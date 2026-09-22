@@ -298,16 +298,17 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         // LocalCache hasn't been rehydrated yet (cold-process broadcast
         // receiver: Account.restoreAll runs async on init and may not have
         // finished by the time we get here).
-        val bundle =
-            manager.buildTextMessage(
-                nostrGroupId = nostrGroupId,
+        // Only the rumor here: sendMarmotGroupMessage does the MLS encryption
+        // and the group-state write, and building an envelope we would throw
+        // away would ratchet the group an extra step for nothing.
+        val innerEvent =
+            manager.buildTextRumor(
                 text = replyText,
                 replyToEventId = replyToInnerEventId,
                 replyToAuthorPubKey = replyToInnerAuthor,
-                persistOwn = false,
             )
 
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))
     }
 
     private suspend fun sendPublicReply(

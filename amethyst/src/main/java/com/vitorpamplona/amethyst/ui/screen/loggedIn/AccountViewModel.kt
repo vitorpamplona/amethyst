@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -2438,8 +2439,42 @@ class AccountViewModel(
         }
     }
 
+    /**
+     * Re-runs the send behind a chat bubble that failed before reaching the
+     * relay pool. The action was registered by the send path itself
+     * ([com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker.markSending]),
+     * so this works for every chat surface without the UI knowing which one it
+     * is looking at. A message old enough to have fallen out of the tracked
+     * window has no action left and the tap is a no-op.
+     */
+    fun retryChatSend(displayedNoteId: HexKey) {
+        val retry = account.chatDeliveryTracker.retryFor(displayedNoteId) ?: return
+        // On the account scope, not the ViewModel's: a retry re-runs the whole
+        // send inline, and leaving the screen must not abandon it half-done.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                retry()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountViewModel", "Retry of chat send $displayedNoteId failed", e)
+            }
+        }
+    }
+
     // --- Marmot Group Messaging ---
 
+    /**
+     * Post a Marmot group message and return as soon as it is on screen.
+     *
+     * Only the cheap half runs here: mention rewriting and the inner kind:9
+     * rumor, neither of which touches MLS. The bubble goes up immediately and
+     * everything expensive — the ratchet step, the encrypted group-state
+     * write, the outer wrap, the relay hand-off — runs on the account scope
+     * afterwards. Deliberately NOT the caller's scope: the composer's
+     * [androidx.compose.runtime.rememberCoroutineScope] dies when the user
+     * navigates away, which would abandon a send that is already showing as
+     * sent.
+     */
     suspend fun sendMarmotGroupMessage(
         nostrGroupId: String,
         text: String,
@@ -2452,21 +2487,40 @@ class AccountViewModel(
         val tagger = NewMessageTagger(text, null, null, this)
         tagger.run()
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
-        // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
-        // event through LocalCache which already handles own-message display.
-        val bundle =
-            account.marmotManager
-                ?.buildTextMessage(
-                    nostrGroupId = nostrGroupId,
-                    text = tagger.message,
-                    replyToEventId = replyToInnerEventId,
-                    replyToAuthorPubKey = replyToInnerAuthorPubKey,
-                    persistOwn = false,
-                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+        val manager = account.marmotManager ?: return
+        val innerEvent =
+            manager.buildTextRumor(
+                text = tagger.message,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthorPubKey,
+                mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+            )
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
+    }
+
+    /**
+     * Show [innerEvent] in the group's chat now and publish it on the account
+     * scope. Shared by every Marmot send that originates in the UI.
+     */
+    private fun deliverMarmotGroupMessage(
+        nostrGroupId: String,
+        innerEvent: Event,
+    ) {
+        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                account.marmot.sendMarmotGroupMessage(
+                    nostrGroupId,
+                    innerEvent,
+                    account.marmot.marmotGroupRelays(nostrGroupId),
                 )
-                ?: return
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // The bubble already carries the failure and its retry; this
+                // is only here so one bad send cannot take the scope down.
+                Log.w("AccountViewModel", "Marmot send failed for $nostrGroupId", e)
+            }
+        }
     }
 
     suspend fun sendMarmotGroupMediaMessage(
@@ -2491,8 +2545,7 @@ class AccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
@@ -2524,9 +2577,7 @@ class AccountViewModel(
         caption: String,
     ) {
         val manager = account.marmotManager ?: return
-        val bundle = manager.buildMediaMessage(nostrGroupId, reference, caption, persistOwn = false)
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption))
     }
 
     suspend fun createMarmotGroup(
@@ -2546,6 +2597,20 @@ class AccountViewModel(
     }
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
+
+    /**
+     * Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner].
+     *
+     * [maxAgeSeconds] lets a passive caller reuse a recent answer instead of
+     * fanning a REQ across the write set; 0 always asks the relays.
+     */
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner(maxAgeSeconds)
+
+    /** Republishes this device's KeyPackage; true only when a relay accepted it. */
+    suspend fun republishKeyPackage(): Boolean = account.marmot.republishKeyPackageConfirmed()
+
+    /** False for a read-only (pubkey-only) login, which cannot publish at all. */
+    fun canPublish(): Boolean = account.isWriteable()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)

@@ -3014,4 +3014,9 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервис получателя по адресу %1$s недоступен. Он был вычислен из Lightning-адреса "%2$s". Ошибка: %3$s. Проверьте, работает ли сервер и правильно ли указан Lightning-адрес</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Не удалось создать Lightning-счёт от %1$s: элемент pr не найден в полученном JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Не удалось создать Lightning-счёт. Сообщение от %1$s: %2$s</string>
+    <string name="show_less">Скрыть</string>
+    <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>
+    <string name="concord_invite_links_title">Приглашения</string>
+    <string name="concord_invite_revoked_ok">Ссылка для приглашения отозвана.</string>
+    <string name="concord_channels_empty">Каналов еще нет.</string>
 </resources>

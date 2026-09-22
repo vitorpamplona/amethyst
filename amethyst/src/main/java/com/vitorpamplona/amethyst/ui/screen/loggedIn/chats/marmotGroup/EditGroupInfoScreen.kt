@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -161,6 +163,11 @@ fun EditGroupInfoScreen(
                     .padding(padding)
                     .consumeWindowInsets(padding)
                     .imePaddingSafe()
+                    // Same reason as CreateGroupScreen: name + description +
+                    // avatar-url + footer is taller than what is left once the
+                    // IME is up, so the padding alone would clip the lower
+                    // fields with no way to reach them.
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -245,6 +252,7 @@ fun EditGroupInfoScreen(
                 text = stringRes(Res.string.marmot_edit_info_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
             )
         }
     }

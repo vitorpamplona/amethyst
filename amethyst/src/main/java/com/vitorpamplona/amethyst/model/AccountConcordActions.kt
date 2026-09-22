@@ -613,8 +613,7 @@ class AccountConcordActions(
                 else ->
                     ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
             }
-        trackConcordDelivery(entry, channelKey, wrap)
-        publishConcordWrap(entry, wrap)
+        sendConcordChannelWrap(entry, channelKey, wrap)
         return true
     }
 
@@ -642,8 +641,7 @@ class AccountConcordActions(
                 .map { it.toTagArray() }
                 .toTypedArray()
         val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
-        trackConcordDelivery(entry, channelKey, wrap)
-        publishConcordWrap(entry, wrap)
+        sendConcordChannelWrap(entry, channelKey, wrap)
         return true
     }
 
@@ -752,20 +750,53 @@ class AccountConcordActions(
     }
 
     /**
-     * Registers an own Concord channel message with the delivery tracker so its chat
-     * bubble shows relay-acceptance ticks. Relays OK the encrypted [wrap], but the feed
-     * shows the inner rumor, so we re-open the wrap (we just built it, so this always
-     * succeeds) to key the tracker by the rumor id the bubble is drawn from. Reactions
-     * and typing wraps skip this — they never become a feed row.
+     * Echo an own Concord channel message into its feed and publish it, driving
+     * the bubble's send state as it goes.
+     *
+     * The echo comes first and is what makes the message appear immediately;
+     * the send state is what says whether it actually got out. Relays OK the
+     * encrypted [wrap] but the feed shows the inner rumor, so the tracker is
+     * keyed by the rumor id — re-opening the wrap to find it always succeeds,
+     * since we just built it. Reactions and typing wraps go through
+     * [publishConcordWrap] instead: they never become a feed row, so there is
+     * no bubble for a send state to live on.
      */
-    private fun trackConcordDelivery(
+    private fun sendConcordChannelWrap(
         entry: ConcordCommunityListEntry,
         channelKey: GroupKey,
         wrap: Event,
     ) {
-        val rumorId = ConcordStreamEnvelope.openOrNull(wrap, channelKey)?.rumor?.id ?: return
+        val rumorId = ConcordStreamEnvelope.openOrNull(wrap, channelKey)?.rumor?.id
+        if (rumorId == null) {
+            publishConcordWrap(entry, wrap)
+            return
+        }
+
+        account.chatDeliveryTracker.markSending(rumorId) { publishTrackedConcordWrap(entry, wrap, rumorId) }
+        account.concordSessions.ingest(wrap)
+        publishTrackedConcordWrap(entry, wrap, rumorId)
+    }
+
+    /**
+     * The publish half of [sendConcordChannelWrap], without the local echo, so
+     * a retry re-publishes the wrap instead of folding it into the session a
+     * second time. Relays are re-resolved on every attempt: a community whose
+     * relay list was empty is the one case worth retrying.
+     */
+    private fun publishTrackedConcordWrap(
+        entry: ConcordCommunityListEntry,
+        wrap: Event,
+        rumorId: HexKey,
+    ) {
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isEmpty()) {
+            Log.w("Concord") { "No usable relay for ${entry.id}: channel message ${wrap.id} has nowhere to go" }
+            account.chatDeliveryTracker.markFailed(rumorId)
+            return
+        }
         account.chatDeliveryTracker.trackWrappedPublic(rumorId, wrap.id, relays)
+        account.client.publish(wrap, relays)
+        account.chatDeliveryTracker.markSent(rumorId)
     }
 
     // ── Concord roles & moderation (CORD-04) ─────────────────────────────────

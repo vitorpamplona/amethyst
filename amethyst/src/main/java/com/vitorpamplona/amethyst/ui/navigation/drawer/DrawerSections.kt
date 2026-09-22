@@ -150,6 +150,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
         NavBarItem.CONCORD,
+        NavBarItem.MARMOT_GROUPS,
         NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,

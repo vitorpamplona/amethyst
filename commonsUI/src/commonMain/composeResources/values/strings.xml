@@ -1623,6 +1623,14 @@
     <string name="user_preferences">User Preferences</string>
     <string name="settings_search_placeholder">Search settings</string>
     <string name="settings_search_no_results">No settings found for "%1$s"</string>
+    <string name="marmot_preview_group_updated">Group updated</string>
+    <string name="marmot_preview_media">Attachment</string>
+    <string name="marmot_preview_no_text">Message</string>
+    <string name="marmot_preview_with_sender">%1$s: %2$s</string>
+    <string name="marmot_empty_create_action">Create a group</string>
+    <string name="marmot_invite_device_banner">Marmot invites are going to another device and cannot be opened here.</string>
+    <string name="marmot_invite_device_banner_dismiss">Dismiss</string>
+    <string name="marmot_invite_device_publish">Publish from this device</string>
     <string name="reset_marmot_confirm_title">Reset Marmot State?</string>
     <string name="reset_marmot_confirm_body">This will permanently delete every Marmot group chat, message history, and MLS key on this device for the current account. Peers will not be notified and may still see you in groups until their next commit. This cannot be undone. A new KeyPackage will be published the next time the app syncs.</string>
     <string name="reset_marmot_confirm_action">Reset</string>
@@ -5303,4 +5311,13 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver's lightning service at %1$s is not available. It was calculated from the lightning address "%2$s". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Unable to create a lightning invoice from %1$s: Element pr not found in the resulting JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Unable to create a lightning invoice. Message from %1$s: %2$s</string>
+    <string name="marmot_invite_device_success">This device now receives your Marmot invites.</string>
+    <string name="marmot_invite_device_failure">Failed to publish KeyPackage: %1$s</string>
+    <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
+    <string name="chat_delivery_sending">Sending\u2026</string>
+    <string name="chat_delivery_failed">Could not be sent. Tap to try again.</string>
+    <plurals name="marmot_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
 </resources>

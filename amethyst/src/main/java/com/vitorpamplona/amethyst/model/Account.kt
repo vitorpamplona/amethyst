@@ -2978,6 +2978,15 @@ class Account(
         wraps: List<GiftWrapEvent>,
         displayedNoteId: HexKey? = null,
     ) {
+        if (displayedNoteId != null) {
+            // Before the note is indexed below, so the bubble never renders a
+            // frame without its state. Republishing the wraps we already hold
+            // is the whole retry: they are signed and sealed, so nothing has
+            // to be rebuilt and the recipients' copies keep the ids they were
+            // given.
+            chatDeliveryTracker.markSending(displayedNoteId) { broadcastPrivately(wraps, displayedNoteId) }
+        }
+
         val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
@@ -2986,6 +2995,16 @@ class Account(
 
         val id = mine.firstOrNull()?.id
         val mineNote = if (id == null) null else cache.getNoteIfExists(id)
+
+        // Unwrap and index the self-copy BEFORE the publish loop, not after it
+        // and not via the newEventBundles batcher (up to ~1s): the bubble is
+        // then on screen while the wraps are still going out, and acceptances
+        // land directly on the rumor note the chat renders instead of parking
+        // on the wrap. The batcher re-delivers this note later; the
+        // processor's replay path and the chatroom add are both idempotent.
+        mineNote?.let { newNotesPreProcessor.consume(it) }
+
+        var published = false
 
         wraps.forEach { wrap ->
             // Creates an alias
@@ -3007,16 +3026,21 @@ class Account(
                 }
             }
 
+            if (relayList.isNotEmpty()) published = true
             client.publish(wrap, relayList)
         }
 
-        // Unwrap and index the self-copy right away instead of waiting for the
-        // newEventBundles batcher (up to ~1s): the sent message reaches the
-        // chatroom before the first relay OK, so acceptances land directly on
-        // the rumor note the chat renders instead of parking on the wrap. The
-        // batcher re-delivers this note later; the processor's replay path and
-        // the chatroom add are both idempotent.
-        mineNote?.let { newNotesPreProcessor.consume(it) }
+        if (displayedNoteId != null) {
+            // Every wrap resolved to an empty relay set, so nothing was sent
+            // anywhere and no OK will ever arrive. That used to be invisible —
+            // the bubble simply sat on a clock forever. Say so, and let the
+            // retry re-publish the same wraps once the user has DM relays.
+            if (published) {
+                chatDeliveryTracker.markSent(displayedNoteId)
+            } else {
+                chatDeliveryTracker.markFailed(displayedNoteId)
+            }
+        }
     }
 
     /**

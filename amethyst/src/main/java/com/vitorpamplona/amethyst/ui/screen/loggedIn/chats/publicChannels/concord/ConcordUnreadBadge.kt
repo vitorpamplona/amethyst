@@ -20,33 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
 import com.vitorpamplona.amethyst.ui.pluralStringRes
-
-/** Counts above this render as "N+" so a very busy channel doesn't blow out the row. */
-private const val CONCORD_UNREAD_CAP = 99
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.CHAT_UNREAD_CAP
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
 
 /**
  * A small pill showing an unread-message [count] (new messages since this account last read).
  * Renders nothing when [count] is zero, so callers can place it unconditionally. Capped at
- * [CONCORD_UNREAD_CAP]+ and carries a plural content description for screen readers.
+ * [CHAT_UNREAD_CAP]+ and carries a plural content description for screen readers.
+ *
+ * The pill itself is [ChatUnreadBadge], shared with the other chat lists; this
+ * wrapper only supplies Concord's own plural so the two surfaces cannot drift
+ * apart visually.
  */
 @Composable
 fun ConcordUnreadBadge(
@@ -54,26 +43,9 @@ fun ConcordUnreadBadge(
     modifier: Modifier = Modifier,
 ) {
     if (count <= 0) return
-    val label = if (count > CONCORD_UNREAD_CAP) "$CONCORD_UNREAD_CAP+" else count.toString()
-    val description = pluralStringRes(Res.plurals.concord_unread_messages, count, count)
-    Box(
-        modifier =
-            modifier
-                .semantics { contentDescription = description }
-                // Smoothly grows/shrinks as the count changes digits (1 → 2 → … → 99+) instead of
-                // snapping — a small touch that makes new activity feel noticed.
-                .animateContentSize()
-                .sizeIn(minWidth = 20.dp, minHeight = 20.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
-    }
+    ChatUnreadBadge(
+        count = count,
+        contentDescription = pluralStringRes(Res.plurals.concord_unread_messages, count, count),
+        modifier = modifier,
+    )
 }

@@ -154,6 +154,12 @@ private fun PreloadFor(
 
         NavBarItem.CONCORD -> ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
+        // The Marmot list renders from local state alone — marmotGroupList.rooms plus
+        // marmotManager.activeGroupIds() — and MarmotManager already owns a per-group
+        // subscription for every group it restores or joins. There is no list-level REQ
+        // to warm up, and adding one would duplicate those.
+        NavBarItem.MARMOT_GROUPS -> Unit
+
         NavBarItem.FOLLOW_PACKS -> FollowPacksFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.LIVE_STREAMS -> LiveStreamsFilterAssemblerSubscription(accountViewModel)
