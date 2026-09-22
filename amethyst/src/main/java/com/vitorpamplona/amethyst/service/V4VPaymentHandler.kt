@@ -172,14 +172,14 @@ class V4VPaymentHandler(
                 request = request,
                 onResponse = { response: Response? ->
                     account.scope.launch {
-                        response.nwcFailureDetail(context)?.let { detail ->
+                        response.nwcFailureDetail()?.let { detail ->
                             onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
                         }
                     }
                 },
                 onTimeout = {
                     account.scope.launch {
-                        onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                        onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage())
                     }
                 },
             )
@@ -270,14 +270,14 @@ class V4VPaymentHandler(
                         zappedNote = zappedNote,
                         onResponse = { response ->
                             account.scope.launch {
-                                response.nwcFailureDetail(context)?.let { detail ->
+                                response.nwcFailureDetail()?.let { detail ->
                                     onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
                                 }
                             }
                         },
                         onTimeout = {
                             account.scope.launch {
-                                onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                                onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage())
                             }
                         },
                     )

@@ -424,12 +424,14 @@ private fun SendPaymentLoaded(
                 accountViewModel.sendZapPaymentRequestFor(
                     bolt11 = invoice,
                     zappedNote = null,
-                    onTimeout = { postStage(PaymentFlowStage.Failure(nwcTimeoutMessage(context))) },
+                    onTimeout = { scope.launch { postStage(PaymentFlowStage.Failure(nwcTimeoutMessage())) } },
                     onResponse = { response ->
-                        val failure = response.nwcFailureDetail(context)
-                        postStage(
-                            if (failure == null) PaymentFlowStage.Success(successTitle) else PaymentFlowStage.Failure(failure),
-                        )
+                        scope.launch {
+                            val failure = response.nwcFailureDetail()
+                            postStage(
+                                if (failure == null) PaymentFlowStage.Success(successTitle) else PaymentFlowStage.Failure(failure),
+                            )
+                        }
                     },
                 )
             }
@@ -437,13 +439,15 @@ private fun SendPaymentLoaded(
             is PaymentSource.ClinkDebit -> {
                 postStage(PaymentFlowStage.InProgress(loadStringRes(Res.string.send_payment_paying_via, source.name)))
                 accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
-                    postStage(
-                        if (response?.isOk() == true) {
-                            PaymentFlowStage.Success(successTitle)
-                        } else {
-                            PaymentFlowStage.Failure(response?.failureDetail() ?: clinkNoResponseLabel)
-                        },
-                    )
+                    scope.launch {
+                        postStage(
+                            if (response?.isOk() == true) {
+                                PaymentFlowStage.Success(successTitle)
+                            } else {
+                                PaymentFlowStage.Failure(response?.failureDetail() ?: clinkNoResponseLabel)
+                            },
+                        )
+                    }
                 }
             }
 
@@ -569,7 +573,7 @@ private fun SendPaymentLoaded(
                         )
                     is OnchainZapSendResult.Failure ->
                         PaymentFlowStage.Failure(
-                            listOfNotNull(result.userMessage(context), result.technicalDetail()).joinToString("\n"),
+                            listOfNotNull(result.userMessage(), result.technicalDetail()).joinToString("\n"),
                         )
                 }
         }

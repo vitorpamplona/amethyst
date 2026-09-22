@@ -163,8 +163,8 @@ private class ConversationType(
     val chip: StringResource,
     val bestFor: StringResource,
     val cta: StringResource,
-    val pros: List<Int>,
-    val cons: List<Int>,
+    val pros: List<StringResource>,
+    val cons: List<StringResource>,
     val route: Route,
 )
 

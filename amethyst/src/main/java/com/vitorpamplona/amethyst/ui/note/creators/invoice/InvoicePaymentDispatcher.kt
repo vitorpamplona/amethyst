@@ -96,9 +96,9 @@ fun InvoicePaymentDispatcher(
                     accountViewModel.sendZapPaymentRequestFor(
                         bolt11 = bolt11,
                         zappedNote = null,
-                        onTimeout = { onError(nwcTimeoutMessage(context)) },
+                        onTimeout = { onError(nwcTimeoutMessage()) },
                         onResponse = { response ->
-                            val failure = response.nwcFailureDetail(context)
+                            val failure = response.nwcFailureDetail()
                             if (failure == null) onSuccess() else onError(failure)
                         },
                     )

@@ -412,10 +412,10 @@ fun DvmPaymentActions(
                         onSent = {
                             onStatusUpdate(nwcPaymentRequest)
                         },
-                        onTimeout = { onStatusUpdate(nwcTimeoutMessage(context)) },
+                        onTimeout = { onStatusUpdate(nwcTimeoutMessage()) },
                         onResponse = { response ->
                             onStatusUpdate(
-                                response.nwcFailureDetail(context)?.let { detail ->
+                                response.nwcFailureDetail()?.let { detail ->
                                     loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
                                 } ?: thankYou,
                             )

@@ -60,7 +60,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -983,7 +982,7 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
 private fun FailureBody(result: OnchainZapSendResult.Failure) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = result.userMessage(LocalContext.current),
+            text = result.userMessage(),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error,
         )

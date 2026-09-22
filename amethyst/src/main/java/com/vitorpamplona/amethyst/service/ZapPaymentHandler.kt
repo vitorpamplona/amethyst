@@ -485,7 +485,7 @@ class ZapPaymentHandler(
                     onResponse = { response ->
                         account.scope.launch {
                             progress.step()
-                            response.nwcFailureDetail(context)?.let { detail ->
+                            response.nwcFailureDetail()?.let { detail ->
                                 onError(
                                     loadStringRes(Res.string.error_dialog_pay_invoice_error),
                                     loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail),
@@ -498,7 +498,7 @@ class ZapPaymentHandler(
                         account.scope.launch {
                             onError(
                                 loadStringRes(Res.string.error_dialog_pay_invoice_error),
-                                nwcTimeoutMessage(context),
+                                nwcTimeoutMessage(),
                                 payable.info.user,
                             )
                         }
@@ -599,7 +599,7 @@ class ZapPaymentHandler(
                 onTimeout = {
                     account.scope.launch {
                         // No response callback will fire, so account for the settlement step here.
-                        reportBolt12Error(Res.string.bolt12_payment_failed, nwcTimeoutMessage(context))
+                        reportBolt12Error(Res.string.bolt12_payment_failed, nwcTimeoutMessage())
                         progress.step()
                     }
                 },
