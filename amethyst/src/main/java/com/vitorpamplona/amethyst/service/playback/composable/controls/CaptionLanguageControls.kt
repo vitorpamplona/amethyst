@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
