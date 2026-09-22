@@ -131,27 +131,110 @@ references disappeared with no error. Two things came out of that:
   HEAD. A rewrite may move a key between namespaces; it may not change the
   multiset. Every rewrite pass after that was run through it.
 
+## Not every string could move: the synchronous-platform tier
+
+The original goal — "zero `R.string` in Kotlin" — was wrong, not merely unmet.
+
+Some strings are read by a platform API that resolves **synchronously and under
+a deadline**, where neither Compose accessor can run. The clearest case is a
+foreground service: `onStartCommand` must call `startForeground` promptly or
+Android kills the service, so `FlowProgressForegroundService` builds its
+notification on that thread (`runCatching { startForegroundCompat(...) }`).
+A `suspend` accessor cannot be called there at all, and a `runBlocking` bridge
+is exactly what the maintainer ruled out. The same holds for a notification
+channel created during service startup and for a PiP `RemoteAction`, which is
+assembled inside `onUserLeaveHint` / the PiP transition.
+
+So `amethyst/src/main/res` keeps a small, deliberate tier, and
+`ui/StringResourceCache.kt` keeps its Android-resource accessors (with the
+`LruCache`, which exists because `Resources.getString` measured >1 ms on some
+phones). What lives there:
+
+| what | keys |
+|---|---|
+| always-on relay notification, call notification | restored with the six service files |
+| PoW mining notification (`formatApproxDuration`/`formatTimeLeft` + `powKindLabelResId` twins) | 15 |
+| nest foreground service + the two PiP activities | 12 |
+| napplet capability labels (`labelResId` twin — the sandbox process has no resources of its own) | 11 |
+| media PiP action labels | 4 |
+| `AndroidManifest.xml` / `res/xml` references | 4 |
+
+Most are **copies**, not moves: the same key is read from composition elsewhere,
+so it lives in both trees. That is why the helpers come in pairs
+(`powKindLabelRes` / `powKindLabelResId`, `formatApproxDuration(seconds)` /
+`formatApproxDuration(context, seconds)`) rather than one being converted.
+
+Two escaping traps came with the copies:
+
+- **aapt and compose-resources do not share escaping rules.** A value moved back
+  to `res/values` needs its apostrophes escaped again or the resource merge
+  fails with `Invalid unicode escape sequence in string`. The inverse of
+  `tools/strings-migrate/fix_escapes.py`; a value Android wrapped in quotes to
+  protect whitespace, and a bare `@string/` alias, must be left alone.
+- **A copy can duplicate a key** a locale already had, which fails
+  `packagePlayDebugResources` — not the Kotlin compile, so it surfaces only
+  after the module is otherwise green.
+
+Where the deadline is *not* real, the string stays in the catalog and the read
+moves instead. `NotificationRelayService`'s per-job breakdown now recomputes off
+the notification path and reposts the card when the text changes, which keeps
+those strings shared.
+
+## What the compile-fix loop actually found
+
+1,130 errors at first compile, cleared over eight rounds. The classes, and what
+each one taught:
+
+- **Suspend does not propagate to a fixed point.** Marking each caller `suspend`
+  went 304 → 307 → 309 → 312 over four rounds and was abandoned. The direction
+  that converges is the opposite: **hoist the read** to the nearest composition
+  or existing coroutine. `WalletViewModel` went 22 errors → 1 by wrapping eight
+  NWC callback *bodies* in `viewModelScope.launch { }` rather than trying to make
+  the callbacks suspend (the relay dispatcher invokes them; they cannot be).
+- **A callback's message belongs in its signature.** `payViaIntent` resolved one
+  fixed "no wallet found" string, which made it `suspend`, which made it
+  uncallable from the 20 `onPayViaIntent` lambdas that are its only callers. The
+  message is now a parameter, resolved in the composable that owns the callback.
+  `FavoriteAppLauncher.launch` took the same treatment.
+- **Much of the `suspend` was never real.** Roughly 30 functions were marked
+  `suspend` only because they once read a string; the read had since moved but
+  the modifier had not, and every plain callback then refused to call them. The
+  wallet entry points are the clearest: `fetchTransactions`, `sendPayment` and
+  `createInvoice` hand straight off to `viewModelScope.launch`, which is the
+  shape a ViewModel entry point should have anyway.
+  *A script that removed the modifier wherever it could not find a suspension
+  point was a mistake and was reverted: it has no parse of interface members
+  (which have no body) and silently un-suspended `IAccount`, `ITorManager` and
+  ~170 other files, including already-green modules.*
+- **`derivedStateOf` is not composable scope.** `TimeAgo` builds its text there,
+  so the formatters split: plain `timeAgoWith` / `timeAbsoluteWith` cores taking
+  a `TimeAgoLabels` holder resolved once in composition, with the `@Composable`
+  wrappers delegating. This is strictly better than the all-composable form —
+  a composable formatter cannot be memoized in a `remember`.
+- **A `StringResource` is not `Saveable` and not a valid LazyColumn key.**
+  `NewConversationScreen`'s accordion keyed itself by the title resource; it now
+  keys by the resource's `String` id.
+- **Nullable format args.** The commonest argument is `Throwable.message`, and
+  compose-resources takes a non-null `Any`. The bridge's varargs are `Any?` and
+  a null renders as an empty string rather than the literal `"null"` that
+  `Resources.getString` would have printed at the user.
+- **`kotlin-errors=0` is not a green build.** A duplicate `app_name` broke
+  `packagePlayDebugResources` *after* Kotlin reported zero errors. Check the
+  `BUILD SUCCESSFUL` line, not the error count.
+
 ## Status
 
-- `R.string` / `R.plurals` references left in Kotlin: **0**
-- `.claude/hooks/orphan_strings_check.py`: passes
-- All 58 default + locale XML files parse
-- `check_refs.py`: no key lost (the only deltas are the intentional
-  `PowDuration` suspend twins and the hoisted labels)
+- `:amethyst:compilePlayDebugKotlin` — **green**
+- `:quartz:jvmTest`, `:commons:jvmTest`, `:commonsUI:jvmTest`,
+  `:amethyst:testPlayDebugUnitTest` — **pass** (1,636 tests in `:amethyst`)
+- `.claude/hooks/orphan_strings_check.py` — passes
+- `./gradlew spotlessApply` — clean
+- `R.string` / `R.plurals` references left in Kotlin: **77**, over **68**
+  distinct keys; `amethyst/src/main/res/values/strings.xml` holds **204**
+  (the extras are manifest-referenced, or `plurals` a key reaches by quantity).
+  All of it is the synchronous-platform tier described above — that is the
+  correct end state, not a shortfall.
 
-**Not yet verified: this has never compiled.** The container's shared egress IP
-is rate-limited by Maven Central (~50% of requests answer 429) and Gradle
-disables a repository on the first failure, so `:amethyst:compileFdroidDebugKotlin`
-could not be driven to completion in the session that wrote this. The changes
-that need a compiler to confirm are:
-
-1. Every scope classification. A `stringRes(id)` inside a non-composable lambda
-   (`onClick = { }`) and a `loadStringRes(id)` outside a coroutine are both
-   compile errors, which is exactly the check that has not run.
-2. The `Int` → `StringResource` retyping (98 declarations across 39 files).
-   Carriers reached only through a positional argument were not found
-   statically and will surface as type errors.
-3. Unused imports and vals left behind by the hoisting (ktlint errors).
-
-Next step is a compile-fix loop, then `./gradlew spotlessApply`, then
-`:amethyst:lintFdroidBenchmark` for `ExtraTranslation`.
+`:cli:test` could not be driven to completion here — its dependency resolution
+is 429-throttled by the container's shared egress IP — but nothing in this wave
+touches `cli`.
