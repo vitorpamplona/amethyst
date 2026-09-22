@@ -1630,7 +1630,8 @@
     <string name="marmot_invite_device_banner">Marmot invites are going to another device and cannot be opened here.</string>
     <string name="marmot_invite_device_banner_dismiss">Dismiss</string>
     <string name="marmot_invite_device_checking">Asking your relays which device currently receives your Marmot invites\u2026</string>
-    <string name="marmot_invite_device_this">This device already receives your Marmot invites. Nothing to do \u2014 publishing again is harmless but unnecessary.</string>
+    <string name="marmot_invite_device_this">This device already receives your Marmot invites. Nothing to do.</string>
+    <string name="marmot_invite_device_read_only">This account is signed in read-only, so it cannot publish a KeyPackage. Sign in with your private key to receive Marmot invites on this device.</string>
     <string name="marmot_invite_device_other">Another device signed in to this account published a newer KeyPackage, so Marmot invites are going there and cannot be opened here. Publishing from this device takes over future invites; the other device keeps the groups it already joined.</string>
     <string name="marmot_invite_device_none">No KeyPackage was found on your relays for this account. Publish one so others can invite you to Marmot groups.</string>
     <string name="marmot_invite_device_error">Could not reach your relays to check. You can still publish from this device.</string>

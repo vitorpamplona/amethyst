@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_error
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_none
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_other
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_publish
+import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_read_only
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_this
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
@@ -345,8 +346,13 @@ private fun MarmotInviteDeviceDialog(
 ) {
     var owner by remember { mutableStateOf<LatestKeyPackageOwner?>(null) }
     var checkFailed by remember { mutableStateOf(false) }
+    // A read-only login cannot publish at all. Without this the dialog would
+    // offer the button and then blame the relays for a refusal that happened at
+    // the isWriteable() check, before any relay was contacted.
+    val canPublish = accountViewModel.canPublish()
 
     LaunchedEffect(Unit) {
+        if (!canPublish) return@LaunchedEffect
         try {
             owner = withContext(Dispatchers.IO) { accountViewModel.latestKeyPackageOwner() }
         } catch (e: CancellationException) {
@@ -361,6 +367,7 @@ private fun MarmotInviteDeviceDialog(
     val resolved = owner
     val body =
         when {
+            !canPublish -> stringRes(Res.string.marmot_invite_device_read_only)
             checkFailed -> stringRes(Res.string.marmot_invite_device_error)
             resolved == null -> stringRes(Res.string.marmot_invite_device_checking)
             resolved == LatestKeyPackageOwner.THIS_DEVICE -> stringRes(Res.string.marmot_invite_device_this)
@@ -388,8 +395,9 @@ private fun MarmotInviteDeviceDialog(
             Button(
                 onClick = onConfirm,
                 // Held until the check resolves so the user is never asked to
-                // act on an answer that has not arrived.
-                enabled = checkFailed || resolved != null,
+                // act on an answer that has not arrived, and never offered at
+                // all to an account that cannot publish.
+                enabled = canPublish && (checkFailed || resolved != null),
             ) {
                 Text(stringRes(Res.string.marmot_invite_device_publish))
             }

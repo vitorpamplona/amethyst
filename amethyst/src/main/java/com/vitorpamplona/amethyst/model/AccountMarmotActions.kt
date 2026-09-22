@@ -454,15 +454,21 @@ class AccountMarmotActions(
             return cached.second
         }
 
-        val latest =
-            KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
-                ?: return LatestKeyPackageOwner.NONE
+        val latest = KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
 
-        val mine = manager.ownsKeyPackageEvent(latest.id)
+        val owner =
+            when {
+                latest == null -> LatestKeyPackageOwner.NONE
+                manager.ownsKeyPackage(latest) -> LatestKeyPackageOwner.THIS_DEVICE
+                else -> LatestKeyPackageOwner.OTHER_DEVICE
+            }
         Log.d("MarmotDbg") {
-            "latestKeyPackageOwner: newest KeyPackage id=${latest.id.take(8)}… createdAt=${latest.createdAt} mine=$mine"
+            "latestKeyPackageOwner: newest KeyPackage id=${latest?.id?.take(8)}… " +
+                "createdAt=${latest?.createdAt} owner=$owner"
         }
-        val owner = if (mine) LatestKeyPackageOwner.THIS_DEVICE else LatestKeyPackageOwner.OTHER_DEVICE
+        // Cached even when nothing was found: that answer cost the same fan-out
+        // as any other, so leaving it uncached would re-run the whole query on
+        // every entry for exactly the accounts with nothing on their relays.
         lastOwnerCheck = TimeUtils.now() to owner
         return owner
     }
@@ -482,6 +488,18 @@ class AccountMarmotActions(
         if (!account.isWriteable()) return false
         val relays = keyPackagePublishRelays()
         if (relays.isEmpty()) return false
+
+        // Minting is destructive: `generateCurrentProfileKeyPackage` overwrites
+        // `activeBundles[slot]`, dropping the private keys of the KeyPackage
+        // already on relays. That is survivable when another device owns the
+        // newest one (nobody was going to invite us through ours anyway), but
+        // doing it when we ALREADY own the newest would destroy the very keys
+        // the current invites depend on — for no gain, since the answer would
+        // not change. So that case is a no-op that truthfully reports success.
+        if (latestKeyPackageOwner() == LatestKeyPackageOwner.THIS_DEVICE) {
+            Log.d("MarmotDbg") { "republishKeyPackageConfirmed: already the newest; not minting" }
+            return true
+        }
 
         val event = manager.generateKeyPackageEvent(relays.toList())
         account.cache.justConsumeMyOwnEvent(event)
