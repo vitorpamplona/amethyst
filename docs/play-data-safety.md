@@ -9,8 +9,8 @@ finds first.
 ## Why this file exists
 
 The form previously said **"App doesn't collect or share data"** and **"Data isn't encrypted"**.
-Both are wrong, and the pair is self-contradictory — if nothing is collected there is no
-encryption answer to give.
+The first is wrong. The second is right, but only became defensible once the first was corrected:
+with nothing collected there is no encryption answer to give, so the pair was self-contradictory.
 
 The error came from reading "collect" as "the developer receives it". Google does not define it
 that way:
@@ -41,7 +41,7 @@ not be declared as sharing — but it is still collection and must be declared.
 | Question | Answer |
 | --- | --- |
 | Does your app collect or share any of the required user data types? | **Yes** |
-| Is all of the user data collected by your app encrypted in transit? | **See § 4 — decide before submitting** |
+| Is all of the user data collected by your app encrypted in transit? | **No** — see § 4 |
 | Do you provide a way for users to request that their data is deleted? | **Yes** — see § 5 |
 
 ## 2. Data types — collected
@@ -94,24 +94,37 @@ publishing to relays is a user-initiated transfer the user reasonably expects.
 > the answer to defend. Be ready to defend it: the user takes a deliberate action, sees the post,
 > and confirms it.
 
-## 4. Encrypted in transit — resolve before submitting
+## 4. Encrypted in transit — answer **No**, deliberately
 
-Relays are `wss://`, media is HTTPS, DMs are NIP-44. **But** `amethyst/src/main/res/xml/network_security_config.xml`
-sets `cleartextTrafficPermitted="true"` on the global `base-config` so user-configured `ws://`
-relays keep working. Google allows "yes" only when encryption covers *all* collected data, so as
-the app stands today that cannot be claimed unconditionally.
+Amethyst's own traffic is encrypted: relays are `wss://`, media uploads are HTTPS, and private DMs
+are NIP-44 on top of that. But `amethyst/src/main/res/xml/network_security_config.xml` sets
+`cleartextTrafficPermitted="true"` on the global `base-config`, because **a user must be able to
+connect to any relay they choose, including a `ws://` one.** That is a deliberate product
+decision, not an oversight: narrowing it to loopback and `.onion` would let this answer be "Yes",
+and it was considered and rejected — cutting off plain `ws://` relays is not an acceptable price
+for a nicer label.
 
-Two honest ways forward:
+Google only permits "yes" when encryption covers *all* collected data, so the honest answer is
+**No**.
 
-1. **Narrow the config** to loopback and `.onion` only, and drop the global permit. Loopback never
-   leaves the device and `.onion` is encrypted by Tor, so "encrypted in transit" becomes truthfully
-   **Yes** — and it is a real security improvement. Cost: a user with a plain `ws://` relay breaks.
-2. **Leave it** and answer **No**. Accurate, but the public label then reads "Data isn't encrypted"
-   next to a health-permission request — the same contradiction that has already cost two
-   submissions.
+**That answer is not the problem, and it never was.** What made the old form incoherent was
+pairing it with "App doesn't collect or share data" — with nothing collected there is no
+encryption question to answer at all. Once § 2 declares collection truthfully, a "No" here is
+simply accurate, and it is defensible in one sentence if anyone asks:
 
-Option 1 is the better outcome. It is a behaviour change for `ws://` relay users, so it is a
-maintainer's decision, not a form-filling one.
+> Amethyst connects over TLS by default. Cleartext is possible only for a relay address the user
+> typed in themselves, because the user chooses their own relays and the app does not override
+> that choice.
+
+Say the same thing in `PRIVACY.md` if it is ever queried, so the two agree.
+
+### Known consequence, for a health reviewer
+
+A user who configures a `ws://` relay and then publishes a workout sends that kind 1301 in
+cleartext. Nothing in § 2 hides this, and the "No" above is what discloses it. If this is ever
+raised in review, the options that preserve `ws://` entirely are to warn at the point a cleartext
+relay is added, or to warn before publishing a health-derived event to one. **Neither is
+implemented today** — recorded here so the choice is a choice rather than an oversight.
 
 ## 5. Data deletion
 
