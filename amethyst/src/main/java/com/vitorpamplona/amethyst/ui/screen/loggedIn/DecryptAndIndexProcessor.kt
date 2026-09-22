@@ -761,6 +761,13 @@ class GroupEventHandler(
                     // was already persisted on the run that originally
                     // decrypted it (the message store appends, so a
                     // re-persist would silently grow the on-disk log).
+                    //
+                    // Our OWN messages always take the duplicate branch:
+                    // `AccountMarmotActions.sendMarmotGroupMessage` puts the
+                    // inner rumor in the cache before it encrypts anything, so
+                    // the bubble can be drawn immediately. That send path owns
+                    // the persist for those — don't relax this gate to cover
+                    // them, or every own message would be written twice.
                     if (isNew) {
                         manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
 
