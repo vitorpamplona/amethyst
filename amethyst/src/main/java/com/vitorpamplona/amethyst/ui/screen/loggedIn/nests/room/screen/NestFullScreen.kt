@@ -58,13 +58,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
 import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_body
 import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_close
+import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_close_failed
 import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_just_leave
 import com.vitorpamplona.amethyst.commons.resources.nest_leave_host_title
 import com.vitorpamplona.amethyst.commons.resources.nest_minimize_description
@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_share_action
 import com.vitorpamplona.amethyst.commons.resources.nest_tab_audience
 import com.vitorpamplona.amethyst.commons.resources.nest_tab_chat
 import com.vitorpamplona.amethyst.commons.resources.nest_tab_hands
+import com.vitorpamplona.amethyst.commons.resources.nests
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
@@ -386,8 +387,8 @@ internal fun NestFullScreen(
                             val ok = closeMeetingSpace(accountViewModel, event)
                             if (!ok) {
                                 accountViewModel.toastManager.toast(
-                                    R.string.nests,
-                                    R.string.nest_leave_host_close_failed,
+                                    Res.string.nests,
+                                    Res.string.nest_leave_host_close_failed,
                                 )
                             }
                             // Tear down the speaker session + listener

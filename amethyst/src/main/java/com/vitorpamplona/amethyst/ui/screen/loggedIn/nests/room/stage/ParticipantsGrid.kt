@@ -60,18 +60,18 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_audience_empty
+import com.vitorpamplona.amethyst.commons.resources.nest_listener_count
 import com.vitorpamplona.amethyst.commons.resources.nest_live_chip
+import com.vitorpamplona.amethyst.commons.resources.nest_raise_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_role_host
 import com.vitorpamplona.amethyst.commons.resources.nest_role_moderator
 import com.vitorpamplona.amethyst.commons.resources.nest_stage
@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -208,8 +209,8 @@ internal fun StageGrid(
                 )
                 Text(
                     text =
-                        pluralStringResource(
-                            R.plurals.nest_listener_count,
+                        pluralStringRes(
+                            Res.plurals.nest_listener_count,
                             listenerCount,
                             listenerCount,
                         ),
@@ -687,7 +688,7 @@ private fun HandRaiseBadge(modifier: Modifier = Modifier) {
     ) {
         Icon(
             symbol = MaterialSymbols.PanTool,
-            contentDescription = stringRes(R.string.nest_raise_hand),
+            contentDescription = stringRes(Res.string.nest_raise_hand),
             tint = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.size(MAX_BADGE_SIZE - 4.dp),
         )

@@ -58,7 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_action
 import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_phone_calendar
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
@@ -74,6 +74,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_in_calendars
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_in_no_calendars
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_loading
 import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
+import com.vitorpamplona.amethyst.commons.resources.calendar_export_share_title
+import com.vitorpamplona.amethyst.commons.resources.calendar_open_in_maps
+import com.vitorpamplona.amethyst.commons.resources.calendar_open_link
 import com.vitorpamplona.amethyst.commons.resources.calendar_participants_section
 import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_going_prefixed
 import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_maybe_prefixed
@@ -83,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_section
 import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr
 import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
+import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.route_calendar_event_detail
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -93,12 +97,13 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.CalendarRsvpRow
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalendar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.relativeTimeLabel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -117,7 +122,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * Dedicated detail screen for a NIP-52 calendar appointment (kind 31922 or 31923). Renders the
@@ -165,7 +169,7 @@ fun CalendarEventDetailScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
@@ -173,6 +177,7 @@ fun CalendarEventDetailScreen(
                 },
                 actions = {
                     val context = LocalContext.current
+                    val icsChooserTitle = stringRes(Res.string.calendar_export_share_title)
                     // Two share modes:
                     //  - .ics for non-nostr calendar apps (Google Calendar / iOS / Outlook)
                     //  - nostr:naddr… link for sharing inside the nostr ecosystem (in DMs,
@@ -187,7 +192,7 @@ fun CalendarEventDetailScreen(
                             if (!addToPhoneCalendar(context, event)) {
                                 val ics = IcsExport.appointmentToIcs(event, targetAddress, TimeUtils.now())
                                 val filename = IcsExport.appointmentFilename(event, targetAddress)
-                                shareIcs(context, filename, ics)
+                                shareIcs(context, filename, ics, icsChooserTitle)
                             }
                         }) {
                             Icon(
@@ -200,7 +205,7 @@ fun CalendarEventDetailScreen(
                         IconButton(onClick = {
                             val ics = IcsExport.appointmentToIcs(event, targetAddress, TimeUtils.now())
                             val filename = IcsExport.appointmentFilename(event, targetAddress)
-                            shareIcs(context, filename, ics)
+                            shareIcs(context, filename, ics, icsChooserTitle)
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.Share,
@@ -250,7 +255,7 @@ fun CalendarEventDetailScreen(
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.Edit,
-                                contentDescription = stringRes(R.string.edit_calendar_event),
+                                contentDescription = stringRes(Res.string.edit_calendar_event),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
@@ -349,10 +354,7 @@ private fun EventBody(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        val relative =
-            remember(note.idHex, view.startSeconds) {
-                relativeTimeLabel(context, view, TimeUtils.now())
-            }
+        val relative = rememberRelativeTimeLabel(view, note.idHex)
         relative?.let {
             Text(
                 text = it,
@@ -484,7 +486,7 @@ private fun CollectionMembersSection(
     nav: INav,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(pluralStringResource(Res.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
+        SectionTitle(pluralStringRes(Res.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
         if (memberAddresses.isEmpty()) {
             Text(
                 text = stringRes(Res.string.calendar_collection_empty_members),
@@ -621,7 +623,7 @@ private fun LocationRow(location: String) {
         Icon(
             symbol = if (isUrl) MaterialSymbols.Link else MaterialSymbols.LocationOn,
             contentDescription =
-                stringRes(if (isUrl) R.string.calendar_open_link else R.string.calendar_open_in_maps),
+                stringRes(if (isUrl) Res.string.calendar_open_link else Res.string.calendar_open_in_maps),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.primary,
         )

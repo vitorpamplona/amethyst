@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reposts_channel_message
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -30,7 +32,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 
@@ -79,7 +80,7 @@ object RepostNotification {
             nm.postStandard(
                 category = NotificationCategory.REPOST,
                 id = id,
-                messageTitle = stringRes(context, R.string.app_notification_reposts_channel_message, booster.toBestDisplayName()),
+                messageTitle = loadStringRes(Res.string.app_notification_reposts_channel_message, booster.toBestDisplayName()),
                 messageBody = NotificationContent.excerpt(boostedNote?.event?.content, 140),
                 time = createdAt,
                 pictureUrl = booster.profilePicture(),

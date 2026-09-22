@@ -64,13 +64,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_create_about
 import com.vitorpamplona.amethyst.commons.resources.concord_create_icon_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_create_name
+import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -168,7 +171,7 @@ private fun ConcordIconHero(
                     throw e
                 } catch (e: Exception) {
                     Log.w("ConcordImageUpload", "Community icon upload failed", e)
-                    val msg = e.message?.takeIf { it.isNotBlank() } ?: stringRes(context, R.string.failed_to_upload_media_no_details)
+                    val msg = e.message?.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.failed_to_upload_media_no_details)
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 } finally {
                     uploading = false
@@ -188,7 +191,7 @@ private fun ConcordIconHero(
             RobohashFallbackAsyncImage(
                 robot = robotSeed,
                 model = iconModel,
-                contentDescription = displayName.ifBlank { stringRes(R.string.concord_create_title) },
+                contentDescription = displayName.ifBlank { stringRes(Res.string.concord_create_title) },
                 modifier = Modifier.size(104.dp).clip(CircleShape),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -239,7 +242,7 @@ private fun ConcordBannerHero(
                     throw e
                 } catch (e: Exception) {
                     Log.w("ConcordImageUpload", "Community banner upload failed", e)
-                    val msg = e.message?.takeIf { it.isNotBlank() } ?: stringRes(context, R.string.failed_to_upload_media_no_details)
+                    val msg = e.message?.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.failed_to_upload_media_no_details)
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 } finally {
                     uploading = false
@@ -291,7 +294,7 @@ private fun ConcordBannerHero(
             ) {
                 SymbolIcon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.remove),
+                    contentDescription = stringRes(Res.string.remove),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -368,7 +371,7 @@ private fun ConcordRelayRow(
             )
         }
         IconButton(onClick = onRemove) {
-            SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.remove))
+            SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove))
         }
     }
 }

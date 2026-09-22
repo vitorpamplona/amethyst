@@ -29,7 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.security_spamming_users_empty
+import com.vitorpamplona.amethyst.commons.resources.spamming_users
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
@@ -49,7 +51,7 @@ fun SpammingUsersScreen(
     Scaffold(
         topBar = {
             BlockListTopBar(
-                title = R.string.spamming_users,
+                title = Res.string.spamming_users,
                 selectedCount = selected.size,
                 onCancel = { selected = emptySet() },
                 onUnblock = {
@@ -63,7 +65,7 @@ fun SpammingUsersScreen(
         SelectableUserList(
             modifier = Modifier.padding(padding),
             viewModel = viewModel,
-            emptyMessage = R.string.security_spamming_users_empty,
+            emptyMessage = Res.string.security_spamming_users_empty,
             selected = selected,
             onToggle = { selected = if (it in selected) selected - it else selected + it },
             accountViewModel = accountViewModel,

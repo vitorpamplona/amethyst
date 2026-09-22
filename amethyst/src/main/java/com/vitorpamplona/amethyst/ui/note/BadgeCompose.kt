@@ -119,7 +119,7 @@ fun BadgeCompose(
                     )
 
                     Text(
-                        timeAgo(note.createdAt(), context = context),
+                        timeAgo(note.createdAt()),
                         color = MaterialTheme.colorScheme.placeholderText,
                         maxLines = 1,
                     )

@@ -96,10 +96,21 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmarks
+import com.vitorpamplona.amethyst.commons.resources.drafts
+import com.vitorpamplona.amethyst.commons.resources.drawer_accounts
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.longs
+import com.vitorpamplona.amethyst.commons.resources.pictures
+import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.relay_setup
+import com.vitorpamplona.amethyst.commons.resources.route_chess
+import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
@@ -147,6 +158,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun DrawerContent(
@@ -618,7 +630,7 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            title = R.string.drawer_accounts,
+            title = Res.string.drawer_accounts,
             icon = MaterialSymbols.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
@@ -630,7 +642,7 @@ fun ListContent(
 @Composable
 private fun CreateRows(nav: INav) {
     NavigationRow(
-        title = R.string.share_hls_video,
+        title = Res.string.share_hls_video,
         icon = MaterialSymbols.SettingsInputAntenna,
         tint = MaterialTheme.colorScheme.onBackground,
         nav = nav,
@@ -639,7 +651,7 @@ private fun CreateRows(nav: INav) {
 
     if (isDebug) {
         NavigationRow(
-            title = R.string.route_chess,
+            title = Res.string.route_chess,
             icon = MaterialSymbols.ChessKnight,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -734,7 +746,7 @@ private fun ScheduledPostsNavigationRow(
 
 @Composable
 private fun IconRowWithBadge(
-    title: Int,
+    title: StringResource,
     icon: MaterialSymbol,
     tint: Color,
     badgeCount: Int,
@@ -786,7 +798,7 @@ fun CatalogNavigationRow(
 
 @Composable
 private fun CollapsibleSection(
-    title: Int,
+    title: StringResource,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
     content: @Composable () -> Unit,
@@ -821,7 +833,7 @@ private fun CollapsibleSection(
 
 @Composable
 fun NavigationRow(
-    title: Int,
+    title: StringResource,
     icon: Int,
     iconReference: Int,
     tint: Color,
@@ -842,7 +854,7 @@ fun NavigationRow(
 
 @Composable
 fun NavigationRow(
-    title: Int,
+    title: StringResource,
     icon: Int,
     iconReference: Int,
     tint: Color,
@@ -863,7 +875,7 @@ fun NavigationRow(
 
 @Composable
 fun NavigationRow(
-    title: Int,
+    title: StringResource,
     icon: MaterialSymbol,
     tint: Color,
     nav: INav,
@@ -882,7 +894,7 @@ fun NavigationRow(
 
 @Composable
 fun NavigationRow(
-    title: Int,
+    title: StringResource,
     icon: MaterialSymbol,
     tint: Color,
     nav: INav,
@@ -901,7 +913,7 @@ fun NavigationRow(
 
 @Composable
 fun IconRow(
-    title: Int,
+    title: StringResource,
     icon: Int,
     iconReference: Int,
     tint: Color,
@@ -935,7 +947,7 @@ fun IconRow(
 
 @Composable
 fun IconRow(
-    title: Int,
+    title: StringResource,
     icon: MaterialSymbol,
     tint: Color,
     onClick: () -> Unit,
@@ -982,14 +994,14 @@ fun IconRowRelays(
     ) {
         Icon(
             painter = painterRes(R.drawable.relays, 4),
-            contentDescription = stringRes(R.string.relay_setup),
+            contentDescription = stringRes(Res.string.relay_setup),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurface,
         )
 
         Text(
             modifier = IconRowTextModifier,
-            text = stringRes(id = R.string.relay_setup),
+            text = stringRes(id = Res.string.relay_setup),
             fontSize = Font18SP,
         )
 
@@ -1093,21 +1105,21 @@ fun BottomContent(
 private fun CollapsibleSectionPreview() {
     ThemeComparisonColumn {
         Column {
-            CollapsibleSection(title = R.string.drawer_section_you, expanded = true, onToggleExpand = {}) {
+            CollapsibleSection(title = Res.string.drawer_section_you, expanded = true, onToggleExpand = {}) {
                 IconRow(
-                    title = R.string.profile,
+                    title = Res.string.profile,
                     icon = MaterialSymbols.AccountCircle,
                     tint = MaterialTheme.colorScheme.primary,
                     onClick = {},
                 )
                 IconRow(
-                    title = R.string.bookmarks,
+                    title = Res.string.bookmarks,
                     icon = MaterialSymbols.CollectionsBookmark,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )
                 IconRow(
-                    title = R.string.drafts,
+                    title = Res.string.drafts,
                     icon = MaterialSymbols.Drafts,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
@@ -1115,15 +1127,15 @@ private fun CollapsibleSectionPreview() {
             }
             // Collapsed, to preview the other half of the heading: its rows are hidden and the
             // chevron points down. Real collapse state lives in DrawerSectionCollapsePreferences.
-            CollapsibleSection(title = R.string.drawer_section_feeds, expanded = false, onToggleExpand = {}) {
+            CollapsibleSection(title = Res.string.drawer_section_feeds, expanded = false, onToggleExpand = {}) {
                 IconRow(
-                    title = R.string.pictures,
+                    title = Res.string.pictures,
                     icon = MaterialSymbols.Photo,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},
                 )
                 IconRow(
-                    title = R.string.longs,
+                    title = Res.string.longs,
                     icon = MaterialSymbols.SmartDisplay,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = {},

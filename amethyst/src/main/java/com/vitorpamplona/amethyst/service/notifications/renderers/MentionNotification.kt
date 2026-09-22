@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_channel_message
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -31,8 +32,8 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Text-mention notifications — someone mentioned, quoted, or cited you in a note
@@ -49,7 +50,7 @@ object MentionNotification {
         account: Account,
         event: Event,
         category: NotificationCategory = NotificationCategory.MENTION,
-        @StringRes titleRes: Int = R.string.app_notification_mentions_channel_message,
+        titleRes: StringResource = Res.string.app_notification_mentions_channel_message,
     ) {
         val note = LocalCache.getNoteIfExists(event.id) ?: return
         if (!account.isAcceptable(note)) return
@@ -80,7 +81,7 @@ object MentionNotification {
             nm.postStandard(
                 category = category,
                 id = event.id,
-                messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
+                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
                 messageBody = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),

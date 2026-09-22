@@ -50,26 +50,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil3.compose.rememberAsyncImagePainter
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_show_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_your_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_count
+import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_new_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes_yet
 import com.vitorpamplona.amethyst.commons.resources.podcast_tap_to_edit_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_count
 import com.vitorpamplona.amethyst.commons.resources.podcast_untitled
 import com.vitorpamplona.amethyst.commons.resources.podcast_your_podcast
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.MyPodcastFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -166,19 +169,19 @@ fun PodcastAuthoringScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(text = stringRes(R.string.podcast_new_episode), modifier = Modifier.padding(start = 6.dp))
+                        Text(text = stringRes(Res.string.podcast_new_episode), modifier = Modifier.padding(start = 6.dp))
                     }
                     OutlinedButton(
                         onClick = { nav.nav(Route.NewPodcastTrailer) },
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(text = stringRes(R.string.podcast_new_trailer))
+                        Text(text = stringRes(Res.string.podcast_new_trailer))
                     }
                 }
             }
 
             if (episodes.isNotEmpty()) {
-                item { SectionHeader(pluralStringResource(R.plurals.podcast_episode_count, episodes.size, episodes.size)) }
+                item { SectionHeader(pluralStringRes(Res.plurals.podcast_episode_count, episodes.size, episodes.size)) }
                 items(episodes, key = { it.id }) { ep ->
                     EpisodeRow(
                         title = ep.title() ?: stringRes(Res.string.podcast_untitled),
@@ -189,7 +192,7 @@ fun PodcastAuthoringScreen(
             }
 
             if (trailers.isNotEmpty()) {
-                item { SectionHeader(pluralStringResource(R.plurals.podcast_trailer_count, trailers.size, trailers.size)) }
+                item { SectionHeader(pluralStringRes(Res.plurals.podcast_trailer_count, trailers.size, trailers.size)) }
                 items(trailers, key = { it.id }) { tr ->
                     EpisodeRow(
                         title = tr.title() ?: stringRes(Res.string.podcast_untitled),

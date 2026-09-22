@@ -50,17 +50,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_reload
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_show
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_open
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_tor
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_open_window
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.napplet_manage_permissions
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.commons.R as CommonsR
@@ -125,7 +127,7 @@ fun TopControlSheet(
                     chrome.torOn?.let { torOn ->
                         SheetSwitchItem(
                             symbol = MaterialSymbols.Lock,
-                            label = stringResource(if (torOn) R.string.favorite_app_network_tor else R.string.favorite_app_network_open),
+                            label = stringRes(if (torOn) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open),
                             checked = torOn,
                             onToggle = { chrome.onToggleTor() },
                         )
@@ -153,7 +155,7 @@ fun TopControlSheet(
                     chrome.onFavorite?.let { toggleFavorite ->
                         SheetItem(
                             if (chrome.isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                            stringResource(if (chrome.isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add),
+                            stringRes(if (chrome.isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add),
                         ) {
                             onExpandedChange(false)
                             toggleFavorite()
@@ -164,9 +166,9 @@ fun TopControlSheet(
                             symbol = MaterialSymbols.Code,
                             label =
                                 if (consoleCount > 0) {
-                                    stringResource(CommonsR.string.browser_console_title, consoleCount)
+                                    stringRes(CommonsR.string.browser_console_title, consoleCount)
                                 } else {
-                                    stringResource(CommonsR.string.browser_console_title_short)
+                                    stringRes(CommonsR.string.browser_console_title_short)
                                 },
                             checked = consoleShowing,
                             onToggle = {

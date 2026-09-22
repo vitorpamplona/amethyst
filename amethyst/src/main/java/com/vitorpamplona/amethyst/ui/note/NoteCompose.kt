@@ -55,7 +55,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -70,10 +69,14 @@ import com.vitorpamplona.amethyst.commons.model.textNoteModifications
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.approve
 import com.vitorpamplona.amethyst.commons.resources.draft
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
+import com.vitorpamplona.amethyst.commons.resources.expiration_info_description
 import com.vitorpamplona.amethyst.commons.resources.group_picture
 import com.vitorpamplona.amethyst.commons.resources.jump_to_parent_reply
 import com.vitorpamplona.amethyst.commons.resources.one_year_plus
 import com.vitorpamplona.amethyst.commons.resources.pinned_notes
+import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_description
+import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_title
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_mark
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
@@ -2080,16 +2083,16 @@ fun DisplayExpiration(
         if (expirationDate - TimeUtils.now() > TimeUtils.ONE_YEAR) {
             stringRes(Res.string.one_year_plus)
         } else {
-            timeAheadNoDot(expirationDate, context)
+            timeAheadNoDot(expirationDate)
         }
     HeaderPill(
         symbol = MaterialSymbols.Timer,
         text = text,
-        contentDescription = stringRes(R.string.expiration_date_label),
+        contentDescription = stringRes(Res.string.expiration_date_label),
         onClick = {
             accountViewModel.toastManager.toast(
-                R.string.expiration_date_label,
-                R.string.expiration_info_description,
+                Res.string.expiration_date_label,
+                Res.string.expiration_info_description,
                 SimpleDateFormat.getDateTimeInstance().format(Date(expirationDate * 1000)),
             )
         },
@@ -2258,8 +2261,8 @@ fun PrivateRumorMark(accountViewModel: AccountViewModel) {
         contentDescription = stringRes(Res.string.private_rumor_mark),
         onClick = {
             accountViewModel.toastManager.toast(
-                R.string.private_rumor_info_title,
-                R.string.private_rumor_info_description,
+                Res.string.private_rumor_info_title,
+                Res.string.private_rumor_info_description,
             )
         },
     )

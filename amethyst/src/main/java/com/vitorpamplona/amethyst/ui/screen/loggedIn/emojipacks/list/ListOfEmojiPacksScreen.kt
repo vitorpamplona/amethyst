@@ -52,19 +52,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_emoji_list
+import com.vitorpamplona.amethyst.commons.resources.edit_emoji_pack
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_count
 import com.vitorpamplona.amethyst.commons.resources.emoji_packs_title
 import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_explainer
 import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_title
+import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
 import com.vitorpamplona.amethyst.commons.resources.no_emoji_packs
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -280,7 +282,7 @@ private fun EmojiPackOptionsButton(
             onDismiss = { isMenuOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_emoji_pack)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.edit_emoji_pack)) {
                     onEdit()
                     isMenuOpen.value = false
                 }
@@ -291,7 +293,7 @@ private fun EmojiPackOptionsButton(
                 )
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     isMenuOpen.value = false
                 }
@@ -388,7 +390,7 @@ fun EmojiPackFab(
 ) {
     ExtendedFloatingActionButton(
         text = {
-            Text(text = stringRes(R.string.new_emoji_pack))
+            Text(text = stringRes(Res.string.new_emoji_pack))
         },
         icon = {
             Icon(

@@ -36,12 +36,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.ui.note.timeAbsolute
-import com.vitorpamplona.amethyst.ui.note.timeAbsoluteNoDot
-import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.now
+import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.ui.note.timeAbsoluteWith
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -95,26 +96,27 @@ fun ToggleableTimeAgoText(
 ) {
     val context = LocalContext.current
     val nowState = LocalNowSeconds.current
-    val nowStr = stringRes(id = R.string.now)
+    val nowStr = stringRes(id = Res.string.now)
+    val labels = rememberTimeAgoLabels()
     val interactionSource = remember { MutableInteractionSource() }
     var showAbsolute by remember(timestamp) { mutableStateOf(false) }
 
     val text by
-        remember(timestamp, context, style, nowState, nowStr) {
+        remember(timestamp, context, style, nowState, nowStr, labels) {
             derivedStateOf {
                 if (showAbsolute) {
                     when (style) {
-                        TimeAgoStyle.Dotted -> timeAbsolute(timestamp, context)
-                        TimeAgoStyle.DottedTight -> timeAbsolute(timestamp, context).trimStart()
-                        TimeAgoStyle.Short -> timeAbsoluteNoDot(timestamp, context)
+                        TimeAgoStyle.Dotted -> timeAbsoluteWith(timestamp, context, labels.never)
+                        TimeAgoStyle.DottedTight -> timeAbsoluteWith(timestamp, context, labels.never).trimStart()
+                        TimeAgoStyle.Short -> timeAbsoluteWith(timestamp, context, labels.never, prefix = "")
                     }
                 } else {
                     // Read nowState only when displaying a relative time, so an item
                     // toggled to absolute doesn't recompose on every 30-second tick.
                     nowState.value
                     when (style) {
-                        TimeAgoStyle.Dotted -> timeAgo(timestamp, context)
-                        TimeAgoStyle.DottedTight -> timeAgo(timestamp, context).trimStart()
+                        TimeAgoStyle.Dotted -> timeAgoWith(timestamp, labels)
+                        TimeAgoStyle.DottedTight -> timeAgoWith(timestamp, labels).trimStart()
                         TimeAgoStyle.Short -> timeAgoShort(timestamp, nowStr)
                     }
                 }

@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.nwc
 
-import android.content.Context
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 
@@ -33,10 +35,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 // nothing at all — which is the failure mode these exist to prevent.
 
 /** Shown when no kind-23195 reply arrived before the client gave up waiting. */
-fun nwcTimeoutMessage(context: Context): String =
-    pluralStringRes(
-        context,
-        R.plurals.wallet_connect_no_response_error,
+suspend fun nwcTimeoutMessage(): String =
+    loadPluralStringRes(
+        Res.plurals.wallet_connect_no_response_error,
         NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
         NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
     )
@@ -57,9 +58,9 @@ fun nwcTimeoutMessage(context: Context): String =
  *   settled payment is guessed into `PayInvoiceSuccessResponse` by the deserializer, so
  *   demanding (say) `PayKeysendSuccessResponse` would report a real payment as unreadable.
  */
-fun Response?.nwcFailureDetail(context: Context): String? =
+suspend fun Response?.nwcFailureDetail(): String? =
     when (this) {
-        null -> stringRes(context, R.string.wallet_connect_unreadable_response_error)
-        is IErrorResponseLike -> errorMessage() ?: stringRes(context, R.string.error_parsing_error_message)
+        null -> loadStringRes(Res.string.wallet_connect_unreadable_response_error)
+        is IErrorResponseLike -> errorMessage() ?: loadStringRes(Res.string.error_parsing_error_message)
         else -> null
     }

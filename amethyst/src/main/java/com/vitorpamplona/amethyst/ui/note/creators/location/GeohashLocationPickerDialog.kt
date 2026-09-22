@@ -83,10 +83,10 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.location_picker_area
 import com.vitorpamplona.amethyst.commons.resources.location_picker_confirm
@@ -446,7 +446,7 @@ private fun PickerHeader(onClose: () -> Unit) {
             IconButton(onClick = onClose) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.cancel),
+                    contentDescription = stringRes(Res.string.cancel),
                     modifier = Modifier.size(22.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )

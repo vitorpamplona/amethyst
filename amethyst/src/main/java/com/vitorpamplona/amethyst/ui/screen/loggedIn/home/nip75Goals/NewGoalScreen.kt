@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.goal_amount_label
 import com.vitorpamplona.amethyst.commons.resources.goal_amount_placeholder
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.goal_summary_label
 import com.vitorpamplona.amethyst.commons.resources.goal_summary_placeholder
 import com.vitorpamplona.amethyst.commons.resources.goal_website_label
 import com.vitorpamplona.amethyst.commons.resources.goal_website_placeholder
+import com.vitorpamplona.amethyst.commons.resources.new_goal
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -101,7 +101,7 @@ fun NewGoalScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.new_goal,
+                titleRes = Res.string.new_goal,
                 isActive = goalViewModel::canPost,
                 onCancel = {
                     goalViewModel.cancel()

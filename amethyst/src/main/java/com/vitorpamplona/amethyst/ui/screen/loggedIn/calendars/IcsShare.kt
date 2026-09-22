@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
 import java.io.File
 
 /**
@@ -40,6 +38,7 @@ fun shareIcs(
     context: Context,
     filename: String,
     content: String,
+    chooserTitle: String,
 ) {
     val dir = File(context.cacheDir, "calendar").apply { mkdirs() }
     val file = File(dir, filename)
@@ -55,7 +54,7 @@ fun shareIcs(
         }
     val chooser =
         Intent
-            .createChooser(intent, stringRes(context, R.string.calendar_export_share_title))
+            .createChooser(intent, chooserTitle)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(chooser)
 }

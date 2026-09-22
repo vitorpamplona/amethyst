@@ -1,112 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="other">이 게시물에 해시태그가 %1$d개를 초과합니다</item>
-    </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">%1$d개 파일 포함</item>
-    </plurals>
-    <plurals name="thread_collapsed_reply_count">
-        <item quantity="other">+%1$d\n개 답글</item>
-    </plurals>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="spam">스팸</string>
-    <string name="spam_description">이 relay에서 수신된 스팸 이벤트 수</string>
-    <string name="impersonation">사칭</string>
-    <string name="illegal_behavior">불법 행위</string>
-    <string name="request_deletion">삭제 요청</string>
     <string name="block_hide_user"><![CDATA[사용자 차단 및 숨기기]]></string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 답글을 달려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 게시물을 부스트하려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_like_posts">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 좋아요를 누르려면 개인 키로 로그인하세요</string>
-    <string name="no_zap_amount_setup_long_press_to_change">Zap 금액이 설정되지 않았습니다. 길게 눌러 변경하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. Zap을 보내려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 팔로우하려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 언팔로우하려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 단어나 문장을 숨기려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 단어나 문장을 표시하려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 업로드하려면 개인 키로 로그인하세요</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">공개 키로 로그인 중입니다. 공개 키는 읽기 전용입니다. 이벤트에 서명하려면 개인 키로 로그인하세요</string>
-    <string name="unauthorized_exception">승인되지 않은 복호화</string>
-    <string name="unauthorized_exception_description">서명 앱이 이 작업에 필요한 복호화를 승인하지 않았습니다. 서명 앱에서 NIP-44 복호화를 활성화한 후 다시 시도하세요</string>
-    <string name="signer_not_found_exception">서명 앱을 찾을 수 없음</string>
-    <string name="signer_not_found_exception_description">서명 앱이 삭제되었나요? 서명 앱이 설치되어 있고 이 계정이 등록되어 있는지 확인하세요. 서명 앱이 변경된 경우 로그아웃 후 다시 로그인하세요.</string>
-    <string name="signer_illegal_state_exception_description">외부 서명 앱이 요청과 맞지 않는 응답을 반환했습니다. Amethyst 또는 서명 앱에 버그가 있을 수 있습니다.</string>
-    <string name="boost">부스트</string>
     <string name="boosted">부스트됨</string>
     <string name="edited_number">수정 #%1$s</string>
-    <string name="propose_an_edit">수정 제안</string>
-    <string name="add">추가</string>
-    <string name="error_parsing_error_message">오류 메시지 파싱 실패</string>
-    <string name="profile">프로필</string>
-    <string name="security_filters">보안 필터</string>
-    <string name="clink_requesting_invoice">인보이스 요청 중…</string>
-    <string name="clink_debit_no_response">직불 서비스가 결제를 완료하지 못했습니다.</string>
-    <string name="clink_confirm_pay_amount_via_source">%2$s을(를) 통해 %1$s을(를) 결제하시겠습니까?</string>
-    <string name="clink_confirm_pay_via_source">%1$s을(를) 통해 이 인보이스를 결제하시겠습니까?</string>
-    <string name="clink_offer_invalid_amount">이 offer에 유효한 금액을 입력하세요.</string>
-    <string name="clink_budget_one_time">1회</string>
-    <string name="clink_budget_daily">일별</string>
-    <string name="clink_budget_weekly">주별</string>
-    <string name="clink_budget_monthly">월별</string>
-    <string name="pay">결제</string>
-    <string name="send_payment_paying_via">%1$s을(를) 통해 결제 중…</string>
-    <string name="send_payment_failed">결제 실패</string>
-    <string name="send_payment_cashu_balance">이 수신자에게 사용 가능한 잔액: %1$s sats</string>
-    <string name="send_payment_onchain_txid">트랜잭션: %1$s</string>
-    <string name="preview_card_image_for">"%1$s의 미리보기 카드 이미지"</string>
-    <string name="description">설명</string>
-    <string name="what_s_on_your_mind">무슨 생각을 하고 계신가요?</string>
-    <string name="write_a_message">메시지를 입력하세요…</string>
-    <string name="post">게시</string>
     <string name="save">저장</string>
-    <string name="send">전송</string>
-    <string name="create">만들기</string>
     <string name="rename">이름 바꾸기</string>
-    <string name="cancel">취소</string>
-    <string name="error">오류</string>
-    <string name="errors">오류 목록</string>
-    <string name="connection_success_rate_description">relay 연결 성공률</string>
-    <string name="download_to_phone">휴대폰에 저장</string>
-    <string name="image_saved_to_the_gallery">사진 갤러리에 이미지가 저장되었습니다</string>
-    <string name="video_download_has_started_toast">동영상 다운로드를 시작했습니다…</string>
-    <string name="media_download_has_started_toast">미디어 다운로드를 시작했습니다…</string>
-    <string name="pin_conversation">상단에 고정</string>
-    <string name="unpin_conversation">고정 해제</string>
-    <string name="failed_to_save_the_image">이미지 저장에 실패했습니다</string>
-    <string name="video_saved_to_the_gallery">동영상 갤러리에 저장되었습니다</string>
-    <string name="failed_to_save_the_video">동영상 저장에 실패했습니다</string>
-    <string name="pdf_saved_to_the_gallery">Downloads/Amethyst에 PDF가 저장되었습니다</string>
-    <string name="failed_to_save_the_pdf">PDF 저장에 실패했습니다</string>
-    <string name="no_camera_app_found">이 기기에서 카메라 앱을 찾을 수 없습니다</string>
-    <string name="record_a_message_description">길게 눌러 메시지를 녹음하세요</string>
-    <string name="upload_error_title">업로드 오류</string>
-    <string name="upload_error_voice_message_failed">음성 메시지 업로드에 실패했습니다</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95는 아직 음성 메시지를 지원하지 않습니다</string>
-    <string name="upload_error_voice_message_exception">음성 업로드 실패: %1$s</string>
-    <string name="voice_preset_none">없음</string>
-    <string name="voice_preset_deep">낮게</string>
-    <string name="voice_preset_high">높게</string>
-    <string name="voice_preset_neutral">보통</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">이 사용자는 sats를 받을 Lightning 주소가 설정되어 있지 않습니다</string>
-    <string name="reply_here">"여기에 답글을… "</string>
-    <string name="known">알려진</string>
-    <string name="new_requests">새 요청</string>
-    <string name="blocked_users">차단된 사용자</string>
-    <string name="new_threads">새 스레드</string>
-    <string name="conversations">대화</string>
-    <string name="more_options">더 보기</string>
-    <string name="show_private_key_qr_code">개인 키 QR 코드 표시</string>
-    <string name="show_encrypted_private_key_qr_code">암호화된 개인 키 QR 코드 표시</string>
-    <string name="follow">팔로우</string>
-    <string name="follow_back">맞팔로우</string>
-    <string name="hide_password">비밀번호 숨기기</string>
-    <string name="invalid_key">유효하지 않은 키</string>
-    <string name="invalid_key_with_message">유효하지 않은 키: %1$s</string>
-    <string name="password_is_required">비밀번호가 필요합니다</string>
-    <string name="key_is_required">키가 필요합니다</string>
-    <string name="name_is_required">이름이 필요합니다</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -115,155 +15,7 @@
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="changed_chat_profile_to">새 채팅 프로필:</string>
-    <string name="leave">나가기</string>
-    <string name="unfollow">팔로우 취소</string>
-    <string name="ephemeral_relay_chat">임시 채팅</string>
-    <string name="relay_chat">relay 채팅</string>
-    <string name="relay_chat_title">relay 채팅</string>
-    <string name="relay_chat_explainer">relay 채팅은 홈 relay가 관리하는 채팅 그룹입니다.
-        Nostr의 모든 사람에게 공개되며 누구나 참여할 수 있습니다.
-        특정 주제에 관한 열린 커뮤니티에 적합합니다. 일부 그룹은 임시적이라
-    채팅 메시지가 시간이 지나면 사라집니다</string>
-    <string name="public_chat">공개 채팅</string>
-    <string name="marmot_group">MLS 그룹</string>
-    <string name="public_chat_title">공개 채팅 메타데이터</string>
-    <string name="public_chat_explainer">공개 채팅은 Nostr의 모든 사람에게 공개되며
-        누구나 참여할 수 있습니다. 특정 주제에 관한 열린 커뮤니티에 적합합니다.
-        relay에서 게시물을 삭제하여 관리할 수 있습니다</string>
-    <string name="public_chat_relays_title">relay</string>
-    <string name="public_chat_relays_explainer">이 그룹을 호스팅하는 relay를 1~3개 입력하세요.
-        Nostr 클라이언트는 이 설정을 통해 메시지를 다운로드하고 전송할 위치를 파악합니다.</string>
-    <string name="remove">제거</string>
-    <string name="never">안 함</string>
-    <string name="now">지금</string>
-    <string name="h">시간</string>
-    <string name="m">분</string>
-    <string name="d">일</string>
-    <string name="nudity">음란물</string>
-    <string name="profanity_hateful_speech">욕설 / 혐오 발언</string>
-    <string name="backup_keys">키 백업</string>
-    <string name="failed_to_encrypt_key">개인 키 암호화에 실패했습니다</string>
-    <string name="secret_key_copied_to_clipboard">비밀 키(nsec)가 클립보드에 복사되었습니다</string>
-    <string name="copy_my_secret_key">내 비밀 키 복사</string>
-    <string name="biometric_authentication_failed">인증 실패</string>
-    <string name="biometric_authentication_failed_explainer">생체 인증으로 이 기기 소유자 확인에 실패했습니다</string>
-    <string name="biometric_authentication_failed_explainer_with_error">생체 인증으로 이 기기 소유자 확인에 실패했습니다. 오류: %1$s</string>
-    <string name="copied_note_text_to_clipboard">노트 텍스트가 클립보드에 복사되었습니다</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">작성자의 @npub가 클립보드에 복사되었습니다</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">노트 ID(@note1)가 클립보드에 복사되었습니다</string>
-    <string name="private_conversation_notification">"&lt;개인 메시지를 복호화할 수 없습니다&gt;\n\n%1$s와 %2$s 사이의 개인/암호화된 대화에서 회원님이 언급되었습니다."</string>
-    <string name="drawer_accounts">계정</string>
-    <string name="drawer_section_navigate">탐색</string>
-    <string name="drawer_section_you">나</string>
-    <string name="drawer_section_feeds">피드</string>
-    <string name="drawer_section_create">만들기</string>
-    <string name="drawer_section_system">시스템</string>
-    <string name="back">뒤로</string>
-    <string name="quick_action_share_browser_link">브라우저 링크 공유</string>
-    <string name="quick_action_share">공유</string>
-    <string name="share_as_image">이미지로 공유</string>
-    <string name="share_as_image_url">이미지 URL로 공유</string>
-    <string name="quick_action_copy_note_id">노트 ID</string>
-    <string name="quick_action_delete">삭제</string>
-    <string name="quick_action_mute_thread">스레드 뮤트</string>
-    <string name="quick_action_unmute_thread">스레드 뮤트 해제</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[차단 및 숨기기]]></string>
-    <string name="block_only">차단</string>
-    <string name="bookmarks">북마크</string>
-    <string name="migrate_bookmarks_success">북마크가 성공적으로 마이그레이션되었습니다</string>
-    <string name="drafts">임시 저장</string>
-    <string name="scheduled_posts">예약된 게시물</string>
-    <string name="schedule_post_button_add">게시물 예약</string>
-    <string name="schedule_post_button_remove">예약 취소</string>
-    <string name="schedule_post_warning_single">예약된 게시물은 앱을 다시 열 때까지 게시되지 않을 수 있습니다. 안정적인 백그라운드 예약을 위해 설정 → UI 환경설정에서 상시 알림을 활성화하세요.</string>
-    <string name="schedule_post_warning_multi">예약된 게시물은 앱을 다시 열 때까지 게시되지 않을 수 있습니다. 이 계정이 활성 상태인 동안에는 다른 계정의 예약된 게시물이 실행되지 않습니다. 안정적인 백그라운드 예약을 위해 설정 → UI 환경설정에서 상시 알림을 활성화하세요.</string>
-    <string name="scheduled_posts_at_time">%1$s · %2$s 후</string>
-    <string name="scheduled_posts_at_time_past">%1$s · %2$s 전</string>
-    <string name="scheduled_posts_day_tomorrow">내일</string>
-    <string name="scheduled_posts_logout_toast_zero">로그아웃됨</string>
-    <plurals name="scheduled_posts_logout_toast">
-        <item quantity="other">로그아웃됨 · 예약된 게시물 %d개가 삭제되었습니다</item>
-    </plurals>
-    <string name="scheduled_posts_notification_sent_title">예약된 게시물이 게시됨</string>
-    <string name="scheduled_posts_notification_failed_title">예약된 게시물 실패</string>
-    <string name="app_notification_scheduled_posts_channel_name">예약된 게시물</string>
-    <string name="app_notification_scheduled_posts_channel_description">예약된 게시물이 게시되거나 게시에 실패할 때 알림을 받습니다.</string>
-    <string name="scheduled_posts_action_send_now">지금 보내기</string>
-    <string name="scheduled_posts_error_prefix">오류: %1$s</string>
-    <string name="scheduled_posts_status_pending">예약됨</string>
-    <string name="scheduled_posts_status_publishing">전송 중…</string>
-    <string name="scheduled_posts_status_failed">실패</string>
-    <string name="scheduled_posts_status_sent">전송됨</string>
-    <string name="scheduled_posts_status_cancelled">취소됨</string>
-    <plurals name="scheduled_posts_logout_warning">
-        <item quantity="other">아직 게시되지 않은 예약된 게시물이 %d개 있습니다. 로그아웃하면 영구적으로 삭제됩니다.</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_queued">
-        <item quantity="other">%d개 대기 중</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="other"> · %d개 1시간 내 예정</item>
-    </plurals>
-    <plurals name="scheduled_posts_relay_count">
-        <item quantity="other">relay %d개로</item>
-    </plurals>
-    <string name="scheduled_posts_event_id_copied">노트 ID가 복사됨</string>
-    <string name="polls">투표</string>
-    <string name="open_polls">열림</string>
-    <string name="closed_polls">닫힘</string>
-    <string name="badges">배지</string>
-    <string name="communities">커뮤니티</string>
-    <string name="new_community">새 커뮤니티</string>
-    <string name="edit_community">커뮤니티 편집</string>
-    <string name="new_community_moderators_section">관리자</string>
-    <string name="new_community_relays_section">Relay</string>
-    <string name="new_community_rules_section">검증 가능한 규칙 (선택 사항)</string>
-    <string name="new_community_rules_kinds_section">허용된 이벤트 kind</string>
-    <string name="new_community_rules_kind_short_text">짧은 텍스트 (1)</string>
-    <string name="new_community_rules_kind_long_form">장문 기사 (30023)</string>
-    <string name="new_community_rules_kind_picture">사진 게시물 (20)</string>
-    <string name="new_community_rules_kind_video">동영상 게시물 (21)</string>
-    <string name="new_community_rules_kind_short_video">짧은 동영상 (22)</string>
-    <string name="new_community_rules_kind_comment">커뮤니티 댓글 (1111)</string>
-    <string name="new_community_rules_banned_section">차단된 사용자</string>
-    <string name="new_community_rules_wot_section">신뢰 네트워크 게이트 (선택 사항)</string>
-    <string name="new_community_rules_max_event_size_section">전체 최대 이벤트 크기 (선택 사항)</string>
-    <string name="new_badge">새 배지</string>
-    <string name="award_badge">배지 수여</string>
-    <string name="profile_badges_title">프로필 배지</string>
-    <string name="pictures">사진</string>
-    <string name="workouts">운동</string>
-    <string name="new_workout">새 운동</string>
-    <string name="exercise_running">달리기</string>
-    <string name="exercise_walking">걷기</string>
-    <string name="exercise_cycling">자전거</string>
-    <string name="exercise_hiking">하이킹</string>
-    <string name="exercise_swimming">수영</string>
-    <string name="exercise_rowing">조정</string>
-    <string name="exercise_strength">근력 운동</string>
-    <string name="exercise_yoga">요가</string>
-    <string name="exercise_meditation">명상</string>
-    <string name="exercise_diet">식이요법</string>
-    <string name="exercise_fasting">단식</string>
-    <string name="exercise_circuit">서킷</string>
-    <string name="software_apps">앱</string>
     <string name="route_software_apps">앱</string>
-    <string name="napplets">nApplet</string>
-    <string name="nsites">nSite</string>
-    <string name="browser">브라우저</string>
-    <string name="browser_tor_on">Tor를 통해 로드 중. 탭하여 일반 웹으로 전환.</string>
-    <string name="browser_tor_off">일반 웹으로 로드 중. 탭하여 Tor로 전환.</string>
-    <string name="browser_favorites">즐겨찾기</string>
-    <string name="favorite_apps">즐겨찾는 앱</string>
-    <string name="favorite_app_add">즐겨찾기에 추가</string>
-    <string name="favorite_app_remove">즐겨찾기에서 제거</string>
-    <string name="favorite_app_network_tor">Tor를 통해 로드됩니다.</string>
-    <string name="favorite_app_network_open">일반 웹을 통해 로드됩니다.</string>
-    <string name="favorite_notice_published">relay에 게시됨</string>
-    <string name="favorite_notice_uploaded">파일 업로드됨</string>
-    <string name="favorite_notice_paid">결제 완료</string>
-    <string name="favorite_app_still_loading">해당 앱은 아직 로드되지 않았습니다. 잠시 후 다시 시도하세요.</string>
-    <string name="favorite_app_recent">최근</string>
     <string name="napplet_permissions">nApplet 권한</string>
     <string name="napplet_permissions_empty">아직 nApplet 권한이 없습니다</string>
     <string name="napplet_permissions_empty_subtitle">nApplet에 부여한 권한이 여기에 표시됩니다.</string>
@@ -273,45 +25,11 @@
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
     <string name="napplet_cap_shell">셸</string>
-    <string name="napplet_cap_identity">신원</string>
-    <string name="napplet_cap_keys">키보드 동작</string>
-    <string name="napplet_cap_relay">Relay</string>
-    <string name="napplet_cap_storage">저장소</string>
-    <string name="napplet_cap_value">결제</string>
-    <string name="napplet_cap_resource">네트워크</string>
-    <string name="napplet_cap_upload">업로드</string>
     <string name="napplet_cap_shell_desc">사용 가능한 기능 확인</string>
-    <string name="napplet_cap_identity_desc">공개 키 읽기</string>
-    <string name="napplet_cap_keys_desc">키보드 단축키 바인딩</string>
-    <string name="napplet_cap_relay_desc">이벤트 읽기, 서명 및 게시</string>
-    <string name="napplet_cap_storage_desc">자체 개인 저장소</string>
-    <string name="napplet_cap_value_desc">Lightning 인보이스 결제</string>
-    <string name="napplet_cap_resource_desc">웹 및 Blossom 리소스 가져오기</string>
-    <string name="napplet_cap_upload_desc">미디어 서버에 파일 업로드</string>
-    <string name="napplet_cap_theme">테마</string>
-    <string name="napplet_cap_notify">알림</string>
-    <string name="napplet_cap_inc">메시징</string>
-    <string name="napplet_cap_theme_desc">앱 색상과 일치시키기</string>
-    <string name="napplet_cap_notify_desc">알림 표시</string>
-    <string name="napplet_cap_inc_desc">다른 nApplet과 메시지 교환</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">기능: %1$s</string>
-    <string name="napplet_consent_get_pubkey">이 nApplet이 공개 키를 읽으려고 합니다.</string>
-    <string name="napplet_consent_identity_read">이 nApplet이 프로필 및 계정 데이터를 읽으려고 합니다.</string>
-    <string name="napplet_consent_publish">이 nApplet이 귀하를 대신하여 kind %1$d 이벤트를 서명하고 게시하려고 합니다.</string>
-    <string name="napplet_consent_publish_preview">이 nApplet이 귀하를 대신하여 kind %1$d 이벤트를 서명하고 게시하려고 합니다:</string>
-    <string name="napplet_consent_publish_encrypted">이 nApplet이 귀하를 대신하여 암호화된 이벤트를 전송하려고 합니다.</string>
-    <string name="napplet_consent_query">이 nApplet이 relay에서 이벤트를 읽으려고 합니다.</string>
-    <string name="napplet_consent_storage">이 nApplet이 개인 저장소를 사용하려고 합니다.</string>
     <string name="napplet_consent_pay">이 nApplet이 Lightning 인보이스를 결제하려고 합니다.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
-    <string name="napplet_consent_resource">이 nApplet이 웹 리소스를 가져오려고 합니다.</string>
-    <string name="napplet_consent_upload">이 nApplet이 미디어 서버에 파일을 업로드하려고 합니다.</string>
-    <string name="napplet_consent_notify">이 nApplet이 알림을 표시하려고 합니다.</string>
-    <string name="napplet_consent_sign">이 사이트가 귀하의 Nostr 키로 kind %1$d 이벤트를 서명하려고 합니다.</string>
-    <plurals name="napplet_consent_pay_amount">
-        <item quantity="other">이 nApplet이 %1$d sats의 Lightning 인보이스를 결제하려고 합니다.</item>
-    </plurals>
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
@@ -344,186 +62,16 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="public_chats">공개 채팅</string>
-    <string name="follow_packs">팔로우 팩</string>
-    <string name="live_streams">라이브 스트림</string>
-    <string name="nest_raise_hand">손 들기</string>
-    <string name="nest_lower_hand">손 내리기</string>
-    <string name="nest_mute">음소거</string>
-    <string name="nest_unmute">음소거 해제</string>
-    <string name="nest_chat_send_failed_title">메시지를 보낼 수 없습니다</string>
-    <string name="nest_mic_mute">마이크 음소거</string>
-    <string name="nest_mic_unmute">마이크 음소거 해제</string>
-    <string name="nest_notification_channel_description">방이 열려 있는 동안 오디오를 계속 재생합니다.</string>
-    <string name="nest_notification_listening">Nest 연결됨</string>
-    <string name="nest_notification_broadcasting">Nest — 라이브</string>
-    <string name="nest_notification_text">탭하여 돌아가기.</string>
-    <string name="nest_notification_stop">중지</string>
-    <string name="nest_presence_raised_hand">손을 들었습니다</string>
-    <string name="nest_presence_on_stage">스테이지에 올라갔습니다</string>
-    <string name="nest_presence_speaking">발언 중입니다</string>
-    <string name="nest_presence_listening">청중으로 참가했습니다</string>
-    <string name="nest_presence_left">Nest를 떠났습니다</string>
-    <string name="nest_leave">나가기</string>
-    <string name="nest_leave_host_close_failed">방을 종료됨으로 표시할 수 없습니다. 어쨌든 나가기 — 방은 자동으로 닫힙니다.</string>
-    <plurals name="nest_listener_count">
-        <item quantity="other">%1$d명 청취자</item>
-    </plurals>
-    <string name="nest_hush_local">이 발언자 로컬 음소거</string>
-    <string name="nest_hush_local_restore">이 발언자 복원</string>
-    <string name="nest_participant_follow">팔로우</string>
-    <string name="nest_participant_unfollow">팔로우 취소</string>
-    <string name="nest_participant_mute">음소거</string>
-    <string name="nest_participant_unmute">음소거 해제</string>
-    <string name="nest_no_server_save_failed">Nest 서버 목록을 저장할 수 없습니다. 다시 시도하세요.</string>
-    <string name="nests_servers_title">Nest 서버</string>
-    <string name="nests_servers_my_section">내 서버</string>
-    <string name="nests_servers_my_explainer">다른 클라이언트가 설정을 읽을 수 있도록 kind-10112 교체 가능 이벤트로 저장됩니다.</string>
-    <string name="nests_servers_recommended_section">추천 서버</string>
-    <string name="nests_servers_recommended_explainer">한 번의 탭으로 목록에 추가할 수 있는 기본 제안입니다.</string>
-    <string name="longs">동영상</string>
-    <string name="route_music_tracks">음악</string>
-    <string name="route_music_playlists">재생목록</string>
-    <string name="route_podcast_episodes">에피소드</string>
-    <string name="route_podcasts">팟캐스트</string>
-    <plurals name="podcast_episode_count">
-        <item quantity="other">%1$d개 에피소드</item>
-    </plurals>
-    <string name="new_music_track">새 음악 트랙</string>
-    <string name="new_music_playlist">새 재생목록</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="other">%1$d개 트랙</item>
-    </plurals>
-    <string name="add_to_public_bookmarks">공개 북마크에 추가</string>
-    <string name="remove_from_public_bookmarks">공개 북마크에서 제거</string>
-    <string name="pin_to_profile">프로필에 고정</string>
-    <string name="unpin_from_profile">프로필에서 고정 해제</string>
-    <string name="bookmark_list_creation_screen_title">새 북마크 목록</string>
-    <string name="bookmark_list_edit_sub_title">북마크 목록 메타데이터</string>
-    <string name="interest_sets_title">해시태그 세트</string>
-    <string name="interest_set_creation_screen_title">새 관심 세트</string>
-    <string name="interest_set_rename">이름 변경</string>
-    <string name="private_note">비공개로 만들기: 알림을 받는 사용자에게만 노트를 gift-wrap으로 전송</string>
-    <string name="disable_private_note">공개로 만들기</string>
-    <string name="private_note_locked">비공개 노트에 대한 답글은 항상 비공개로 유지됩니다</string>
-    <string name="private_note_visible_to">볼 수 있는 사람</string>
     <string name="private_note_no_receivers">아직 수신자가 없습니다. 본인만 이 노트를 볼 수 있습니다. 공유할 사람을 추가하세요.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">추가</string>
     <string name="notify_remove_user">알림에서 사용자 제거</string>
     <string name="notify_search_and_add_user">알림을 보낼 사용자 검색 및 추가</string>
-    <string name="bookmark_list_explainer">북마크 목록의 메타데이터는 Nostr의 누구나 볼 수 있습니다. 비공개 항목만 암호화됩니다.</string>
-    <string name="move_bookmark_to_public_label">공개로 이동</string>
-    <string name="move_bookmark_to_private_label">비공개로 이동</string>
-    <string name="reload_mint_confirm">충전 &amp; zap 전송</string>
-    <string name="reload_mint_send_confirm">zap 전송</string>
-    <string name="reload_mint_summary">%2$s에 %1$s sats 충전 후 %4$s sats zap %3$s · 수수료 ≈ %5$s sats</string>
-    <string name="poll_option_index">%s번 옵션</string>
-    <string name="poll_single_choice">단일 선택</string>
-    <string name="poll_multiple_choice">복수 선택</string>
-    <string name="poll_unable_to_vote">투표할 수 없습니다</string>
-    <string name="poll_is_closed_explainer">투표가 새로운 투표를 받지 않습니다</string>
-    <string name="one_vote_per_user_on_atomic_votes">이 유형의 투표에서는 사용자당 한 번만 투표할 수 있습니다</string>
-    <string name="poll_author_no_vote">투표 작성자는 자신의 투표에 참여할 수 없습니다.</string>
-    <string name="hash_verification_info_title">이것이 무슨 의미인가요?</string>
-    <string name="hash_verification_passed">이 콘텐츠는 게시 이후 동일합니다</string>
-    <string name="hash_verification_failed">이 콘텐츠가 변경되었습니다. 작성자가 변경 사항을 확인하거나 승인하지 않았을 수 있습니다</string>
-    <string name="content_description_add_media">미디어 추가</string>
-    <string name="content_description_add_image">이미지 추가</string>
-    <string name="content_description_add_video">동영상 추가</string>
-    <string name="content_description_add_document">문서 추가</string>
-    <string name="file_server">파일 서버</string>
-    <string name="file_server_description">이 파일을 업로드할 서버를 선택하세요</string>
-    <string name="media_servers">미디어 서버</string>
     <string name="set_preferred_media_servers">선호하는 미디어 업로드 서버를 설정하세요.</string>
     <string name="recommended_media_servers">추천 미디어 서버</string>
     <string name="built_in_servers_description">Amethyst의 기본 목록입니다. 개별적으로 추가하거나 전체 목록을 추가할 수 있습니다.</string>
-    <string name="payment_targets">결제 대상</string>
-    <string name="payment_targets_section_explainer">다양한 네트워크(예: bitcoin, lightning, ethereum)의 결제 주소를 추가하세요.</string>
-    <string name="no_payment_app_found">이 결제를 처리할 앱을 찾을 수 없습니다. 호환 가능한 지갑을 설치하세요.</string>
-    <string name="no_payment_app_found_for_type">%1$s 결제를 처리할 앱이 설치되어 있지 않습니다. 호환 가능한 지갑을 설치하세요.</string>
-    <string name="error_dialog_payment_error">결제를 열 수 없습니다</string>
-    <string name="privacy_options">개인 정보 옵션</string>
-    <string name="follow_list_kind3follows">모든 팔로우</string>
-    <string name="follow_list_kind3follows_users_only">모든 사용자 팔로우</string>
-    <string name="follow_list_kind3_follows_users_only">기본 팔로우 목록</string>
-    <string name="follow_list_aroundme">내 주변</string>
-    <string name="follow_list_global">전체</string>
-    <string name="follow_list_curated">큐레이션</string>
-    <string name="follow_list_mine">내 목록</string>
-    <string name="follow_list_mute_list">뮤트 목록</string>
-    <string name="follow_set_creation_dialog_title">새 팔로우 목록</string>
-    <string name="follow_pack_creation_dialog_title">새 팔로우 팩</string>
-    <string name="follow_set_edit_list_metadata">목록 편집</string>
-    <string name="connect_through_your_orbot_setup_short">기본 포트는 9050입니다</string>
-    <string name="orbot_socks_port">Orbot Socks 포트</string>
-    <string name="use_internal_tor">내장 Tor 엔진</string>
-    <string name="use_internal_tor_explainer">내장 버전 또는 Orbot을 사용하세요</string>
-    <string name="tor_preset">Tor/개인 정보 보호 프리셋</string>
-    <string name="tor_preset_explainer">아래의 모든 설정을 빠르게 수정합니다</string>
-    <string name="tor_use_onion_address">Onion URL/Relay</string>
-    <string name="tor_use_onion_address_explainer">.onion URL에 Tor를 사용합니다</string>
-    <string name="tor_use_dm_relays">DM Relay</string>
-    <string name="tor_use_dm_relays_explainer">DM 발신 및 수신에 Tor를 강제 사용합니다</string>
-    <string name="tor_use_new_relays">신뢰되지 않은 Relay</string>
-    <string name="tor_use_new_relays_explainer">outbox/inbox relay에 Tor를 강제 사용합니다</string>
-    <string name="tor_use_trusted_relays">신뢰된 Relay</string>
-    <string name="tor_use_trusted_relays_explainer">목록에 있는 모든 relay에 Tor를 강제 사용합니다</string>
-    <string name="tor_use_profile_pictures">프로필 사진</string>
-    <string name="tor_use_profile_pictures_explainer">프로필 사진 로딩 시 Tor를 강제 사용합니다</string>
-    <string name="tor_use_url_previews">URL 미리보기</string>
-    <string name="tor_use_url_previews_explainer">URL 미리보기 로딩 시 Tor를 강제 사용합니다</string>
-    <string name="tor_use_images">이미지</string>
-    <string name="tor_use_images_explainer">이미지 로딩 시 Tor를 강제 사용합니다</string>
-    <string name="tor_use_videos">동영상</string>
-    <string name="tor_use_videos_explainer">동영상 로딩 시 Tor를 강제 사용합니다</string>
-    <string name="tor_use_money_operations">금전 거래</string>
-    <string name="tor_use_money_operations_explainer">zap, Lightning 및 Cashu 전송에 Tor를 강제 사용합니다</string>
-    <string name="tor_use_nip05_verification">Nostr 주소 인증</string>
-    <string name="tor_use_nip05_verification_explainer">NIP-05 주소 인증 시 Tor를 강제 사용합니다</string>
-    <string name="tor_use_media_uploads">미디어 업로드</string>
-    <string name="tor_use_media_uploads_explainer">콘텐츠 업로드 시 Tor를 강제 사용합니다</string>
-    <string name="tor_internal">내장</string>
-    <string name="tor_off">끄기</string>
-    <string name="tor_when_needed">기본</string>
-    <string name="tor_default">기본값</string>
-    <string name="tor_small_payloads">미디어 제외 전체</string>
-    <string name="tor_full_privacy">완전한 개인 정보 보호</string>
-    <string name="tor_custom">사용자 지정</string>
-    <string name="tor_when_needed_explainer">서버에서 요구할 때 Tor를 사용합니다</string>
-    <string name="tor_default_explainer">무작위 relay에서 IP를 숨깁니다</string>
-    <string name="tor_small_payloads_explainer">이미지와 동영상을 제외한 모든 곳에서 IP를 숨깁니다</string>
-    <string name="tor_full_privacy_explainer">모든 연결에서 IP를 숨깁니다</string>
-    <string name="tor_custom_explainer">직접 설정하기</string>
-    <string name="app_notification_dms_channel_name">비공개 메시지</string>
-    <string name="app_notification_dms_channel_description">비공개 메시지가 도착하면 알립니다</string>
-    <string name="app_notification_zaps_channel_name">받은 Zap</string>
-    <string name="app_notification_zaps_channel_description">누군가 zap을 보내면 알립니다</string>
-    <string name="app_notification_zaps_channel_message_from">보낸 사람: %1$s</string>
-    <string name="app_notification_zaps_channel_message_for">%1$s에 대해</string>
-    <string name="app_notification_reply_label">답글</string>
-    <string name="app_notification_mark_read_label">읽음으로 표시</string>
-    <string name="app_notification_dms_summary">새 메시지</string>
-    <string name="app_notification_zaps_summary">새 zap</string>
-    <string name="app_notification_reactions_channel_name">반응</string>
-    <string name="app_notification_reactions_channel_description">누군가 게시물에 반응하면 알립니다</string>
-    <string name="app_notification_reactions_channel_message">%1$s님이 게시물에 반응했습니다</string>
-    <string name="app_notification_reactions_channel_message_for">%1$s에 대해</string>
-    <string name="app_notification_reactions_summary">새 반응</string>
-    <string name="app_notification_chess_channel_name">체스</string>
-    <string name="app_notification_chess_channel_description">체스 게임 이벤트를 알립니다</string>
-    <string name="app_notification_chess_challenge_accepted">%1$s님이 체스 도전을 수락했습니다</string>
-    <string name="app_notification_chess_your_turn">%1$s님이 이동했습니다 — 당신의 차례입니다</string>
-    <string name="app_notification_chess_summary">체스 업데이트</string>
-    <string name="app_notification_replies_channel_name">답글</string>
-    <string name="app_notification_replies_channel_description">누군가 게시물에 답글을 달면 알립니다</string>
     <string name="app_notification_replies_channel_message">%1$s님이 답글을 달았습니다</string>
     <string name="app_notification_replies_channel_message_for">게시물: %1$s</string>
-    <string name="app_notification_replies_summary">새 답글</string>
-    <string name="app_notification_mentions_channel_name">멘션</string>
-    <string name="app_notification_mentions_channel_description">누군가 게시물에서 나를 언급하거나 인용하면 알립니다</string>
-    <string name="app_notification_mentions_channel_message">%1$s님이 나를 언급했습니다</string>
-    <string name="app_notification_mentions_summary">새 멘션</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -533,34 +81,6 @@
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
     <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
-    <string name="app_notification_calls_channel_name">수신 전화</string>
-    <string name="app_notification_calls_channel_description">수신 음성 및 영상 통화 알림</string>
-    <string name="call_incoming">수신 전화</string>
-    <string name="call_incoming_voice">수신 음성 통화…</string>
-    <string name="call_incoming_video">수신 영상 통화…</string>
-    <string name="call_with">%1$s와(과) 통화</string>
-    <string name="call_ongoing">통화</string>
-    <string name="call_ongoing_description">진행 중인 통화 알림</string>
-    <string name="call_hangup">전화 끊기</string>
-    <string name="call_accept">수락</string>
-    <string name="call_reject">거절</string>
-    <string name="call_mute">음소거</string>
-    <string name="call_unmute">음소거 해제</string>
-    <string name="call_camera_on">카메라 켜기</string>
-    <string name="call_camera_off">카메라 끄기</string>
-    <string name="call_speaker">스피커</string>
-    <string name="call_earpiece">수화기</string>
-    <string name="call_permission_denied_voice">음성 통화를 시작하려면 Amethyst에 마이크 접근 권한이 필요합니다. 앱 설정에서 활성화해 주세요.</string>
-    <string name="call_permission_denied_video">영상 통화를 시작하려면 Amethyst에 카메라 및 마이크 접근 권한이 필요합니다. 앱 설정에서 활성화해 주세요.</string>
-    <string name="call_settings">통화 설정</string>
-    <string name="always_on_notif_channel_description">실시간 알림을 위해 inbox relay에 대한 연결을 유지합니다</string>
-    <string name="always_on_notif_title">Amethyst 알림 활성화됨</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">%1$d개의 inbox relay에 연결됨</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="other">%1$d개의 relay에 연결됨</item>
-    </plurals>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
@@ -571,113 +91,16 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_connecting">inbox relay에 연결 중…</string>
     <string name="always_on_notif_setting_title">상시 알림 서비스</string>
     <string name="always_on_notif_setting_description">즉각적인 알림 전달을 위해 inbox relay에 지속적인 연결을 유지합니다. 진행 중인 알림이 표시됩니다. 배터리를 더 많이 사용하지만 메시지를 놓치지 않도록 합니다.</string>
-    <string name="split_notifications_setting_title">팔로우별 알림 분리</string>
-    <string name="split_notifications_setting_description">팔로잉(팔로우하는 사람들)과 모든 사람 두 개의 알림 탭을 표시합니다. 읽지 않음 표시기는 팔로우하는 사람들의 활동에만 반응합니다.</string>
-    <string name="show_messages_in_notifications_setting_title">메시지 표시</string>
-    <string name="show_messages_in_notifications_setting_description">알림 탭에 다이렉트 및 그룹 메시지를 포함합니다. 메시지를 메시지 탭에만 표시하려면 끄세요.</string>
-    <string name="reply_notify">알림: </string>
-    <string name="today">오늘</string>
-    <string name="content_warning_hide_all_sensitive_content_option">숨기기</string>
-    <string name="content_warning_show_all_sensitive_content_option">표시</string>
-    <string name="content_warning_see_warnings_option">경고 보기</string>
-    <string name="filter_spam_from_strangers_title">스팸 필터링</string>
-    <string name="filter_spam_from_strangers_explainer">5회 이상 동일한 내용의 낯선 사람 게시물을 숨깁니다</string>
-    <string name="add_client_tag_title">내 이벤트에 클라이언트 태그 추가</string>
-    <string name="add_client_tag_explainer">활성화하면 Amethyst가 게시하는 이벤트에 NIP-89 클라이언트 태그를 추가합니다.</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_title">신고 시 경고</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">게시물이나 프로필이 팔로우하는 사람들로부터 신고를 받으면 경고 메시지를 표시합니다</string>
-    <string name="hide_community_rules_violations_title">커뮤니티 규칙을 위반하는 게시물 숨기기</string>
-    <string name="hide_community_rules_violations_explainer">커뮤니티가 NIP-9B 규칙 문서를 게시하고 이벤트가 규칙에 위반될 경우 커뮤니티 피드에서 게시물을 제거합니다. 커뮤니티에 구조화된 규칙이 없으면 효과가 없습니다.</string>
-    <string name="security_section_filtering_preferences">필터링 환경 설정</string>
-    <string name="security_section_blocked_content">차단된 콘텐츠</string>
-    <string name="security_blocked_users_empty">아직 차단한 사용자가 없습니다.</string>
-    <string name="security_spamming_users_empty">이 세션에서 스팸으로 신고된 계정이 없습니다.</string>
-    <string name="security_hidden_words_empty">숨겨진 단어가 없습니다. 아래에 단어를 추가하여 해당 단어가 포함된 게시물을 숨기세요.</string>
-    <string name="no_reaction_type_setup_long_press_to_change">이 사용자에 대해 미리 선택된 반응 유형이 없습니다. 하트 버튼을 길게 눌러 변경하세요</string>
-    <string name="read_from_relay">Relay에서 읽기</string>
-    <string name="write_to_relay">Relay에 쓰기</string>
-    <string name="write_to_relay_description">필터 및 이벤트를 포함하여 이 relay에 전송된 바이트 수</string>
-    <string name="read_from_relay_description">필터 및 이벤트를 포함하여 이 relay에서 수신된 바이트 수</string>
-    <string name="privacy_policy">개인정보 처리방침</string>
-    <string name="child_safety_standards">아동 안전 기준</string>
-    <string name="about_legal">정보 &amp; 법적 고지</string>
-    <string name="cashu">Cashu 토큰</string>
-    <string name="no_lightning_address_set">설정된 Lightning 주소 없음</string>
-    <string name="relay_setup">Relay</string>
-    <string name="discover_follows">팔로우 팩</string>
-    <string name="discover_reads">읽기</string>
-    <string name="discover_content_v2">피드 알고리즘</string>
-    <string name="discover_marketplace">마켓플레이스</string>
-    <string name="discover_live_v2">라이브 스트림</string>
-    <string name="discover_community_v2">커뮤니티</string>
-    <string name="discover_chat">채팅</string>
-    <string name="add_sensitive_content_label">민감한 콘텐츠</string>
-    <string name="add_sensitive_content_description">이 콘텐츠를 표시하기 전에 민감한 콘텐츠 경고를 추가합니다</string>
-    <string name="ui_preferences">UI 설정</string>
     <string name="preferences">앱 설정</string>
-    <string name="translations">번역</string>
-    <string name="reactions">반응</string>
-    <string name="settings">설정</string>
-    <string name="account_settings">계정 설정</string>
-    <string name="app_settings">앱 설정</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
-    <string name="danger_zone">위험 구역</string>
-    <string name="reset_marmot_state">Marmot 상태 초기화</string>
-    <string name="reset_marmot_success">Marmot 상태가 초기화되었습니다.</string>
-    <string name="reset_marmot_failure">Marmot 상태 초기화 실패: %1$s</string>
-    <string name="connectivity_type_always">항상</string>
-    <string name="connectivity_type_unmetered_wifi_only">무제한 WiFi</string>
-    <string name="connectivity_type_never">사용 안 함</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
-    <string name="ui_feature_set_type_complete">전체</string>
-    <string name="ui_feature_set_type_simplified">간소화</string>
-    <string name="ui_feature_set_type_performance">성능</string>
     <!-- Compact labels for the segmented control. -->
-    <string name="gallery_type_classic">클래식</string>
-    <string name="gallery_type_modern">모던</string>
-    <string name="system">시스템</string>
-    <string name="light">라이트</string>
-    <string name="dark">다크</string>
-    <string name="theme">테마</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="automatically_load_images_gifs">이미지 미리보기</string>
-    <string name="automatically_play_videos">동영상 재생</string>
-    <string name="autoplay_videos">동영상 자동 재생</string>
-    <string name="automatically_show_url_preview">URL 미리보기</string>
-    <string name="automatically_hide_nav_bars">몰입형 스크롤</string>
-    <string name="automatically_hide_nav_bars_description">스크롤 시 탐색 바 숨기기</string>
-    <string name="ui_style">UI 모드</string>
-    <string name="ui_style_description">게시물 스타일 선택</string>
-    <string name="gallery_style">프로필 갤러리 스타일</string>
-    <string name="gallery_style_description">갤러리 스타일 선택</string>
-    <string name="spamming_users">스패머</string>
-    <string name="muted_button">음소거됨. 클릭하여 음소거 해제</string>
-    <string name="mute_button">소리 켜짐. 클릭하여 음소거</string>
-    <string name="skip_back">%d초 뒤로 건너뛰기</string>
-    <string name="skip_forward">%d초 앞으로 건너뛰기</string>
-    <string name="geohash_exclusive">위치 전용 게시물</string>
-    <string name="geohash_exclusive_explainer">해당 위치의 팔로워만 볼 수 있습니다. 일반 팔로워에게는 표시되지 않습니다.</string>
-    <plurals name="music_playlist_track_count">
-        <item quantity="other">%1$d개 트랙</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="other">+%1$d개 더보기</item>
-    </plurals>
-    <string name="music_track_cover_upload_cta">커버 이미지 업로드</string>
-    <string name="music_track_cover_upload_hint">이 트랙의 아트워크로 사용할 정사각형 이미지를 선택하세요.</string>
-    <string name="music_track_audio_upload_cta">오디오 파일 업로드</string>
-    <string name="music_track_audio_upload_hint">MP3, WAV 또는 FLAC 파일을 선택하세요. 저장 시 미디어 서버에 업로드됩니다.</string>
-    <string name="music_track_uploading_banner">커버 및 오디오를 업로드하고 게시하는 중입니다. 화면을 나가도 계속 진행됩니다.</string>
-    <string name="edit_music_playlist">플레이리스트 편집</string>
-    <string name="music_playlist_cover_upload_cta">커버 이미지 업로드</string>
-    <string name="music_playlist_cover_upload_hint">이 플레이리스트의 아트워크로 사용할 정사각형 이미지를 선택하세요.</string>
-    <string name="music_playlist_uploading_banner">커버를 업로드하고 게시하는 중입니다. 화면을 나가도 계속 진행됩니다.</string>
     <string name="messages_create_public_chat">공개</string>
     <string name="messages_create_group">그룹</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
@@ -686,615 +109,47 @@
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="messages_new_message">비공개</string>
-    <string name="messages_new_message_subject">제목</string>
-    <string name="messages_cant_upload_title">업로드 불가</string>
-    <string name="messages_cant_upload_explainer">먼저 메시지 대상을 입력하세요</string>
-    <string name="couldnt_find_nwc_wallets">지갑을 찾을 수 없음</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst에서 Nostr Wallet Connect (NWC)를 지원하는 지갑 앱을 찾을 수 없습니다.
-\n\n할 수 있는 작업:
-\n\t1. NWC 지원 확인: 사용하려는 지갑 앱이 Nostr Wallet Connect와 호환되는지 다시 확인하세요.
-\n\t2. 연결 생성: 지갑 앱에서 새 NWC 연결을 생성하세요.
-\n\t3. Amethyst에 연결: 지갑에서 보통 세 가지 옵션을 제공합니다:
-\n\t\t3.1 자동 연결: Amethyst를 자동으로 열고 연결하는 버튼. 해당 버튼을 클릭하고 Amethyst를 열어 새 화면에서 저장을 누르세요.
-\n\t\t3.2 수동 연결: 연결 URI를 복사하고 이 화면의 붙여넣기 아이콘을 클릭하여 직접 입력하세요.
-\n\t\t3.3 QR 코드: 지갑이 QR 코드를 생성하면 이 화면의 QR 코드 버튼으로 읽을 수 있습니다.
-    </string>
-    <string name="theme_description">다크, 라이트 또는 시스템 테마</string>
-    <string name="automatically_load_images_gifs_description">이미지 및 GIF 자동 로드</string>
-    <string name="automatically_play_videos_description">동영상 및 GIF 자동 로드</string>
-    <string name="autoplay_videos_description">화면에 표시될 때 동영상 자동 재생</string>
-    <string name="automatically_show_url_preview_description">URL 미리보기 표시</string>
-    <string name="copy_to_clipboard">클립보드에 복사</string>
-    <string name="copied_to_clipboard">클립보드에 복사됨</string>
-    <string name="share_or_save">공유 또는 저장</string>
     <string name="share_target_as_dm">DM으로 보내기</string>
-    <string name="media_added">미디어가 추가됨</string>
-    <string name="media_added_to_profile_gallery">프로필 갤러리에 미디어가 추가됨</string>
-    <string name="error_dialog_zap_error">zap을 보낼 수 없음</string>
-    <string name="missing_lud16">Lightning 설정 누락</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">사용자 %1$s는 sats를 받기 위한 lightning 주소가 설정되어 있지 않습니다</string>
-    <string name="error_opening_external_signer">서명 앱을 열 수 없음</string>
-    <string name="error_opening_external_signer_description">서명 앱을 찾을 수 없습니다. 앱이 삭제되지 않았는지 확인하세요</string>
-    <string name="error_video_playback_failed">이 동영상을 재생할 수 없음</string>
-    <string name="error_video_playback_failed_description">이 기기에서는 코덱 또는 형식이 지원되지 않습니다 (%1$s). 브라우저에서 열어보세요.</string>
-    <string name="error_video_open_in_browser">브라우저에서 열기</string>
-    <string name="sign_request_rejected2">서명 요청이 거부됨</string>
-    <string name="sign_request_rejected_description">서명 앱이 이 트랜잭션을 승인했는지 확인하세요</string>
-    <string name="no_wallet_found_with_error">Lightning 인보이스를 결제할 지갑을 찾을 수 없습니다 (오류: %1$s). zap을 사용하려면 Lightning 지갑을 설치하세요</string>
-    <string name="no_wallet_found">Lightning 인보이스를 결제할 지갑을 찾을 수 없습니다. zap을 사용하려면 Lightning 지갑을 설치하세요</string>
-    <string name="no_blossom_apps_found_title">Blossom 링크를 열 수 없음</string>
-    <string name="no_blossom_apps_found_description">Blossom 앱을 찾을 수 없습니다. 이 파일을 보려면 로컬 Blossom 앱을 설치하세요</string>
-    <string name="hidden_words">숨김 단어</string>
-    <string name="settings_muted_threads_title">뮤트된 스레드</string>
-    <string name="settings_muted_threads_empty">뮤트된 스레드 없음</string>
-    <string name="automatically_show_profile_picture">프로필 사진</string>
-    <string name="automatically_show_profile_picture_description">프로필 사진 표시</string>
-    <string name="error_dialog_pay_invoice_error">인보이스를 결제할 수 없음</string>
-    <string name="error_dialog_pay_withdraw_error">출금할 수 없음</string>
-    <string name="cashu_failed_redemption">Cashu를 환급할 수 없음</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">Mint에서 다음 오류 메시지를 반환했습니다: %1$s</string>
-    <string name="cashu_successful_redemption">Cashu 수신됨</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats가 지갑으로 전송되었습니다. (수수료: %2$s sats)</string>
-    <string name="cashu_no_wallet_found">시스템에서 호환 가능한 Cashu 지갑을 찾을 수 없음</string>
-    <string name="error_unable_to_fetch_invoice">수신자 서버에서 인보이스를 가져올 수 없음</string>
-    <string name="wallet_connect_pay_invoice_error_error">지갑 연결 제공자에서 다음 오류를 반환했습니다: %1$s</string>
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning 주소 \"%1$s\"에서 LNUrl을 구성할 수 없습니다. 사용자 설정을 확인하세요</string>
-    <string name="could_not_fetch_invoice_from_details">%1$s에서 인보이스를 가져올 수 없습니다: %2$s</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">%1$s에서 JSON 파싱 오류. 사용자의 lightning 설정을 확인하세요</string>
-    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s의 응답에서 콜백 URL을 찾을 수 없음</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">%2$s의 인보이스 금액이 올바르지 않습니다 (%1$s sats). %3$s여야 했습니다</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">zap을 보내기 전에 lightning 인보이스를 생성할 수 없습니다. 수신자의 lightning 지갑에서 다음 오류를 보냈습니다: %1$s</string>
-    <string name="read_only_user">읽기 전용 사용자</string>
-    <string name="no_reactions_setup">반응 설정 없음</string>
-    <string name="notification_settings">알림</string>
-    <string name="notification_settings_section_delivery">전달</string>
-    <string name="notification_settings_section_display">앱 내 표시</string>
-    <string name="notification_settings_section_categories">카테고리</string>
-    <string name="payment_required_title">%1$s의 메시지</string>
-    <string name="hi_seller_is_this_still_available">안녕하세요 %1$s님, 아직 구매 가능한가요?</string>
-    <string name="classifieds_category_clothing">의류</string>
-    <string name="classifieds_category_accessories">액세서리</string>
-    <string name="classifieds_category_electronics">전자제품</string>
-    <string name="classifieds_category_furniture">가구</string>
-    <string name="classifieds_category_collectibles">수집품</string>
-    <string name="classifieds_category_books">도서</string>
-    <string name="classifieds_category_pets">반려동물</string>
-    <string name="classifieds_category_sports">스포츠</string>
-    <string name="classifieds_category_fitness">피트니스</string>
-    <string name="classifieds_category_art">예술</string>
-    <string name="classifieds_category_crafts">공예</string>
-    <string name="classifieds_category_home">가정용품</string>
-    <string name="classifieds_category_office">사무용품</string>
-    <string name="classifieds_category_food">식품</string>
-    <string name="classifieds_category_misc">기타</string>
-    <string name="classifieds_category_other">기타</string>
-    <string name="failed_to_upload_media_no_details">미디어 업로드에 실패했습니다</string>
-    <string name="could_not_open_the_compressed_file">압축 파일을 열 수 없습니다</string>
-    <string name="failed_to_upload_media">업로드 오류: %1$s</string>
-    <string name="server_did_not_provide_a_url_after_uploading">업로드 후 서버에서 URL을 제공하지 않았습니다</string>
-    <string name="could_not_download_from_the_server">서버에서 업로드된 미디어를 다운로드할 수 없습니다</string>
-    <string name="could_not_check_downloaded_file">업로드 후 다운로드된 파일을 확인할 수 없습니다: %1$s</string>
-    <string name="failed_to_upload_to_server_with_message">%1$s에 업로드하지 못했습니다: %2$s</string>
-    <string name="failed_to_delete_with_message">삭제하지 못했습니다: %1$s</string>
-    <string name="media_too_big_for_nip95">미디어가 NIP-95에 비해 너무 큽니다</string>
-    <string name="encrypt_files_label">파일 암호화</string>
-    <string name="encrypt_files_description">개인정보 보호를 위해 업로드 전 파일을 암호화합니다. 일부 서버는 무료 계정에서 암호화된 파일을 허용하지 않을 수 있습니다.</string>
-    <string name="failed_to_upload_encrypted_media_title">암호화된 업로드에 실패했습니다</string>
-    <string name="failed_to_upload_encrypted_media_message">많은 서버에서 무료 계정의 암호화된 파일을 허용하지 않습니다. 암호화 없이 다시 시도할 수 있습니다.</string>
-    <string name="video_codec_h265_label">H.265/HEVC 코덱 사용</string>
-    <string name="video_codec_h265_description">파일 크기는 작고 품질은 더 우수하지만 모든 기기가 H.265 재생을 지원하지는 않습니다.</string>
-    <string name="convert_gif_to_mp4_label">GIF를 MP4로 변환</string>
-    <string name="convert_gif_to_mp4_description">파일 크기 축소 및 재생 호환성 향상을 위해 애니메이션 GIF를 MP4 동영상으로 변환합니다.</string>
-    <string name="strip_metadata_label">개인 메타데이터 제거</string>
-    <string name="strip_metadata_description">업로드 전 지원되는 미디어 파일에서 개인 메타데이터를 제거하려고 시도합니다</string>
-    <string name="metadata_strip_failed_title">메타데이터를 제거할 수 없습니다</string>
-    <string name="metadata_strip_failed_upload_cancelled">미디어에서 개인 메타데이터를 제거하지 못했습니다. 업로드가 취소되었습니다.</string>
-    <string name="upload_cancelled">업로드가 취소되었습니다</string>
-    <string name="avif_metadata_strip_failed">AVIF에서 메타데이터를 제거할 수 없습니다: %1$s</string>
-    <string name="route_home">홈</string>
-    <string name="route_discover">탐색</string>
-    <string name="route_messages">메시지</string>
-    <string name="route_notifications">알림</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="route_calendars">캘린더</string>
-    <string name="route_calendar_collections">캘린더 목록</string>
-    <string name="route_chess">체스</string>
-    <string name="wallet">지갑</string>
-    <string name="wallet_add_cashu_title">Cashu 지갑 (NIP-60)</string>
     <string name="cashu_p2pk_section">Nutzap 키 (고급)</string>
     <string name="cashu_p2pk_explainer">NIP-61 nutzap 수신에만 사용되는 별도의 개인 키입니다. Nostr 신원 키가 아닙니다.</string>
     <string name="cashu_p2pk_autogen">새 키 생성</string>
     <string name="cashu_p2pk_manual_label">P2PK 개인 키 (hex)</string>
-    <string name="wallet_edit_cashu_title">Mint 편집</string>
     <string name="wallet_save_changes">변경사항 저장</string>
-    <plurals name="cashu_mint_plus_others">
-        <item quantity="other">+%1$d개 더</item>
-    </plurals>
-    <plurals name="cashu_mint_recommended_by_others">
-        <item quantity="other">%1$d명이 추천함</item>
-    </plurals>
-    <string name="cashu_mint_popular_header">인기 있는 mint</string>
-    <string name="cashu_mint_matches_header">일치하는 mint</string>
-    <string name="cashu_history_incoming">수신</string>
-    <string name="cashu_history_outgoing">송신</string>
-    <string name="cashu_settings_delete_confirm_body">%1$s에 대한 kind:38000 추천의 삭제 요청을 게시합니다. NIP-09를 지원하는 relay에서 삭제됩니다.</string>
-    <string name="cashu_settings_restore_result">%2$s개의 증명에서 %1$s sats를 복구했습니다.</string>
-    <string name="cashu_quote_confirm">%1$s sat + 최대 %2$s sat 수수료를 결제하시겠습니까?</string>
-    <string name="nutzap_failed_title">Nutzap 실패</string>
-    <string name="nutzap_failed_no_recipient">노트에 수신자 pubkey가 없습니다</string>
-    <string name="nutzap_failed_private_note">Nutzap은 공개적이어서 이 비공개 노트가 노출됩니다. 대신 Lightning zap을 사용하세요.</string>
-    <string name="nutzap_failed_no_event">이벤트 참조를 만들 수 없습니다</string>
-    <string name="cashu_waiting_for_payment">인보이스 결제 대기 중…</string>
-    <string name="cashu_checking_mint">Mint 확인 중…</string>
     <!-- Onchain zap send dialog -->
-    <string name="onchain_send_fee_slow">느림</string>
-    <string name="onchain_send_fee_normal">보통</string>
-    <string name="onchain_send_fee_fast">빠름</string>
-    <string name="onchain_send_fee_eta_slow">~1시간</string>
-    <string name="onchain_send_fee_eta_normal">~30분</string>
-    <string name="onchain_send_fee_eta_fast">~10분</string>
-    <plurals name="onchain_send_button_amount_split">
-        <item quantity="other">%1$s sats를 %2$d개로 나누어 보내기</item>
-    </plurals>
-    <plurals name="onchain_send_use_note_split">
-        <item quantity="other">이 노트의 %1$d방향 zap 분할 사용</item>
-    </plurals>
-    <plurals name="onchain_send_splits_label">
-        <item quantity="other">%1$d명의 수신자 간 분할</item>
-    </plurals>
-    <plurals name="onchain_send_splits_skipped">
-        <item quantity="other">Lightning 주소 전용 수신자 %1$d명 건너뜀 — 온체인은 주소를 파생하기 위해 Nostr pubkey가 필요합니다.</item>
-    </plurals>
-    <string name="onchain_stage_loading_utxos">잔액 로드 중</string>
-    <string name="onchain_stage_building">거래 빌드 중</string>
-    <string name="onchain_stage_signing">서명 중</string>
-    <string name="onchain_stage_broadcasting">브로드캐스트 중</string>
-    <string name="onchain_stage_publishing">영수증 게시 중</string>
-    <string name="onchain_send_error_backend_not_configured">Bitcoin 체인 백엔드가 구성되지 않았습니다</string>
-    <string name="onchain_send_error_load_utxos">Bitcoin 잔액을 로드할 수 없습니다</string>
-    <string name="onchain_send_error_build">거래를 빌드할 수 없습니다</string>
-    <string name="onchain_send_error_recipient_dust">수신자 몫이 먼지 한도 미만입니다</string>
-    <string name="onchain_send_error_sign">거래에 서명할 수 없습니다</string>
-    <string name="onchain_send_error_broadcast">거래를 브로드캐스트할 수 없습니다</string>
-    <string name="onchain_send_error_publish_receipt">결제는 전송되었지만 zap 영수증을 게시할 수 없습니다</string>
-    <plurals name="onchain_send_error_publish_receipt_partial">
-        <item quantity="other">결제 전송 완료 (%2$d개 중 %1$d개 영수증 게시됨), 다음 영수증을 게시할 수 없습니다</item>
-    </plurals>
-    <string name="route_import_follows">팔로우 가져오기</string>
-    <string name="new_product">새 상품</string>
-    <string name="new_long_form_post">새 글</string>
-    <string name="new_calendar_event">새 캘린더 이벤트</string>
-    <string name="edit_calendar_event">캘린더 이벤트 편집</string>
-    <string name="new_calendar_collection">새 캘린더</string>
-    <string name="edit_calendar_collection">캘린더 편집</string>
-    <string name="calendar_view_feed">피드</string>
-    <string name="calendar_view_month">월</string>
-    <string name="calendar_view_week">주</string>
-    <string name="calendar_view_day">일</string>
-    <plurals name="calendar_day_a11y_events">
-        <item quantity="other">%1$s, %2$d개 이벤트</item>
-    </plurals>
-    <string name="calendar_relative_ongoing">지금 진행 중</string>
-    <string name="calendar_relative_ongoing_with_end">%1$s · %2$s 종료</string>
-    <string name="calendar_export_share_title">캘린더 이벤트 공유</string>
-    <string name="calendar_reminder_channel_name">캘린더 알림</string>
-    <string name="calendar_reminder_channel_description">참석하는 이벤트가 곧 시작될 때 미리 알림.</string>
-    <string name="calendar_reminder_default_title">캘린더 이벤트</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="other">%1$d분 후 시작</item>
-    </plurals>
-    <string name="calendar_event_image_upload_failed">이미지 업로드 실패</string>
-    <string name="calendar_event_image_upload_failed_body">선택한 이미지를 업로드할 수 없습니다. 다시 시도하거나 URL을 붙여넣으세요.</string>
-    <string name="calendar_reminder_settings_title">캘린더 알림</string>
-    <string name="calendar_reminder_settings_enabled_title">알림 보내기</string>
-    <string name="calendar_reminder_settings_enabled_subtitle">참석하는 이벤트가 곧 시작될 때 알림이 발송됩니다.</string>
-    <plurals name="calendar_reminder_settings_lead_choice">
-        <item quantity="other">%1$d분</item>
-    </plurals>
-    <string name="calendar_open_in_maps">지도에서 열기</string>
-    <string name="calendar_open_link">링크 열기</string>
-    <string name="open_all_reactions_to_this_post">이 게시물의 모든 반응 열기</string>
-    <string name="close_all_reactions_to_this_post">이 게시물의 모든 반응 닫기</string>
-    <string name="bottom_bar_settings">하단 탐색 모음</string>
     <string name="bottom_bar_settings_description">드래그하여 순서 변경. 토글로 하단 모음에 항목 추가 또는 제거. 항목이 없으면 하단 모음이 숨겨집니다.</string>
     <string name="bottom_bar_settings_reorder">순서 변경</string>
     <string name="home_tabs_settings_description">홈 화면에 표시할 탭을 선택하세요. 탭이 하나만 활성화되면 탭 표시줄이 숨겨집니다.</string>
-    <string name="home_tab_everything">전체</string>
-    <string name="profile_ui_settings">프로필 UI</string>
     <string name="profile_ui_settings_description">사용자 프로필 화면에 표시할 섹션과 피드를 선택하세요. 기본적으로 모든 옵션이 활성화되어 있습니다.</string>
-    <string name="profile_ui_setting_badges">프로필 배지</string>
-    <string name="profile_ui_setting_app_recommendations">앱 추천</string>
-    <string name="profile_ui_setting_zap_received_feed">Zap 수신 피드</string>
-    <string name="profile_ui_setting_followers_feed">팔로워 피드</string>
-    <string name="reactions_settings">반응 행</string>
-    <string name="video_player_settings">동영상 플레이어 버튼</string>
-    <string name="audio_visualizer_settings">오디오 시각화</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="expiration_date_label">만료 날짜</string>
-    <string name="invalid_nip19_uri">잘못된 주소</string>
-    <string name="invalid_nip19_uri_description">Amethyst가 열기 위한 URI를 수신했지만 해당 URI가 유효하지 않습니다: %1$s</string>
-    <string name="dm_relays_title">DM 수신함 Relay</string>
-    <string name="search_relays_title">검색 Relay</string>
-    <string name="search_relays_not_found_examples">좋은 옵션:\n%1$s</string>
-    <string name="outbox_relays_title">Outbox Relay</string>
-    <string name="inbox_relays_title">Inbox Relay</string>
-    <string name="relay_settings">Relay 설정</string>
-    <string name="public_home_section">공개 Outbox/홈 Relay</string>
-    <string name="public_home_section_explainer_profile">사용자가 이 relay에 콘텐츠를 게시하고 있습니다</string>
-    <string name="public_home_section_explainer">이 relay 유형은 모든 콘텐츠를 저장합니다. Amethyst는 여기에 게시물을 전송하고 다른 사람들은 이 relay를 통해 콘텐츠를 찾습니다. 1~3개의 relay를 입력하세요. 개인 relay, 유료 relay 또는 공개 relay일 수 있습니다.</string>
-    <string name="public_notif_section">공개 Inbox Relay</string>
-    <string name="public_notif_section_explainer_profile">사용자가 이 relay에서 알림을 받고 있습니다</string>
-    <string name="public_notif_section_explainer">이 relay 유형은 게시물에 대한 모든 답글, 댓글, 좋아요 및 zap을 수신합니다. 유료 또는 무료 relay일 수 있습니다. relay 운영자가 설정한 제한은 알림 수신에 긍정적 또는 부정적 영향을 줄 수 있습니다. 예를 들어, 댓글 스팸 공격을 받는 경우 유료 relay가 스팸을 필터링할 수 있습니다. 1~3개의 relay를 입력하세요.</string>
-    <string name="private_inbox_section">DM 수신함 Relay</string>
-    <string name="private_inbox_section_explainer_profile">사용자가 이 relay에서 DM을 수신합니다</string>
-    <string name="private_inbox_section_explainer">개인 수신함으로 사용할 relay를 1~3개 입력하세요. 다른 사람들이 이 relay를 통해 DM을 보냅니다. DM 수신함 relay는 누구의 메시지든 수신해야 하지만, 다운로드는 본인만 가능해야 합니다. 좋은 옵션:\n - inbox.nostr.wine (유료)\n - auth.nostr1.com (무료)\n - you.nostr1.com (개인 relay - 유료)</string>
-    <string name="keypackage_section">KeyPackage Relay</string>
-    <string name="keypackage_section_explainer">MLS KeyPackage가 게시되는 relay (MIP-00). 다른 사용자는 이 KeyPackage를 가져와 Marmot 그룹 채팅에 초대합니다. KeyPackage 이벤트를 허용하고 공개 읽기를 허용하는 relay를 1~3개 입력하세요.</string>
-    <string name="private_outbox_section">비공개 홈 Relay</string>
-    <string name="private_outbox_section_explainer">초안 및/또는 앱 설정 등 다른 사람이 볼 수 없는 이벤트를 저장할 relay를 1~3개 입력하세요. 이 relay는 로컬이거나 각 사용자의 콘텐츠를 다운로드하기 전에 인증이 필요한 것이 이상적입니다.</string>
-    <string name="connected_section">연결된 Relay</string>
-    <string name="connected_section_description">현재 사용 중인 relay 목록</string>
-    <string name="search_section">검색 Relay</string>
-    <string name="search_section_explainer">콘텐츠 또는 사용자를 검색할 때 사용할 relay 목록입니다. 옵션이 없으면 태그 지정 및 검색이 작동하지 않습니다. NIP-50을 구현하는지 확인하세요.</string>
-    <string name="local_section">로컬 Relay</string>
-    <string name="local_section_explainer">이 기기에서 실행 중인 relay 목록입니다.</string>
-    <string name="send_kind0_to_local_relay_title">로컬 relay로 프로필 전달</string>
-    <string name="send_kind0_to_local_relay_description">수신된 모든 프로필(kind 0) 이벤트를 로컬 relay로 전송</string>
-    <string name="trusted_section">신뢰하는 Relay</string>
-    <string name="trusted_section_explainer">Tor 연결이 필요 없다고 신뢰하는 relay</string>
-    <string name="favorite_section">즐겨찾는 Relay 피드</string>
-    <string name="favorite_section_explainer">자주 방문하여 글로벌 피드를 보는 relay</string>
-    <string name="proxy_section">프록시 Relay</string>
-    <string name="proxy_section_explainer">filter.nostr.wine 같이 피드를 다운로드하는 데 앱이 사용해야 하는 집계 relay입니다. 이 설정은 아웃박스 모델을 대체하며 앱이 목록에 있는 relay에만 연결하도록 합니다.</string>
-    <string name="broadcast_section">브로드캐스트 Relay</string>
-    <string name="broadcast_section_explainer">sendit.nosflare.com 같이 내 노트를 다른 모든 relay로 전달하는 데 특화된 relay입니다. Amethyst는 내가 작성하는 모든 새 이벤트에 이 relay를 추가합니다.</string>
-    <string name="indexer_section">인덱서 Relay</string>
-    <string name="indexer_section_explainer">purplepag.es 같이 모든 사람의 메타데이터와 relay 목록을 호스팅하는 데 특화된 relay입니다. Amethyst는 이 relay를 사용하여 목록에 없는 사용자를 찾습니다.</string>
-    <string name="blocked_section">차단된 Relay</string>
-    <string name="blocked_section_explainer">Amethyst는 이 relay에 절대 연결하지 않습니다.</string>
-    <string name="export_relay_settings">relay 설정 내보내기</string>
     <string name="git_web_address">웹:</string>
     <string name="git_repo_tab_overview">개요</string>
     <string name="git_repo_section_about">소개</string>
     <string name="git_repo_section_links">링크</string>
     <string name="git_repo_section_maintainers">관리자</string>
     <string name="git_repo_section_topics">주제</string>
-    <string name="ots_info_title">타임스탬프 증명</string>
-    <string name="ots_info_description">이 게시물이 %1$s 이전에 서명되었다는 증명이 있습니다. 해당 날짜와 시간에 Bitcoin 블록체인에 증명이 기록되었습니다.</string>
-    <string name="edit_post">게시물 편집</string>
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">초안 노트에는 답글을 달 수 없습니다.</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">초안 노트는 인용할 수 없습니다.</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">초안 노트에는 반응할 수 없습니다.</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">초안 노트에는 zap을 보낼 수 없습니다.</string>
-    <string name="draft_note">초안 노트</string>
-    <string name="http_status_400">잘못된 요청 - 서버가 요청을 처리할 수 없거나 처리하지 않습니다.</string>
-    <string name="http_status_401">인증되지 않음 - 사용자에게 유효한 인증 자격 증명이 없습니다.</string>
-    <string name="http_status_402">결제 필요 - 서버가 요청을 완료하기 위해 결제를 요구합니다.</string>
-    <string name="http_status_403">접근 금지 - 사용자가 요청을 수행할 접근 권한이 없습니다.</string>
-    <string name="http_status_404">찾을 수 없음 - 서버가 요청한 주소를 찾을 수 없습니다.</string>
-    <string name="http_status_405">허용되지 않는 메서드 - 서버는 요청 메서드를 지원하지만 대상 리소스는 지원하지 않습니다.</string>
-    <string name="http_status_406">허용할 수 없음 - 서버가 요청을 충족하는 콘텐츠를 찾을 수 없습니다.</string>
-    <string name="http_status_407">프록시 인증 필요 - 사용자에게 유효한 인증 자격 증명이 없습니다.</string>
-    <string name="http_status_408">요청 시간 초과 - 서버가 응답을 기다리다 시간이 초과되었습니다.</string>
-    <string name="http_status_409">충돌 - 리소스와 충돌이 발생하여 서버가 요청을 처리할 수 없습니다.</string>
-    <string name="http_status_410">사라짐 - 요청한 콘텐츠가 서버에서 영구적으로 삭제되었으며 복구되지 않습니다.</string>
-    <string name="http_status_411">길이 필요 - 서버가 정의된 Content-Length가 없어 요청을 거부합니다.</string>
-    <string name="http_status_412">사전 조건 실패 - 서버가 요청 헤더 필드의 사전 조건을 충족하지 못했습니다.</string>
-    <string name="http_status_413">페이로드가 너무 큼 - 요청이 서버의 정의된 한도보다 크며 서버가 처리를 거부합니다.</string>
-    <string name="http_status_414">URI가 너무 긺 - 클라이언트가 요청한 URL이 서버가 처리하기에 너무 깁니다.</string>
-    <string name="http_status_415">지원되지 않는 미디어 유형 - 서버가 지원하지 않는 미디어 형식을 요청에서 사용합니다.</string>
-    <string name="http_status_416">범위가 충족되지 않음 - 서버가 요청의 Range 헤더 필드에 표시된 값을 처리할 수 없습니다.</string>
-    <string name="http_status_417">기대치 실패 - 서버가 Expect 요청 헤더 필드에 표시된 요구 사항을 충족할 수 없습니다.</string>
-    <string name="http_status_426">업그레이드 필요 - 클라이언트가 다른 프로토콜로 업그레이드하지 않으면 서버가 현재 프로토콜을 사용하여 요청을 처리하지 않습니다.</string>
-    <string name="http_status_500">내부 서버 오류 - 서버에 예상치 못한 오류가 발생하여 요청을 완료할 수 없습니다.</string>
-    <string name="http_status_501">구현되지 않음 - 서버가 요청을 처리할 수 없거나 요청 메서드를 인식하지 못합니다.</string>
-    <string name="http_status_502">잘못된 게이트웨이 - 서버가 게이트웨이 역할을 하며 호스트에서 잘못된 응답을 받았습니다.</string>
-    <string name="http_status_503">서비스 사용 불가 - 서버가 과부하 상태이거나 유지 관리로 인해 중단된 경우 자주 발생합니다.</string>
-    <string name="http_status_504">게이트웨이 시간 초과 - 서버가 게이트웨이 또는 프록시 역할을 하며 응답을 기다리다 시간이 초과되었습니다.</string>
-    <string name="http_status_505">HTTP 버전 미지원 - 서버가 요청의 HTTP 버전을 지원하지 않습니다.</string>
-    <string name="http_status_506">변형도 협상 중 - 서버에 내부 구성 오류가 있습니다.</string>
-    <string name="http_status_507">저장 공간 부족 - 서버가 요청을 성공적으로 처리할 충분한 저장 공간이 없습니다.</string>
-    <string name="http_status_508">루프 감지됨 - 서버가 요청을 처리하는 중 무한 루프를 감지했습니다.</string>
-    <string name="http_status_511">네트워크 인증 필요 - 네트워크에 접근하려면 클라이언트 인증이 필요합니다.</string>
     <string name="media_servers_blossom_section">Blossom 서버</string>
     <string name="media_servers_blossom_explainer">원하는 만큼 서버를 추가할 수 있습니다. 사진을 업로드할 때 사용할 서버를 나중에 선택할 수 있습니다.</string>
-    <string name="add_a_nip96_server">NIP-96 서버 추가</string>
-    <string name="add_a_blossom_server">Blossom 서버 추가</string>
     <string name="torrent_download">다운로드</string>
-    <string name="torrent_failure">파일 열기 실패</string>
-    <string name="torrent_no_apps">파일을 열고 다운로드할 토렌트 앱이 설치되어 있지 않습니다.</string>
-    <string name="torrent_no_info">이벤트에 마그넷 링크를 만들기 위한 정보가 충분하지 않습니다.</string>
-    <string name="my_lists">내 목록</string>
-    <string name="feed_group_feeds">피드</string>
-    <string name="feed_group_hashtags">해시태그</string>
-    <string name="feed_group_interest_sets">관심 세트</string>
-    <string name="feed_group_locations">위치</string>
-    <string name="feed_group_communities">커뮤니티</string>
-    <string name="feed_group_lists">목록</string>
-    <string name="feed_group_dvms">피드 알고리즘</string>
-    <string name="follow_list_all_favorite_dvms">모든 즐겨찾는 피드 알고리즘</string>
-    <string name="feed_group_relays">Relay</string>
-    <string name="favorite_dvms_title">즐겨찾는 피드 알고리즘</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="private_message">비공개 메시지</string>
-    <string name="public_message">공개 메시지</string>
-    <string name="unable_to_share_image">이미지를 공유할 수 없습니다. 나중에 다시 시도하세요…</string>
-    <string name="unable_to_share_video">동영상을 공유할 수 없습니다. 나중에 다시 시도하세요…</string>
-    <string name="downloading_video_for_sharing">동영상 다운로드 중…</string>
-    <string name="dont_translate_from">번역하지 않을 언어</string>
-    <string name="dont_translate_from_description">여기에 표시된 언어는 번역되지 않습니다. 언어를 선택하면 제거되어 다시 번역됩니다.</string>
-    <string name="translate_to">번역 대상 언어</string>
-    <string name="translate_to_description">콘텐츠를 번역할 언어를 선택하세요.</string>
-    <string name="language_preferences">언어 표시 기본 설정</string>
-    <string name="language_preferences_description">번역된 각 언어 쌍에 대해 먼저 표시할 언어를 선택하세요.</string>
-    <string name="pause">일시 정지</string>
-    <string name="play">재생</string>
-    <string name="this_message_will_disappear_in">이 메시지는 %1$s 후에 사라집니다.</string>
-    <string name="people_list_title">팔로우 목록 메타데이터</string>
-    <string name="people_list_explainer">팔로우 목록 메타데이터는 Nostr의 누구나 볼 수 있습니다. 비공개 멤버만 암호화됩니다.</string>
-    <string name="follow_pack_title">Follow Pack 메타데이터</string>
-    <string name="follow_pack_explainer">Follow pack 메타데이터는 Nostr의 누구나 볼 수 있으며, 새 사용자를 위한 시작 키트로 많은 웹사이트에 자주 게시됩니다.</string>
-    <string name="follow_pack_edit_list_metadata">Follow Pack 편집</string>
-    <string name="expand">펼치기</string>
-    <string name="retry">재시도</string>
-    <string name="reaction">반응</string>
-    <string name="voice_post">음성 게시물</string>
-    <string name="voice_reply">음성 답글</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="kind_outbox_relays">아웃박스 Relays</string>
-    <string name="kind_app_recommendations">App 추천</string>
-    <string name="kind_user_settings">사용자 설정</string>
-    <string name="kind_audio_header">오디오 헤더</string>
-    <string name="kind_audio_track">오디오 트랙</string>
-    <string name="kind_music_track">음악 트랙</string>
-    <string name="kind_music_playlist">음악 재생목록</string>
-    <string name="kind_podcast_episode">팟캐스트 에피소드</string>
-    <string name="kind_podcast_metadata">팟캐스트 쇼</string>
-    <string name="kind_authored_podcasts">제작한 팟캐스트</string>
-    <string name="kind_favorite_podcasts">즐겨찾기 팟캐스트</string>
-    <string name="kind_badge_awards">배지 수여</string>
-    <string name="kind_badge_definitions">배지 정의</string>
-    <string name="kind_accepted_badge_set">수락된 배지 세트</string>
-    <string name="kind_profile_badges">프로필 배지</string>
-    <string name="kind_blocked_relays">차단된 Relays</string>
-    <string name="kind_blossom_servers">Blossom 서버</string>
-    <string name="kind_nests_servers">Nests 서버</string>
-    <string name="kind_broadcast_relays">브로드캐스트 Relays</string>
-    <string name="kind_bookmark_list">북마크 목록</string>
-    <string name="kind_old_bookmark_list">이전 북마크 목록</string>
-    <string name="kind_day_appointment">일별 일정</string>
-    <string name="kind_calendar">캘린더</string>
-    <string name="kind_appointment">일정</string>
-    <string name="kind_appt_rsvp">일정 RSVP</string>
-    <string name="kind_chess_games">체스 게임</string>
-    <string name="kind_chess_auth">체스 Auth</string>
-    <string name="kind_favorite_relays">즐겨찾기 Relays</string>
-    <string name="kind_chess_challenges">체스 도전</string>
-    <string name="kind_chess_game_accept">체스 게임 수락</string>
-    <string name="kind_chess_move">체스 수</string>
-    <string name="kind_chess_game_end">체스 게임 종료</string>
-    <string name="kind_chess_draw_offer">체스 무승부 제안</string>
-    <string name="kind_channel_definition">채널 정의</string>
-    <string name="kind_channel_hide_msg">채널 메시지 숨기기</string>
-    <string name="kind_channel_list">채널 목록</string>
-    <string name="kind_channel_message">채널 메시지</string>
-    <string name="kind_channel_metadata">채널 메타데이터</string>
-    <string name="kind_channel_mute_user">채널 사용자 음소거</string>
-    <string name="kind_dm_file">DM 파일</string>
-    <string name="kind_dm_message">DM 메시지</string>
-    <string name="kind_classifieds">분류 광고</string>
-    <string name="kind_comments">댓글</string>
-    <string name="kind_community_def">커뮤니티 정의</string>
-    <string name="kind_community_list">커뮤니티 목록</string>
-    <string name="kind_community_post">커뮤니티 게시물</string>
-    <string name="kind_follow_list">팔로우 목록</string>
-    <string name="kind_deletions">삭제</string>
-    <string name="kind_drafts">초안</string>
-    <string name="kind_emoji_packs">이모지 팩</string>
-    <string name="kind_emoji_pack_list">이모지 팩 목록</string>
-    <string name="kind_ephemeral_chat">임시 채팅</string>
-    <string name="kind_ephemeral_chatrooms">임시 채팅방</string>
-    <string name="kind_file_headers">파일 헤더</string>
-    <string name="kind_profile_gallery">프로필 갤러리</string>
-    <string name="kind_file_servers">파일 서버</string>
-    <string name="kind_blob_data">Blob 데이터</string>
-    <string name="kind_blob_headers">Blob 헤더</string>
-    <string name="kind_medical_data">의료 데이터</string>
-    <string name="kind_reposts_16">리포스트 (16)</string>
-    <string name="kind_geohash_follows">지오해시 팔로우</string>
-    <string name="kind_git_issue">Git 이슈</string>
-    <string name="kind_git_patch">Git 패치</string>
-    <string name="kind_git_repo">Git 저장소</string>
-    <string name="kind_git_reply">Git 답글</string>
-    <string name="kind_zap_goals">Zap 목표</string>
-    <string name="kind_hashtag_follows">해시태그 팔로우</string>
-    <string name="kind_highlights">하이라이트</string>
-    <string name="kind_http_auth">HTTP Auth</string>
-    <string name="kind_index_relay_list">인덱스 Relay 목록</string>
-    <string name="kind_adventure_prologue">어드벤처 프롤로그</string>
-    <string name="kind_adventure_scene">어드벤처 장면</string>
-    <string name="kind_adventure_reading">어드벤처 읽기</string>
-    <string name="kind_named_bookmarks">이름 있는 북마크</string>
-    <string name="kind_live_chats">라이브 채팅</string>
-    <string name="kind_live_streams">라이브 스트림</string>
-    <string name="kind_nwc_request">NWC 요청</string>
-    <string name="kind_nwc_response">NWC 응답</string>
-    <string name="kind_private_zaps">비공개 Zaps</string>
-    <string name="kind_zap_req">Zap 요청</string>
-    <string name="kind_blogs">블로그</string>
-    <string name="kind_meeting_room">회의실</string>
-    <string name="kind_room_presence">방 참석</string>
-    <string name="kind_meeting_space">회의 공간</string>
-    <string name="kind_profile">프로필</string>
-    <string name="kind_mute_list">음소거 목록</string>
-    <string name="kind_nostr_connect">Nostr 연결</string>
-    <string name="kind_dvm_status">DVM 상태</string>
-    <string name="kind_dvm_content_req">DVM 콘텐츠 요청</string>
-    <string name="kind_dvm_content_resp">DVM 콘텐츠 응답</string>
-    <string name="kind_dvm_user_req">DVM 사용자 요청</string>
-    <string name="kind_dvm_user_resp">DVM 사용자 응답</string>
-    <string name="kind_people_lists">사람 목록</string>
-    <string name="kind_pictures">사진</string>
-    <string name="kind_workouts">운동</string>
-    <string name="kind_pins">핀</string>
-    <string name="kind_zap_poll">Zap 투표</string>
-    <string name="kind_poll">투표</string>
-    <string name="kind_poll_response">투표 응답</string>
-    <string name="kind_private_relays">비공개 Relays</string>
-    <string name="kind_proxy_relays">프록시 Relays</string>
-    <string name="kind_public_message">공개 메시지</string>
-    <string name="kind_reactions">반응</string>
-    <string name="kind_contact_card">연락처 카드</string>
-    <string name="kind_relay_discovery">Relay 검색</string>
-    <string name="kind_relay_monitor">Relay 모니터 공지</string>
-    <string name="kind_relay_set">Relay 세트</string>
-    <string name="kind_reports">신고</string>
-    <string name="kind_reposts">리포스트</string>
-    <string name="kind_user_delete">사용자 삭제</string>
-    <string name="kind_seals">봉인</string>
-    <string name="kind_search_relays">검색 Relays</string>
-    <string name="kind_user_status">사용자 상태</string>
-    <string name="kind_notes">노트</string>
-    <string name="kind_edits">편집</string>
-    <string name="kind_torrents">토렌트</string>
-    <string name="kind_torrent_comments">토렌트 댓글</string>
-    <string name="kind_trusted_relays">신뢰할 수 있는 Relays</string>
-    <string name="kind_trusted_providers">신뢰할 수 있는 제공자</string>
-    <string name="kind_video_repl">비디오 (Repl)</string>
-    <string name="kind_video">비디오</string>
-    <string name="kind_voice_msg">음성 메시지</string>
-    <string name="kind_voice_reply">음성 답글</string>
-    <string name="kind_web_bookmark">웹 북마크</string>
-    <string name="uptime">%1$d%% 업타임</string>
-    <string name="namecoin_settings">Namecoin 설정</string>
-    <string name="event_sync_title">Relay 동기화</string>
-    <string name="events_from_you">나의 이벤트</string>
-    <string name="events_to_you">나에게 온 이벤트</string>
-    <string name="searchable_events">검색 가능한 이벤트</string>
-    <string name="dms">DM</string>
-    <string name="profiles">프로필</string>
-    <string name="relay_settings_lower2">아웃박스 목록</string>
-    <string name="last_seen">%1$s 전에 마지막으로 확인</string>
-    <string name="last_seen_on_date">%1$s에 마지막으로 확인 (%2$s 전)</string>
-    <string name="last_seen_just_now">방금 마지막으로 확인</string>
-    <string name="last_seen_never">확인된 적 없음</string>
-    <plurals name="duration_minutes">
-        <item quantity="other">%1$d분</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="other">%1$d시간</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="other">%1$d일</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="other">%1$d주</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="other">%1$d개월</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="other">%1$d년</item>
-    </plurals>
-    <plurals name="cashu_wallet_subtitle_mints">
-        <item quantity="other">%1$d개 mint</item>
-    </plurals>
-    <plurals name="cashu_pending_quotes_title">
-        <item quantity="other">%1$d개의 대기 중인 인보이스</item>
-    </plurals>
-    <plurals name="cashu_untrusted_mint_title">
-        <item quantity="other">사용하지 않는 %1$d개의 mint에 보관된 자금</item>
-    </plurals>
-    <string name="cashu_move_coins_done">%1$s sat을 %2$s로 이동했습니다.</string>
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
-    <string name="cast_to_device">기기로 캐스트</string>
-    <string name="cast_stop_casting">캐스트 중지</string>
     <!-- HLS multi-resolution video sharing -->
-    <string name="share_hls_video">HLS 업로드</string>
-    <string name="hls_state_uploading_with_label_format">%1$s 업로드 중 (%3$d 중 %2$d)</string>
-    <string name="attestation">증명</string>
-    <string name="attestation_request">증명 요청</string>
-    <string name="attestor_recommendation">증명자 추천</string>
-    <string name="attestor_proficiency">증명자 숙련도</string>
-    <string name="web_bookmarks">웹 북마크</string>
-    <string name="web_bookmark_add_title">웹 북마크 추가</string>
-    <string name="web_bookmark_edit_title">웹 북마크 편집</string>
     <!-- NIP-75 Zap Goals -->
-    <string name="goal_progress">%2$s sats 목표 중 %1$s 달성</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="new_goal">새 목표</string>
-    <string name="request_to_vanish">삭제 요청</string>
-    <string name="vanish_request_sent">Vanish 요청이 전송되었습니다</string>
-    <string name="vanish_history">Vanish 기록</string>
     <!-- NIP-86 Relay Management -->
-    <string name="relay_management_tab_pubkeys">사용자</string>
-    <string name="relay_management_tab_events">이벤트</string>
-    <string name="relay_management_tab_kinds">종류</string>
-    <string name="relay_management_tab_ips">IP</string>
-    <string name="relay_management_tab_settings">설정</string>
-    <string name="ai_writing_setting_title">텍스트 개선 제안</string>
-    <string name="ai_writing_setting_description">기기 내 AI 모델을 사용하여 텍스트 수정 및 톤 변경을 제안합니다.</string>
-    <string name="tracked_broadcasts_setting_title">추적된 방송</string>
-    <string name="tracked_broadcasts_setting_description">이벤트를 전송할 때 추적 브로드캐스터를 사용합니다. 방송하는 동안 실시간 진행 상황 및 relay별 상태를 표시합니다.</string>
-    <string name="suggest_workouts_setting_title">운동 공유 제안</string>
-    <string name="suggest_workouts_setting_description">Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…)에서 완료된 운동을 읽어 게시물로 공유할 것을 제안합니다. 권한은 연결 시에만 요청됩니다.</string>
-    <string name="compose_settings">작성 설정</string>
-    <string name="auto_create_drafts_setting_title">자동으로 임시 저장</string>
-    <string name="auto_create_drafts_setting_description">텍스트를 입력하거나 전송하지 않은 텍스트가 있는 작성 화면을 떠날 때 자동으로 임시 저장 이벤트를 저장하고 개인 outbox relay로 전송합니다.</string>
     <!-- Emoji packs -->
-    <string name="new_emoji_pack">새 emoji 팩</string>
-    <string name="edit_emoji_pack">Emoji 팩 편집</string>
-    <string name="manage_emoji_packs">내 Emoji 팩</string>
-    <string name="emoji_sets">Emoji</string>
-    <string name="emoji_public_explainer">공개 emoji는 모든 사람에게 표시되며, 이 팩이 emoji 목록에 있을 때 반응 메뉴와 \":\" 자동완성 선택기에 나타납니다.</string>
-    <string name="emoji_private_explainer">비공개 emoji는 relay에 암호화되어 저장되며 본인만 볼 수 있습니다. 공개 emoji와 마찬가지로 반응 메뉴와 \":\" 자동완성에 나타납니다.</string>
     <!-- NIP-9B community rules composer-side validation. -->
-    <string name="community_rules_violation_kind_size_exceeded">임시 저장이 %1$d바이트입니다. 이 커뮤니티는 이 종류를 %2$d바이트로 제한합니다.</string>
-    <string name="community_rules_violation_max_size_exceeded">임시 저장이 %1$d바이트입니다. 이 커뮤니티는 이벤트를 %2$d바이트로 제한합니다.</string>
-    <string name="community_rules_violation_quota_exceeded">오늘 이 종류의 이벤트를 이미 %1$d개 게시했습니다 (한도 %2$d개).</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="nowhere_link_card_generic">Nowhere 사이트</string>
-    <string name="nowhere_link_card_event">Nowhere 이벤트</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere 모금</string>
-    <string name="nowhere_link_card_store">Nowhere 스토어</string>
-    <string name="nowhere_link_card_petition">Nowhere 청원</string>
-    <string name="nowhere_link_card_message">Nowhere 메시지</string>
-    <string name="nowhere_link_card_art">Nowhere 아트</string>
-    <string name="nowhere_link_card_forum">Nowhere 포럼</string>
     <!-- Marmot (MLS) group chats -->
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d개의 메시지</item>
-    </plurals>
-    <plurals name="marmot_member_count">
-        <item quantity="other">%1$d명의 멤버</item>
-    </plurals>
-    <string name="marmot_group_info_updated">그룹 정보가 업데이트되었습니다</string>
-    <string name="marmot_failed_to_update">업데이트 실패: %1$s</string>
-    <string name="marmot_failed_to_create_group">그룹 생성 실패: %1$s</string>
-    <string name="marmot_failed_to_leave_group">그룹 나가기 실패: %1$s</string>
-    <string name="marmot_adding_user">%1$s 추가 중…</string>
-    <string name="marmot_failed_to_add_user">%1$s 추가 실패: %2$s</string>
-    <string name="marmot_unknown_error">알 수 없는 오류</string>
-    <string name="marmot_member_removed">멤버가 제거되었습니다</string>
-    <string name="marmot_failed_to_remove_member">멤버 제거 실패: %1$s</string>
-    <string name="marmot_admin_granted">관리자 권한이 부여되었습니다</string>
-    <string name="marmot_failed_to_grant_admin">관리자 권한 부여 실패: %1$s</string>
-    <string name="marmot_admin_revoked">관리자 권한이 취소되었습니다</string>
-    <string name="marmot_failed_to_revoke_admin">관리자 권한 취소 실패: %1$s</string>
-    <string name="marmot_not_a_member">이 그룹의 멤버가 아닙니다</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s의 수신자 Lightning 서비스를 사용할 수 없습니다. Lightning 주소 \"%2$s\"에서 계산된 결과입니다. 오류: %3$s. 서버가 작동 중인지, Lightning 주소가 올바른지 확인하세요</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s을(를) 확인할 수 없습니다. 연결 상태, 서버 작동 여부, Lightning 주소 %2$s가 올바른지 확인하세요.\n\n예외 내용: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s의 청구서 조회에서 JSON 파싱 오류가 발생했습니다. 사용자의 Lightning 설정을 확인하세요</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning 청구서를 생성할 수 없습니다. %1$s의 메시지: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s에서 Lightning 청구서를 생성할 수 없습니다: 결과 JSON에서 pr 요소를 찾을 수 없습니다.</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
@@ -1304,5 +159,47 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
-    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
+    <string name="always_on_notif_channel_description">실시간 알림을 위해 inbox relay에 대한 연결을 유지합니다</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">%1$d개의 inbox relay에 연결됨</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">%1$d개의 relay에 연결됨</item>
+    </plurals>
+    <string name="always_on_notif_connecting">inbox relay에 연결 중…</string>
+    <string name="always_on_notif_title">Amethyst 알림 활성화됨</string>
+    <string name="call_ongoing">통화</string>
+    <string name="call_ongoing_description">진행 중인 통화 알림</string>
+    <string name="call_with">%1$s와(과) 통화</string>
+    <string name="call_hangup">전화 끊기</string>
+    <string name="reaction">반응</string>
+    <string name="boost">부스트</string>
+    <string name="post">게시</string>
+    <string name="voice_post">음성 게시물</string>
+    <string name="voice_reply">음성 답글</string>
+    <string name="private_message">비공개 메시지</string>
+    <string name="nest_notification_broadcasting">Nest — 라이브</string>
+    <string name="nest_notification_channel_description">방이 열려 있는 동안 오디오를 계속 재생합니다.</string>
+    <string name="nest_notification_listening">Nest 연결됨</string>
+    <string name="nest_notification_stop">중지</string>
+    <string name="nest_notification_text">탭하여 돌아가기.</string>
+    <string name="nest_leave">나가기</string>
+    <string name="nest_mute">음소거</string>
+    <string name="nest_unmute">음소거 해제</string>
+    <string name="call_mute">음소거</string>
+    <string name="call_unmute">음소거 해제</string>
+    <string name="napplet_cap_identity">신원</string>
+    <string name="napplet_cap_keys">키보드 동작</string>
+    <string name="napplet_cap_relay">Relay</string>
+    <string name="napplet_cap_storage">저장소</string>
+    <string name="napplet_cap_value">결제</string>
+    <string name="napplet_cap_resource">네트워크</string>
+    <string name="napplet_cap_upload">업로드</string>
+    <string name="napplet_cap_theme">테마</string>
+    <string name="napplet_cap_notify">알림</string>
+    <string name="napplet_cap_inc">메시징</string>
+    <string name="muted_button">음소거됨. 클릭하여 음소거 해제</string>
+    <string name="mute_button">소리 켜짐. 클릭하여 음소거</string>
+    <string name="play">재생</string>
+    <string name="pause">일시 정지</string>
 </resources>

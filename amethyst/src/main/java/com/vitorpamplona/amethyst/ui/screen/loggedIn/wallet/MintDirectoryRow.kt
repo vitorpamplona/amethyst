@@ -36,17 +36,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_no_recs
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_plus_others
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by
+import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by_others
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -155,7 +156,7 @@ private fun RecommendersLine(
                 }
                 if (plusOthers > 0) {
                     Text(
-                        text = pluralStringResource(R.plurals.cashu_mint_plus_others, plusOthers, plusOthers),
+                        text = pluralStringRes(Res.plurals.cashu_mint_plus_others, plusOthers, plusOthers),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.CenterVertically),
@@ -166,8 +167,8 @@ private fun RecommendersLine(
         entry.recommendationCount > 0 -> {
             Text(
                 text =
-                    pluralStringResource(
-                        R.plurals.cashu_mint_recommended_by_others,
+                    pluralStringRes(
+                        Res.plurals.cashu_mint_recommended_by_others,
                         entry.recommendationCount,
                         entry.recommendationCount,
                     ),

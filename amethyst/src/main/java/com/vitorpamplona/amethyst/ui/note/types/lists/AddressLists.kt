@@ -26,8 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_app_curation_set
+import com.vitorpamplona.amethyst.commons.resources.kind_favorite_algo_feeds
+import com.vitorpamplona.amethyst.commons.resources.kind_git_repositories
+import com.vitorpamplona.amethyst.commons.resources.kind_simple_groups
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -51,7 +55,7 @@ fun RenderGitRepositoryList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateRepositories(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_git_repositories),
+        title = stringRes(Res.string.kind_git_repositories),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -78,7 +82,7 @@ fun RenderFavoriteAlgoFeedsList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateFavoriteAlgoFeeds(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_favorite_algo_feeds),
+        title = stringRes(Res.string.kind_favorite_algo_feeds),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -104,7 +108,7 @@ fun RenderAppCurationSet(
     val apps = remember(noteEvent) { noteEvent.apps() }
 
     ListCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_app_curation_set),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_app_curation_set),
         description = noteEvent.description(),
         items = apps,
         // Not a PrivateTagArrayEvent: an app set has no encrypted half to be locked out of.
@@ -135,7 +139,7 @@ fun RenderSimpleGroupList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateGroups(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_simple_groups),
+        title = stringRes(Res.string.kind_simple_groups),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),

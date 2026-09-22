@@ -26,11 +26,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_my_inbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_my_own_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_notify_inbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_other
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_post_venue
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_read_outbox
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_read_venue
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_send_dm
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_thread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Loads [pubkey] from the local cache, get-or-creating (and subscribing) if absent, then hands the
@@ -58,15 +68,15 @@ internal fun LoadRelayAuthUser(
  * deciding right now ("It won't serve … to readers it can't identify"); these caption a past login in
  * the settings log, where a full sentence per row would be the wall of text this screen just lost.
  */
-internal fun relayAuthPurposeLabelRes(kind: AuthPurposeKind): Int =
+internal fun relayAuthPurposeLabelRes(kind: AuthPurposeKind): StringResource =
     when (kind) {
-        AuthPurposeKind.SEND_DM -> R.string.relay_auth_purpose_send_dm
-        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_purpose_notify_inbox
-        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_purpose_read_outbox
-        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_purpose_post_venue
-        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_purpose_read_venue
-        AuthPurposeKind.MY_INBOX -> R.string.relay_auth_purpose_my_inbox
-        AuthPurposeKind.THREAD -> R.string.relay_auth_purpose_thread
-        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_purpose_my_own_relay
-        AuthPurposeKind.OTHER -> R.string.relay_auth_purpose_other
+        AuthPurposeKind.SEND_DM -> Res.string.relay_auth_purpose_send_dm
+        AuthPurposeKind.NOTIFY_INBOX -> Res.string.relay_auth_purpose_notify_inbox
+        AuthPurposeKind.READ_OUTBOX -> Res.string.relay_auth_purpose_read_outbox
+        AuthPurposeKind.POST_VENUE -> Res.string.relay_auth_purpose_post_venue
+        AuthPurposeKind.READ_VENUE -> Res.string.relay_auth_purpose_read_venue
+        AuthPurposeKind.MY_INBOX -> Res.string.relay_auth_purpose_my_inbox
+        AuthPurposeKind.THREAD -> Res.string.relay_auth_purpose_thread
+        AuthPurposeKind.MY_OWN_RELAY -> Res.string.relay_auth_purpose_my_own_relay
+        AuthPurposeKind.OTHER -> Res.string.relay_auth_purpose_other
     }

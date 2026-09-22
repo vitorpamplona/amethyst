@@ -61,15 +61,16 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.edit_emoji_pack
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_description_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_image_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_name_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
+import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -180,7 +181,7 @@ private fun EmojiPackMetadataTopBar(
 ) {
     if (viewModel.isNewPack) {
         CreatingTopBar(
-            titleRes = R.string.new_emoji_pack,
+            titleRes = Res.string.new_emoji_pack,
             isActive = viewModel::canPost,
             onCancel = {
                 viewModel.clear()
@@ -190,7 +191,7 @@ private fun EmojiPackMetadataTopBar(
         )
     } else {
         SavingTopBar(
-            titleRes = R.string.edit_emoji_pack,
+            titleRes = Res.string.edit_emoji_pack,
             isActive = viewModel::canPost,
             onCancel = {
                 viewModel.clear()

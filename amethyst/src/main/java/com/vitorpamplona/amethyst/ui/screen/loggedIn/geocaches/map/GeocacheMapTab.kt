@@ -68,10 +68,10 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.roadEventPinBitmap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.rememberMyFoundCacheIds
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import org.jetbrains.compose.resources.stringResource
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -270,7 +270,7 @@ fun GeocacheMapTab(
 
         if (peek == null) {
             Text(
-                text = stringResource(Res.string.geocache_map_long_press),
+                text = stringRes(Res.string.geocache_map_long_press),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
@@ -294,7 +294,7 @@ private fun GeocachePeekSheet(
             Text(
                 text =
                     listing.cacheType().geocacheEmoji() + "  " +
-                        (listing.cacheName()?.trim()?.ifBlank { null } ?: stringResource(Res.string.geocache_unnamed)),
+                        (listing.cacheName()?.trim()?.ifBlank { null } ?: stringRes(Res.string.geocache_unnamed)),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -304,7 +304,7 @@ private fun GeocachePeekSheet(
             Spacer(Modifier.height(10.dp))
 
             Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(Res.string.geocache_map_open))
+                Text(stringRes(Res.string.geocache_map_open))
             }
         }
     }

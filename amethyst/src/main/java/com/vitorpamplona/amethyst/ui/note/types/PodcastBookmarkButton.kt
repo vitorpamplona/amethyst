@@ -36,11 +36,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
+import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -100,7 +102,7 @@ fun PodcastBookmarkButton(
             symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
             contentDescription =
                 stringRes(
-                    if (isBookmarked) R.string.remove_from_public_bookmarks else R.string.add_to_public_bookmarks,
+                    if (isBookmarked) Res.string.remove_from_public_bookmarks else Res.string.add_to_public_bookmarks,
                 ),
             tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(iconSize),

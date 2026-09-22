@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.events_from_you
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -40,7 +41,7 @@ class PrivateOutboxRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = R.string.events_from_you,
+                label = Res.string.events_from_you,
                 filter = Filter(authors = listOf(account.pubKey)),
             ),
         )

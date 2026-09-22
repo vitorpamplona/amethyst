@@ -40,11 +40,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_hide_word
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_show_word
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.mute_hashtag
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.unmute_hashtag
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
@@ -172,8 +177,8 @@ fun HashtagActionOptions(
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
             } else {
                 accountViewModel.unfollowHashtag(tag)
@@ -183,8 +188,8 @@ fun HashtagActionOptions(
         FollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_follow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_follow,
                 )
             } else {
                 accountViewModel.followHashtag(tag)
@@ -206,7 +211,7 @@ fun HashtagMuteMenu(
     IconButton(onClick = { menuOpen = true }) {
         Icon(
             symbol = MaterialSymbols.MoreVert,
-            contentDescription = stringRes(R.string.more_options),
+            contentDescription = stringRes(Res.string.more_options),
             modifier = Modifier.size(22.dp),
         )
     }
@@ -219,8 +224,8 @@ fun HashtagMuteMenu(
                     menuOpen = false
                     if (!accountViewModel.isWriteable()) {
                         accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_show_word,
+                            Res.string.read_only_user,
+                            Res.string.login_with_a_private_key_to_be_able_to_show_word,
                         )
                     } else {
                         accountViewModel.showHashtag(tag)
@@ -234,8 +239,8 @@ fun HashtagMuteMenu(
                     menuOpen = false
                     if (!accountViewModel.isWriteable()) {
                         accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_hide_word,
+                            Res.string.read_only_user,
+                            Res.string.login_with_a_private_key_to_be_able_to_hide_word,
                         )
                     } else {
                         accountViewModel.hideHashtag(tag)

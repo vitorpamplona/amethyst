@@ -26,8 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_good_wiki_relays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -46,7 +47,7 @@ fun RenderGoodWikiRelayList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateRelays(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_good_wiki_relays),
+        title = stringRes(Res.string.kind_good_wiki_relays),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),

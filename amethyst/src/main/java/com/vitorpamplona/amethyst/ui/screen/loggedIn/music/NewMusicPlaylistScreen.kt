@@ -58,21 +58,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.edit_music_playlist
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_collaborative_hint
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_cover_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_cover_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_delete
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_description_label
@@ -86,7 +88,10 @@ import com.vitorpamplona.amethyst.commons.resources.music_playlist_private
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_private_hint
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_remove_track
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_title_label
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_unknown_track
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_uploading_banner
+import com.vitorpamplona.amethyst.commons.resources.new_music_playlist
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
@@ -96,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -143,7 +149,7 @@ fun NewMusicPlaylistScreen(
     Scaffold(
         topBar = {
             SendingTopBar(
-                titleRes = if (vm.isEditing) R.string.edit_music_playlist else R.string.new_music_playlist,
+                titleRes = if (vm.isEditing) Res.string.edit_music_playlist else Res.string.new_music_playlist,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
@@ -166,7 +172,7 @@ fun NewMusicPlaylistScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isBusy) UploadInProgressBanner(R.string.music_playlist_uploading_banner)
+            if (isBusy) UploadInProgressBanner(Res.string.music_playlist_uploading_banner)
 
             CoverImagePicker(
                 cover = vm.coverMedia.value,
@@ -175,8 +181,8 @@ fun NewMusicPlaylistScreen(
                 onDelete = { vm.clearPickedCover() },
                 accountViewModel = accountViewModel,
                 enabled = !isBusy,
-                ctaRes = R.string.music_playlist_cover_upload_cta,
-                hintRes = R.string.music_playlist_cover_upload_hint,
+                ctaRes = Res.string.music_playlist_cover_upload_cta,
+                hintRes = Res.string.music_playlist_cover_upload_hint,
             )
 
             OutlinedTextField(
@@ -302,7 +308,7 @@ private fun TrackManagementSection(
 
     val count = tracks.size
     Text(
-        text = pluralStringResource(R.plurals.music_playlist_track_count, count, count),
+        text = pluralStringRes(Res.plurals.music_playlist_track_count, count, count),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
     )
@@ -524,7 +530,7 @@ private fun DeleteMusicPlaylistRow(
             },
             dismissButton = {
                 TextButton(onClick = { confirming = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

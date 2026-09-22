@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -30,6 +29,14 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.counterpartyPubKey
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -42,12 +49,12 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
-fun NostrSignerOp.label(context: Context): String =
+suspend fun NostrSignerOp.label(context: Context): String =
     when (this) {
-        is NostrSignerOp.SignKind -> context.getString(R.string.napplet_op_sign_kind_named, kindNameFor(context, kind), kind)
-        NostrSignerOp.Encrypt -> context.getString(R.string.napplet_op_encrypt)
-        NostrSignerOp.Decrypt -> context.getString(R.string.napplet_op_decrypt)
-        is NostrSignerOp.DecryptFrom -> context.getString(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
+        is NostrSignerOp.SignKind -> loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
+        NostrSignerOp.Encrypt -> loadStringRes(Res.string.napplet_op_encrypt)
+        NostrSignerOp.Decrypt -> loadStringRes(Res.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> loadStringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
 
 /**
@@ -66,13 +73,13 @@ fun counterpartyLabel(pubKeyHex: HexKey): String {
 }
 
 /** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
-fun buildSignerConsentInfo(
+suspend fun buildSignerConsentInfo(
     context: Context,
     identity: NappletIdentity,
     op: NostrSignerOp,
     request: NappletRequest,
 ): SignerConsentInfo {
-    val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+    val untitled = loadStringRes(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
@@ -156,7 +163,7 @@ fun buildSignerConsentInfo(
         // are present, so deriving them from one value keeps them from disagreeing.
         narrowOpLabel =
             (narrowOp as? NostrSignerOp.DecryptFrom)?.let {
-                context.getString(R.string.nip46_signer_allow_always_for, counterpartyLabel(it.counterparty))
+                loadStringRes(Res.string.nip46_signer_allow_always_for, counterpartyLabel(it.counterparty))
             },
     )
 }
@@ -167,12 +174,12 @@ fun buildSignerConsentInfo(
  * [SignerConnectInfo.requestedPermissions] — otherwise the dialog would be asking the user to
  * approve a set it never showed them.
  */
-fun buildConnectInfo(
+suspend fun buildConnectInfo(
     context: Context,
     identity: NappletIdentity,
     declared: Set<NappletCapability> = emptySet(),
 ): SignerConnectInfo {
-    val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
+    val untitled = loadStringRes(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
@@ -191,7 +198,7 @@ fun buildConnectInfo(
     val preGranted =
         declared
             .filter { it.requiresConsent && !it.requiresPerUseConsent }
-            .map { context.getString(it.labelRes()) }
+            .map { loadStringRes(it.labelRes()) }
             .sorted()
     return SignerConnectInfo(
         appletTitle = title,

@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
 
 import androidx.compose.ui.text.input.TextFieldValue
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_bunker_not_supported
+import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_supported
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -50,7 +52,7 @@ class LoginViewModelKeyKindTest {
         val model = viewModelWithKey("bunker://${"a".repeat(64)}?relay=wss%3A%2F%2Fr.example&secret=s1")
 
         assertFalse(model.checkCanLogin())
-        assertEquals(R.string.login_bunker_not_supported, errorResIdOf(model))
+        assertEquals(Res.string.login_bunker_not_supported, errorResIdOf(model))
     }
 
     /** Same defect, same field: a connect offer is not a sign-in method either. */
@@ -59,7 +61,7 @@ class LoginViewModelKeyKindTest {
         val model = viewModelWithKey("nostrconnect://${"b".repeat(64)}?relay=wss%3A%2F%2Fr.example&secret=s1")
 
         assertFalse(model.checkCanLogin())
-        assertEquals(R.string.login_nostrconnect_not_supported, errorResIdOf(model))
+        assertEquals(Res.string.login_nostrconnect_not_supported, errorResIdOf(model))
     }
 
     /** Pasted from a chat app, which loves to add a trailing space. */
@@ -68,7 +70,7 @@ class LoginViewModelKeyKindTest {
         val model = viewModelWithKey("  bunker://${"a".repeat(64)}?secret=s1  ")
 
         assertFalse(model.checkCanLogin())
-        assertEquals(R.string.login_bunker_not_supported, errorResIdOf(model))
+        assertEquals(Res.string.login_bunker_not_supported, errorResIdOf(model))
     }
 
     /** An npub is still a key, so the guard must not swallow the ordinary path. */

@@ -57,7 +57,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.badge_award_image
 import com.vitorpamplona.amethyst.commons.resources.badge_award_image_for
 import com.vitorpamplona.amethyst.commons.resources.badge_untitled
 import com.vitorpamplona.amethyst.commons.resources.profile_badges_header
+import com.vitorpamplona.amethyst.commons.resources.profile_badges_title
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -177,7 +177,7 @@ private fun RenderProfileBadgeStrip(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Settings,
-                        contentDescription = stringRes(R.string.profile_badges_title),
+                        contentDescription = stringRes(Res.string.profile_badges_title),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

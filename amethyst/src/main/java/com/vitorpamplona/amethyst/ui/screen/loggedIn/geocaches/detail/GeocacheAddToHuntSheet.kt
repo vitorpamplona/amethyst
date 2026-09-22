@@ -57,12 +57,12 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_new
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_none_yet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationRevision
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Add to a hunt", for hunts that already exist.
@@ -102,7 +102,7 @@ fun GeocacheAddToHuntSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             Text(
-                text = stringResource(Res.string.geocache_add_to_hunt),
+                text = stringRes(Res.string.geocache_add_to_hunt),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp),
@@ -125,7 +125,7 @@ fun GeocacheAddToHuntSheet(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = stringResource(Res.string.geocache_hunt_new),
+                    text = stringRes(Res.string.geocache_hunt_new),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -135,7 +135,7 @@ fun GeocacheAddToHuntSheet(
 
             if (mine.isEmpty()) {
                 Text(
-                    text = stringResource(Res.string.geocache_hunt_none_yet),
+                    text = stringRes(Res.string.geocache_hunt_none_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 14.dp),
@@ -176,9 +176,9 @@ fun GeocacheAddToHuntSheet(
                         Text(
                             text =
                                 if (already) {
-                                    stringResource(Res.string.geocache_hunt_already_on)
+                                    stringRes(Res.string.geocache_hunt_already_on)
                                 } else {
-                                    stringResource(Res.string.geocache_hunt_caches, hunt.geocaches().size)
+                                    stringRes(Res.string.geocache_hunt_caches, hunt.geocaches().size)
                                 },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

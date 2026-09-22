@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -40,8 +39,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_create_fab
 import com.vitorpamplona.amethyst.commons.resources.nest_no_server_body
 import com.vitorpamplona.amethyst.commons.resources.nest_no_server_cancel
+import com.vitorpamplona.amethyst.commons.resources.nest_no_server_save_failed
 import com.vitorpamplona.amethyst.commons.resources.nest_no_server_title
 import com.vitorpamplona.amethyst.commons.resources.nest_no_server_use_default
+import com.vitorpamplona.amethyst.commons.resources.nests
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
@@ -167,8 +168,8 @@ fun NestsScreen(
                         showCreateSheet = true
                     } catch (_: Throwable) {
                         accountViewModel.toastManager.toast(
-                            R.string.nests,
-                            R.string.nest_no_server_save_failed,
+                            Res.string.nests,
+                            Res.string.nest_no_server_save_failed,
                         )
                     }
                 }

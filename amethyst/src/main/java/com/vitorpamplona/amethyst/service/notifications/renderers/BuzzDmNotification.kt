@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_new_message
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
@@ -32,7 +34,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -78,7 +79,7 @@ object BuzzDmNotification {
         val channel = buzzDmChannelForMe(note, account.signer.pubKey) ?: return
 
         val sender = LocalCache.getOrCreateUser(event.pubKey)
-        val body = event.content.takeIf { it.isNotBlank() } ?: stringRes(context, R.string.app_notification_new_message)
+        val body = event.content.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.app_notification_new_message)
 
         val accountNpub = NotificationRoutes.accountNpub(account)
         // The channel's kind-39000 naddr routes straight to the chatroom via the

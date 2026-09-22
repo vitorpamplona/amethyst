@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.CHAT_UNREAD_CAP
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
 
@@ -44,7 +45,7 @@ fun ConcordUnreadBadge(
     if (count <= 0) return
     ChatUnreadBadge(
         count = count,
-        contentDescription = pluralStringResource(R.plurals.concord_unread_messages, count, count),
+        contentDescription = pluralStringRes(Res.plurals.concord_unread_messages, count, count),
         modifier = modifier,
     )
 }

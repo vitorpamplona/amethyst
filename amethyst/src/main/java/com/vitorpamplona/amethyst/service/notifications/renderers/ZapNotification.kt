@@ -21,10 +21,16 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_nutzap_channel_message_from
+import com.vitorpamplona.amethyst.commons.resources.app_notification_onchain_channel_message_from
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_message_for
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_message_from
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -33,11 +39,11 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import org.jetbrains.compose.resources.StringResource
 import java.math.BigDecimal
 
 /**
@@ -76,7 +82,7 @@ object ZapNotification {
             sender = sender,
             zappedNote = zappedNote,
             title = { _ -> zapTitle(context, amount, comment) },
-            body = { user, excerpt -> fromLine(context, R.string.app_notification_zaps_channel_message_from, user, excerpt) },
+            body = { user, excerpt -> fromLine(context, Res.string.app_notification_zaps_channel_message_from, user, excerpt) },
         )
     }
 
@@ -96,7 +102,7 @@ object ZapNotification {
             createdAt = event.createdAt,
             sender = sender,
             zappedNote = zappedNote,
-            title = { user -> stringRes(context, R.string.app_notification_nutzap_channel_message_from, user) },
+            title = { user -> loadStringRes(Res.string.app_notification_nutzap_channel_message_from, user) },
             body = { user, excerpt -> excerpt.ifBlank { user } },
         )
     }
@@ -120,12 +126,12 @@ object ZapNotification {
             zappedNote = zappedNote,
             title = { user ->
                 if (sats != null) {
-                    stringRes(context, R.string.app_notification_zaps_channel_message, showAmount(sats.toBigDecimal()))
+                    loadStringRes(Res.string.app_notification_zaps_channel_message, showAmount(sats.toBigDecimal()))
                 } else {
-                    stringRes(context, R.string.app_notification_onchain_channel_message_from, user)
+                    loadStringRes(Res.string.app_notification_onchain_channel_message_from, user)
                 }
             },
-            body = { user, excerpt -> fromLine(context, R.string.app_notification_onchain_channel_message_from, user, excerpt) },
+            body = { user, excerpt -> fromLine(context, Res.string.app_notification_onchain_channel_message_from, user, excerpt) },
         )
     }
 
@@ -136,8 +142,8 @@ object ZapNotification {
         createdAt: Long,
         sender: User,
         zappedNote: Note?,
-        title: (String) -> String,
-        body: (String, String) -> String,
+        title: suspend (String) -> String,
+        body: suspend (String, String) -> String,
     ) {
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.notificationsUri(accountNpub, id)
@@ -167,24 +173,24 @@ object ZapNotification {
         }
     }
 
-    private fun zapTitle(
+    private suspend fun zapTitle(
         context: Context,
         amount: String,
         comment: String?,
     ): String {
-        val base = stringRes(context, R.string.app_notification_zaps_channel_message, amount)
+        val base = loadStringRes(Res.string.app_notification_zaps_channel_message, amount)
         return if (comment != null) "$base ($comment)" else base
     }
 
-    private fun fromLine(
+    private suspend fun fromLine(
         context: Context,
-        fromRes: Int,
+        fromRes: StringResource,
         user: String,
         excerpt: String,
     ): String {
-        var content = stringRes(context, fromRes, user)
+        var content = loadStringRes(fromRes, user)
         if (excerpt.isNotBlank()) {
-            content += " " + stringRes(context, R.string.app_notification_zaps_channel_message_for, excerpt)
+            content += " " + loadStringRes(Res.string.app_notification_zaps_channel_message_for, excerpt)
         }
         return content
     }

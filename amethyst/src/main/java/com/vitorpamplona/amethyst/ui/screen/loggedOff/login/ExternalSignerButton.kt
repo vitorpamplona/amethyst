@@ -55,9 +55,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.select_signer
+import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected2
 import com.vitorpamplona.amethyst.model.DefaultSignerPermissions
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
@@ -91,7 +92,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         loginViewModel.loginWithExternalSigner(loginInfo.result.packageName)
                     }
                 } else {
-                    loginViewModel.errorManager.error(R.string.sign_request_rejected2)
+                    loginViewModel.errorManager.error(Res.string.sign_request_rejected2)
                 }
             }
         }
@@ -134,7 +135,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                                                 } catch (e: Exception) {
                                                     if (e is CancellationException) throw e
                                                     Log.e("ExternalSigner", "Error opening Signer app", e)
-                                                    loginViewModel.errorManager.error(R.string.error_opening_external_signer)
+                                                    loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
                                                 } finally {
                                                     shouldSelectSigner = false
                                                 }
@@ -187,7 +188,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         Log.e("ExternalSigner", "Error opening Signer app", e)
-                        loginViewModel.errorManager.error(R.string.error_opening_external_signer)
+                        loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
                     }
                 }
             },

@@ -93,7 +93,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -134,6 +133,14 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_no_description
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_choose
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_picker_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_approved
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_denied
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_needs_approval
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_publishing
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_readonly_approver
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_runs_title
@@ -163,6 +170,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The shared **workflow run board** of one Buzz channel — where a team drives an AI agent under a
@@ -990,14 +998,14 @@ private fun styleColors(style: RunStyle): Pair<Color, Color> =
         RunStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun pillContent(state: WorkflowRunState): Pair<Int, MaterialSymbol> =
+private fun pillContent(state: WorkflowRunState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        WorkflowRunState.TRIGGERED -> R.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
-        WorkflowRunState.RUNNING -> R.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
-        WorkflowRunState.AWAITING_APPROVAL -> R.string.buzz_workflow_pill_needs_approval to MaterialSymbols.Gavel
-        WorkflowRunState.APPROVED -> R.string.buzz_workflow_pill_approved to MaterialSymbols.CheckCircle
-        WorkflowRunState.COMPLETED -> R.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
-        WorkflowRunState.FAILED -> R.string.buzz_workflow_pill_failed to MaterialSymbols.Error
-        WorkflowRunState.CANCELLED -> R.string.buzz_workflow_pill_cancelled to MaterialSymbols.Cancel
-        WorkflowRunState.DENIED -> R.string.buzz_workflow_pill_denied to MaterialSymbols.Close
+        WorkflowRunState.TRIGGERED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        WorkflowRunState.RUNNING -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        WorkflowRunState.AWAITING_APPROVAL -> Res.string.buzz_workflow_pill_needs_approval to MaterialSymbols.Gavel
+        WorkflowRunState.APPROVED -> Res.string.buzz_workflow_pill_approved to MaterialSymbols.CheckCircle
+        WorkflowRunState.COMPLETED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        WorkflowRunState.FAILED -> Res.string.buzz_workflow_pill_failed to MaterialSymbols.Error
+        WorkflowRunState.CANCELLED -> Res.string.buzz_workflow_pill_cancelled to MaterialSymbols.Cancel
+        WorkflowRunState.DENIED -> Res.string.buzz_workflow_pill_denied to MaterialSymbols.Close
     }

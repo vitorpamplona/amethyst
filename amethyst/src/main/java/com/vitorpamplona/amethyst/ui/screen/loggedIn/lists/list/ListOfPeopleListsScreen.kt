@@ -33,11 +33,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
+import com.vitorpamplona.amethyst.commons.resources.my_lists
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -73,7 +73,7 @@ fun ListOfPeopleListsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.my_lists), nav)
+            TopBarWithBackButton(stringRes(Res.string.my_lists), nav)
         },
         bottomBar = {
             AppBottomBar(Route.Lists, nav, accountViewModel) { route ->

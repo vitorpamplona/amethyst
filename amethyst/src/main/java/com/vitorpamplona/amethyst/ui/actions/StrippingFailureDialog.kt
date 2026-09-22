@@ -24,9 +24,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_body
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload
 import com.vitorpamplona.amethyst.service.uploads.ConfirmationCallbacks
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
@@ -42,7 +43,7 @@ fun StrippingFailureDialog(confirmation: SuspendableConfirmation) {
 fun StrippingFailureDialog(dialogState: ConfirmationCallbacks) {
     AlertDialog(
         onDismissRequest = { dialogState.onCancel() },
-        title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
+        title = { Text(stringRes(Res.string.metadata_strip_failed_title)) },
         text = { Text(stringRes(Res.string.metadata_strip_failed_body)) },
         confirmButton = {
             Button(onClick = { dialogState.onConfirm() }) {
@@ -51,7 +52,7 @@ fun StrippingFailureDialog(dialogState: ConfirmationCallbacks) {
         },
         dismissButton = {
             Button(onClick = { dialogState.onCancel() }) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

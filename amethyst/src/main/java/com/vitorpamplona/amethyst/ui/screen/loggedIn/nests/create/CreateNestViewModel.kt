@@ -23,7 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
+import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
@@ -35,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
@@ -158,8 +163,8 @@ class CreateNestViewModel : ViewModel() {
                     !strippingResult.stripped
                 ) {
                     onError(
-                        stringRes(context, R.string.metadata_strip_failed_title),
-                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                        loadStringRes(Res.string.metadata_strip_failed_title),
+                        loadStringRes(Res.string.metadata_strip_failed_upload_cancelled),
                     )
                     return null
                 } else {
@@ -199,21 +204,21 @@ class CreateNestViewModel : ViewModel() {
 
                 if (result.url == null) {
                     onError(
-                        stringRes(context, R.string.failed_to_upload_media_no_details),
-                        stringRes(context, R.string.server_did_not_provide_a_url_after_uploading),
+                        loadStringRes(Res.string.failed_to_upload_media_no_details),
+                        loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading),
                     )
                 }
 
                 result.url
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
                 null
             }
         } catch (e: AvifMetadataNotVerifiableException) {
             onError(
-                stringRes(context, R.string.metadata_strip_failed_title),
-                stringRes(context, R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
+                loadStringRes(Res.string.metadata_strip_failed_title),
+                loadStringRes(Res.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
             )
             null
         } finally {

@@ -57,7 +57,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -65,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accept_badge
+import com.vitorpamplona.amethyst.commons.resources.award_badge
 import com.vitorpamplona.amethyst.commons.resources.award_granted_to
 import com.vitorpamplona.amethyst.commons.resources.badge_and_n_others
 import com.vitorpamplona.amethyst.commons.resources.badge_award_image
@@ -132,7 +132,7 @@ fun BadgeDisplay(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringRes(R.string.award_badge))
+                    Text(stringRes(Res.string.award_badge))
                 }
             }
         }

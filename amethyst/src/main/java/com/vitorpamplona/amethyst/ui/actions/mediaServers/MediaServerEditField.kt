@@ -35,16 +35,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.add_a_nip96_server
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun MediaServerEditField(
-    label: Int = R.string.add_a_nip96_server,
+    label: StringResource = Res.string.add_a_nip96_server,
     modifier: Modifier = Modifier,
     onAddServer: (String) -> Unit,
 ) {
@@ -88,7 +91,7 @@ fun MediaServerEditField(
             shape = ButtonBorder,
             enabled = validUrl,
         ) {
-            Text(text = stringRes(id = R.string.add), color = Color.White)
+            Text(text = stringRes(id = Res.string.add), color = Color.White)
         }
     }
 }

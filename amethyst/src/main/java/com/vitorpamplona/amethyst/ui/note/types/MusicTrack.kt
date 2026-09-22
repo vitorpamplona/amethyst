@@ -52,12 +52,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
@@ -363,7 +364,7 @@ private fun MusicTrackCover(
         if (image != null) {
             MyAsyncImage(
                 imageUrl = image,
-                contentDescription = stringRes(R.string.preview_card_image_for, image),
+                contentDescription = stringRes(Res.string.preview_card_image_for, image),
                 contentScale = ContentScale.Crop,
                 mainImageModifier = Modifier.fillMaxSize(),
                 loadedImageModifier = imageModifier,

@@ -51,15 +51,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_progress
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_start
 import com.vitorpamplona.amethyst.commons.resources.geocache_loading
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.resources.route_geocache_hunt_detail
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
@@ -78,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * One curated hunt: a banner, a progress bar and the caches in the order the curator put them.
@@ -114,12 +114,12 @@ fun GeocacheHuntScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.route_geocache_hunt_detail)) },
+                title = { Text(stringRes(Res.string.route_geocache_hunt_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
@@ -141,7 +141,7 @@ fun GeocacheHuntScreen(
             if (hunt == null) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        text = stringResource(Res.string.geocache_loading),
+                        text = stringRes(Res.string.geocache_loading),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -186,7 +186,7 @@ fun GeocacheHuntScreen(
             )
 
             Text(
-                text = stringResource(Res.string.geocache_hunt_progress, doneCount, caches.size),
+                text = stringRes(Res.string.geocache_hunt_progress, doneCount, caches.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -194,7 +194,7 @@ fun GeocacheHuntScreen(
             Button(
                 onClick = { nav.nav(Route.Geocaches(GeocacheTab.MAP)) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(Res.string.geocache_hunt_start)) }
+            ) { Text(stringRes(Res.string.geocache_hunt_start)) }
 
             caches.forEachIndexed { index, cacheAddress ->
                 GeocacheHuntStop(
@@ -242,7 +242,7 @@ private fun GeocacheHuntStop(
                 Text(
                     text =
                         listing?.cacheName()?.trim()?.ifBlank { null }
-                            ?: stringResource(Res.string.geocache_unnamed),
+                            ?: stringRes(Res.string.geocache_unnamed),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                 )

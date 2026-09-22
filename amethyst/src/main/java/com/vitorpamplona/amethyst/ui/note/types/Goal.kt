@@ -43,10 +43,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.goal_closed
+import com.vitorpamplona.amethyst.commons.resources.goal_progress
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -97,7 +98,7 @@ fun GoalHeader(
             Box {
                 MyAsyncImage(
                     imageUrl = it,
-                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentDescription = stringRes(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.FillWidth,
                     mainImageModifier = Modifier.fillMaxWidth(),
                     loadedImageModifier = Modifier,
@@ -190,7 +191,7 @@ fun GoalProgressBar(
             Text(
                 text =
                     stringRes(
-                        R.string.goal_progress,
+                        Res.string.goal_progress,
                         totalPercentage,
                         showAmount(goalAmountSats.toBigDecimal()),
                     ),

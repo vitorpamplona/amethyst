@@ -56,7 +56,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -64,6 +63,9 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_archive
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_unarchive
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.relay_group_thread_new
 import com.vitorpamplona.amethyst.commons.resources.relay_group_thread_untitled
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_all_caught_up
@@ -191,7 +193,7 @@ private fun RelayGroupThreads(
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(
                                 symbol = MaterialSymbols.MoreVert,
-                                contentDescription = stringRes(R.string.more_options),
+                                contentDescription = stringRes(Res.string.more_options),
                                 modifier = Modifier.size(22.dp),
                             )
                         }
@@ -201,7 +203,7 @@ private fun RelayGroupThreads(
                             if (isAdmin) {
                                 val archived = channel.isArchived()
                                 DropdownMenuItem(
-                                    text = { Text(stringRes(if (archived) R.string.buzz_channel_unarchive else R.string.buzz_channel_archive)) },
+                                    text = { Text(stringRes(if (archived) Res.string.buzz_channel_unarchive else Res.string.buzz_channel_archive)) },
                                     onClick = {
                                         menuOpen = false
                                         accountViewModel.archiveRelayGroup(channel, !archived)

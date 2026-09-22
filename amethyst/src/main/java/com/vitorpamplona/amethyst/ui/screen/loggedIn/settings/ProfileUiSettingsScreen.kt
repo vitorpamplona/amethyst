@@ -33,8 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.gallery_style
+import com.vitorpamplona.amethyst.commons.resources.gallery_style_description
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_app_recommendations
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_badges
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_followers_feed
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_onchain_wallet
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_zap_received_feed
+import com.vitorpamplona.amethyst.commons.resources.profile_ui_settings
+import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
+import com.vitorpamplona.amethyst.commons.resources.settings_section_profile_sections
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -63,7 +73,7 @@ fun ProfileUiSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.profile_ui_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.profile_ui_settings), nav)
         },
     ) { padding ->
         ProfileUiSettingsContent(accountViewModel.settings.uiSettingsFlow, Modifier.padding(padding))
@@ -90,48 +100,48 @@ fun ProfileUiSettingsContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        SettingsSection(R.string.settings_section_profile_sections) {
+        SettingsSection(Res.string.settings_section_profile_sections) {
             SettingsSwitchTile(
                 icon = MaterialSymbols.MilitaryTech,
-                title = R.string.profile_ui_setting_badges,
+                title = Res.string.profile_ui_setting_badges,
                 checked = showBadges,
                 onCheckedChange = { ui.showProfileBadges.tryEmit(it) },
             )
             SettingsDivider()
             SettingsSwitchTile(
                 icon = MaterialSymbols.Recommend,
-                title = R.string.profile_ui_setting_app_recommendations,
+                title = Res.string.profile_ui_setting_app_recommendations,
                 checked = showAppRecommendations,
                 onCheckedChange = { ui.showProfileAppRecommendations.tryEmit(it) },
             )
             SettingsDivider()
             SettingsSwitchTile(
                 icon = MaterialSymbols.Bolt,
-                title = R.string.profile_ui_setting_zap_received_feed,
+                title = Res.string.profile_ui_setting_zap_received_feed,
                 checked = showZapReceived,
                 onCheckedChange = { ui.showProfileZapReceivedFeed.tryEmit(it) },
             )
             SettingsDivider()
             SettingsSwitchTile(
                 icon = MaterialSymbols.Group,
-                title = R.string.profile_ui_setting_followers_feed,
+                title = Res.string.profile_ui_setting_followers_feed,
                 checked = showFollowers,
                 onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
             )
             SettingsDivider()
             SettingsSwitchTile(
                 icon = MaterialSymbols.AccountBalanceWallet,
-                title = R.string.profile_ui_setting_onchain_wallet,
+                title = Res.string.profile_ui_setting_onchain_wallet,
                 checked = showOnchainWallet,
                 onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
             )
         }
 
-        SettingsSection(R.string.settings_section_appearance) {
+        SettingsSection(Res.string.settings_section_appearance) {
             SegmentedChoiceTile(
                 icon = MaterialSymbols.Collections,
-                title = R.string.gallery_style,
-                description = R.string.gallery_style_description,
+                title = Res.string.gallery_style,
+                description = Res.string.gallery_style_description,
                 options = ProfileGalleryType.entries,
                 labelRes = { it.resourceId },
                 selected = gallery,

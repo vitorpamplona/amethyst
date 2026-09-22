@@ -40,12 +40,12 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.kind_comments
 import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -91,7 +91,7 @@ fun UrlPreviewCard(
                 onUrlComments?.let {
                     M3ActionRow(
                         icon = MaterialSymbols.Link,
-                        text = stringRes(R.string.kind_comments),
+                        text = stringRes(Res.string.kind_comments),
                     ) {
                         popupExpanded.value = false
                         it()

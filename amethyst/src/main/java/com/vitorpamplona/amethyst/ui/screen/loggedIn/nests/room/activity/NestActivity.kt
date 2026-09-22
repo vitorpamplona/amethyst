@@ -38,11 +38,11 @@ import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -165,8 +165,6 @@ class NestActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
-                StringResSetup()
-
                 // Pauses relay services when the app pauses
                 ManageRelayServices()
                 ManageWebOkHttp()
@@ -306,13 +304,13 @@ class NestActivity : AppCompatActivity() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         val muteIconRes = if (isMuted.value) R.drawable.ic_mic_off else R.drawable.ic_mic_on
-        val muteLabel = getString(if (isMuted.value) R.string.nest_unmute else R.string.nest_mute)
+        val muteLabel = stringRes(this, if (isMuted.value) R.string.nest_unmute else R.string.nest_mute)
         return listOf(
             RemoteAction(Icon.createWithResource(this, muteIconRes), muteLabel, muteLabel, muteIntent),
             RemoteAction(
                 Icon.createWithResource(this, R.drawable.ic_call_end),
-                getString(R.string.nest_leave),
-                getString(R.string.nest_leave),
+                stringRes(this, R.string.nest_leave),
+                stringRes(this, R.string.nest_leave),
                 leaveIntent,
             ),
         )

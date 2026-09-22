@@ -25,14 +25,18 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_name
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Registry of user-facing notification channels and helpers to read their
@@ -57,10 +61,10 @@ object NotificationChannels {
      * settings page has something to open even before the first notification fires.
      */
     data class Entry(
-        val nameRes: Int,
+        val nameRes: StringResource,
         val icon: MaterialSymbol,
-        val channelId: (Context) -> String,
-        val ensure: (Context) -> Unit,
+        val channelId: suspend (Context) -> String,
+        val ensure: suspend (Context) -> Unit,
     )
 
     /** The per-kind content channels, derived from [NotificationCategory], in a
@@ -81,13 +85,13 @@ object NotificationChannels {
             } +
             listOf(
                 Entry(
-                    nameRes = R.string.app_notification_scheduled_posts_channel_name,
+                    nameRes = Res.string.app_notification_scheduled_posts_channel_name,
                     icon = MaterialSymbols.Schedule,
-                    channelId = { stringRes(it, R.string.app_notification_scheduled_posts_channel_id) },
+                    channelId = { loadStringRes(Res.string.app_notification_scheduled_posts_channel_id) },
                     ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
                 ),
                 Entry(
-                    nameRes = R.string.app_notification_calls_channel_name,
+                    nameRes = Res.string.app_notification_calls_channel_name,
                     icon = MaterialSymbols.Call,
                     channelId = { CallNotifier.CALL_CHANNEL_ID },
                     ensure = { CallNotifier.getOrCreateCallChannel(it) },

@@ -60,14 +60,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_language
 import com.vitorpamplona.amethyst.commons.resources.add_language_pair
 import com.vitorpamplona.amethyst.commons.resources.delete_preference
+import com.vitorpamplona.amethyst.commons.resources.dont_translate_from
+import com.vitorpamplona.amethyst.commons.resources.dont_translate_from_description
 import com.vitorpamplona.amethyst.commons.resources.language_preference_pair
+import com.vitorpamplona.amethyst.commons.resources.language_preferences
+import com.vitorpamplona.amethyst.commons.resources.language_preferences_description
 import com.vitorpamplona.amethyst.commons.resources.no_language_preferences
 import com.vitorpamplona.amethyst.commons.resources.quick_action_select
 import com.vitorpamplona.amethyst.commons.resources.remove_language
@@ -75,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.resources.search_languages
 import com.vitorpamplona.amethyst.commons.resources.show_first
 import com.vitorpamplona.amethyst.commons.resources.source_language
 import com.vitorpamplona.amethyst.commons.resources.target_language
+import com.vitorpamplona.amethyst.commons.resources.translate_to
+import com.vitorpamplona.amethyst.commons.resources.translate_to_description
 import com.vitorpamplona.amethyst.commons.resources.user_preferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -208,8 +213,8 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
 
     Column(modifier = Modifier.fillMaxWidth()) {
         SettingsRow(
-            name = R.string.translate_to,
-            description = R.string.translate_to_description,
+            name = Res.string.translate_to,
+            description = Res.string.translate_to_description,
         ) {
             OutlinedCard(
                 modifier = Modifier.clickable { showPicker = !showPicker },
@@ -256,8 +261,8 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
 
     Column(modifier = Modifier.fillMaxWidth()) {
         SettingsRow(
-            name = R.string.dont_translate_from,
-            description = R.string.dont_translate_from_description,
+            name = Res.string.dont_translate_from,
+            description = Res.string.dont_translate_from_description,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -319,8 +324,8 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsRow(
-            name = R.string.language_preferences,
-            description = R.string.language_preferences_description,
+            name = Res.string.language_preferences,
+            description = Res.string.language_preferences_description,
         )
 
         if (languagePreferences.isEmpty() && !showAddPair) {

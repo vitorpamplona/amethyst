@@ -90,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
 
         setContent {
-            StringResSetup()
             AmethystTheme {
                 NowProvider {
                     AccountScreen(Amethyst.instance.sessionManager)

@@ -47,13 +47,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_banner
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_banner_dismiss
+import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_failure
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_publish
+import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_rejected
+import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_success
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -169,8 +172,8 @@ fun MarmotInviteDeviceBanner(
                         // success they are not.
                         owner = LatestKeyPackageOwner.THIS_DEVICE
                         scope.launch(Dispatchers.IO) {
-                            val successMessage = stringRes(context, R.string.marmot_invite_device_success)
-                            val rejectedMessage = stringRes(context, R.string.marmot_invite_device_rejected)
+                            val successMessage = loadStringRes(Res.string.marmot_invite_device_success)
+                            val rejectedMessage = loadStringRes(Res.string.marmot_invite_device_rejected)
                             try {
                                 val accepted = accountViewModel.republishKeyPackage()
                                 launch(Dispatchers.Main) {
@@ -189,7 +192,7 @@ fun MarmotInviteDeviceBanner(
                                 throw e
                             } catch (e: Exception) {
                                 val failureMessage =
-                                    stringRes(context, R.string.marmot_invite_device_failure, e.message ?: "")
+                                    loadStringRes(Res.string.marmot_invite_device_failure, e.message ?: "")
                                 launch(Dispatchers.Main) {
                                     Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
                                     // The warning was right after all, so put it back.

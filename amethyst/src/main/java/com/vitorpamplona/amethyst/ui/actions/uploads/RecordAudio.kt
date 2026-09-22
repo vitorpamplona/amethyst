@@ -36,7 +36,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.record_a_message_description
 import com.vitorpamplona.amethyst.ui.components.ToggleableBox
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
@@ -70,6 +71,10 @@ fun RecordAudioBox(
         }
     }
 
+    // Read in composition: both helpers run from onClick, where neither
+    // string accessor can be called.
+    val recordDescription = stringRes(Res.string.record_a_message_description)
+
     fun startRecording() {
         if (mediaRecorder.value == null) {
             elapsedSeconds = 0
@@ -88,7 +93,7 @@ fun RecordAudioBox(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.record_a_message_description),
+                    recordDescription,
                     Toast.LENGTH_SHORT,
                 ).show()
         }

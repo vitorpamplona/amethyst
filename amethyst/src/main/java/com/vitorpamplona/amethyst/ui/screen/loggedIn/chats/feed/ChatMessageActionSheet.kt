@@ -55,7 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -64,14 +63,20 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_edit_message
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.edit_message
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
+import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -294,7 +299,7 @@ fun ChatMessageActionSheet(
             if (canEditBuzz || canEditConcord) {
                 SectionDivider()
                 TileRow {
-                    val label = if (canEditBuzz) R.string.buzz_edit_message else R.string.edit_message
+                    val label = if (canEditBuzz) Res.string.buzz_edit_message else Res.string.edit_message
                     ActionTile(MaterialSymbols.Edit, stringRes(label)) {
                         onWantsToEditChatMessage(note)
                         onDismiss()
@@ -435,7 +440,7 @@ private fun MoreActionsToggle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringRes(if (expanded) R.string.show_less else R.string.more_options),
+            text = stringRes(if (expanded) Res.string.show_less else Res.string.more_options),
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -617,6 +622,7 @@ private fun QuickZapAmountRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
@@ -637,14 +643,14 @@ private fun QuickZapAmountRow(
     val onError = { _: String, message: String, user: User? ->
         // Payment failed — drop the optimistic "zapping" indicator on the bubble.
         accountViewModel.endZapInFlight(note.idHex)
-        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
     }
 
     val onPayViaIntent = { payables: ImmutableList<ZapPaymentHandler.Payable> ->
         // Handoff to an external wallet: we can't observe whether it completes, so clear
         // the optimistic indicator rather than leave it spinning forever.
         accountViewModel.endZapInFlight(note.idHex)
-        payViaIntentOrManualSplit(payables, context, accountViewModel, nav)
+        payViaIntentOrManualSplit(payables, context, noWalletFoundStr, accountViewModel, nav)
     }
 
     Row(

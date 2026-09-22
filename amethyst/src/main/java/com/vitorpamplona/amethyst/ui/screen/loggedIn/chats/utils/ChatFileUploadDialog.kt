@@ -53,17 +53,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_send
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.content_description
 import com.vitorpamplona.amethyst.commons.resources.content_description_example
+import com.vitorpamplona.amethyst.commons.resources.encrypt_files_description
+import com.vitorpamplona.amethyst.commons.resources.encrypt_files_label
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -195,8 +202,8 @@ private fun ImageVideoPostChat(
     )
 
     SettingSwitchItem(
-        title = R.string.add_sensitive_content_label,
-        description = R.string.add_sensitive_content_description,
+        title = Res.string.add_sensitive_content_label,
+        description = Res.string.add_sensitive_content_description,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         checked = fileUploadState.contentWarning,
         onCheckedChange = fileUploadState::updateContentWarning,
@@ -204,15 +211,15 @@ private fun ImageVideoPostChat(
 
     if (isNip17) {
         SettingSwitchItem(
-            title = R.string.encrypt_files_label,
-            description = R.string.encrypt_files_description,
+            title = Res.string.encrypt_files_label,
+            description = Res.string.encrypt_files_description,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             checked = fileUploadState.encryptFiles,
             onCheckedChange = { fileUploadState.encryptFiles = it },
         )
     }
 
-    SettingsRow(R.string.file_server, R.string.file_server_description) {
+    SettingsRow(Res.string.file_server, Res.string.file_server_description) {
         TextSpinner(
             label = "",
             placeholder =
@@ -270,8 +277,8 @@ private fun ImageVideoPostChat(
     }
 
     SettingSwitchItem(
-        title = R.string.strip_metadata_label,
-        description = R.string.strip_metadata_description,
+        title = Res.string.strip_metadata_label,
+        description = Res.string.strip_metadata_description,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         checked = fileUploadState.stripMetadata,
         onCheckedChange = { fileUploadState.stripMetadata = it },

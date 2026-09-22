@@ -62,17 +62,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_available
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_awaiting_payment
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_retry
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_from
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.resources.topup_mint_amount_label
 import com.vitorpamplona.amethyst.commons.resources.topup_mint_confirm
 import com.vitorpamplona.amethyst.commons.resources.topup_mint_title
@@ -112,7 +113,7 @@ fun TopUpMintScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -168,7 +169,7 @@ fun TopUpMintScreen(
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                suffix = { Text(stringRes(R.string.sats)) },
+                suffix = { Text(stringRes(Res.string.sats)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 

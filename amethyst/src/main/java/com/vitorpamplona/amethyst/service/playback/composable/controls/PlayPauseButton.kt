@@ -39,9 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PlayIconSize
@@ -117,13 +119,13 @@ fun PlayPauseButton(
                 Icon(
                     symbol = MaterialSymbols.PlayArrow,
                     modifier = Size50Modifier,
-                    contentDescription = stringRes(R.string.play),
+                    contentDescription = stringRes(Res.string.play),
                 )
             } else {
                 Icon(
                     symbol = MaterialSymbols.Pause,
                     modifier = Size50Modifier,
-                    contentDescription = stringRes(R.string.pause),
+                    contentDescription = stringRes(Res.string.pause),
                 )
             }
         }

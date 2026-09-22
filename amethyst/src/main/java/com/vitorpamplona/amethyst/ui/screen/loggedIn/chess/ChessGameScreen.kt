@@ -58,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
@@ -66,11 +65,13 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.chess_game_id
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
 import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
 import com.vitorpamplona.amethyst.commons.resources.go_back
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -193,7 +194,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                                contentDescription = stringRes(R.string.back),
+                                contentDescription = stringRes(Res.string.back),
                             )
                         }
                     },
@@ -201,7 +202,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { showRelaySettings = true }) {
                             Icon(
                                 symbol = MaterialSymbols.Settings,
-                                contentDescription = stringRes(R.string.relay_settings),
+                                contentDescription = stringRes(Res.string.relay_settings),
                             )
                         }
                     },
@@ -293,7 +294,7 @@ fun ChessGameScreen(
                     }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.padding(end = 8.dp),
                         )
                         Text(stringRes(Res.string.go_back))

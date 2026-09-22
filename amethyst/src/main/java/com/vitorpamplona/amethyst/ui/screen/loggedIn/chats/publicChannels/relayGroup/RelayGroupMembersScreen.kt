@@ -63,7 +63,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzAgentActivityState
@@ -74,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_add_people_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_working
 import com.vitorpamplona.amethyst.commons.resources.buzz_import_added
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.relay_group_add_member
 import com.vitorpamplona.amethyst.commons.resources.relay_group_assign_role
 import com.vitorpamplona.amethyst.commons.resources.relay_group_demote_member
@@ -401,7 +402,7 @@ private fun RelayGroupMemberRow(
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         symbol = MaterialSymbols.MoreVert,
-                        contentDescription = stringRes(R.string.more_options),
+                        contentDescription = stringRes(Res.string.more_options),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -504,7 +505,7 @@ private fun RelayGroupMemberRow(
             },
             dismissButton = {
                 TextButton(onClick = { confirmRemove = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

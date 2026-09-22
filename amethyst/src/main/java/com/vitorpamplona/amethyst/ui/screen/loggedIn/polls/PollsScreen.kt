@@ -35,8 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.closed_polls
+import com.vitorpamplona.amethyst.commons.resources.open_polls
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun PollsScreen(
@@ -100,13 +103,13 @@ private fun AssemblePollsTabs(
             mutableStateOf(
                 listOf(
                     PollsTabItem(
-                        resource = R.string.open_polls,
+                        resource = Res.string.open_polls,
                         feedState = openPollsFeedContentState,
                         routeForLastRead = "PollsOpenFeed",
                         scrollStateKey = ScrollStateKeys.POLLS_OPEN,
                     ),
                     PollsTabItem(
-                        resource = R.string.closed_polls,
+                        resource = Res.string.closed_polls,
                         feedState = closedPollsFeedContentState,
                         routeForLastRead = "PollsClosedFeed",
                         scrollStateKey = ScrollStateKeys.POLLS_CLOSED,
@@ -201,7 +204,7 @@ fun WatchAccountForPollsScreen(
 
 @Immutable
 class PollsTabItem(
-    val resource: Int,
+    val resource: StringResource,
     val feedState: FeedContentState,
     val routeForLastRead: String,
     val scrollStateKey: String,

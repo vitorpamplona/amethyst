@@ -28,9 +28,10 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_shortcut_account_removed
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -140,7 +141,7 @@ object ConversationShortcuts {
      * the cache is what keeps a conversation alive after it falls out of the top slots, so
      * dropping only the dynamic copy would leave it recoverable.
      */
-    fun removeForAccount(
+    suspend fun removeForAccount(
         context: Context,
         accountNpub: String,
     ) {
@@ -170,7 +171,7 @@ object ConversationShortcuts {
             ShortcutManagerCompat.disableShortcuts(
                 context,
                 mine,
-                stringRes(context, R.string.app_notification_shortcut_account_removed),
+                loadStringRes(Res.string.app_notification_shortcut_account_removed),
             )
             ShortcutManagerCompat.removeLongLivedShortcuts(context, mine)
         } catch (e: Exception) {

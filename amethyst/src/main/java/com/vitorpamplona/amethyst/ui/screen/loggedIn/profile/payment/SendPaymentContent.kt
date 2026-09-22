@@ -66,7 +66,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -74,9 +73,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.amount_in_sats
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_example
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.resources.send_payment_amount
 import com.vitorpamplona.amethyst.commons.resources.send_payment_done
+import com.vitorpamplona.amethyst.commons.resources.send_payment_failed
 import com.vitorpamplona.amethyst.commons.resources.send_payment_fixed_price
 import com.vitorpamplona.amethyst.commons.resources.send_payment_from
 import com.vitorpamplona.amethyst.commons.resources.send_payment_message_recipient
@@ -395,7 +398,7 @@ fun SendPaymentContent(
                 ResultCard(
                     symbol = MaterialSymbols.Error,
                     tint = MaterialTheme.colorScheme.error,
-                    title = stringRes(R.string.send_payment_failed),
+                    title = stringRes(Res.string.send_payment_failed),
                     detail = stage.message,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -469,8 +472,8 @@ private fun MethodChip(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val copyLabel = stringRes(R.string.copy_to_clipboard)
-    val copiedMessage = stringRes(R.string.copied_to_clipboard)
+    val copyLabel = stringRes(Res.string.copy_to_clipboard)
+    val copiedMessage = stringRes(Res.string.copied_to_clipboard)
 
     val containerColor =
         if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
@@ -606,7 +609,7 @@ private fun AmountSection(
             enabled = enabled && !locked,
             isError = isError,
             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            suffix = { Text(stringRes(R.string.sats)) },
+            suffix = { Text(stringRes(Res.string.sats)) },
             supportingText =
                 when {
                     supportText != null -> {

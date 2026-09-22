@@ -67,16 +67,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.edit_community
+import com.vitorpamplona.amethyst.commons.resources.new_community
 import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator
 import com.vitorpamplona.amethyst.commons.resources.new_community_add_moderator_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_community_description
 import com.vitorpamplona.amethyst.commons.resources.new_community_moderators_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_moderators_section
 import com.vitorpamplona.amethyst.commons.resources.new_community_name
 import com.vitorpamplona.amethyst.commons.resources.new_community_owner
 import com.vitorpamplona.amethyst.commons.resources.new_community_pick_cover
@@ -86,7 +88,11 @@ import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_a
 import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_none
 import com.vitorpamplona.amethyst.commons.resources.new_community_relay_marker_requests
 import com.vitorpamplona.amethyst.commons.resources.new_community_relays_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_relays_section
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_section
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -108,6 +114,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun NewCommunityScreen(
@@ -166,11 +173,11 @@ private fun CommunityFormScreen(
             // first composition of the edit screen already shows "Save" before
             // loadFrom() runs in its LaunchedEffect.
             val isEditing = editing != null
-            val titleRes = if (isEditing) R.string.edit_community else R.string.new_community
+            val titleRes = if (isEditing) Res.string.edit_community else Res.string.new_community
             if (isEditing) {
                 ActionTopBar(
                     titleRes = titleRes,
-                    postRes = R.string.save,
+                    postRes = Res.string.save,
                     isActive = model::canPost,
                     onCancel = {
                         model.reset()
@@ -264,7 +271,7 @@ private fun CommunityFormScreen(
 
                 HorizontalDivider()
 
-                SectionHeader(R.string.new_community_moderators_section)
+                SectionHeader(Res.string.new_community_moderators_section)
                 ModeratorsSection(
                     model = model,
                     accountViewModel = accountViewModel,
@@ -273,7 +280,7 @@ private fun CommunityFormScreen(
 
                 HorizontalDivider()
 
-                SectionHeader(R.string.new_community_relays_section)
+                SectionHeader(Res.string.new_community_relays_section)
                 RelaysSection(
                     model = model,
                     accountViewModel = accountViewModel,
@@ -282,7 +289,7 @@ private fun CommunityFormScreen(
 
                 HorizontalDivider()
 
-                SectionHeader(R.string.new_community_rules_section)
+                SectionHeader(Res.string.new_community_rules_section)
                 CommunityRulesEditorSection(
                     model = model,
                     accountViewModel = accountViewModel,
@@ -294,7 +301,7 @@ private fun CommunityFormScreen(
 }
 
 @Composable
-private fun SectionHeader(resourceId: Int) {
+private fun SectionHeader(resourceId: StringResource) {
     Text(
         text = stringRes(resourceId),
         style = MaterialTheme.typography.titleMedium,
@@ -367,7 +374,7 @@ private fun ExistingCommunityCover(
         IconButton(onClick = onClear) {
             Icon(
                 symbol = MaterialSymbols.Close,
-                contentDescription = stringRes(R.string.remove),
+                contentDescription = stringRes(Res.string.remove),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -538,7 +545,7 @@ private fun SelectedModeratorRow(
             IconButton(onClick = onRemove) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.remove),
+                    contentDescription = stringRes(Res.string.remove),
                 )
             }
         }

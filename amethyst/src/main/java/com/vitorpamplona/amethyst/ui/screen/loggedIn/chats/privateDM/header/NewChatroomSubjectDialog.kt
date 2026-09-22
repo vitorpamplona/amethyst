@@ -46,9 +46,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message
 import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message_placeholder
@@ -123,7 +123,7 @@ fun NewChatroomSubjectDialog(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.messages_new_message_subject)) },
+                    label = { Text(text = stringRes(Res.string.messages_new_message_subject)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = groupName.value,
                     onValueChange = { groupName.value = it },

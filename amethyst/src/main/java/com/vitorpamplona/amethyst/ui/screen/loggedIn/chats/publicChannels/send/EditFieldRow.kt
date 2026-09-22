@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -50,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -123,7 +124,7 @@ fun EditFieldRow(
             IconButton(onClick = { channelScreenModel.clearBuzzEdit() }) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.cancel),
+                    contentDescription = stringRes(Res.string.cancel),
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -198,7 +199,7 @@ fun EditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.reply_here),
+                    text = stringRes(Res.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

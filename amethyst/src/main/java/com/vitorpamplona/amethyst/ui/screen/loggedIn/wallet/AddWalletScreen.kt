@@ -46,12 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_description
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_choose_type
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
@@ -80,7 +81,7 @@ fun AddWalletScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -108,7 +109,7 @@ fun AddWalletScreen(
             )
             WalletTypeCard(
                 icon = MaterialSymbols.AccountBalanceWallet,
-                title = stringRes(R.string.wallet_add_cashu_title),
+                title = stringRes(Res.string.wallet_add_cashu_title),
                 description = stringRes(Res.string.wallet_add_cashu_description),
                 // Route through the find-or-create wizard, not straight to the
                 // mint manager: a portable NIP-60 wallet may already exist on

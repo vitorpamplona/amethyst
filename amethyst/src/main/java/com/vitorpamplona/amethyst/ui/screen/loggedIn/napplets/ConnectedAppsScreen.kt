@@ -47,14 +47,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -66,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_empty
+import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
@@ -126,7 +125,7 @@ fun ConnectedAppsScreen(
     ConnectedAppsFilterAssemblerSubscription(accountViewModel, nappletAuthors)
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(R.string.napplet_permissions_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.napplet_permissions_title), nav) },
     ) { padding ->
         val current = items
         when {
@@ -157,7 +156,7 @@ fun ConnectedAppsScreen(
                 }
 
             else -> {
-                val untitled = stringResource(CommonsR.string.napplet_untitled)
+                val untitled = stringRes(CommonsR.string.napplet_untitled)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentPadding = PaddingValues(16.dp),

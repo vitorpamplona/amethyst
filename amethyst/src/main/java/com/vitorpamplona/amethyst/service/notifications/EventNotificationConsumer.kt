@@ -30,13 +30,16 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_challenge_accepted
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_your_turn
+import com.vitorpamplona.amethyst.commons.resources.app_notification_poll_channel_message
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
@@ -275,7 +278,7 @@ class EventNotificationConsumer(
             is VideoVerticalEvent,
             -> MediaNotification.notify(applicationContext, account, event)
 
-            is PollEvent -> MentionNotification.notify(applicationContext, account, event, titleRes = R.string.app_notification_poll_channel_message)
+            is PollEvent -> MentionNotification.notify(applicationContext, account, event, titleRes = Res.string.app_notification_poll_channel_message)
 
             is HighlightEvent,
             is LongTextNoteEvent,
@@ -292,8 +295,8 @@ class EventNotificationConsumer(
             is GitStatusClosedEvent -> CodeNotification.notify(applicationContext, account, event)
             is GitStatusDraftEvent -> CodeNotification.notify(applicationContext, account, event)
 
-            is LiveChessGameAcceptEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_challenge_accepted)
-            is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_your_turn)
+            is LiveChessGameAcceptEvent -> ChessNotification.notify(applicationContext, account, event, Res.string.app_notification_chess_challenge_accepted)
+            is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, Res.string.app_notification_chess_your_turn)
         }
     }
 

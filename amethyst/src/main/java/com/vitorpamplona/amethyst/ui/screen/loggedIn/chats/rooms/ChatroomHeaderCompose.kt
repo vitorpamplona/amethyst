@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.channel_created
 import com.vitorpamplona.amethyst.commons.resources.channel_image
 import com.vitorpamplona.amethyst.commons.resources.channel_information_changed_to
@@ -72,13 +72,26 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
+import com.vitorpamplona.amethyst.commons.resources.concord_home_title
+import com.vitorpamplona.amethyst.commons.resources.concord_server_label
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
+import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
+import com.vitorpamplona.amethyst.commons.resources.geohash_chat
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
+import com.vitorpamplona.amethyst.commons.resources.marmot_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.mute_notifications
 import com.vitorpamplona.amethyst.commons.resources.muted_chat_content_description
+import com.vitorpamplona.amethyst.commons.resources.pin_conversation
 import com.vitorpamplona.amethyst.commons.resources.pinned_to_top
+import com.vitorpamplona.amethyst.commons.resources.public_chat
 import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
 import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.relay_group_server_label
+import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
+import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
+import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -141,6 +154,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.flow.emptyFlow
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -344,7 +358,7 @@ private fun ChannelRoomCompose(
             ChannelTitleWithLabelInfo(
                 channelName,
                 if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Public,
-                R.string.public_chat,
+                Res.string.public_chat,
                 modifier,
                 labelContentDescription = if (isMuted) stringRes(Res.string.muted_chat_content_description) else null,
             )
@@ -371,9 +385,9 @@ private fun ChannelRoomCompose(
                 Text(
                     stringRes(
                         if (channel.idHex in mutedChats.value) {
-                            R.string.unmute_notifications
+                            Res.string.unmute_notifications
                         } else {
-                            R.string.mute_notifications
+                            Res.string.mute_notifications
                         },
                     ),
                 )
@@ -408,7 +422,7 @@ private fun ChannelRoomCompose(
     ChannelName(
         channelIdHex = channel.roomId.toKey(),
         channelPicture = relayInfo.icon,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), MaterialSymbols.Timer, R.string.ephemeral_relay_chat, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), MaterialSymbols.Timer, Res.string.ephemeral_relay_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
@@ -443,7 +457,7 @@ private fun GeohashRoomCompose(
     ChannelName(
         channelIdHex = "Geohash/${geohashChannel.geohash}",
         channelPicture = null,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(geohashChannel.toBestDisplayName(), MaterialSymbols.LocationOn, R.string.geohash_chat, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(geohashChannel.toBestDisplayName(), MaterialSymbols.LocationOn, Res.string.geohash_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
@@ -497,7 +511,7 @@ private fun MarmotGroupRoomCompose(
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, R.string.marmot_group, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
@@ -554,14 +568,14 @@ private fun RelayGroupRoomCompose(
         // group top bar so "Remove from Messages" (drop from my list, stay a member) and "Leave"
         // (kind-9022) are reachable without opening the group first.
         DropdownMenuItem(
-            text = { Text(stringRes(R.string.remove_from_messages)) },
+            text = { Text(stringRes(Res.string.remove_from_messages)) },
             onClick = {
                 dismiss()
                 accountViewModel.removeRelayGroupFromMessages(channel)
             },
         )
         DropdownMenuItem(
-            text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+            text = { Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error) },
             onClick = {
                 dismiss()
                 accountViewModel.leaveRelayGroup(channel)
@@ -690,7 +704,7 @@ private fun ChannelInviteRoomCompose(
         nav = nav,
     ) { channel, dismiss ->
         DropdownMenuItem(
-            text = { Text(stringRes(R.string.add_to_messages)) },
+            text = { Text(stringRes(Res.string.add_to_messages)) },
             onClick = {
                 dismiss()
                 accountViewModel.acceptChannelInvite(channel)
@@ -809,7 +823,7 @@ private fun ConcordRoomCompose(
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error) },
                 onClick = {
                     menuOpen = false
                     showLeave = true
@@ -850,7 +864,7 @@ private fun RelayGroupServerRoomCompose(
     ChannelName(
         channelIdHex = relay.url,
         channelPicture = relayInfo.icon,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Dns, R.string.relay_group_server_label, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Dns, Res.string.relay_group_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = hasNewMessages,
@@ -881,7 +895,7 @@ private fun ConcordServerRoomCompose(
                 ?.value
                 ?.metadata
         }
-    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.concord_home_title)
+    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.concord_home_title)
 
     val author = row.newestMessage?.author
     val noteEvent = row.newestMessage?.event
@@ -901,7 +915,7 @@ private fun ConcordServerRoomCompose(
     ChannelName(
         channelIdHex = row.communityId,
         channelPicture = rememberConcordImageModel(metadata?.icon, accountViewModel),
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Group, R.string.concord_server_label, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Group, Res.string.concord_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = hasNewMessages,
@@ -925,7 +939,7 @@ private fun ConcordServerRoomCompose(
 private fun ChannelTitleWithLabelInfo(
     channelName: String,
     labelIcon: MaterialSymbol,
-    label: Int,
+    label: StringResource,
     modifier: Modifier,
     labelContentDescription: String? = null,
 ) {
@@ -1043,7 +1057,7 @@ private fun UserRoomCompose(
     ) {
         DropdownMenuItem(
             text = {
-                Text(stringRes(if (room in pinnedRooms.value) R.string.unpin_conversation else R.string.pin_conversation))
+                Text(stringRes(if (room in pinnedRooms.value) Res.string.unpin_conversation else Res.string.pin_conversation))
             },
             onClick = {
                 accountViewModel.toggleChatroomPin(room)

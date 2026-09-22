@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -61,7 +60,13 @@ import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatSendState
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.RecipientDelivery
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_accepted
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_delivered_all
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_failed
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_no_relay_info
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_pending
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_sending
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -78,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The timestamp on a chat message, as a single tap target that opens the relay /
@@ -245,9 +251,9 @@ private fun ChatDeliveryDetailDialog(
                             text =
                                 stringRes(
                                     if (delivery != null) {
-                                        R.string.chat_delivery_pending
+                                        Res.string.chat_delivery_pending
                                     } else {
-                                        R.string.chat_delivery_no_relay_info
+                                        Res.string.chat_delivery_no_relay_info
                                     },
                                 ),
                             color = MaterialTheme.colorScheme.placeholderText,
@@ -324,9 +330,9 @@ private fun RelayDeliveryRow(
 @Composable
 private fun DeliveryStatusTick(delivered: Boolean) {
     if (delivered) {
-        TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+        TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
     } else {
-        TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+        TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -359,9 +365,9 @@ private fun RenderDeliveryTicks(
     if (delivery == null) {
         // Untracked (sent before a restart): the seen-on relay set is the only signal.
         if (seenSomewhere) {
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, pendingColor)
+            TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, pendingColor)
         } else {
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, pendingColor)
+            TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, pendingColor)
         }
         return
     }
@@ -403,13 +409,13 @@ private fun DeliveryLadderTick(
 ) {
     when {
         pending ->
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+            TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
 
         fullyAccepted ->
-            TickIcon(MaterialSymbols.DoneAll, R.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
+            TickIcon(MaterialSymbols.DoneAll, Res.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
 
         else ->
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)
+            TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -439,7 +445,7 @@ private fun SendingTick() {
 
     Icon(
         symbol = MaterialSymbols.Schedule,
-        contentDescription = stringRes(R.string.chat_delivery_sending),
+        contentDescription = stringRes(Res.string.chat_delivery_sending),
         modifier = Modifier.size(14.dp).graphicsLayer { this.alpha = alpha.value },
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -455,7 +461,7 @@ private fun FailedTick(onRetry: () -> Unit) {
     ClickableBox(onClick = onRetry) {
         Icon(
             symbol = MaterialSymbols.ErrorOutline,
-            contentDescription = stringRes(R.string.chat_delivery_failed),
+            contentDescription = stringRes(Res.string.chat_delivery_failed),
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.error,
         )
@@ -465,7 +471,7 @@ private fun FailedTick(onRetry: () -> Unit) {
 @Composable
 private fun TickIcon(
     symbol: MaterialSymbol,
-    contentDescription: Int,
+    contentDescription: StringResource,
     tint: Color,
 ) {
     Icon(

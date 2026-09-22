@@ -79,21 +79,32 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audience_send_privately
 import com.vitorpamplona.amethyst.commons.resources.disable_poll
+import com.vitorpamplona.amethyst.commons.resources.disable_private_note
+import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
+import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
+import com.vitorpamplona.amethyst.commons.resources.kind_poll
+import com.vitorpamplona.amethyst.commons.resources.kind_zap_poll
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.poll
+import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.post_anonymously
+import com.vitorpamplona.amethyst.commons.resources.private_note
+import com.vitorpamplona.amethyst.commons.resources.private_note_locked
+import com.vitorpamplona.amethyst.commons.resources.relay_group_thread_title_label
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_continue
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_message
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_open_settings
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_always_on_prompt_title
+import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.model.BooleanType
@@ -276,7 +287,7 @@ internal fun NewPostScreenInner(
         topBar = {
             PostingTopBar(
                 isActive = postViewModel::canPost,
-                postRes = if (postViewModel.wantsPrivateNote) R.string.audience_send_privately else R.string.post,
+                postRes = if (postViewModel.wantsPrivateNote) Res.string.audience_send_privately else Res.string.post,
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
@@ -417,9 +428,9 @@ private fun NewPostScreenBody(
                                 text =
                                     stringRes(
                                         if (postViewModel.groupThreadTarget != null) {
-                                            R.string.relay_group_thread_title_label
+                                            Res.string.relay_group_thread_title_label
                                         } else {
-                                            R.string.messages_new_message_subject
+                                            Res.string.messages_new_message_subject
                                         },
                                     ),
                                 fontSize = Font14SP,
@@ -482,7 +493,7 @@ private fun NewPostScreenBody(
                             }
                         }
                         MessageField(
-                            R.string.what_s_on_your_mind,
+                            Res.string.what_s_on_your_mind,
                             postViewModel,
                             onContentReceived = { uri, mimeType ->
                                 postViewModel.selectImage(
@@ -508,7 +519,7 @@ private fun NewPostScreenBody(
                                     postViewModel.wantsPoll = true
                                     postViewModel.wantsZapPoll = false
                                 },
-                                label = { Text(stringRes(R.string.kind_poll)) },
+                                label = { Text(stringRes(Res.string.kind_poll)) },
                             )
                             FilterChip(
                                 selected = postViewModel.wantsZapPoll,
@@ -516,7 +527,7 @@ private fun NewPostScreenBody(
                                     postViewModel.wantsZapPoll = true
                                     postViewModel.wantsPoll = false
                                 },
-                                label = { Text(stringRes(R.string.kind_zap_poll)) },
+                                label = { Text(stringRes(Res.string.kind_zap_poll)) },
                             )
                         }
                         if (postViewModel.wantsPoll) {
@@ -577,8 +588,8 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsToAddGeoHash) {
                     GeoHashPostSection(postViewModel) {
                         SettingsRow(
-                            R.string.geohash_exclusive,
-                            R.string.geohash_exclusive_explainer,
+                            Res.string.geohash_exclusive,
+                            Res.string.geohash_exclusive_explainer,
                         ) {
                             Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
                         }
@@ -995,9 +1006,9 @@ private fun AddPrivateNoteButton(
                 stringRes(
                     id =
                         when {
-                            isLocked -> R.string.private_note_locked
-                            isActive -> R.string.disable_private_note
-                            else -> R.string.private_note
+                            isLocked -> Res.string.private_note_locked
+                            isActive -> Res.string.disable_private_note
+                            else -> Res.string.private_note
                         },
                 ),
             modifier = Modifier.height(22.dp),
@@ -1014,7 +1025,7 @@ private fun AddSubjectButton(
     IconButton(onClick = onClick) {
         Icon(
             symbol = MaterialSymbols.Topic,
-            contentDescription = stringRes(R.string.messages_new_message_subject),
+            contentDescription = stringRes(Res.string.messages_new_message_subject),
             modifier = Modifier.height(22.dp),
             tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )

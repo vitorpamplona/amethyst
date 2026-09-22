@@ -44,13 +44,13 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_going
 import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_maybe
 import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_not_going
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * Renders a 3-button RSVP row (Going / Maybe / Can't go) below a NIP-52 calendar appointment.
@@ -95,21 +95,21 @@ fun CalendarRsvpRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RsvpButton(
-            label = stringResource(Res.string.calendar_rsvp_going),
+            label = stringRes(Res.string.calendar_rsvp_going),
             status = RSVPStatusTag.STATUS.ACCEPTED,
             currentStatus = currentStatus,
             modifier = Modifier.weight(1f),
             onClick = onTap,
         )
         RsvpButton(
-            label = stringResource(Res.string.calendar_rsvp_maybe),
+            label = stringRes(Res.string.calendar_rsvp_maybe),
             status = RSVPStatusTag.STATUS.TENTATIVE,
             currentStatus = currentStatus,
             modifier = Modifier.weight(1f),
             onClick = onTap,
         )
         RsvpButton(
-            label = stringResource(Res.string.calendar_rsvp_not_going),
+            label = stringRes(Res.string.calendar_rsvp_not_going),
             status = RSVPStatusTag.STATUS.DECLINED,
             currentStatus = currentStatus,
             modifier = Modifier.weight(1f),

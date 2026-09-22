@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Square cover-image picker shared by the music track and playlist composers.
@@ -76,8 +77,8 @@ fun CoverImagePicker(
     onDelete: () -> Unit,
     accountViewModel: AccountViewModel,
     enabled: Boolean,
-    ctaRes: Int,
-    hintRes: Int,
+    ctaRes: StringResource,
+    hintRes: StringResource,
 ) {
     when {
         cover != null ->
@@ -165,8 +166,8 @@ private fun ExistingCoverPreview(
 @Composable
 fun UploadPlaceholder(
     iconSymbol: MaterialSymbol,
-    ctaRes: Int,
-    hintRes: Int,
+    ctaRes: StringResource,
+    hintRes: StringResource,
     onClick: () -> Unit,
     aspectRatio: Float? = 1f,
     enabled: Boolean = true,
@@ -219,7 +220,7 @@ fun UploadPlaceholder(
  * primary feedback that something IS happening.
  */
 @Composable
-fun UploadInProgressBanner(messageRes: Int) {
+fun UploadInProgressBanner(messageRes: StringResource) {
     Row(
         modifier =
             Modifier

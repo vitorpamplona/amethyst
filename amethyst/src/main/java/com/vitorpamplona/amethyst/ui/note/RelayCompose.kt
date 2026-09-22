@@ -30,9 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,9 +38,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
 import com.vitorpamplona.amethyst.commons.resources.posts_received
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.MyRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -79,10 +78,7 @@ fun RelayCompose(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                val lastTime by
-                    remember(relay.lastEvent) {
-                        derivedStateOf { timeAgo(relay.lastEvent, context = context) }
-                    }
+                val lastTime = timeAgo(relay.lastEvent)
 
                 Text(
                     text = lastTime,
@@ -129,7 +125,7 @@ fun AddRelayButton(onClick: () -> Unit) {
         shape = ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(id = R.string.add))
+        Text(text = stringRes(id = Res.string.add))
     }
 }
 
@@ -141,6 +137,6 @@ fun RemoveRelayButton(onClick: () -> Unit) {
         shape = ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.remove))
+        Text(text = stringRes(Res.string.remove))
     }
 }
