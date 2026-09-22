@@ -40,6 +40,7 @@ Related code:
 - `service/workouts/health/HealthConnectManager.kt` — the only place the app touches Health Connect.
 - `ui/screen/loggedIn/workouts/health/HealthConnectRationaleActivity.kt` — the in-app rationale screen.
 - `PRIVACY.md` § "Health and fitness data (Health Connect)".
+- `docs/play-data-safety.md` — the Data safety form, which Google cross-checks against this one.
 
 ## Rejection 2 — the app contradicted this declaration, and what changed
 
