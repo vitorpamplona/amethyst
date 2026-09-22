@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEve
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -140,8 +141,9 @@ fun backupSlot(event: Event): String = event.kind.toString() + ":" + (event.tags
 object ReplaceableBackupDiff {
     /**
      * What a newer [incoming] version of a backed-up event removed from the [saved] one, as
-     * computed by the event itself ([Event.diffFrom]), or null when it removed nothing: it
-     * only added or edited entries, which means the other app did read the previous version.
+     * computed by the event itself ([DiffableEvent.diffFrom]), or null when it removed
+     * nothing: it only added or edited entries, which means the other app did read the
+     * previous version. Events that can't diff themselves never raise a conflict.
      */
     fun detectLoss(
         saved: Event,
@@ -150,6 +152,7 @@ object ReplaceableBackupDiff {
         if (saved.id == incoming.id) return null
         // Older or same-age versions never replace the backup in LocalCache anyway.
         if (incoming.createdAt <= saved.createdAt) return null
-        return incoming.diffFrom(saved)?.takeIf { it.removesData() }
+        val diffable = incoming as? DiffableEvent<*> ?: return null
+        return diffable.diffFrom(saved)?.takeIf { it.removesData() }
     }
 }

@@ -16,26 +16,25 @@ only surviving copy of the user's data is gone.
    ids of replaceable/addressable events passing through `justConsumeMyOwnEvent`, the
    choke point for every local publish and for the backup restore at startup. It is a
    bounded LRU (500 ids): only the latest versions of each list matter.
-2. **Events diff themselves.** `Event.diffFrom(older)` (quartz, `nip01Core/diff/`)
-   compares two versions of the same event and returns an `EventDiff`: removed / added /
-   changed `DiffEntry`s plus a `ContentChange` for content not already expressed as
-   entries (the NIP-44 private items of lists). `DiffEntry` is a sealed vocabulary
-   (`Person`, `Relay` with read/write, `Hashtag`, `Word`, `Geohash`, `EventRef`,
-   `AddressRef`, `ProfileField`, `RelayGroup`, `ChatRoom`, `TrustProvider`, `Mint`,
-   `NutzapKey`, `PaymentTarget`, `Bolt12Offer`, `OtherTag`), each with a stable identity
-   `key`: same key in both versions but unequal entries is a change (new relay marker,
-   petname, edited bio), not a removal plus an addition.
+2. **Events diff themselves.** Every backed-up event implements
+   `DiffableEvent<D>` (quartz, `nip01Core/diff/`): `diffFrom(older)` returns its own diff
+   class built from its own parsed objects, e.g. `ContactListDiff(follows:
+   ListDiff<ContactTag>)`, `MuteListDiff(publicMutes: ListDiff<MuteTag>, privateItems)`,
+   `AdvertisedRelayListDiff(relays: ListDiff<AdvertisedRelayInfo>)`, `NutzapInfoDiff(mints:
+   ListDiff<NutzapMintTag>, relays, p2pkPubkey: ValueChange<HexKey>)`, `MetadataDiff` with
+   one `ValueChange` per `UserMetadata` field plus NIP-39 claims and unmodeled JSON fields.
+   The relay-tag lists (DM, key package, search, indexer, feeds, blocked, trusted, private
+   outbox) share `RelayListDiff`; encrypted-only events (Cashu wallet, Concord list, NIP-78
+   data) diff their content as a whole.
 
-   Each event owns its mapping through two hooks: `diffEntry(tag)` (default handles
-   `p`/`t`/`word`/`g`/`r`/`relay`/`e`/`a`, skips `alt`/`client`/`d`/`expiration`) and
-   `diffContent(older)`. Overrides: `MetadataEvent` (JSON fields → `ProfileField`, no
-   content change), `ContactListEvent` (ignores the deprecated relay-map content),
-   `SimpleGroupListEvent`, `EphemeralChatListEvent`, `TrustProviderListEvent`,
-   `NutzapInfoEvent`, `PaymentTargetsEvent`, `Bolt12OfferListEvent`.
+   `nip01Core/diff/` only holds the containers: `EventDiff` (`removesData()`, `isEmpty()`),
+   `ListDiff<T>` (items matched by an identity key; a matched pair with different details
+   is a change, not a removal plus an addition), `ValueChange<T>`, and `ContentChange` for
+   NIP-44 private items, which can't be compared item by item without decrypting.
 3. **Only question lossy external rewrites.** `AccountSettings.acceptIntoBackup` guards
    every `update*` backup method. A newer version that was not signed here goes through
-   `ReplaceableBackupDiff.detectLoss` (commons), which keeps the `EventDiff` only when
-   `removesData()`: an entry was removed or the private content was cleared.
+   `ReplaceableBackupDiff.detectLoss` (commons), which asks the event for its diff and
+   keeps it only when `removesData()`.
 
    If nothing was dropped, the other app evidently built on the previous version, and the
    backup is updated silently as before.
@@ -44,10 +43,9 @@ only surviving copy of the user's data is gone.
    `BackupConflictDialog` (shown from `LoggedInPage`) is specific to the event: it names it
    ("Your mute list changed in another app"), says what that event is for, and lists what
    was removed, added and changed, grouped by entry type (people by display name, relays
-   with their read/write marker, profile fields old → new…). Rendering is an exhaustive
-   `when` over `DiffEntry`, so a new entry type can't be forgotten by the UI; the group
-   label also depends on the event (an `e` tag is a muted thread in a mute list and a
-   joined chat in a public chat list). It offers:
+   with their read/write marker, profile fields old → new…). The dialog maps each diff
+   class to labelled groups from its typed objects (`when (diff)`), resolving pubkeys and
+   channel ids to names from `LocalCache`. It offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)` and publishes it.

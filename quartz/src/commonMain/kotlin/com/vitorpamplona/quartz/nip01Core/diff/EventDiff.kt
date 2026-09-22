@@ -21,19 +21,111 @@
 package com.vitorpamplona.quartz.nip01Core.diff
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
-/** An entry that exists in both versions, but with different details. */
+/**
+ * What changed between two versions of the same replaceable/addressable event. Each event
+ * kind defines its own diff class holding its own parsed objects (a follow list diffs
+ * `ContactTag`s, a nutzap info diffs `NutzapMintTag`s and its P2PK key…), built with the
+ * [ListDiff], [ValueChange] and [ContentChange] containers.
+ */
+interface EventDiff {
+    /** The newer version dropped something the older one had. */
+    fun removesData(): Boolean
+
+    fun isEmpty(): Boolean
+}
+
+/**
+ * An event that knows how to compare itself with an older version of itself.
+ *
+ * [diffFrom] returns null when [older] isn't a version of the same event: a different kind,
+ * author or, for addressables, d-tag.
+ */
+interface DiffableEvent<D : EventDiff> {
+    fun diffFrom(older: Event): D?
+}
+
+/** An item present in both versions whose details differ. */
 @Immutable
-data class DiffChange(
-    val before: DiffEntry,
-    val after: DiffEntry,
+class ItemChange<T>(
+    val before: T,
+    val after: T,
 )
 
 /**
- * What happened to the part of the content that is not already represented by [DiffEntry]s.
- * For NIP-51 lists that is the NIP-44 encrypted private items, which can only be compared
- * as a whole without decrypting.
+ * The difference between two lists of parsed items. Items are matched by an identity key;
+ * a matched pair whose details differ is a change, not a removal plus an addition.
+ */
+@Immutable
+class ListDiff<T>(
+    val removed: List<T>,
+    val added: List<T>,
+    val changed: List<ItemChange<T>>,
+) {
+    fun isEmpty() = removed.isEmpty() && added.isEmpty() && changed.isEmpty()
+
+    fun hasRemovals() = removed.isNotEmpty()
+
+    companion object {
+        /**
+         * @param key the identity of an item inside the list.
+         * @param same whether two items with the same key carry the same details.
+         */
+        fun <T, K> of(
+            older: List<T>,
+            newer: List<T>,
+            key: (T) -> K,
+            same: (T, T) -> Boolean = { a, b -> a == b },
+        ): ListDiff<T> {
+            val olderByKey = LinkedHashMap<K, T>(older.size)
+            older.forEach { olderByKey.getOrPut(key(it)) { it } }
+            val newerByKey = LinkedHashMap<K, T>(newer.size)
+            newer.forEach { newerByKey.getOrPut(key(it)) { it } }
+
+            val removed = mutableListOf<T>()
+            val changed = mutableListOf<ItemChange<T>>()
+            olderByKey.forEach { (k, before) ->
+                val after = newerByKey[k]
+                if (after == null) {
+                    removed.add(before)
+                } else if (!same(before, after)) {
+                    changed.add(ItemChange(before, after))
+                }
+            }
+            val added = newerByKey.filterKeys { it !in olderByKey }.values.toList()
+
+            return ListDiff(removed, added, changed)
+        }
+    }
+}
+
+/** A single value that differs between two versions; null on a side means it wasn't set. */
+@Immutable
+class ValueChange<T>(
+    val before: T?,
+    val after: T?,
+) {
+    fun isRemoval() = before != null && after == null
+
+    companion object {
+        /** Null when both sides are the same. */
+        fun <T> of(
+            before: T?,
+            after: T?,
+            same: (T, T) -> Boolean = { a, b -> a == b },
+        ): ValueChange<T>? =
+            when {
+                before == null && after == null -> null
+                before != null && after != null && same(before, after) -> null
+                else -> ValueChange(before, after)
+            }
+    }
+}
+
+/**
+ * How content that can't be read without decrypting (NIP-44 private list items, encrypted
+ * wallets and settings) changed as a whole.
  */
 enum class ContentChange {
     NONE,
@@ -41,6 +133,8 @@ enum class ContentChange {
     CHANGED,
     CLEARED,
     ;
+
+    fun isRemoval() = this == CLEARED
 
     companion object {
         fun between(
@@ -53,55 +147,5 @@ enum class ContentChange {
                 newer.isBlank() -> CLEARED
                 else -> CHANGED
             }
-    }
-}
-
-/**
- * Everything that differs between two versions of the same event, computed by
- * [com.vitorpamplona.quartz.nip01Core.core.Event.diffFrom].
- *
- * @property contentEncrypted whether [content] refers to encrypted content (private list
- * items) rather than plain text.
- */
-@Immutable
-class EventDiff(
-    val kind: Kind,
-    val removed: List<DiffEntry>,
-    val added: List<DiffEntry>,
-    val changed: List<DiffChange>,
-    val content: ContentChange,
-    val contentEncrypted: Boolean,
-) {
-    fun isEmpty() = removed.isEmpty() && added.isEmpty() && changed.isEmpty() && content == ContentChange.NONE
-
-    /** The newer version dropped something the older one had. */
-    fun removesData() = removed.isNotEmpty() || content == ContentChange.CLEARED
-
-    companion object {
-        fun compute(
-            kind: Kind,
-            older: List<DiffEntry>,
-            newer: List<DiffEntry>,
-            content: ContentChange,
-            contentEncrypted: Boolean,
-        ): EventDiff {
-            val olderByKey = LinkedHashMap<String, DiffEntry>(older.size)
-            older.forEach { olderByKey.getOrPut(it.key) { it } }
-            val newerByKey = LinkedHashMap<String, DiffEntry>(newer.size)
-            newer.forEach { newerByKey.getOrPut(it.key) { it } }
-
-            val removed = mutableListOf<DiffEntry>()
-            val changed = mutableListOf<DiffChange>()
-            olderByKey.forEach { (key, before) ->
-                val after = newerByKey[key]
-                when {
-                    after == null -> removed.add(before)
-                    after != before -> changed.add(DiffChange(before, after))
-                }
-            }
-            val added = newerByKey.filterKeys { it !in olderByKey }.values.toList()
-
-            return EventDiff(kind, removed, added, changed, content, contentEncrypted)
-        }
     }
 }

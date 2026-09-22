@@ -26,7 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
-import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -46,13 +47,18 @@ class ContactListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<ContactListDiff>,
     PubKeyHintProvider {
+    override fun diffFrom(older: Event): ContactListDiff? {
+        if (older !is ContactListEvent || older.pubKey != pubKey) return null
+        return ContactListDiff(
+            ListDiff.of(older.follows(), follows(), { it.pubKey }, { a, b -> a.relayUri == b.relayUri && a.petname == b.petname }),
+        )
+    }
+
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(ContactTag::parseKey)
-
-    /** The content is a deprecated relay map that many clients drop on purpose. */
-    override fun diffContent(older: Event) = ContentChange.NONE
 
     /**
      * Returns a list of p-tags that are verified as hex keys.

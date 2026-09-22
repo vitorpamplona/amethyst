@@ -2837,9 +2837,6 @@
     <string name="backup_conflict_private_cleared">All private (encrypted) items were removed.</string>
     <string name="backup_conflict_private_changed">Private (encrypted) items also changed. They can\'t be compared here.</string>
     <string name="backup_conflict_private_added">Private (encrypted) items were added.</string>
-    <string name="backup_conflict_content_cleared">The content was cleared.</string>
-    <string name="backup_conflict_content_added">Content was added.</string>
-    <string name="backup_conflict_content_changed">The content changed.</string>
     <string name="backup_conflict_more_items">…and %1$s more</string>
     <string name="backup_conflict_restore_explainer">Restoring brings back what was removed and drops what the other app added or changed.</string>
     <string name="backup_conflict_restore_mine">Restore saved version</string>
@@ -2919,8 +2916,7 @@
     <string name="backup_entry_nutzap_key">Nutzap keys</string>
     <string name="backup_entry_payment_target">Payment addresses</string>
     <string name="backup_entry_offer">Offers</string>
-    <string name="backup_entry_event">Events</string>
-    <string name="backup_entry_address">Items</string>
+    <string name="backup_entry_identity_claim">Linked identities</string>
     <string name="backup_entry_other">Other entries</string>
     <string name="backup_profile_field_name">Username</string>
     <string name="backup_profile_field_display_name">Display name</string>
@@ -2933,5 +2929,6 @@
     <string name="backup_profile_field_lud06">LNURL</string>
     <string name="backup_profile_field_pronouns">Pronouns</string>
     <string name="backup_profile_field_birthday">Birthday</string>
+    <string name="backup_profile_field_clink_offer">CLINK offer</string>
     <string name="backup_profile_field_bot">Bot flag</string>
 </resources>

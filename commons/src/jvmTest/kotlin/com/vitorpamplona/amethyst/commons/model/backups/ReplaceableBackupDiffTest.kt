@@ -22,16 +22,17 @@ package com.vitorpamplona.amethyst.commons.model.backups
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The backup guard's use of [Event.diffFrom]; the diff itself is tested in quartz. */
+/** The backup guard's use of the events' own diffs; the diffs themselves are tested in quartz. */
 class ReplaceableBackupDiffTest {
     private val signer = NostrSignerSync(KeyPair())
 
@@ -49,9 +50,8 @@ class ReplaceableBackupDiffTest {
     fun lossyRewriteIsDetected() {
         val saved = sign(3, 100, arrayOf(arrayOf("p", alice), arrayOf("p", bob)))
         val incoming = sign(3, 200, arrayOf(arrayOf("p", bob)))
-        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
-        assertEquals(listOf(DiffEntry.Person(alice)), diff.removed)
-        assertEquals(BackupEventType.FOLLOW_LIST, BackupEventType.of(diff.kind))
+        val diff = assertIs<ContactListDiff>(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertEquals(listOf(alice), diff.follows.removed.map { it.pubKey })
     }
 
     @Test

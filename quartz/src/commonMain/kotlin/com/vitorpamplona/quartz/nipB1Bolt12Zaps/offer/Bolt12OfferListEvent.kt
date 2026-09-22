@@ -23,8 +23,10 @@ package com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -51,14 +53,18 @@ class Bolt12OfferListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<Bolt12OfferListDiff> {
+    override fun diffFrom(older: Event): Bolt12OfferListDiff? {
+        if (older !is Bolt12OfferListEvent || older.pubKey != pubKey) return null
+        return Bolt12OfferListDiff(ListDiff.of(older.offers(), offers(), { it }))
+    }
+
     /** All canonical raw BOLT12 offers (`lno1...`) this user publishes, in tag order. */
     fun offers(): List<String> = tags.mapNotNull(OfferTag::parse)
 
     /** The first valid offer, or null when the list carries none. */
     fun firstOffer(): String? = tags.firstNotNullOfOrNull(OfferTag::parse)
-
-    override fun diffEntry(tag: Array<String>): DiffEntry? = OfferTag.parse(tag)?.let { DiffEntry.Bolt12Offer(it) } ?: super.diffEntry(tag)
 
     companion object {
         const val KIND = 10058

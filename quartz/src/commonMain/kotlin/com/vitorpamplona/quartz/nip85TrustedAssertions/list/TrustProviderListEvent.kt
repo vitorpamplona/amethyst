@@ -22,10 +22,12 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.list
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -43,12 +45,17 @@ class TrustProviderListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun serviceProviders() = tags.serviceProviders()
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<TrustProviderListDiff> {
+    override fun diffFrom(older: Event): TrustProviderListDiff? {
+        if (older !is TrustProviderListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return TrustProviderListDiff(
+            ListDiff.of(older.serviceProviders(), serviceProviders(), { it.service to it.pubkey }, { a, b -> a.relayUrl == b.relayUrl }),
+            privateItemsChangeFrom(older),
+        )
+    }
 
-    override fun diffEntry(tag: Array<String>): DiffEntry? =
-        ServiceProviderTag.parse(tag)?.let { DiffEntry.TrustProvider(it.service.toValue(), it.pubkey, it.relayUrl.url) }
-            ?: super.diffEntry(tag)
+    fun serviceProviders() = tags.serviceProviders()
 
     companion object {
         const val KIND = 10040

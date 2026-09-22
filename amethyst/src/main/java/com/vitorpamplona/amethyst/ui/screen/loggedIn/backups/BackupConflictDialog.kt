@@ -50,12 +50,38 @@ import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
-import com.vitorpamplona.quartz.nip01Core.diff.DiffChange
-import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ItemChange
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
+import com.vitorpamplona.quartz.nip01Core.metadata.Birthday
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
+import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoDiff
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataDiff
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 
 private const val MAX_ITEMS_PER_GROUP = 6
 private const val MAX_VALUE_LENGTH = 80
@@ -98,7 +124,6 @@ private fun BackupConflictDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val diff = conflict.diff
     val eventType = conflict.eventType
 
     AlertDialog(
@@ -114,7 +139,7 @@ private fun BackupConflictDialog(
                 Spacer(Modifier.height(12.dp))
                 Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.incoming.createdAt, context)))
 
-                DiffDetails(diff, eventType)
+                DiffDetails(conflict.diff)
 
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -135,42 +160,209 @@ private fun BackupConflictDialog(
     )
 }
 
+/**
+ * One labelled group of differences (people, relays, profile fields…), already turned into
+ * display lines. Built per event type from that event's own diff class.
+ */
+private class DiffGroup(
+    val label: Int,
+    val removed: List<String>,
+    val added: List<String>,
+    val changed: List<String>,
+)
+
+/** A group from a [ListDiff] of an event's parsed items. */
+private fun <T> listGroup(
+    label: Int,
+    diff: ListDiff<T>,
+    describe: (T) -> String,
+    describeChange: (ItemChange<T>) -> String = { describe(it.before) + " → " + describe(it.after) },
+) = DiffGroup(label, diff.removed.map(describe), diff.added.map(describe), diff.changed.map(describeChange))
+
+/** Keeps only the items of [T] from a list diff of a sealed family (e.g. one kind of [MuteTag]). */
+private inline fun <reified T> ListDiff<*>.only() =
+    ListDiff(
+        removed.filterIsInstance<T>(),
+        added.filterIsInstance<T>(),
+        changed.filter { it.before is T }.map { ItemChange(it.before as T, it.after as T) },
+    )
+
+/** A group from single-valued fields: a field set only after is added, only before is removed. */
+private fun fieldGroup(
+    label: Int,
+    fields: List<Pair<String, ValueChange<String>?>>,
+): DiffGroup {
+    val removed = mutableListOf<String>()
+    val added = mutableListOf<String>()
+    val changed = mutableListOf<String>()
+    fields.forEach { (name, change) ->
+        if (change == null) return@forEach
+        val before = change.before
+        val after = change.after
+        when {
+            before != null && after == null -> removed.add(name + ": " + clip(before))
+            before == null && after != null -> added.add(name + ": " + clip(after))
+            else -> changed.add(name + ": " + clip(before) + " → " + clip(after))
+        }
+    }
+    return DiffGroup(label, removed, added, changed)
+}
+
+/** Turns each event's own diff into display groups, plus the change to its encrypted content. */
 @Composable
-private fun DiffDetails(
-    diff: EventDiff,
-    eventType: BackupEventType,
-) {
-    if (diff.removed.isNotEmpty() || diff.content == ContentChange.CLEARED) {
-        SectionHeader(
-            stringRes(R.string.backup_conflict_removed, diff.removed.size.toString()),
-            MaterialTheme.colorScheme.error,
-        )
-        if (diff.content == ContentChange.CLEARED) {
-            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_cleared else R.string.backup_conflict_content_cleared)
+private fun presentation(diff: EventDiff): Pair<List<DiffGroup>, ContentChange> =
+    when (diff) {
+        is MetadataDiff -> {
+            val birthday = diff.birthday?.let { ValueChange(it.before?.let(::birthdayText), it.after?.let(::birthdayText)) }
+            val bot = diff.bot?.let { ValueChange(it.before?.toString(), it.after?.toString()) }
+            listOf(
+                fieldGroup(
+                    R.string.backup_entry_profile_field,
+                    listOf(
+                        stringRes(R.string.backup_profile_field_name) to diff.name,
+                        stringRes(R.string.backup_profile_field_display_name) to diff.displayName,
+                        stringRes(R.string.backup_profile_field_about) to diff.about,
+                        stringRes(R.string.backup_profile_field_picture) to diff.picture,
+                        stringRes(R.string.backup_profile_field_banner) to diff.banner,
+                        stringRes(R.string.backup_profile_field_website) to diff.website,
+                        stringRes(R.string.backup_profile_field_nip05) to diff.nip05,
+                        stringRes(R.string.backup_profile_field_lud16) to diff.lud16,
+                        stringRes(R.string.backup_profile_field_lud06) to diff.lud06,
+                        stringRes(R.string.backup_profile_field_clink_offer) to diff.clinkOffer,
+                        stringRes(R.string.backup_profile_field_pronouns) to diff.pronouns,
+                        stringRes(R.string.backup_profile_field_birthday) to birthday,
+                        stringRes(R.string.backup_profile_field_bot) to bot,
+                    ),
+                ),
+                listGroup(R.string.backup_entry_identity_claim, diff.identityClaims, { it.platformIdentity() }),
+                listGroup(R.string.backup_entry_other, diff.otherFields, { it.first + ": " + clip(it.second) }),
+            ) to ContentChange.NONE
         }
-        EntryGroups(diff.removed, eventType)
+        is ContactListDiff ->
+            listOf(
+                listGroup(
+                    R.string.backup_entry_person,
+                    diff.follows,
+                    { personName(it.pubKey) + (it.petname?.let { name -> " ($name)" } ?: "") },
+                    {
+                        personName(it.before.pubKey) + ": " +
+                            listOfNotNull(it.before.petname, it.before.relayUri?.url).joinToString() + " → " +
+                            listOfNotNull(it.after.petname, it.after.relayUri?.url).joinToString()
+                    },
+                ),
+            ) to ContentChange.NONE
+        is MuteListDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_person, diff.publicMutes.only<UserTag>(), { personName(it.pubKey) }),
+                listGroup(R.string.backup_entry_word, diff.publicMutes.only<WordTag>(), { "\"" + it.word + "\"" }),
+                listGroup(R.string.backup_entry_hashtag, diff.publicMutes.only<HashtagTag>(), { "#" + it.hashtag }),
+                listGroup(R.string.backup_entry_thread, diff.publicMutes.only<EventTag>(), { it.eventId.toShortDisplay() }),
+            ) to diff.privateItems
+        is AdvertisedRelayListDiff -> {
+            val types =
+                mapOf(
+                    AdvertisedRelayType.BOTH to stringRes(R.string.backup_conflict_relay_read_write),
+                    AdvertisedRelayType.READ to stringRes(R.string.backup_conflict_relay_read_only),
+                    AdvertisedRelayType.WRITE to stringRes(R.string.backup_conflict_relay_write_only),
+                )
+            listOf(
+                listGroup(
+                    R.string.backup_entry_relay,
+                    diff.relays,
+                    { it.relayUrl.url + " (" + types[it.type] + ")" },
+                    { it.before.relayUrl.url + ": " + types[it.before.type] + " → " + types[it.after.type] },
+                ),
+            ) to ContentChange.NONE
+        }
+        is RelayListDiff -> listOf(listGroup(R.string.backup_entry_relay, diff.relays, { it.url })) to diff.privateRelays
+        is ChannelListDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_public_chat, diff.channels, { channelName(it.eventId) }),
+            ) to diff.privateItems
+        is CommunityListDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_community, diff.communities, { it.address.dTag.ifBlank { it.address.toValue() } }),
+            ) to diff.privateItems
+        is HashtagListDiff -> listOf(listGroup(R.string.backup_entry_hashtag, diff.hashtags, { "#$it" })) to diff.privateItems
+        is GeohashListDiff -> listOf(listGroup(R.string.backup_entry_location, diff.geohashes, { it })) to diff.privateItems
+        is FavoriteAlgoFeedsListDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_algo_feed, diff.feeds, { it.address.dTag.ifBlank { it.address.toValue() } }),
+            ) to diff.privateItems
+        is EphemeralChatListDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_chat_room, diff.rooms, { it.id + " @ " + it.relayUrl.url }),
+            ) to diff.privateItems
+        is SimpleGroupListDiff ->
+            listOf(
+                listGroup(
+                    R.string.backup_entry_relay_group,
+                    diff.groups,
+                    { (it.name ?: it.groupId) + " @ " + it.relayUrl },
+                    { (it.before.name ?: it.before.groupId) + " → " + (it.after.name ?: it.after.groupId) },
+                ),
+            ) to diff.privateItems
+        is TrustProviderListDiff ->
+            listOf(
+                listGroup(
+                    R.string.backup_entry_trust_provider,
+                    diff.providers,
+                    { it.service.type + ": " + personName(it.pubkey) },
+                    { it.before.service.type + ": " + it.before.relayUrl.url + " → " + it.after.relayUrl.url },
+                ),
+            ) to diff.privateItems
+        is NutzapInfoDiff ->
+            listOf(
+                listGroup(
+                    R.string.backup_entry_mint,
+                    diff.mints,
+                    { it.mintUrl + (if (it.units.isEmpty()) "" else " (" + it.units.joinToString() + ")") },
+                    { it.before.mintUrl + ": " + it.before.units.joinToString() + " → " + it.after.units.joinToString() },
+                ),
+                listGroup(R.string.backup_entry_relay, diff.relays, { it.url }),
+                fieldGroup(
+                    R.string.backup_entry_nutzap_key,
+                    listOf(
+                        stringRes(R.string.backup_entry_nutzap_key) to
+                            diff.p2pkPubkey?.let { ValueChange(it.before?.toShortDisplay(), it.after?.toShortDisplay()) },
+                    ),
+                ),
+            ) to ContentChange.NONE
+        is PaymentTargetsDiff ->
+            listOf(
+                listGroup(R.string.backup_entry_payment_target, diff.targets, { it.type + ": " + clip(it.authority) }),
+            ) to ContentChange.NONE
+        is Bolt12OfferListDiff -> listOf(listGroup(R.string.backup_entry_offer, diff.offers, { it.toShortDisplay() })) to ContentChange.NONE
+        is CashuWalletDiff -> emptyList<DiffGroup>() to diff.wallet
+        is ConcordCommunityListDiff -> emptyList<DiffGroup>() to diff.communities
+        is AppSpecificDataDiff -> emptyList<DiffGroup>() to diff.data
+        else -> emptyList<DiffGroup>() to ContentChange.NONE
     }
 
-    if (diff.added.isNotEmpty() || diff.content == ContentChange.ADDED) {
-        SectionHeader(
-            stringRes(R.string.backup_conflict_added, diff.added.size.toString()),
-            MaterialTheme.colorScheme.primary,
-        )
-        if (diff.content == ContentChange.ADDED) {
-            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_added else R.string.backup_conflict_content_added)
-        }
-        EntryGroups(diff.added, eventType)
+@Composable
+private fun DiffDetails(diff: EventDiff) {
+    val (allGroups, content) = presentation(diff)
+    val groups = allGroups.filter { it.removed.isNotEmpty() || it.added.isNotEmpty() || it.changed.isNotEmpty() }
+
+    val removed = groups.sumOf { it.removed.size }
+    if (removed > 0 || content == ContentChange.CLEARED) {
+        SectionHeader(stringRes(R.string.backup_conflict_removed, removed.toString()), MaterialTheme.colorScheme.error)
+        if (content == ContentChange.CLEARED) ContentNote(R.string.backup_conflict_private_cleared)
+        groups.forEach { ItemGroup(it.label, it.removed) }
     }
 
-    if (diff.changed.isNotEmpty() || diff.content == ContentChange.CHANGED) {
-        SectionHeader(
-            stringRes(R.string.backup_conflict_changed, diff.changed.size.toString()),
-            MaterialTheme.colorScheme.tertiary,
-        )
-        if (diff.content == ContentChange.CHANGED) {
-            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_changed else R.string.backup_conflict_content_changed)
-        }
-        ChangeGroups(diff.changed, eventType)
+    val added = groups.sumOf { it.added.size }
+    if (added > 0 || content == ContentChange.ADDED) {
+        SectionHeader(stringRes(R.string.backup_conflict_added, added.toString()), MaterialTheme.colorScheme.primary)
+        if (content == ContentChange.ADDED) ContentNote(R.string.backup_conflict_private_added)
+        groups.forEach { ItemGroup(it.label, it.added) }
+    }
+
+    val changed = groups.sumOf { it.changed.size }
+    if (changed > 0 || content == ContentChange.CHANGED) {
+        SectionHeader(stringRes(R.string.backup_conflict_changed, changed.toString()), MaterialTheme.colorScheme.tertiary)
+        if (content == ContentChange.CHANGED) ContentNote(R.string.backup_conflict_private_changed)
+        groups.forEach { ItemGroup(it.label, it.changed) }
     }
 }
 
@@ -189,170 +381,45 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun GroupLabel(labelRes: Int) {
+private fun ItemGroup(
+    labelRes: Int,
+    items: List<String>,
+) {
+    if (items.isEmpty()) return
     Text(
         text = stringRes(labelRes),
         style = MaterialTheme.typography.labelMedium,
         modifier = Modifier.padding(top = 6.dp),
     )
-}
-
-@Composable
-private fun Item(text: String) {
-    Text(
-        text = "• $text",
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(start = 8.dp),
-    )
-}
-
-@Composable
-private fun MoreItems(count: Int) {
-    if (count > 0) {
+    items.take(MAX_ITEMS_PER_GROUP).forEach {
         Text(
-            text = stringRes(R.string.backup_conflict_more_items, count.toString()),
+            text = "• $it",
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+    val more = items.size - MAX_ITEMS_PER_GROUP
+    if (more > 0) {
+        Text(
+            text = stringRes(R.string.backup_conflict_more_items, more.toString()),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(start = 8.dp),
         )
     }
 }
 
-@Composable
-private fun EntryGroups(
-    entries: List<DiffEntry>,
-    eventType: BackupEventType,
-) {
-    entries.groupBy { groupLabel(it, eventType) }.forEach { (label, group) ->
-        GroupLabel(label)
-        group.take(MAX_ITEMS_PER_GROUP).forEach { Item(describe(it)) }
-        MoreItems(group.size - MAX_ITEMS_PER_GROUP)
-    }
-}
-
-@Composable
-private fun ChangeGroups(
-    changes: List<DiffChange>,
-    eventType: BackupEventType,
-) {
-    changes.groupBy { groupLabel(it.before, eventType) }.forEach { (label, group) ->
-        GroupLabel(label)
-        group.take(MAX_ITEMS_PER_GROUP).forEach { Item(describe(it)) }
-        MoreItems(group.size - MAX_ITEMS_PER_GROUP)
-    }
-}
-
-/** One line per changed entry: what it is, then its details before → after. */
-@Composable
-private fun describe(change: DiffChange): String {
-    val before = change.before
-    val after = change.after
-    return when {
-        before is DiffEntry.ProfileField && after is DiffEntry.ProfileField ->
-            profileFieldName(before.name) + ": " + clip(before.value) + " → " + clip(after.value)
-        before is DiffEntry.Relay && after is DiffEntry.Relay ->
-            before.url + ": " + relayMarker(before) + " → " + relayMarker(after)
-        before is DiffEntry.Person && after is DiffEntry.Person ->
-            personName(before.pubKey) + ": " + listOfNotNull(before.petName, before.relayHint).joinToString() +
-                " → " + listOfNotNull(after.petName, after.relayHint).joinToString()
-        before is DiffEntry.Mint && after is DiffEntry.Mint ->
-            before.url + ": " + before.units.joinToString() + " → " + after.units.joinToString()
-        before is DiffEntry.RelayGroup && after is DiffEntry.RelayGroup ->
-            (before.name ?: before.groupId) + " → " + (after.name ?: after.groupId)
-        else -> describe(before) + " → " + describe(after)
-    }
-}
-
-/** One line per entry, resolving people and chats to their names when this device knows them. */
-@Composable
-private fun describe(entry: DiffEntry): String =
-    when (entry) {
-        is DiffEntry.ProfileField -> profileFieldName(entry.name) + ": " + clip(entry.value)
-        is DiffEntry.Person -> personName(entry.pubKey) + (entry.petName?.let { " ($it)" } ?: "")
-        is DiffEntry.Hashtag -> "#" + entry.hashtag
-        is DiffEntry.Word -> "\"" + entry.word + "\""
-        is DiffEntry.Geohash -> entry.geohash
-        is DiffEntry.Relay -> entry.url + " (" + relayMarker(entry) + ")"
-        is DiffEntry.EventRef ->
-            LocalCache.getPublicChatChannelIfExists(entry.eventId)?.toBestDisplayName() ?: entry.eventId.toShortDisplay()
-        is DiffEntry.AddressRef -> Address.parse(entry.address)?.dTag?.ifBlank { null } ?: entry.address.toShortDisplay()
-        is DiffEntry.RelayGroup -> entry.name ?: entry.groupId
-        is DiffEntry.ChatRoom -> entry.roomId + " @ " + entry.relay
-        is DiffEntry.TrustProvider -> entry.service.substringAfter(':') + ": " + personName(entry.pubKey)
-        is DiffEntry.Mint -> entry.url
-        is DiffEntry.NutzapKey -> entry.pubKey.toShortDisplay()
-        is DiffEntry.PaymentTarget -> entry.type + ": " + clip(entry.authority)
-        is DiffEntry.Bolt12Offer -> entry.offer.toShortDisplay()
-        is DiffEntry.OtherTag -> entry.name + ": " + clip(entry.value)
-    }
-
-/** Which group an entry is listed under. The same tag means different things in different lists. */
-private fun groupLabel(
-    entry: DiffEntry,
-    eventType: BackupEventType,
-): Int =
-    when (entry) {
-        is DiffEntry.ProfileField -> R.string.backup_entry_profile_field
-        is DiffEntry.Person -> R.string.backup_entry_person
-        is DiffEntry.Hashtag -> R.string.backup_entry_hashtag
-        is DiffEntry.Word -> R.string.backup_entry_word
-        is DiffEntry.Geohash -> R.string.backup_entry_location
-        is DiffEntry.Relay -> R.string.backup_entry_relay
-        is DiffEntry.EventRef ->
-            when (eventType) {
-                BackupEventType.MUTE_LIST -> R.string.backup_entry_thread
-                BackupEventType.PUBLIC_CHATS -> R.string.backup_entry_public_chat
-                else -> R.string.backup_entry_event
-            }
-        is DiffEntry.AddressRef ->
-            when (eventType) {
-                BackupEventType.COMMUNITIES -> R.string.backup_entry_community
-                BackupEventType.FAVORITE_ALGO_FEEDS -> R.string.backup_entry_algo_feed
-                else -> R.string.backup_entry_address
-            }
-        is DiffEntry.RelayGroup -> R.string.backup_entry_relay_group
-        is DiffEntry.ChatRoom -> R.string.backup_entry_chat_room
-        is DiffEntry.TrustProvider -> R.string.backup_entry_trust_provider
-        is DiffEntry.Mint -> R.string.backup_entry_mint
-        is DiffEntry.NutzapKey -> R.string.backup_entry_nutzap_key
-        is DiffEntry.PaymentTarget -> R.string.backup_entry_payment_target
-        is DiffEntry.Bolt12Offer -> R.string.backup_entry_offer
-        is DiffEntry.OtherTag -> R.string.backup_entry_other
-    }
-
 private fun personName(pubkey: String): String = LocalCache.getUserIfExists(pubkey)?.toBestDisplayName() ?: pubkey.toShortDisplay()
+
+private fun channelName(eventId: String): String = LocalCache.getPublicChatChannelIfExists(eventId)?.toBestDisplayName() ?: eventId.toShortDisplay()
+
+private fun birthdayText(birthday: Birthday): String = listOfNotNull(birthday.year, birthday.month, birthday.day).joinToString("-")
 
 private fun clip(text: String?): String {
     if (text == null) return ""
     val oneLine = text.replace('\n', ' ')
     return if (oneLine.length > MAX_VALUE_LENGTH) oneLine.take(MAX_VALUE_LENGTH) + "…" else oneLine
 }
-
-@Composable
-private fun relayMarker(relay: DiffEntry.Relay): String =
-    when {
-        relay.read && !relay.write -> stringRes(R.string.backup_conflict_relay_read_only)
-        relay.write && !relay.read -> stringRes(R.string.backup_conflict_relay_write_only)
-        else -> stringRes(R.string.backup_conflict_relay_read_write)
-    }
-
-@Composable
-private fun profileFieldName(field: String): String =
-    when (field) {
-        "name" -> stringRes(R.string.backup_profile_field_name)
-        "display_name", "displayName" -> stringRes(R.string.backup_profile_field_display_name)
-        "about" -> stringRes(R.string.backup_profile_field_about)
-        "picture", "image" -> stringRes(R.string.backup_profile_field_picture)
-        "banner" -> stringRes(R.string.backup_profile_field_banner)
-        "website" -> stringRes(R.string.backup_profile_field_website)
-        "nip05" -> stringRes(R.string.backup_profile_field_nip05)
-        "lud16" -> stringRes(R.string.backup_profile_field_lud16)
-        "lud06" -> stringRes(R.string.backup_profile_field_lud06)
-        "pronouns" -> stringRes(R.string.backup_profile_field_pronouns)
-        "birthday" -> stringRes(R.string.backup_profile_field_birthday)
-        "bot" -> stringRes(R.string.backup_profile_field_bot)
-        else -> field
-    }
 
 private fun eventTypeName(type: BackupEventType): Int =
     when (type) {

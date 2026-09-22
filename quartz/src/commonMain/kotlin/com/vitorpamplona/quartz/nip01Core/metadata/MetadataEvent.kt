@@ -27,8 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
-import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
-import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
@@ -69,7 +70,54 @@ class MetadataEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<MetadataDiff>,
     SearchableEvent {
+    override fun diffFrom(older: Event): MetadataDiff? {
+        if (older !is MetadataEvent || older.pubKey != pubKey) return null
+        val before = older.contactMetaData() ?: UserMetadata()
+        val after = contactMetaData() ?: UserMetadata()
+
+        fun text(
+            b: String?,
+            a: String?,
+        ) = ValueChange.of(b?.ifBlank { null }, a?.ifBlank { null })
+
+        return MetadataDiff(
+            name = text(before.name, after.name),
+            displayName = text(before.displayName, after.displayName),
+            picture = text(before.picture, after.picture),
+            banner = text(before.banner, after.banner),
+            website = text(before.website, after.website),
+            about = text(before.about, after.about),
+            pronouns = text(before.pronouns, after.pronouns),
+            nip05 = text(before.nip05, after.nip05),
+            lud06 = text(before.lud06, after.lud06),
+            lud16 = text(before.lud16, after.lud16),
+            clinkOffer = text(before.clinkOffer, after.clinkOffer),
+            bot = ValueChange.of(before.bot, after.bot),
+            birthday =
+                ValueChange.of(before.birthday, after.birthday) { b, a ->
+                    b.year == a.year && b.month == a.month && b.day == a.day
+                },
+            otherFields = ListDiff.of(older.unmodeledFields(), unmodeledFields(), { it.first }),
+            identityClaims =
+                ListDiff.of(
+                    older.tags.mapNotNull(IdentityClaimTag::parse),
+                    tags.mapNotNull(IdentityClaimTag::parse),
+                    { it.platformIdentity() },
+                    { b, a -> b.proof == a.proof },
+                ),
+        )
+    }
+
+    /** Filled JSON fields [UserMetadata] has no typed property for, as raw pairs. */
+    private fun unmodeledFields(): List<Pair<String, String>> =
+        contactMetadataJson()?.mapNotNull { (key, value) ->
+            if (key in MetadataDiff.MODELED_FIELDS) return@mapNotNull null
+            val text = if (value is JsonPrimitive) value.content else value.toString()
+            if (text.isBlank() || text == "null") null else key to text
+        } ?: emptyList()
+
     override fun isContentEncoded() = true
 
     // Profile content is JSON, so we parse it and index only the
@@ -106,24 +154,6 @@ class MetadataEvent(
     }
 
     override fun indexableSeparator() = " "
-
-    /**
-     * Profile fields live in the JSON content, so they become [DiffEntry.ProfileField]s.
-     * Tags that only mirror a content field are left out to not count them twice.
-     */
-    override fun diffEntries(): List<DiffEntry> {
-        val fields =
-            contactMetadataJson()?.mapNotNull { (name, value) ->
-                val text = if (value is JsonPrimitive) value.content else value.toString()
-                if (text.isBlank() || text == "null") null else DiffEntry.ProfileField(name, text)
-            } ?: emptyList()
-        val fieldNames = fields.mapTo(HashSet()) { it.name }
-        val tagEntries = super.diffEntries().filterNot { it is DiffEntry.OtherTag && it.name in fieldNames }
-        return fields + tagEntries
-    }
-
-    /** The content is already fully represented by [diffEntries]. */
-    override fun diffContent(older: Event) = ContentChange.NONE
 
     fun contactMetadataJson() =
         if (content.isBlank()) {
