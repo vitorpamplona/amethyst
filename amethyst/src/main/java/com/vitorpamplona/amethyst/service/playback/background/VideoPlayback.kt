@@ -99,11 +99,12 @@ class VideoPlayback(
     fun promote(
         checkout: PooledPlayer,
         context: Context,
+        claimFocus: Boolean,
     ) {
         if (coordinator.isPromoted(checkout)) return
 
         releaseDisplacedAudio()
-        claimSystemAudio(checkout.player)
+        claimSystemAudio(checkout.player, claimFocus)
         coordinator.promote(checkout)
         Log.d(TAG) { "Promoted ${checkout.player.currentMediaItem?.mediaId}" }
 
@@ -114,6 +115,7 @@ class VideoPlayback(
     fun promoteDetached(
         request: VideoRequest,
         context: Context,
+        claimFocus: Boolean,
     ): PooledPlayer {
         // Before the coordinator hands the displaced checkout back to the pool: a player must never
         // return still holding a focus request and a becoming-noisy receiver, or the next muted feed
@@ -121,7 +123,7 @@ class VideoPlayback(
         releaseDisplacedAudio()
 
         val checkout = coordinator.promoteDetached(request)
-        claimSystemAudio(checkout.player)
+        claimSystemAudio(checkout.player, claimFocus)
 
         startHost(context)
         return checkout
@@ -157,10 +159,23 @@ class VideoPlayback(
 
     fun destroy() = coordinator.releaseAll()
 
-    // Only the promoted playback arbitrates with other apps. Turning this on for every feed video
-    // would have five muted players fighting each other and ducking the user's music.
-    private fun claimSystemAudio(player: ExoPlayer) {
-        player.setAudioAttributes(PROMOTED_AUDIO_ATTRIBUTES, true)
+    /**
+     * Arms the promoted player's system audio behaviour.
+     *
+     * [claimFocus] follows the *medium*, not the promotion. Audio posts — a podcast, a music track,
+     * a voice note — are things the user sits and listens to, so they take audio focus and pause
+     * whatever else was playing. A video does not: watching a clip with the sound on while your own
+     * music keeps going is the behaviour people expect from a feed, whichever app the music is
+     * coming from. Feed videos never reach here at all, since only a promotion arms anything.
+     *
+     * Becoming-noisy is armed either way — no playback should carry on into the room when the
+     * headphones come out.
+     */
+    private fun claimSystemAudio(
+        player: ExoPlayer,
+        claimFocus: Boolean,
+    ) {
+        player.setAudioAttributes(PROMOTED_AUDIO_ATTRIBUTES, claimFocus)
         player.setHandleAudioBecomingNoisy(true)
     }
 

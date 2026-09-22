@@ -46,6 +46,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.PictureIn
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isAudioOnly
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
@@ -331,6 +333,13 @@ fun RenderTopButtonsForVoice(
             controllerState.controller.volume = if (mute) 0f else 1f
         },
         onPictureInPictureClick = {
+            // Hand the *running* player over rather than letting the window acquire a second one
+            // for the same URI: it keeps its buffer, position and decoder. Audio takes focus —
+            // a podcast or a track is something you sit and listen to, so it pauses whatever else
+            // was playing, unlike a video.
+            controllerState.pooled?.let {
+                Amethyst.instance.videoPlayback.promote(it, context, claimFocus = mediaData.isAudioOnly())
+            }
             PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context)
         },
         modifier = modifier,

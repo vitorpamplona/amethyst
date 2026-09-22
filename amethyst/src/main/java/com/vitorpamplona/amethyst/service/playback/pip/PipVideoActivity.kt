@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETT
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isAudioOnly
 import com.vitorpamplona.amethyst.service.playback.coordinator.VideoRequest
 
 class PipVideoActivity : ComponentActivity() {
@@ -65,6 +66,7 @@ class PipVideoActivity : ComponentActivity() {
                                 ?: playback.promoteDetached(
                                     VideoRequest(mediaItem.src.proxyPort, mediaItem.item.mediaId, mediaItem.src.repeatMode),
                                     applicationContext,
+                                    claimFocus = mediaItem.src.isAudioOnly(),
                                 )
 
                         if (pooled.player.currentMediaItem?.mediaId != mediaItem.item.mediaId) {
@@ -91,7 +93,7 @@ class PipVideoActivity : ComponentActivity() {
                         HoldPromotedPlayback(pooled.player)
                         RegisterControllerReceiver(controllerState)
                         WatchControllerForActions(mediaItemData, controllerState)
-                        RenderPipVideo(controllerState, mediaItemData.waveformData)
+                        RenderPipVideo(controllerState, mediaItemData, mediaItemData.waveformData)
                     }
                 }
             }

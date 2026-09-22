@@ -226,7 +226,9 @@ fun MusicTrackHeader(
                     GetMediaItem(
                         videoUri = url,
                         title = title,
-                        artworkUri = null,
+                        // The card draws its own cover, but the PiP window and the media
+                        // notification have no card to draw — they need the URL.
+                        artworkUri = image,
                         authorName = note.author?.toBestDisplayName(),
                         callbackUri = callbackUri,
                         mimeType = audioMimeType,

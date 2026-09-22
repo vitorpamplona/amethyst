@@ -22,30 +22,42 @@ package com.vitorpamplona.amethyst.service.playback.pip
 
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.state.rememberMuteButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isAudioOnly
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
@@ -54,15 +66,22 @@ import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 @Composable
 fun RenderPipVideo(
     controller: MediaControllerState,
+    mediaData: MediaItemData,
     waveformData: WaveformData?,
 ) {
     KeepScreenOnWhilePlaying(controller)
 
+    val isAudio = remember(mediaData) { mediaData.isAudioOnly() }
+
     val modifier =
-        remember {
+        remember(isAudio) {
+            // Audio has no frame to size the window by, so it gets a square — the shape cover art
+            // is already in. Video keeps whatever ratio the post declared.
             val ratio =
-                controller.currentMedia()?.let {
-                    MediaAspectRatioCache.get(it)
+                if (isAudio) {
+                    AUDIO_PIP_ASPECT_RATIO
+                } else {
+                    controller.currentMedia()?.let { MediaAspectRatioCache.get(it) }
                 }
 
             if (ratio != null) {
@@ -88,17 +107,81 @@ fun RenderPipVideo(
         ),
         contentAlignment = Alignment.Center,
     ) {
-        ContentFrame(
-            player = controller.controller,
-            keepContentOnReset = true,
-            contentScale = ContentScale.Crop,
-        )
+        if (isAudio) {
+            RenderPipAudioArtwork(mediaData)
+        } else {
+            ContentFrame(
+                player = controller.controller,
+                keepContentOnReset = true,
+                contentScale = ContentScale.Crop,
+            )
+        }
 
         Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
             waveformData?.let { Waveform(it, controller, Modifier) }
         }
     }
 }
+
+/**
+ * What a picture-in-picture window shows when there is no picture: the post's cover art, with the
+ * title and author over it so the window still says what is playing when the art is missing or has
+ * not loaded. The play/pause and mute controls are the window's own RemoteActions, and the shade
+ * and lock screen come from the MediaSession the promotion claims — so this is only the visual.
+ *
+ * Loaded through Coil's singleton loader rather than the shared MyAsyncImage: this activity has no
+ * account, by design.
+ */
+@Composable
+private fun RenderPipAudioArtwork(mediaData: MediaItemData) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)) {
+        mediaData.artworkUri?.let { art ->
+            AsyncImage(
+                model = art,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        val title = mediaData.title?.ifBlank { null }
+        val author = mediaData.authorName?.ifBlank { null }
+
+        if (title != null || author != null) {
+            Column(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    // The art is arbitrary, so the text needs its own ground to stay legible.
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                author?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Cover art is square far more often than not, and a square window reads as "this is a track"
+// rather than a video that failed to load.
+private const val AUDIO_PIP_ASPECT_RATIO = 1f
 
 @Composable
 fun KeepScreenOnWhilePlaying(controller: MediaControllerState) {

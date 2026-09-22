@@ -55,3 +55,11 @@ class LoadedMediaItem(
     val src: MediaItemData,
     val item: MediaItem,
 )
+
+/**
+ * True when the post's own imeta says this is audio — a podcast episode, a music track, a voice
+ * note. Read from the mime type rather than the player's tracks because both the promotion
+ * decision and the picture-in-picture window need an answer on the first frame, before ExoPlayer
+ * has parsed anything.
+ */
+fun MediaItemData.isAudioOnly(): Boolean = mimeType?.startsWith("audio/", ignoreCase = true) == true
