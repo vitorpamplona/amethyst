@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.podcasts.PodcastValueShare
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -170,12 +171,16 @@ class V4VPaymentHandler(
             account.zaps.sendNwcRequest(
                 request = request,
                 onResponse = { response: Response? ->
-                    response.nwcFailureDetail(context)?.let { detail ->
-                        onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
+                    account.scope.launch {
+                        response.nwcFailureDetail(context)?.let { detail ->
+                            onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
+                        }
                     }
                 },
                 onTimeout = {
-                    onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                    account.scope.launch {
+                        onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                    }
                 },
             )
         }
@@ -264,12 +269,16 @@ class V4VPaymentHandler(
                         bolt11 = payable.invoice,
                         zappedNote = zappedNote,
                         onResponse = { response ->
-                            response.nwcFailureDetail(context)?.let { detail ->
-                                onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
+                            account.scope.launch {
+                                response.nwcFailureDetail(context)?.let { detail ->
+                                    onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
+                                }
                             }
                         },
                         onTimeout = {
-                            onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                            account.scope.launch {
+                                onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                            }
                         },
                     )
                     done++

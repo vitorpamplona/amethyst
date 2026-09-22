@@ -435,21 +435,23 @@ class WalletViewModel : ViewModel() {
             updateWalletInfo(walletId) { it.copy(isLoading = true, error = null) }
             try {
                 acc.zaps.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
-                    when (response) {
-                        is GetBalanceSuccessResponse -> {
-                            val sats = (response.result?.balance ?: 0L) / 1000L
-                            updateWalletInfo(walletId) { it.copy(balanceSats = sats, isLoading = false) }
-                        }
-
-                        is NwcErrorResponse -> {
-                            updateWalletInfo(walletId) {
-                                it.copy(error = response.error?.message ?: text(Res.string.wallet_balance_request_failed), isLoading = false)
+                    viewModelScope.launch {
+                        when (response) {
+                            is GetBalanceSuccessResponse -> {
+                                val sats = (response.result?.balance ?: 0L) / 1000L
+                                updateWalletInfo(walletId) { it.copy(balanceSats = sats, isLoading = false) }
                             }
-                        }
 
-                        else -> {
-                            updateWalletInfo(walletId) {
-                                it.copy(error = unreadableResponseError(response), isLoading = false)
+                            is NwcErrorResponse -> {
+                                updateWalletInfo(walletId) {
+                                    it.copy(error = response.error?.message ?: text(Res.string.wallet_balance_request_failed), isLoading = false)
+                                }
+                            }
+
+                            else -> {
+                                updateWalletInfo(walletId) {
+                                    it.copy(error = unreadableResponseError(response), isLoading = false)
+                                }
                             }
                         }
                     }
@@ -466,12 +468,14 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 acc.zaps.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
-                    when (response) {
-                        is GetInfoSuccessResponse -> {
-                            updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
-                        }
+                    viewModelScope.launch {
+                        when (response) {
+                            is GetInfoSuccessResponse -> {
+                                updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
+                            }
 
-                        else -> {}
+                            else -> {}
+                        }
                     }
                 }
             } catch (_: Exception) {
@@ -481,7 +485,7 @@ class WalletViewModel : ViewModel() {
 
     private suspend fun updateWalletInfo(
         walletId: String,
-        transform: (WalletInfo) -> WalletInfo,
+        transform: suspend (WalletInfo) -> WalletInfo,
     ) {
         walletInfoMap.value =
             walletInfoMap.value.toMutableMap().apply {
@@ -508,23 +512,25 @@ class WalletViewModel : ViewModel() {
             try {
                 requestId =
                     acc.zaps.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
-                        timeoutJob.cancel()
-                        when (response) {
-                            is GetBalanceSuccessResponse -> {
-                                _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
-                                updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
-                                _error.value = null
-                            }
+                        viewModelScope.launch {
+                            timeoutJob.cancel()
+                            when (response) {
+                                is GetBalanceSuccessResponse -> {
+                                    _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
+                                    updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
+                                    _error.value = null
+                                }
 
-                            is NwcErrorResponse -> {
-                                _error.value = response.error?.message ?: text(Res.string.wallet_balance_request_failed)
-                            }
+                                is NwcErrorResponse -> {
+                                    _error.value = response.error?.message ?: text(Res.string.wallet_balance_request_failed)
+                                }
 
-                            else -> {
-                                _error.value = unreadableResponseError(response)
+                                else -> {
+                                    _error.value = unreadableResponseError(response)
+                                }
                             }
+                            _isLoading.value = false
                         }
-                        _isLoading.value = false
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
@@ -541,13 +547,15 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 acc.zaps.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
-                    when (response) {
-                        is GetInfoSuccessResponse -> {
-                            _walletAlias.value = response.result?.alias
-                            updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
-                        }
+                    viewModelScope.launch {
+                        when (response) {
+                            is GetInfoSuccessResponse -> {
+                                _walletAlias.value = response.result?.alias
+                                updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
+                            }
 
-                        else -> {}
+                            else -> {}
+                        }
                     }
                 }
             } catch (_: Exception) {
@@ -576,30 +584,32 @@ class WalletViewModel : ViewModel() {
                             unpaid = false,
                         ),
                     ) { response ->
-                        timeoutJob.cancel()
-                        when (response) {
-                            is ListTransactionsSuccessResponse -> {
-                                val txs = response.result?.transactions ?: emptyList()
-                                allTransactions.value = txs
-                                val totalCount = response.result?.total_count
-                                _hasMoreTransactions.value =
-                                    if (totalCount != null) {
-                                        txs.size < totalCount
-                                    } else {
-                                        txs.size >= pageSize
-                                    }
-                                _error.value = null
-                            }
+                        viewModelScope.launch {
+                            timeoutJob.cancel()
+                            when (response) {
+                                is ListTransactionsSuccessResponse -> {
+                                    val txs = response.result?.transactions ?: emptyList()
+                                    allTransactions.value = txs
+                                    val totalCount = response.result?.total_count
+                                    _hasMoreTransactions.value =
+                                        if (totalCount != null) {
+                                            txs.size < totalCount
+                                        } else {
+                                            txs.size >= pageSize
+                                        }
+                                    _error.value = null
+                                }
 
-                            is NwcErrorResponse -> {
-                                _error.value = response.error?.message ?: text(Res.string.wallet_transactions_load_failed)
-                            }
+                                is NwcErrorResponse -> {
+                                    _error.value = response.error?.message ?: text(Res.string.wallet_transactions_load_failed)
+                                }
 
-                            else -> {
-                                _error.value = unreadableResponseError(response)
+                                else -> {
+                                    _error.value = unreadableResponseError(response)
+                                }
                             }
+                            _isLoading.value = false
                         }
-                        _isLoading.value = false
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
@@ -630,30 +640,32 @@ class WalletViewModel : ViewModel() {
                             unpaid = false,
                         ),
                     ) { response ->
-                        timeoutJob.cancel()
-                        when (response) {
-                            is ListTransactionsSuccessResponse -> {
-                                val newTxs = response.result?.transactions ?: emptyList()
-                                allTransactions.value += newTxs
-                                val totalCount = response.result?.total_count
-                                _hasMoreTransactions.value =
-                                    if (totalCount != null) {
-                                        allTransactions.value.size < totalCount
-                                    } else {
-                                        newTxs.size >= pageSize
-                                    }
-                                _error.value = null
-                            }
+                        viewModelScope.launch {
+                            timeoutJob.cancel()
+                            when (response) {
+                                is ListTransactionsSuccessResponse -> {
+                                    val newTxs = response.result?.transactions ?: emptyList()
+                                    allTransactions.value += newTxs
+                                    val totalCount = response.result?.total_count
+                                    _hasMoreTransactions.value =
+                                        if (totalCount != null) {
+                                            allTransactions.value.size < totalCount
+                                        } else {
+                                            newTxs.size >= pageSize
+                                        }
+                                    _error.value = null
+                                }
 
-                            is NwcErrorResponse -> {
-                                _error.value = response.error?.message ?: text(Res.string.wallet_transactions_load_more_failed)
-                            }
+                                is NwcErrorResponse -> {
+                                    _error.value = response.error?.message ?: text(Res.string.wallet_transactions_load_more_failed)
+                                }
 
-                            else -> {
-                                _error.value = unreadableResponseError(response)
+                                else -> {
+                                    _error.value = unreadableResponseError(response)
+                                }
                             }
+                            _isLoadingMore.value = false
                         }
-                        _isLoadingMore.value = false
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
@@ -671,24 +683,26 @@ class WalletViewModel : ViewModel() {
             _sendState.value = SendState.Sending
             try {
                 acc.zaps.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
-                    when (response) {
-                        is PayInvoiceSuccessResponse -> {
-                            _sendState.value = SendState.Success(response.result?.preimage)
-                            fetchBalance()
-                        }
+                    viewModelScope.launch {
+                        when (response) {
+                            is PayInvoiceSuccessResponse -> {
+                                _sendState.value = SendState.Success(response.result?.preimage)
+                                fetchBalance()
+                            }
 
-                        is IErrorResponseLike -> {
-                            // Both PayInvoiceErrorResponse (method-specific, kept for
-                            // back-compat) and NwcErrorResponse (generic) reduce to the
-                            // same user-visible "payment failed" message.
-                            _sendState.value =
-                                SendState.Error(
-                                    response.errorMessage() ?: text(Res.string.send_payment_failed),
-                                )
-                        }
+                            is IErrorResponseLike -> {
+                                // Both PayInvoiceErrorResponse (method-specific, kept for
+                                // back-compat) and NwcErrorResponse (generic) reduce to the
+                                // same user-visible "payment failed" message.
+                                _sendState.value =
+                                    SendState.Error(
+                                        response.errorMessage() ?: text(Res.string.send_payment_failed),
+                                    )
+                            }
 
-                        else -> {
-                            _sendState.value = SendState.Error(text(Res.string.wallet_connect_unreadable_response_error))
+                            else -> {
+                                _sendState.value = SendState.Error(text(Res.string.wallet_connect_unreadable_response_error))
+                            }
                         }
                     }
                 }
@@ -715,25 +729,27 @@ class WalletViewModel : ViewModel() {
                         description = description,
                     ),
                 ) { response ->
-                    when (response) {
-                        is MakeInvoiceSuccessResponse -> {
-                            val invoice = response.result?.invoice
-                            if (invoice != null) {
-                                _receiveState.value = ReceiveState.Created(invoice, amountSats)
-                            } else {
-                                _receiveState.value = ReceiveState.Error(text(Res.string.wallet_no_invoice_returned))
+                    viewModelScope.launch {
+                        when (response) {
+                            is MakeInvoiceSuccessResponse -> {
+                                val invoice = response.result?.invoice
+                                if (invoice != null) {
+                                    _receiveState.value = ReceiveState.Created(invoice, amountSats)
+                                } else {
+                                    _receiveState.value = ReceiveState.Error(text(Res.string.wallet_no_invoice_returned))
+                                }
                             }
-                        }
 
-                        is NwcErrorResponse -> {
-                            _receiveState.value =
-                                ReceiveState.Error(
-                                    response.error?.message ?: text(Res.string.wallet_invoice_creation_failed),
-                                )
-                        }
+                            is NwcErrorResponse -> {
+                                _receiveState.value =
+                                    ReceiveState.Error(
+                                        response.error?.message ?: text(Res.string.wallet_invoice_creation_failed),
+                                    )
+                            }
 
-                        else -> {
-                            _receiveState.value = ReceiveState.Error(text(Res.string.wallet_connect_unreadable_response_error))
+                            else -> {
+                                _receiveState.value = ReceiveState.Error(text(Res.string.wallet_connect_unreadable_response_error))
+                            }
                         }
                     }
                 }
