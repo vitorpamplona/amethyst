@@ -158,4 +158,27 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">يحافظ على الاتصال بـ relay صندوق الوارد الخاص بك لتلقّي الإشعارات في الوقت الفعلي</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="zero">متصل بـ %1$d relay للصندوق الوارد</item>
+        <item quantity="one">متصل بـ %1$d relay للصندوق الوارد</item>
+        <item quantity="two">متصل بـ %1$d relay للصندوق الوارد</item>
+        <item quantity="few">متصل بـ %1$d relay للصندوق الوارد</item>
+        <item quantity="many">متصل بـ %1$d relay للصندوق الوارد</item>
+        <item quantity="other">متصل بـ %1$d relay للصندوق الوارد</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="zero">متصل بـ %1$d relay</item>
+        <item quantity="one">متصل بـ %1$d relay</item>
+        <item quantity="two">متصل بـ %1$d relay</item>
+        <item quantity="few">متصل بـ %1$d relay</item>
+        <item quantity="many">متصل بـ %1$d relay</item>
+        <item quantity="other">متصل بـ %1$d relay</item>
+    </plurals>
+    <string name="always_on_notif_connecting">جارٍ الاتصال بـ relay صندوق الوارد…</string>
+    <string name="always_on_notif_title">إشعارات Amethyst نشطة</string>
+    <string name="call_ongoing">المكالمات</string>
+    <string name="call_ongoing_description">إشعار المكالمة الجارية</string>
+    <string name="call_with">مكالمة مع %1$s</string>
+    <string name="call_hangup">إنهاء المكالمة</string>
 </resources>

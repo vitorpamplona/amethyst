@@ -2881,4 +2881,19 @@
 
 
 
+    <string name="always_on_notif_channel_description">Gerçek zamanlı bildirimler için gelen kutusu relay'lerinize bağlantıları etkin tutar</string>
+    <plurals name="always_on_notif_connected">
+    <item quantity="one">%1$d gelen kutusu relay'ine bağlandı</item>
+    <item quantity="other">%1$d gelen kutusu relay'ine bağlandı</item>
+</plurals>
+    <plurals name="always_on_notif_connected_foreground">
+    <item quantity="one">%1$d relay'e bağlandı</item>
+    <item quantity="other">%1$d relay'e bağlandı</item>
+</plurals>
+    <string name="always_on_notif_connecting">Gelen kutusu relay'lerine bağlanılıyor…</string>
+    <string name="always_on_notif_title">Amethyst Bildirimleri Etkin</string>
+    <string name="call_ongoing">Aramalar</string>
+    <string name="call_ongoing_description">Devam eden arama bildirimi</string>
+    <string name="call_with">%1$s ile arama</string>
+    <string name="call_hangup">Kapat</string>
 </resources>

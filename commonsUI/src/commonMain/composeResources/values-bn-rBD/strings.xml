@@ -1800,17 +1800,6 @@
     <string name="add_to_public_bookmarks">সর্বজনীন বুকমার্কে যুক্ত করুন</string>
     <string name="ai_writing_setting_description">পাঠ্য সংশোধন এবং সুরের পরিবর্তন প্রস্তাব করতে ডিভাইসে AI মডেল ব্যবহার করে।</string>
     <string name="ai_writing_setting_title">পাঠ্য উন্নতির প্রস্তাব দিন</string>
-    <string name="always_on_notif_channel_description">রিয়েল-টাইম বিজ্ঞপ্তির জন্য আপনার ইনবক্স relays-এর সাথে সংযোগ সক্রিয় রাখে</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d টি ইনবক্স relay-তে সংযুক্ত</item>
-        <item quantity="other">%1$d টি ইনবক্স relay-তে সংযুক্ত</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d টি relay-তে সংযুক্ত</item>
-        <item quantity="other">%1$d টি relay-তে সংযুক্ত</item>
-    </plurals>
-    <string name="always_on_notif_connecting">ইনবক্স relays-এ সংযুক্ত হচ্ছে…</string>
-    <string name="always_on_notif_title">Amethyst বিজ্ঞপ্তি সক্রিয়</string>
     <string name="app_notification_calls_channel_description">ইনকামিং ভয়েস ও ভিডিও কলের বিজ্ঞপ্তি</string>
     <string name="app_notification_calls_channel_name">আসা কল</string>
     <string name="app_notification_chess_challenge_accepted">%1$s আপনার দাবা চ্যালেঞ্জ গ্রহণ করেছে</string>
@@ -1925,15 +1914,12 @@
     <string name="call_incoming_video">ইনকামিং ভিডিও কল…</string>
     <string name="call_incoming_voice">ইনকামিং ভয়েস কল…</string>
     <string name="call_mute">মিউট করুন</string>
-    <string name="call_ongoing">কলসমূহ</string>
-    <string name="call_ongoing_description">চলমান কলের বিজ্ঞপ্তি</string>
     <string name="call_permission_denied_video">ভিডিও কল শুরু করতে Amethyst-এর ক্যামেরা ও মাইক্রোফোনের অ্যাক্সেস প্রয়োজন। অ্যাপ সেটিংসে এগুলো সক্ষম করুন।</string>
     <string name="call_permission_denied_voice">ভয়েস কল শুরু করতে Amethyst-এর মাইক্রোফোনের অ্যাক্সেস প্রয়োজন। অ্যাপ সেটিংসে এটি সক্ষম করুন।</string>
     <string name="call_reject">প্রত্যাখ্যান করুন</string>
     <string name="call_settings">কল সেটিংস</string>
     <string name="call_speaker">স্পিকার</string>
     <string name="call_unmute">আনমিউট করুন</string>
-    <string name="call_with">%1$s-এর সাথে কল</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s এর প্রতিক্রিয়া থেকে Callback URL পাওয়া যায়নি</string>
     <string name="cancel">বাতিল করুন</string>
     <string name="cashu">ক্যাশু টোকেন</string>

@@ -1795,17 +1795,6 @@
     <string name="add_to_public_bookmarks">Ongeza kwenye Vialamisho vya Umma</string>
     <string name="ai_writing_setting_description">Hutumia mfano wa AI uliopo kwenye kifaa kupendekeza marekebisho ya maandishi na mabadiliko ya sauti.</string>
     <string name="ai_writing_setting_title">Pendekeza maboresho ya maandishi</string>
-    <string name="always_on_notif_channel_description">Inaweka miunganisho kwenye relays za inbox yako hai kwa arifa za wakati halisi</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Imeunganishwa na relay %1$d ya kikasha</item>
-        <item quantity="other">Imeunganishwa na relay %1$d za kikasha</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Imeunganishwa na relay %1$d</item>
-        <item quantity="other">Imeunganishwa na relay %1$d</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Inaunganika kwenye relays za inbox…</string>
-    <string name="always_on_notif_title">Arifa za Amethyst Zinafanya Kazi</string>
     <string name="app_notification_calls_channel_description">Arifa za simu za sauti na video zinazoingia</string>
     <string name="app_notification_calls_channel_name">Simu zinazoingia</string>
     <string name="app_notification_chess_challenge_accepted">%1$s amekubali changamoto yako ya sataranji</string>
@@ -1919,15 +1908,12 @@
     <string name="call_incoming_video">Simu ya video inayoingia…</string>
     <string name="call_incoming_voice">Simu ya sauti inayoingia…</string>
     <string name="call_mute">Kimya</string>
-    <string name="call_ongoing">Simu</string>
-    <string name="call_ongoing_description">Arifa ya simu inayoendelea</string>
     <string name="call_permission_denied_video">Amethyst inahitaji ufikiaji wa kamera na maikrofoni kuanza simu ya video. Tafadhali zishe katika mipangilio ya programu.</string>
     <string name="call_permission_denied_voice">Amethyst inahitaji ufikiaji wa maikrofoni kuanza simu ya sauti. Tafadhali iwezesha katika mipangilio ya programu.</string>
     <string name="call_reject">Kataa</string>
     <string name="call_settings">Mipangilio ya Simu</string>
     <string name="call_speaker">Spika</string>
     <string name="call_unmute">Ondoa kimya</string>
-    <string name="call_with">Simu na %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL ya mrejesho haikupatikana kutoka kwa jibu la %1$s</string>
     <string name="cancel">Ghairi</string>
     <string name="cashu">Tokeni ya Cashu</string>

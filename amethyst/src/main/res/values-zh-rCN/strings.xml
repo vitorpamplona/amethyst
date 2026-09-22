@@ -217,4 +217,33 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">保持与收件箱中继的连接以便接收实时通知</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">已连接到 %1$d 个收件箱中继</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">已连接到 %1$d 个中继</item>
+    </plurals>
+    <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
+    <string name="always_on_notif_tile_subtitle_off">关</string>
+    <string name="always_on_notif_tile_subtitle_on">开</string>
+    <string name="always_on_notif_title">Amethyst 通知活跃</string>
+    <string name="blossom_sync_cancel">取消</string>
+    <string name="blossom_sync_channel_description">在您的 Blossom 服务器间复制文件时显示进度。</string>
+    <string name="blossom_sync_channel_name">Blossom 同步</string>
+    <string name="call_ongoing">通话</string>
+    <string name="call_ongoing_description">进行中的通话通知</string>
+    <string name="call_with">和 %1$s 的通话</string>
+    <string name="pow_notification_channel_description">显示仍在挖掘 NIP-13 工作证明的帖子，以便在你离开应用后它们可以完成挖掘。</string>
+    <string name="pow_notification_channel_name">工作证明开采</string>
+    <string name="blossom_syncing">正在服务器之间复制您的文件…</string>
+    <string name="call_hangup">挂断</string>
+    <plurals name="pow_mining_job">
+        <item quantity="other">%1$s • 在 %2$d 比特挖掘中</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="other">挖掘工作证明… （队列中有 %1$d 篇帖子)</item>
+    </plurals>
+    <string name="pow_mining_title">挖掘工作证明</string>
+    <string name="pow_notification_cancel_all">取消</string>
 </resources>

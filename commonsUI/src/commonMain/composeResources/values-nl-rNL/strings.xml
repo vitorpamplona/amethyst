@@ -2635,19 +2635,6 @@
     <string name="add_to_public_bookmarks">Toevoegen aan publieke bladwijzers</string>
     <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
     <string name="ai_writing_setting_title">Tekstverbeteringen voorstellen</string>
-    <string name="always_on_notif_channel_description">Houdt verbindingen met je inbox-relays actief voor realtime meldingen</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Verbonden met %1$d inbox-relay</item>
-        <item quantity="other">Verbonden met %1$d inbox-relays</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Verbonden met %1$d relay</item>
-        <item quantity="other">Verbonden met %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
-    <string name="always_on_notif_tile_subtitle_off">Uit</string>
-    <string name="always_on_notif_tile_subtitle_on">Aan</string>
-    <string name="always_on_notif_title">Amethyst-meldingen actief</string>
     <string name="app_notification_added_to_group">Je bent toegevoegd aan %1$s</string>
     <string name="app_notification_articles_channel_description">Brengt je op de hoogte wanneer iemand je vermeldt of highlight in een artikel</string>
     <string name="app_notification_articles_channel_message">%1$s heeft je vermeld in een artikel</string>
@@ -2806,9 +2793,6 @@
         <item quantity="other">%1$d sats betalen</item>
     </plurals>
     <string name="blossom_payment_required">Deze server vereist betaling om te uploaden: %1$s</string>
-    <string name="blossom_sync_cancel">Annuleren</string>
-    <string name="blossom_sync_channel_description">Toont de voortgang tijdens het kopiëren van je bestanden tussen je Blossom-servers.</string>
-    <string name="blossom_sync_channel_name">Blossom-synchronisatie</string>
     <string name="blossom_syncing">Je bestanden kopiëren tussen servers…</string>
     <string name="bolt12_offers">BOLT12-offers</string>
     <string name="bolt12_offers_section_explainer">Voeg een of meer BOLT12-offers toe (lno1…). Ze worden openbaar gedeeld zodat iedereen je kan betalen.</string>
@@ -2908,15 +2892,12 @@
     <string name="call_incoming_video">Inkomende video-oproep…</string>
     <string name="call_incoming_voice">Inkomende spraakoproep…</string>
     <string name="call_mute">Dempen</string>
-    <string name="call_ongoing">Lopende oproep</string>
-    <string name="call_ongoing_description">Lopende oproep</string>
     <string name="call_permission_denied_video">Amethyst heeft toegang tot camera en microfoon nodig om een video-oproep te starten. Schakel dit in bij de app-instellingen.</string>
     <string name="call_permission_denied_voice">Amethyst heeft toegang tot de microfoon nodig om een spraakoproep te starten. Schakel dit in bij de app-instellingen.</string>
     <string name="call_reject">Weigeren</string>
     <string name="call_settings">Gespreksinstellingen</string>
     <string name="call_speaker">Luidspreker</string>
     <string name="call_unmute">Dempen opheffen</string>
-    <string name="call_with">Bellen met %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback-URL niet gevonden in het antwoord van %1$s.</string>
     <string name="cancel">Annuleren</string>
     <string name="cashu">Cashu-token</string>
@@ -4127,9 +4108,6 @@
     </plurals>
     <string name="pow_mining_title">Proof of work minen</string>
     <string name="pow_notification_cancel_all">Annuleren</string>
-    <string name="pow_notification_channel_description">Toont berichten die hun NIP-13-proof-of-work nog aan het mijnen zijn, zodat ze kunnen afronden nadat je de app verlaat.</string>
-    <string name="pow_notification_channel_name">Proof-of-work-minen</string>
-    <string name="pow_notification_send_without_pow">Nu verzenden</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="other">%1$d bits</item>

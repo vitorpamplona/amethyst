@@ -2717,4 +2717,17 @@
     
     
 
+    <string name="always_on_notif_channel_description">リアルタイム通知のためにインボックス relay への接続を維持します</string>
+    <plurals name="always_on_notif_connected">
+    <item quantity="other">%1$d 件のインボックス relay に接続中</item>
+</plurals>
+    <plurals name="always_on_notif_connected_foreground">
+    <item quantity="other">%1$d 件の relay に接続中</item>
+</plurals>
+    <string name="always_on_notif_connecting">インボックス relay に接続中…</string>
+    <string name="always_on_notif_title">Amethyst 通知有効中</string>
+    <string name="call_ongoing">通話</string>
+    <string name="call_ongoing_description">通話中の通知</string>
+    <string name="call_with">%1$s との通話</string>
+    <string name="call_hangup">切る</string>
 </resources>

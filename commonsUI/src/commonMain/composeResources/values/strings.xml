@@ -3122,22 +3122,6 @@
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="ai_writing_setting_title">Propose text improvements</string>
-    <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
-    <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Connected to %1$d inbox relay</item>
-        <item quantity="other">Connected to %1$d inbox relays</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Connected to %1$d relay</item>
-        <item quantity="other">Connected to %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
-    <string name="always_on_notif_hide_details">Hide details</string>
-    <string name="always_on_notif_show_details">Show details</string>
-    <string name="always_on_notif_tile_subtitle_off">Off</string>
-    <string name="always_on_notif_tile_subtitle_on">On</string>
-    <string name="always_on_notif_title">Amethyst Notifications Active</string>
     <string name="app_notification_added_to_group">You've been added to %1$s</string>
     <string name="app_notification_articles_channel_description">Notifies you when somebody mentions or highlights you in an article</string>
     <string name="app_notification_articles_channel_id" translatable="false">ArticlesID</string>
@@ -3328,9 +3312,6 @@
         <item quantity="other">Pay %1$d sats</item>
     </plurals>
     <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
-    <string name="blossom_sync_cancel">Cancel</string>
-    <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
-    <string name="blossom_sync_channel_name">Blossom sync</string>
     <string name="blossom_syncing">Copying your files across servers…</string>
     <string name="bolt12_offers">BOLT12 Offers</string>
     <string name="bolt12_offers_search_keywords" translatable="false">bolt12, bolt 12, offer, lno, lightning, zap, reusable invoice</string>
@@ -3433,8 +3414,6 @@
     <string name="call_incoming_video">Incoming video call\u2026</string>
     <string name="call_incoming_voice">Incoming voice call\u2026</string>
     <string name="call_mute">Mute</string>
-    <string name="call_ongoing">Calls</string>
-    <string name="call_ongoing_description">Ongoing call notification</string>
     <string name="call_permission_denied_video">Amethyst needs camera and microphone access to start a video call. Please enable them in the app settings.</string>
     <string name="call_permission_denied_voice">Amethyst needs microphone access to start a voice call. Please enable it in the app settings.</string>
     <string name="call_reject">Reject</string>
@@ -3445,7 +3424,6 @@
     <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
     <string name="call_speaker">Speaker</string>
     <string name="call_unmute">Unmute</string>
-    <string name="call_with">Call with %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL not found from %1$s's response</string>
     <string name="cancel">Cancel</string>
     <string name="captions_off">Off</string>
@@ -4736,9 +4714,6 @@
     </plurals>
     <string name="pow_mining_title">Mining proof of work</string>
     <string name="pow_notification_cancel_all">Cancel</string>
-    <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
-    <string name="pow_notification_channel_name">Proof of work mining</string>
-    <string name="pow_notification_send_without_pow">Send now</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="other">%1$d bits</item>

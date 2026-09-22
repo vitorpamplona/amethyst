@@ -51,4 +51,19 @@
 <string name="media_servers_blossom_section">Blossom சேவையகங்கள்</string>
 <string name="media_servers_blossom_explainer">உங்களுக்கு விரும்பிய அளவு சேவையகங்கள் சேர்க்கவும். உங்கள் படத்தை பதிவேற்றும்போது எதைப் பயன்படுத்த வேண்டும் என்று பின்னர் தேர்வு செய்யலாம்</string>
 <string name="torrent_download">பதிவிறக்கு</string>
+    <string name="always_on_notif_channel_description">நிகழ்நேர அறிவிப்புகளுக்காக உங்கள் inbox relays உடன் இணைப்புகளை செயலில் வைக்கிறது</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">%1$d inbox relay-உடன் இணைக்கப்பட்டது</item>
+        <item quantity="other">%1$d inbox relays-உடன் இணைக்கப்பட்டது</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">%1$d relay-உடன் இணைக்கப்பட்டது</item>
+        <item quantity="other">%1$d relays-உடன் இணைக்கப்பட்டது</item>
+    </plurals>
+    <string name="always_on_notif_connecting">inbox relays உடன் இணைக்கிறது…</string>
+    <string name="always_on_notif_title">Amethyst அறிவிப்புகள் செயலில்</string>
+    <string name="call_ongoing">அழைப்புகள்</string>
+    <string name="call_ongoing_description">நடைமுறையில் உள்ள அழைப்பு அறிவிப்பு</string>
+    <string name="call_with">%1$s உடன் அழைப்பு</string>
+    <string name="call_hangup">அழைப்பு துண்டி</string>
 </resources>

@@ -1798,17 +1798,6 @@
     <string name="add_to_public_bookmarks">Lisää julkisiin kirjanmerkkeihin</string>
     <string name="ai_writing_setting_description">Käyttää laitteen tekoälymallia ehdottamaan tekstikorjauksia ja sävymuutoksia.</string>
     <string name="ai_writing_setting_title">Ehdota tekstiparannuksia</string>
-    <string name="always_on_notif_channel_description">Pitää yhteydet inbox-relayihisi aktiivisina reaaliaikaisia ilmoituksia varten</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Yhdistetty %1$d inbox-relayhin</item>
-        <item quantity="other">Yhdistetty %1$d inbox-relayhin</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Yhdistetty %1$d relayhin</item>
-        <item quantity="other">Yhdistetty %1$d relayhin</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Yhdistetään inbox-relayihin…</string>
-    <string name="always_on_notif_title">Amethyst-ilmoitukset aktiiviset</string>
     <string name="app_notification_calls_channel_description">Ilmoitukset saapuvista ääni- ja videopuheluista</string>
     <string name="app_notification_calls_channel_name">Saapuvat puhelut</string>
     <string name="app_notification_chess_challenge_accepted">%1$s hyväksyi shakkihaasteesi</string>
@@ -1918,15 +1907,12 @@
     <string name="call_incoming_video">Saapuva videopuhelu…</string>
     <string name="call_incoming_voice">Saapuva äänipuhelu…</string>
     <string name="call_mute">Mykistä</string>
-    <string name="call_ongoing">Puhelut</string>
-    <string name="call_ongoing_description">Käynnissä olevan puhelun ilmoitus</string>
     <string name="call_permission_denied_video">Amethyst tarvitsee kameran ja mikrofonin käyttöoikeuden videopuhelun aloittamiseksi. Ota ne käyttöön sovelluksen asetuksissa.</string>
     <string name="call_permission_denied_voice">Amethyst tarvitsee mikrofonin käyttöoikeuden äänipuhelun aloittamiseksi. Ota se käyttöön sovelluksen asetuksissa.</string>
     <string name="call_reject">Hylkää</string>
     <string name="call_settings">Puheluasetukset</string>
     <string name="call_speaker">Kaiutin</string>
     <string name="call_unmute">Poista mykistys</string>
-    <string name="call_with">Puhelu: %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Takaisinkutsun URL:ää ei löydy kohteen %1$s vastauksesta</string>
     <string name="cancel">Peruuta</string>
     <string name="cashu">Cashu-tunnus</string>

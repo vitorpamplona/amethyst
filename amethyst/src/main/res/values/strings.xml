@@ -587,4 +587,41 @@
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
+    <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
+    <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Connected to %1$d inbox relay</item>
+        <item quantity="other">Connected to %1$d inbox relays</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Connected to %1$d relay</item>
+        <item quantity="other">Connected to %1$d relays</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
+    <string name="always_on_notif_hide_details">Hide details</string>
+    <string name="always_on_notif_show_details">Show details</string>
+    <string name="always_on_notif_tile_subtitle_off">Off</string>
+    <string name="always_on_notif_tile_subtitle_on">On</string>
+    <string name="always_on_notif_title">Amethyst Notifications Active</string>
+    <string name="blossom_sync_cancel">Cancel</string>
+    <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
+    <string name="blossom_sync_channel_name">Blossom sync</string>
+    <string name="call_ongoing">Calls</string>
+    <string name="call_ongoing_description">Ongoing call notification</string>
+    <string name="call_with">Call with %1$s</string>
+    <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
+    <string name="pow_notification_channel_name">Proof of work mining</string>
+    <string name="pow_notification_send_without_pow">Send now</string>
+    <string name="blossom_syncing">Copying your files across servers…</string>
+    <string name="call_hangup">Hang up</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • mining at %2$d bit</item>
+        <item quantity="other">%1$s • mining at %2$d bits</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Mining proof of work… (%1$d post in queue)</item>
+        <item quantity="other">Mining proof of work… (%1$d posts in queue)</item>
+    </plurals>
+    <string name="pow_mining_title">Mining proof of work</string>
+    <string name="pow_notification_cancel_all">Cancel</string>
 </resources>

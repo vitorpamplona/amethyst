@@ -2931,21 +2931,6 @@
     <string name="add_to_public_bookmarks">Hozzáadás a nyilvános könyvjelzőkhöz</string>
     <string name="ai_writing_setting_description">Az eszközön futó LLM-modell segítségével szövegjavításokkal és hangnemváltoztatásokkal kapcsolatos javaslatokat kaphat.</string>
     <string name="ai_writing_setting_title">Javaslatok a szöveg javítására</string>
-    <string name="always_on_notif_channel_description">Aktív kapcsolatot tart fenn a beérkező üzenetek átjátszóival a valós idejű értesítések érdekében</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
-        <item quantity="other">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
-        <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
-    <string name="always_on_notif_hide_details">Részletek elrejtése</string>
-    <string name="always_on_notif_show_details">Részletek megjelenítése</string>
-    <string name="always_on_notif_tile_subtitle_off">Ki</string>
-    <string name="always_on_notif_tile_subtitle_on">Be</string>
-    <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
     <string name="app_notification_added_to_group">Önt hozzáadták ehhez: %1$s</string>
     <string name="app_notification_articles_channel_description">Értesítés említésekről vagy kiemelésekről egy cikkben</string>
     <string name="app_notification_articles_channel_message">%1$s megemlítette Önt egy cikkben</string>
@@ -3115,9 +3100,6 @@
         <item quantity="other">%1$d satoshi fizetése</item>
     </plurals>
     <string name="blossom_payment_required">Ez a kiszolgáló fizetést igényel a feltöltéshez: %1$s</string>
-    <string name="blossom_sync_cancel">Mégsem</string>
-    <string name="blossom_sync_channel_description">Megjeleníti a folyamatot, miközben a fájljait átmásolja a Blossom kiszolgálókra.</string>
-    <string name="blossom_sync_channel_name">Blossom szinkronizálás</string>
     <string name="blossom_syncing">Fájlok másolása a kiszolgálók között…</string>
     <string name="bolt12_offers">BOLT12 Ajánlatok</string>
     <string name="bolt12_offers_section_explainer">Adjon hozzá egy vagy több BOLT12 ajánlatot (lno1…). Ezek nyilvánosan megosztásra kerülnek, így bárki tud Önnek fizetni.</string>
@@ -3217,8 +3199,6 @@
     <string name="call_incoming_video">Bejövő videóhívás\u2026</string>
     <string name="call_incoming_voice">Bejövő hanghívás\u2026</string>
     <string name="call_mute">Némítás</string>
-    <string name="call_ongoing">Hívások</string>
-    <string name="call_ongoing_description">Értesítés a folyamatban lévő hívásról</string>
     <string name="call_permission_denied_video">Az Amethyst alkalmazásnak hozzáférésre van szüksége a kamerához és a mikrofonhoz a videohívások kezdeményezéséhez. Engedélyezze ezeket az alkalmazás beállításaiban.</string>
     <string name="call_permission_denied_voice">Az Amethyst alkalmazásnak hozzáférésre van szüksége a mikrofonhoz a hanghívások kezdeményezéséhez. Engedélyezze ezt az alkalmazás beállításaiban.</string>
     <string name="call_reject">Elutasítás</string>
@@ -3228,7 +3208,6 @@
     <string name="call_settings">Hívásbeállítások</string>
     <string name="call_speaker">Hangszóró</string>
     <string name="call_unmute">Némítás megszüntetése</string>
-    <string name="call_with">Hívás ezzel: %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nem található a visszahívási webcím a(z) %1$s válaszából</string>
     <string name="cancel">Mégse</string>
     <string name="cashu">Cashu token</string>
@@ -4479,9 +4458,6 @@
     </plurals>
     <string name="pow_mining_title">„Munkabizonyítás” bányászata</string>
     <string name="pow_notification_cancel_all">Mégse</string>
-    <string name="pow_notification_channel_description">Azokat a bejegyzéseket jeleníti meg, amelyek még mindig a NIP-13 szerinti munkabizonyítást végzik, így azok befejeződhetnek, miután kilép az alkalmazásból.</string>
-    <string name="pow_notification_channel_name">„Munkabizonyítás” bányászata</string>
-    <string name="pow_notification_send_without_pow">Küldés most</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="other">%1$d bit</item>

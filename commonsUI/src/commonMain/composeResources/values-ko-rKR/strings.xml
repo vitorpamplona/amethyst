@@ -1792,15 +1792,6 @@
     <string name="add_to_public_bookmarks">공개 북마크에 추가</string>
     <string name="ai_writing_setting_description">기기 내 AI 모델을 사용하여 텍스트 수정 및 톤 변경을 제안합니다.</string>
     <string name="ai_writing_setting_title">텍스트 개선 제안</string>
-    <string name="always_on_notif_channel_description">실시간 알림을 위해 inbox relay에 대한 연결을 유지합니다</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">%1$d개의 inbox relay에 연결됨</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="other">%1$d개의 relay에 연결됨</item>
-    </plurals>
-    <string name="always_on_notif_connecting">inbox relay에 연결 중…</string>
-    <string name="always_on_notif_title">Amethyst 알림 활성화됨</string>
     <string name="app_notification_calls_channel_description">수신 음성 및 영상 통화 알림</string>
     <string name="app_notification_calls_channel_name">수신 전화</string>
     <string name="app_notification_chess_challenge_accepted">%1$s님이 체스 도전을 수락했습니다</string>
@@ -1911,15 +1902,12 @@
     <string name="call_incoming_video">수신 영상 통화…</string>
     <string name="call_incoming_voice">수신 음성 통화…</string>
     <string name="call_mute">음소거</string>
-    <string name="call_ongoing">통화</string>
-    <string name="call_ongoing_description">진행 중인 통화 알림</string>
     <string name="call_permission_denied_video">영상 통화를 시작하려면 Amethyst에 카메라 및 마이크 접근 권한이 필요합니다. 앱 설정에서 활성화해 주세요.</string>
     <string name="call_permission_denied_voice">음성 통화를 시작하려면 Amethyst에 마이크 접근 권한이 필요합니다. 앱 설정에서 활성화해 주세요.</string>
     <string name="call_reject">거절</string>
     <string name="call_settings">통화 설정</string>
     <string name="call_speaker">스피커</string>
     <string name="call_unmute">음소거 해제</string>
-    <string name="call_with">%1$s와(과) 통화</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s의 응답에서 콜백 URL을 찾을 수 없음</string>
     <string name="cancel">취소</string>
     <string name="cashu">Cashu 토큰</string>

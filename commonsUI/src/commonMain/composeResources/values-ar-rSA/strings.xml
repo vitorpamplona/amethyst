@@ -1816,25 +1816,6 @@
     <string name="add_to_public_bookmarks">إضافة إلى المفضلات العامة</string>
     <string name="ai_writing_setting_description">يستخدم نموذج ذكاء اصطناعي على الجهاز لاقتراح تصحيحات نصية وتغييرات في النبرة.</string>
     <string name="ai_writing_setting_title">اقتراح تحسينات النص</string>
-    <string name="always_on_notif_channel_description">يحافظ على الاتصال بـ relay صندوق الوارد الخاص بك لتلقّي الإشعارات في الوقت الفعلي</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="zero">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="one">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="two">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="few">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="many">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="other">متصل بـ %1$d relay للصندوق الوارد</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="zero">متصل بـ %1$d relay</item>
-        <item quantity="one">متصل بـ %1$d relay</item>
-        <item quantity="two">متصل بـ %1$d relay</item>
-        <item quantity="few">متصل بـ %1$d relay</item>
-        <item quantity="many">متصل بـ %1$d relay</item>
-        <item quantity="other">متصل بـ %1$d relay</item>
-    </plurals>
-    <string name="always_on_notif_connecting">جارٍ الاتصال بـ relay صندوق الوارد…</string>
-    <string name="always_on_notif_title">إشعارات Amethyst نشطة</string>
     <string name="app_notification_calls_channel_description">إشعارات للمكالمات الصوتية والمرئية الواردة</string>
     <string name="app_notification_calls_channel_name">المكالمات الواردة</string>
     <string name="app_notification_chess_challenge_accepted">قبِل %1$s تحديك في الشطرنج</string>
@@ -1959,15 +1940,12 @@
     <string name="call_incoming_video">مكالمة مرئية واردة…</string>
     <string name="call_incoming_voice">مكالمة صوتية واردة…</string>
     <string name="call_mute">كتم الصوت</string>
-    <string name="call_ongoing">المكالمات</string>
-    <string name="call_ongoing_description">إشعار المكالمة الجارية</string>
     <string name="call_permission_denied_video">يحتاج Amethyst إلى إذن الوصول إلى الكاميرا والميكروفون لبدء مكالمة مرئية. يُرجى تفعيلهما من إعدادات التطبيق.</string>
     <string name="call_permission_denied_voice">يحتاج Amethyst إلى إذن الوصول إلى الميكروفون لبدء مكالمة صوتية. يُرجى تفعيله من إعدادات التطبيق.</string>
     <string name="call_reject">رفض</string>
     <string name="call_settings">إعدادات المكالمات</string>
     <string name="call_speaker">مكبّر الصوت</string>
     <string name="call_unmute">إلغاء كتم الصوت</string>
-    <string name="call_with">مكالمة مع %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">لم يتم العثور على عنوان URL للاستجابة في رد %1$s</string>
     <string name="cancel">إلغاء</string>
     <string name="cashu">رمز Cashu</string>

@@ -268,4 +268,48 @@
     <string name="health_connect_rationale_activity_label">Health Connect a Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Udržuje připojení k vašim inbox relayím aktivní pro oznámení v reálném čase</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Připojeno k %1$d příchozímu relay</item>
+        <item quantity="few">Připojeno k %1$d příchozím relays</item>
+        <item quantity="many">Připojeno k %1$d příchozímu relay</item>
+        <item quantity="other">Připojeno k %1$d příchozím relays</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Připojeno k %1$d relay</item>
+        <item quantity="few">Připojeno k %1$d relays</item>
+        <item quantity="many">Připojeno k %1$d relay</item>
+        <item quantity="other">Připojeno k %1$d relays</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Připojování k inbox relayím\u2026</string>
+    <string name="always_on_notif_hide_details">Skrýt podrobnosti</string>
+    <string name="always_on_notif_show_details">Zobrazit podrobnosti</string>
+    <string name="always_on_notif_tile_subtitle_off">Vypnuto</string>
+    <string name="always_on_notif_tile_subtitle_on">Zapnuto</string>
+    <string name="always_on_notif_title">Amethyst oznámení aktivní</string>
+    <string name="blossom_sync_cancel">Zrušit</string>
+    <string name="blossom_sync_channel_description">Zobrazuje průběh kopírování vašich souborů mezi servery Blossom.</string>
+    <string name="blossom_sync_channel_name">Synchronizace Blossom</string>
+    <string name="call_ongoing">Hovory</string>
+    <string name="call_ongoing_description">Oznámení o probíhajícím hovoru</string>
+    <string name="call_with">Hovor s %1$s</string>
+    <string name="pow_notification_channel_description">Zobrazuje příspěvky, které stále těží svůj NIP-13 proof of work, aby mohly dokončit těžbu i po opuštění aplikace.</string>
+    <string name="pow_notification_channel_name">Těžení proof of work</string>
+    <string name="pow_notification_send_without_pow">Odeslat nyní</string>
+    <string name="blossom_syncing">Kopírování vašich souborů mezi servery…</string>
+    <string name="call_hangup">Zavěsit</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • těžení na %2$d bitu</item>
+        <item quantity="few">%1$s • těžení na %2$d bitech</item>
+        <item quantity="many">%1$s • těžení na %2$d bitu</item>
+        <item quantity="other">%1$s • těžení na %2$d bitech</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Těžení proof of work… (%1$d příspěvek ve frontě)</item>
+        <item quantity="few">Těžení proof of work… (%1$d příspěvky ve frontě)</item>
+        <item quantity="many">Těžení proof of work… (%1$d příspěvku ve frontě)</item>
+        <item quantity="other">Těžení proof of work… (%1$d příspěvků ve frontě)</item>
+    </plurals>
+    <string name="pow_mining_title">Těžení proof of work</string>
+    <string name="pow_notification_cancel_all">Zrušit</string>
 </resources>

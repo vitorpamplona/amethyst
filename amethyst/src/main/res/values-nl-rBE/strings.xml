@@ -3031,4 +3031,19 @@
     
     
 
+    <string name="always_on_notif_channel_description">Houdt verbindingen met je inbox-relays actief voor realtime meldingen</string>
+    <plurals name="always_on_notif_connected">
+    <item quantity="one">Verbonden met %1$d inbox-relay</item>
+    <item quantity="other">Verbonden met %1$d inbox-relays</item>
+</plurals>
+    <plurals name="always_on_notif_connected_foreground">
+    <item quantity="one">Verbonden met %1$d relay</item>
+    <item quantity="other">Verbonden met %1$d relays</item>
+</plurals>
+    <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
+    <string name="always_on_notif_title">Amethyst-meldingen actief</string>
+    <string name="call_ongoing">Lopende oproep</string>
+    <string name="call_ongoing_description">Lopende oproep</string>
+    <string name="call_with">Bellen met %1$s</string>
+    <string name="call_hangup">Ophangen</string>
 </resources>

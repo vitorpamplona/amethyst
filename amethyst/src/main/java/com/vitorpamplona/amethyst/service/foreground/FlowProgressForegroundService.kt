@@ -32,8 +32,8 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +43,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 
 /**
  * Shared scaffolding for a foreground service that shields a background job from the
@@ -69,13 +68,13 @@ abstract class FlowProgressForegroundService<T> : Service() {
     /** The Android 14+ `ServiceInfo.FOREGROUND_SERVICE_TYPE_*` this service runs as. */
     protected abstract val fgsType: Int
     protected abstract val channelId: String
-    protected abstract val channelNameRes: StringResource
-    protected abstract val channelDescRes: StringResource
+    protected abstract val channelNameRes: Int
+    protected abstract val channelDescRes: Int
     protected abstract val notificationId: Int
 
     /** The intent action that routes back here to cancel everything. */
     protected abstract val cancelAction: String
-    protected abstract val cancelLabelRes: StringResource
+    protected abstract val cancelLabelRes: Int
 
     /**
      * Optional second notification action (e.g. "send without PoW"). When
@@ -84,7 +83,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
      * stopping the service — the work keeps going and the card drains normally.
      */
     protected open val secondaryAction: String? = null
-    protected open val secondaryLabelRes: StringResource? = null
+    protected open val secondaryLabelRes: Int? = null
 
     protected open fun onSecondaryAction() {
         // No-op by default: only subclasses that declare a secondary action override this.
@@ -100,7 +99,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
     /** Keep the service (and notification) alive while this is true; stop once it goes false. */
     protected abstract fun isActive(value: T): Boolean
 
-    protected abstract suspend fun render(value: T): Content
+    protected abstract fun render(value: T): Content
 
     /** Invoked by the cancel action. */
     protected abstract fun cancelAll()
@@ -245,7 +244,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
         }
     }
 
-    private suspend fun startForegroundCompat(value: T) {
+    private fun startForegroundCompat(value: T) {
         ensureChannel()
         val notification = buildNotification(value)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -255,7 +254,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
         }
     }
 
-    private suspend fun updateNotification(value: T) {
+    private fun updateNotification(value: T) {
         val manager = NotificationManagerCompat.from(this)
         if (!manager.areNotificationsEnabled()) return
         try {
@@ -265,7 +264,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
         }
     }
 
-    private suspend fun buildNotification(value: T): Notification {
+    private fun buildNotification(value: T): Notification {
         val content = render(value)
         val style =
             when (val bar = content.bar) {
@@ -294,7 +293,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
                 .setContentText(content.text)
                 .setStyle(style)
                 .setContentIntent(tapIntent)
-                .addAction(0, loadStringRes(cancelLabelRes), cancelIntent)
+                .addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
@@ -304,18 +303,18 @@ abstract class FlowProgressForegroundService<T> : Service() {
         val secondaryLabel = secondaryLabelRes
         val secondaryPending = secondaryIntent
         if (secondaryLabel != null && secondaryPending != null) {
-            builder.addAction(0, loadStringRes(secondaryLabel), secondaryPending)
+            builder.addAction(0, stringRes(this, secondaryLabel), secondaryPending)
         }
 
         return builder.build()
     }
 
-    private suspend fun ensureChannel() {
+    private fun ensureChannel() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(channelId) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(channelId, loadStringRes(channelNameRes), NotificationManager.IMPORTANCE_LOW).apply {
-                description = loadStringRes(this@FlowProgressForegroundService, channelDescRes)
+            NotificationChannel(channelId, stringRes(this, channelNameRes), NotificationManager.IMPORTANCE_LOW).apply {
+                description = stringRes(this@FlowProgressForegroundService, channelDescRes)
                 setShowBadge(false)
             },
         )

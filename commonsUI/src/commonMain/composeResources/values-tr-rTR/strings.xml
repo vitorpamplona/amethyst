@@ -1807,17 +1807,6 @@
     <string name="add_to_public_bookmarks">Herkese Açık Yer İşaretlerine Ekle</string>
     <string name="ai_writing_setting_description">Metin düzeltmeleri ve ton değişiklikleri önermek için cihaz üzerindeki bir yapay zeka modeli kullanır.</string>
     <string name="ai_writing_setting_title">Metin iyileştirmeleri öner</string>
-    <string name="always_on_notif_channel_description">Gerçek zamanlı bildirimler için gelen kutusu relay'lerinize bağlantıları etkin tutar</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d gelen kutusu relay'ine bağlandı</item>
-        <item quantity="other">%1$d gelen kutusu relay'ine bağlandı</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d relay'e bağlandı</item>
-        <item quantity="other">%1$d relay'e bağlandı</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Gelen kutusu relay'lerine bağlanılıyor…</string>
-    <string name="always_on_notif_title">Amethyst Bildirimleri Etkin</string>
     <string name="app_notification_calls_channel_description">Gelen sesli ve görüntülü aramalar için bildirimler</string>
     <string name="app_notification_calls_channel_name">Gelen aramalar</string>
     <string name="app_notification_chess_challenge_accepted">%1$s satranç meydan okumanızı kabul etti</string>
@@ -1932,15 +1921,12 @@
     <string name="call_incoming_video">Gelen görüntülü arama…</string>
     <string name="call_incoming_voice">Gelen sesli arama…</string>
     <string name="call_mute">Sesi Kapat</string>
-    <string name="call_ongoing">Aramalar</string>
-    <string name="call_ongoing_description">Devam eden arama bildirimi</string>
     <string name="call_permission_denied_video">Amethyst'in görüntülü arama başlatabilmesi için kamera ve mikrofon erişimine ihtiyacı var. Lütfen uygulama ayarlarından etkinleştirin.</string>
     <string name="call_permission_denied_voice">Amethyst'in sesli arama başlatabilmesi için mikrofon erişimine ihtiyacı var. Lütfen uygulama ayarlarından etkinleştirin.</string>
     <string name="call_reject">Reddet</string>
     <string name="call_settings">Arama Ayarları</string>
     <string name="call_speaker">Hoparlör</string>
     <string name="call_unmute">Sesi Aç</string>
-    <string name="call_with">%1$s ile arama</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s'in yanıtında geri çağırma URL'si bulunamadı</string>
     <string name="cancel">Vazgeç</string>
     <string name="cashu">Cashu Token'ı</string>

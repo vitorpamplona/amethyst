@@ -2856,21 +2856,6 @@
     <string name="add_to_public_bookmarks">Lägg till i Publika Bokmärken</string>
     <string name="ai_writing_setting_description">Använder en AI-modell på enheten för att föreslå textkorrigeringar och tonändringar.</string>
     <string name="ai_writing_setting_title">Föreslå textförbättringar</string>
-    <string name="always_on_notif_channel_description">Håller anslutningarna till dina inbox-relän aktiva för realtidsnotifieringar</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Ansluten till %1$d inkorgsrelä</item>
-        <item quantity="other">Ansluten till %1$d inkorgsreläer</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Ansluten till %1$d relä</item>
-        <item quantity="other">Ansluten till %1$d reläer</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
-    <string name="always_on_notif_hide_details">Dölj detaljer</string>
-    <string name="always_on_notif_show_details">Visa detaljer</string>
-    <string name="always_on_notif_tile_subtitle_off">Av</string>
-    <string name="always_on_notif_tile_subtitle_on">På</string>
-    <string name="always_on_notif_title">Amethyst-notifieringar aktiva</string>
     <string name="app_notification_added_to_group">Du har lagts till i %1$s</string>
     <string name="app_notification_articles_channel_description">Meddelar dig när någon nämner eller markerar dig i en artikel</string>
     <string name="app_notification_articles_channel_message">%1$s nämnde dig i en artikel</string>
@@ -3040,9 +3025,6 @@
         <item quantity="other">Betala %1$d sats</item>
     </plurals>
     <string name="blossom_payment_required">Den här servern kräver betalning för uppladdning: %1$s</string>
-    <string name="blossom_sync_cancel">Avbryt</string>
-    <string name="blossom_sync_channel_description">Visar förloppet medan dina filer kopieras mellan dina Blossom-servrar.</string>
-    <string name="blossom_sync_channel_name">Blossom-synk</string>
     <string name="blossom_syncing">Kopierar dina filer mellan servrar…</string>
     <string name="bolt12_offers">BOLT12-erbjudanden</string>
     <string name="bolt12_offers_section_explainer">Lägg till ett eller flera BOLT12-erbjudanden (lno1…). De delas offentligt så att vem som helst kan betala dig.</string>
@@ -3142,8 +3124,6 @@
     <string name="call_incoming_video">Inkommande videosamtal\u2026</string>
     <string name="call_incoming_voice">Inkommande röstsamtal\u2026</string>
     <string name="call_mute">Ljud av</string>
-    <string name="call_ongoing">Samtal</string>
-    <string name="call_ongoing_description">Avisering om pågående samtal</string>
     <string name="call_permission_denied_video">Amethyst behöver åtkomst till kameran och mikrofonen för att starta ett videosamtal. Aktivera dem i appens inställningar.</string>
     <string name="call_permission_denied_voice">Amethyst behöver åtkomst till mikrofonen för att starta ett röstsamtal. Aktivera den i appens inställningar.</string>
     <string name="call_reject">Avvisa</string>
@@ -3153,7 +3133,6 @@
     <string name="call_settings">Samtalsinställningar</string>
     <string name="call_speaker">Högtalare</string>
     <string name="call_unmute">Ljud på</string>
-    <string name="call_with">Samtal med %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL hittades inte från %1$s's svar</string>
     <string name="cancel">Avbryt</string>
     <string name="cashu">Cashu Token</string>
@@ -4402,9 +4381,6 @@
     </plurals>
     <string name="pow_mining_title">Minar bevis på arbete</string>
     <string name="pow_notification_cancel_all">Avbryt</string>
-    <string name="pow_notification_channel_description">Visar inlägg som fortfarande minar sitt NIP-13-bevis på arbete så att de kan slutföras efter att du lämnat appen.</string>
-    <string name="pow_notification_channel_name">Mining av bevis på arbete</string>
-    <string name="pow_notification_send_without_pow">Skicka nu</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="other">%1$d bits</item>

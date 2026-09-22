@@ -1821,15 +1821,6 @@
     <string name="add_to_public_bookmarks">添加到公開書籤</string>
     <string name="ai_writing_setting_description">使用设备上的 AI 模型来提出文本更正和音调更改。</string>
     <string name="ai_writing_setting_title">建议文本改进</string>
-    <string name="always_on_notif_channel_description">保持与收件箱中继的连接以便接收实时通知</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">已连接到 %1$d 个收件箱中继</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="other">已连接到 %1$d 个中继</item>
-    </plurals>
-    <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
-    <string name="always_on_notif_title">Amethyst 通知活跃</string>
     <string name="app_notification_calls_channel_description">语音和视频来电通知</string>
     <string name="app_notification_calls_channel_name">来电</string>
     <string name="app_notification_chess_challenge_accepted">%1$s 接受了您的国际象棋挑战</string>
@@ -1943,15 +1934,12 @@
     <string name="call_incoming_video">视频来电 \u2026</string>
     <string name="call_incoming_voice">语音来电 \u2026</string>
     <string name="call_mute">静音</string>
-    <string name="call_ongoing">通话</string>
-    <string name="call_ongoing_description">进行中的通话通知</string>
     <string name="call_permission_denied_video">Amethyst需要摄像头和麦克风访问权限来开始视频通话。请在应用程序设置中启用它们。</string>
     <string name="call_permission_denied_voice">Amethyst 需要麦克风权限来开始语音通话。请在应用程序设置中启用它。</string>
     <string name="call_reject">拒绝</string>
     <string name="call_settings">通话设置</string>
     <string name="call_speaker">扬声器</string>
     <string name="call_unmute">取消静音</string>
-    <string name="call_with">和 %1$s 的通话</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">从 %1$s 的响应中找不到回调 URL</string>
     <string name="cancel">取消</string>
     <string name="cashu">Cashu 代币</string>

@@ -2856,21 +2856,6 @@
     <string name="add_to_public_bookmarks">Adicionar aos Itens Salvos Públicos</string>
     <string name="ai_writing_setting_description">Usa um modelo de IA no dispositivo para sugerir correções de texto e mudanças de tom.</string>
     <string name="ai_writing_setting_title">Sugerir melhorias de texto</string>
-    <string name="always_on_notif_channel_description">Mantém as conexões com seus relays de caixa de entrada ativas para notificações em tempo real</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Conectado a %1$d relay de entrada</item>
-        <item quantity="other">Conectado a %1$d relays de entrada</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Conectado a %1$d relay</item>
-        <item quantity="other">Conectado a %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
-    <string name="always_on_notif_hide_details">Ocultar detalhes</string>
-    <string name="always_on_notif_show_details">Mostrar detalhes</string>
-    <string name="always_on_notif_tile_subtitle_off">Desligado</string>
-    <string name="always_on_notif_tile_subtitle_on">Ligado</string>
-    <string name="always_on_notif_title">Notificações do Amethyst ativas</string>
     <string name="app_notification_added_to_group">Você foi adicionado a %1$s</string>
     <string name="app_notification_articles_channel_description">Notifica você quando alguém menciona ou destaca você em um artigo</string>
     <string name="app_notification_articles_channel_message">%1$s mencionou você em um artigo</string>
@@ -3040,9 +3025,6 @@
         <item quantity="other">Pagar %1$d sats</item>
     </plurals>
     <string name="blossom_payment_required">Este servidor exige pagamento para enviar: %1$s</string>
-    <string name="blossom_sync_cancel">Cancelar</string>
-    <string name="blossom_sync_channel_description">Mostra o progresso enquanto seus arquivos são copiados entre seus servidores Blossom.</string>
-    <string name="blossom_sync_channel_name">Sincronização Blossom</string>
     <string name="blossom_syncing">Copiando seus arquivos entre servidores…</string>
     <string name="bolt12_offers">Ofertas BOLT12</string>
     <string name="bolt12_offers_section_explainer">Adicione uma ou mais ofertas BOLT12 (lno1…). Elas são compartilhadas publicamente, então qualquer pessoa pode pagar você.</string>
@@ -3142,8 +3124,6 @@
     <string name="call_incoming_video">Chamada de vídeo recebida\u2026</string>
     <string name="call_incoming_voice">Chamada de voz recebida\u2026</string>
     <string name="call_mute">Silenciar</string>
-    <string name="call_ongoing">Chamadas</string>
-    <string name="call_ongoing_description">Notificação de chamada em andamento</string>
     <string name="call_permission_denied_video">O Amethyst precisa de acesso à câmera e ao microfone para iniciar uma chamada de vídeo. Habilite-os nas configurações do aplicativo.</string>
     <string name="call_permission_denied_voice">O Amethyst precisa de acesso ao microfone para iniciar uma chamada de voz. Habilite-o nas configurações do aplicativo.</string>
     <string name="call_reject">Rejeitar</string>
@@ -3153,7 +3133,6 @@
     <string name="call_settings">Configurações de Chamada</string>
     <string name="call_speaker">Alto-falante</string>
     <string name="call_unmute">Ativar som</string>
-    <string name="call_with">Chamada com %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL de retorno de chamada não encontrado da resposta %1$s</string>
     <string name="cancel">Cancelar</string>
     <string name="cashu">Token Cashu</string>
@@ -4402,9 +4381,6 @@
     </plurals>
     <string name="pow_mining_title">Minerando prova de trabalho</string>
     <string name="pow_notification_cancel_all">Cancelar</string>
-    <string name="pow_notification_channel_description">Mostra publicações que ainda estão minerando sua prova de trabalho NIP-13 para que possam terminar depois que você sair do app.</string>
-    <string name="pow_notification_channel_name">Mineração de prova de trabalho</string>
-    <string name="pow_notification_send_without_pow">Enviar agora</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="other">%1$d bits</item>

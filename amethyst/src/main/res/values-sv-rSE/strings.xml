@@ -256,4 +256,40 @@
     <string name="health_connect_rationale_activity_label">Health Connect och Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Håller anslutningarna till dina inbox-relän aktiva för realtidsnotifieringar</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Ansluten till %1$d inkorgsrelä</item>
+        <item quantity="other">Ansluten till %1$d inkorgsreläer</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Ansluten till %1$d relä</item>
+        <item quantity="other">Ansluten till %1$d reläer</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
+    <string name="always_on_notif_hide_details">Dölj detaljer</string>
+    <string name="always_on_notif_show_details">Visa detaljer</string>
+    <string name="always_on_notif_tile_subtitle_off">Av</string>
+    <string name="always_on_notif_tile_subtitle_on">På</string>
+    <string name="always_on_notif_title">Amethyst-notifieringar aktiva</string>
+    <string name="blossom_sync_cancel">Avbryt</string>
+    <string name="blossom_sync_channel_description">Visar förloppet medan dina filer kopieras mellan dina Blossom-servrar.</string>
+    <string name="blossom_sync_channel_name">Blossom-synk</string>
+    <string name="call_ongoing">Samtal</string>
+    <string name="call_ongoing_description">Avisering om pågående samtal</string>
+    <string name="call_with">Samtal med %1$s</string>
+    <string name="pow_notification_channel_description">Visar inlägg som fortfarande minar sitt NIP-13-bevis på arbete så att de kan slutföras efter att du lämnat appen.</string>
+    <string name="pow_notification_channel_name">Mining av bevis på arbete</string>
+    <string name="pow_notification_send_without_pow">Skicka nu</string>
+    <string name="blossom_syncing">Kopierar dina filer mellan servrar…</string>
+    <string name="call_hangup">Lägg på</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • minar vid %2$d bit</item>
+        <item quantity="other">%1$s • minar vid %2$d bitar</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Minar bevis på arbete… (%1$d inlägg i kön)</item>
+        <item quantity="other">Minar bevis på arbete… (%1$d inlägg i kön)</item>
+    </plurals>
+    <string name="pow_mining_title">Minar bevis på arbete</string>
+    <string name="pow_notification_cancel_all">Avbryt</string>
 </resources>

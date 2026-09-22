@@ -1797,17 +1797,6 @@
     <string name="add_to_public_bookmarks">Ommaviy Xatcho'plarga qo'shish</string>
     <string name="ai_writing_setting_description">Matn tuzatishlar va ohang o'zgarishlarini taklif qilish uchun qurilmadagi AI modelidan foydalanadi.</string>
     <string name="ai_writing_setting_title">Matn yaxshilanishlarini taklif qilish</string>
-    <string name="always_on_notif_channel_description">Real vaqtli bildirishnomalar uchun kirish relaylaringizga ulanishni faol saqlaydi</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d kirish relay'iga ulangan</item>
-        <item quantity="other">%1$d kirish relay'lariga ulangan</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d relay'ga ulangan</item>
-        <item quantity="other">%1$d relay'larga ulangan</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Kirish relaylariga ulanilmoqda…</string>
-    <string name="always_on_notif_title">Amethyst Bildirishnomalari Faol</string>
     <string name="app_notification_calls_channel_description">Kiruvchi ovozli va video qo'ng'iroqlar uchun bildirishnomalar</string>
     <string name="app_notification_calls_channel_name">Kiruvchi qo'ng'iroqlar</string>
     <string name="app_notification_chess_challenge_accepted">%1$s shaxmat taklifingizni qabul qildi</string>
@@ -1921,15 +1910,12 @@
     <string name="call_incoming_video">Kiruvchi video qo'ng'iroq…</string>
     <string name="call_incoming_voice">Kiruvchi ovozli qo'ng'iroq…</string>
     <string name="call_mute">Ovozni o'chirish</string>
-    <string name="call_ongoing">Qo'ng'iroqlar</string>
-    <string name="call_ongoing_description">Davom etayotgan qo'ng'iroq bildirishномаsi</string>
     <string name="call_permission_denied_video">Amethyst video qo'ng'iroqni boshlash uchun kamera va mikrofonga kirish kerak. Iltimos, ilova sozlamalarida yoqing.</string>
     <string name="call_permission_denied_voice">Amethyst ovozli qo'ng'iroqni boshlash uchun mikrofonga kirish kerak. Iltimos, ilova sozlamalarida yoqing.</string>
     <string name="call_reject">Rad etish</string>
     <string name="call_settings">Qo'ng'iroq Sozlamalari</string>
     <string name="call_speaker">Dinamik</string>
     <string name="call_unmute">Ovozni yoqish</string>
-    <string name="call_with">%1$s bilan qo'ng'iroq</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s ning javobida qayta qo'ng'iroq URL si topilmadi</string>
     <string name="cancel">Bekor qilish</string>
     <string name="cashu_checking_mint">Mint tekshirilmoqda…</string>

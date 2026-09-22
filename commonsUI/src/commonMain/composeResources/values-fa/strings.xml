@@ -1833,17 +1833,6 @@
     <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
     <string name="ai_writing_setting_description">از یک مدل هوش مصنوعی روی دستگاه برای پیشنهاد اصلاحات متن و تغییر لحن استفاده می‌کند.</string>
     <string name="ai_writing_setting_title">پیشنهاد بهبود متن</string>
-    <string name="always_on_notif_channel_description">اتصالات به relay های صندوق ورودی شما را برای اعلان‌های بلادرنگ فعال نگه می‌دارد</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">متصل به %1$d relay صندوق ورودی</item>
-    <item quantity="other">متصل به %1$d relay صندوق ورودی</item>
-</plurals>
-    <plurals name="always_on_notif_connected_foreground">
-    <item quantity="one">متصل به %1$d relay</item>
-    <item quantity="other">متصل به %1$d relay</item>
-</plurals>
-    <string name="always_on_notif_connecting">در حال اتصال به relay های صندوق ورودی…</string>
-    <string name="always_on_notif_title">اعلان‌های Amethyst فعال است</string>
     <string name="app_notification_calls_channel_description">اعلان‌های تماس‌های صوتی و تصویری ورودی</string>
     <string name="app_notification_calls_channel_name">تماس‌های ورودی</string>
     <string name="app_notification_chess_challenge_accepted">%1$s چالش شطرنج شما را پذیرفت</string>
@@ -1960,15 +1949,12 @@
     <string name="call_incoming_video">تماس تصویری ورودی…</string>
     <string name="call_incoming_voice">تماس صوتی ورودی…</string>
     <string name="call_mute">بی‌صدا</string>
-    <string name="call_ongoing">تماس‌ها</string>
-    <string name="call_ongoing_description">اعلان تماس در جریان</string>
     <string name="call_permission_denied_video">Amethyst برای شروع تماس تصویری به دسترسی دوربین و میکروفون نیاز دارد. لطفاً آن‌ها را در تنظیمات برنامه فعال کنید.</string>
     <string name="call_permission_denied_voice">Amethyst برای شروع تماس صوتی به دسترسی میکروفون نیاز دارد. لطفاً آن را در تنظیمات برنامه فعال کنید.</string>
     <string name="call_reject">رد کردن</string>
     <string name="call_settings">تنظیمات تماس</string>
     <string name="call_speaker">بلندگو</string>
     <string name="call_unmute">با صدا</string>
-    <string name="call_with">تماس با %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">فراخوانی URL از پاسخ %1$s یافت نشد</string>
     <string name="cancel">لغو</string>
     <string name="cashu">توکن Cashu</string>

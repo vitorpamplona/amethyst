@@ -255,4 +255,38 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Houdt verbindingen met je inbox-relays actief voor realtime meldingen</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Verbonden met %1$d inbox-relay</item>
+        <item quantity="other">Verbonden met %1$d inbox-relays</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Verbonden met %1$d relay</item>
+        <item quantity="other">Verbonden met %1$d relays</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
+    <string name="always_on_notif_tile_subtitle_off">Uit</string>
+    <string name="always_on_notif_tile_subtitle_on">Aan</string>
+    <string name="always_on_notif_title">Amethyst-meldingen actief</string>
+    <string name="blossom_sync_cancel">Annuleren</string>
+    <string name="blossom_sync_channel_description">Toont de voortgang tijdens het kopiëren van je bestanden tussen je Blossom-servers.</string>
+    <string name="blossom_sync_channel_name">Blossom-synchronisatie</string>
+    <string name="call_ongoing">Lopende oproep</string>
+    <string name="call_ongoing_description">Lopende oproep</string>
+    <string name="call_with">Bellen met %1$s</string>
+    <string name="pow_notification_channel_description">Toont berichten die hun NIP-13-proof-of-work nog aan het mijnen zijn, zodat ze kunnen afronden nadat je de app verlaat.</string>
+    <string name="pow_notification_channel_name">Proof-of-work-minen</string>
+    <string name="pow_notification_send_without_pow">Nu verzenden</string>
+    <string name="blossom_syncing">Je bestanden kopiëren tussen servers…</string>
+    <string name="call_hangup">Ophangen</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • minen op %2$d bit</item>
+        <item quantity="other">%1$s • minen op %2$d bits</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Proof of work minen… (%1$d post in wachtrij)</item>
+        <item quantity="other">Proof of work minen… (%1$d posts in wachtrij)</item>
+    </plurals>
+    <string name="pow_mining_title">Proof of work minen</string>
+    <string name="pow_notification_cancel_all">Annuleren</string>
 </resources>

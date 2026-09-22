@@ -25,10 +25,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_tile_subtitle_off
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_tile_subtitle_on
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,11 +118,11 @@ class NotificationServiceTileService : TileService() {
             val enabled = LocalPreferences.isNotificationServiceEnabled()
             tile.state = if (enabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             tile.subtitleCompat(
-                loadStringRes(
+                getString(
                     if (enabled) {
-                        Res.string.always_on_notif_tile_subtitle_on
+                        R.string.always_on_notif_tile_subtitle_on
                     } else {
-                        Res.string.always_on_notif_tile_subtitle_off
+                        R.string.always_on_notif_tile_subtitle_off
                     },
                 ),
             )

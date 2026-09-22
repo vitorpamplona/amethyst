@@ -1832,15 +1832,6 @@
     <string name="add_to_public_bookmarks">公開ブックマークに追加</string>
     <string name="ai_writing_setting_description">デバイス上のAIモデルを使用して、テキストの修正やトーンの変更を提案します。</string>
     <string name="ai_writing_setting_title">テキストの改善を提案</string>
-    <string name="always_on_notif_channel_description">リアルタイム通知のためにインボックス relay への接続を維持します</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="other">%1$d 件のインボックス relay に接続中</item>
-</plurals>
-    <plurals name="always_on_notif_connected_foreground">
-    <item quantity="other">%1$d 件の relay に接続中</item>
-</plurals>
-    <string name="always_on_notif_connecting">インボックス relay に接続中…</string>
-    <string name="always_on_notif_title">Amethyst 通知有効中</string>
     <string name="app_notification_calls_channel_description">音声・ビデオ通話の着信通知</string>
     <string name="app_notification_calls_channel_name">着信</string>
     <string name="app_notification_chess_challenge_accepted">%1$s があなたのチェスの挑戦を受け入れました</string>
@@ -1954,15 +1945,12 @@
     <string name="call_incoming_video">ビデオ通話着信中…</string>
     <string name="call_incoming_voice">音声通話着信中…</string>
     <string name="call_mute">ミュート</string>
-    <string name="call_ongoing">通話</string>
-    <string name="call_ongoing_description">通話中の通知</string>
     <string name="call_permission_denied_video">Amethyst がビデオ通話を開始するにはカメラとマイクのアクセス権が必要です。アプリの設定で有効にしてください。</string>
     <string name="call_permission_denied_voice">Amethyst が音声通話を開始するにはマイクのアクセス権が必要です。アプリの設定で有効にしてください。</string>
     <string name="call_reject">拒否</string>
     <string name="call_settings">通話設定</string>
     <string name="call_speaker">スピーカー</string>
     <string name="call_unmute">ミュート解除</string>
-    <string name="call_with">%1$s との通話</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s のレスポンスにコールバック URL が見つかりませんでした</string>
     <string name="cancel">キャンセル</string>
     <string name="cashu">Cashuトークン</string>

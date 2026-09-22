@@ -158,4 +158,19 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">اتصالات به relay های صندوق ورودی شما را برای اعلان‌های بلادرنگ فعال نگه می‌دارد</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">متصل به %1$d relay صندوق ورودی</item>
+        <item quantity="other">متصل به %1$d relay صندوق ورودی</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">متصل به %1$d relay</item>
+        <item quantity="other">متصل به %1$d relay</item>
+    </plurals>
+    <string name="always_on_notif_connecting">در حال اتصال به relay های صندوق ورودی…</string>
+    <string name="always_on_notif_title">اعلان‌های Amethyst فعال است</string>
+    <string name="call_ongoing">تماس‌ها</string>
+    <string name="call_ongoing_description">اعلان تماس در جریان</string>
+    <string name="call_with">تماس با %1$s</string>
+    <string name="call_hangup">قطع تماس</string>
 </resources>

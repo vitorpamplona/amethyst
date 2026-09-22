@@ -23,13 +23,9 @@ package com.vitorpamplona.amethyst.service.uploads.blossom
 import android.content.Context
 import android.content.pm.ServiceInfo
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.blossom_sync_cancel
-import com.vitorpamplona.amethyst.commons.resources.blossom_sync_channel_description
-import com.vitorpamplona.amethyst.commons.resources.blossom_sync_channel_name
-import com.vitorpamplona.amethyst.commons.resources.blossom_syncing
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Foreground service that keeps the BUD-04 "sync all" sweep ([BlossomMirrorQueue]) running
@@ -44,11 +40,11 @@ import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundServi
 class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncState?>() {
     override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
     override val channelId = CHANNEL_ID
-    override val channelNameRes = Res.string.blossom_sync_channel_name
-    override val channelDescRes = Res.string.blossom_sync_channel_description
+    override val channelNameRes = R.string.blossom_sync_channel_name
+    override val channelDescRes = R.string.blossom_sync_channel_description
     override val notificationId = NOTIFICATION_ID
     override val cancelAction = ACTION_CANCEL
-    override val cancelLabelRes = Res.string.blossom_sync_cancel
+    override val cancelLabelRes = R.string.blossom_sync_cancel
 
     override fun state() = Amethyst.instance.blossomMirrorQueue.state
 
@@ -59,14 +55,14 @@ class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncSt
     // State emits on every mirror step (including currentHost changes), so no clock refresh.
     override val refreshMs: Long? = null
 
-    override suspend fun render(value: BlossomSyncState?): Content {
-        if (value == null) return Content(loadStringRes(Res.string.blossom_syncing), null, Bar.Indeterminate)
+    override fun render(value: BlossomSyncState?): Content {
+        if (value == null) return Content(stringRes(this, R.string.blossom_syncing), null, Bar.Indeterminate)
         val text =
             buildString {
                 append("${value.done} / ${value.total}")
                 if (value.failed > 0) append("  ·  ${value.failed} failed")
             }
-        return Content(loadStringRes(Res.string.blossom_syncing), text, Bar.Determinate(value.fraction.toDouble()))
+        return Content(stringRes(this, R.string.blossom_syncing), text, Bar.Determinate(value.fraction.toDouble()))
     }
 
     companion object {

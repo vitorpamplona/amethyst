@@ -1832,18 +1832,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_to_public_bookmarks">Zu den öffentlichen Lesezeichen hinzufügen</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
-    <string name="always_on_notif_channel_description">Hält Verbindungen zu deinen Inbox-Relays aktiv für Echtzeit-Benachrichtigungen</string>
-    <string name="always_on_notif_channel_name">Relay-Verbindungsdienst</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">Mit %1$d Posteingangs-Relay verbunden</item>
-    <item quantity="other">Mit %1$d Posteingangs-Relays verbunden</item>
-</plurals>
-    <plurals name="always_on_notif_connected_foreground">
-    <item quantity="one">Mit %1$d Relay verbunden</item>
-    <item quantity="other">Mit %1$d Relays verbunden</item>
-</plurals>
-    <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
-    <string name="always_on_notif_title">Amethyst-Benachrichtigungen aktiv</string>
     <string name="app_notification_calls_channel_description">Benachrichtigungen für eingehende Sprach- und Videoanrufe</string>
     <string name="app_notification_calls_channel_name">Eingehende Anrufe</string>
     <string name="app_notification_chess_challenge_accepted">%1$s hat deine Schachherausforderung angenommen</string>
@@ -1965,8 +1953,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="call_incoming_video">Eingehender Videoanruf\u2026</string>
     <string name="call_incoming_voice">Eingehender Sprachanruf\u2026</string>
     <string name="call_mute">Stummschalten</string>
-    <string name="call_ongoing">Anrufe</string>
-    <string name="call_ongoing_description">Benachrichtigung über laufenden Anruf</string>
     <string name="call_permission_denied_video">Amethyst benötigt Zugriff auf Kamera und Mikrofon, um einen Videoanruf zu starten. Bitte aktiviere sie in den App-Einstellungen.</string>
     <string name="call_permission_denied_voice">Amethyst benötigt Zugriff auf das Mikrofon, um einen Sprachanruf zu starten. Bitte aktiviere ihn in den App-Einstellungen.</string>
     <string name="call_reject">Ablehnen</string>
@@ -1974,7 +1960,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="call_settings_search_keywords">WebRTC, Videoanruf, Sprachanruf, Anrufe</string>
     <string name="call_speaker">Lautsprecher</string>
     <string name="call_unmute">Stummschaltung aufheben</string>
-    <string name="call_with">Anruf mit %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback-URL aus %1$s Antwort nicht gefunden</string>
     <string name="cancel">Abbrechen</string>
     <string name="cashu">Cashu-Token</string>

@@ -1826,15 +1826,6 @@
     <string name="add_to_public_bookmarks">เพิ่มไปยังบุ๊คมาร์คสาธรณะ</string>
     <string name="ai_writing_setting_description">ใช้โมเดล AI บนอุปกรณ์เพื่อเสนอการแก้ไขข้อความและการเปลี่ยนแปลงโทนเสียง</string>
     <string name="ai_writing_setting_title">เสนอการปรับปรุงข้อความ</string>
-    <string name="always_on_notif_channel_description">รักษาการเชื่อมต่อกับ relay กล่องข้อความของคุณให้ใช้งานได้เพื่อรับการแจ้งเตือนแบบเรียลไทม์</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="other">เชื่อมต่อกับ %1$d inbox relay แล้ว</item>
-</plurals>
-    <plurals name="always_on_notif_connected_foreground">
-    <item quantity="other">เชื่อมต่อกับ %1$d relay แล้ว</item>
-</plurals>
-    <string name="always_on_notif_connecting">กำลังเชื่อมต่อกับ inbox relay…</string>
-    <string name="always_on_notif_title">การแจ้งเตือน Amethyst ใช้งานอยู่</string>
     <string name="app_notification_calls_channel_description">การแจ้งเตือนสำหรับสายโทรด้วยเสียงและวิดีโอที่เข้ามา</string>
     <string name="app_notification_calls_channel_name">สายเรียกเข้า</string>
     <string name="app_notification_chess_challenge_accepted">%1$s ยอมรับการท้าทายหมากรุกของคุณ</string>
@@ -1948,15 +1939,12 @@
     <string name="call_incoming_video">สายโทรด้วยวิดีโอเข้ามา…</string>
     <string name="call_incoming_voice">สายโทรด้วยเสียงเข้ามา…</string>
     <string name="call_mute">ปิดเสียง</string>
-    <string name="call_ongoing">การโทร</string>
-    <string name="call_ongoing_description">การแจ้งเตือนการโทรที่กำลังดำเนินอยู่</string>
     <string name="call_permission_denied_video">Amethyst ต้องการสิทธิ์เข้าถึงกล้องและไมโครโฟนเพื่อเริ่มการโทรด้วยวิดีโอ โปรดเปิดใช้งานในการตั้งค่าแอป</string>
     <string name="call_permission_denied_voice">Amethyst ต้องการสิทธิ์เข้าถึงไมโครโฟนเพื่อเริ่มการโทรด้วยเสียง โปรดเปิดใช้งานในการตั้งค่าแอป</string>
     <string name="call_reject">ปฏิเสธ</string>
     <string name="call_settings">การตั้งค่าการโทร</string>
     <string name="call_speaker">ลำโพง</string>
     <string name="call_unmute">เปิดเสียง</string>
-    <string name="call_with">โทรกับ %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">ไม่พบที่อยู่ URL จาก %1$s</string>
     <string name="cancel">ยกเลิก</string>
     <string name="cashu">โทเคน Cashu</string>

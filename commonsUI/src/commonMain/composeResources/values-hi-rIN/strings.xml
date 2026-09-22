@@ -2931,21 +2931,6 @@
     <string name="add_to_public_bookmarks">सार्वजनिक स्मर्तव्य सूची में जोडें</string>
     <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
     <string name="ai_writing_setting_title">लेख शोधन प्रस्ताव करें</string>
-    <string name="always_on_notif_channel_description">आपके आगतपेटिका पुनःप्रसारकों के साथ संयोजन सक्रिय रखता है तत्काल सूचनाओं के लिए</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">संयोजित %1$d आगतपेटिका पुनःप्रसारक के साथ</item>
-        <item quantity="other">संयोजित %1$d आगतपेटिका पुनःप्रसारकों के साथ</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">संयोजित %1$d पुनःप्रसारक के साथ</item>
-        <item quantity="other">संयोजित %1$d पुनःप्रसारकों के साथ</item>
-    </plurals>
-    <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
-    <string name="always_on_notif_hide_details">विवरण छिपाएँ</string>
-    <string name="always_on_notif_show_details">विवरण दिखाएँ</string>
-    <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>
-    <string name="always_on_notif_tile_subtitle_on">सक्रिय</string>
-    <string name="always_on_notif_title">अमेथिस्ट सूचनाएँ सक्रिय</string>
     <string name="app_notification_added_to_group">आप %1$s में जोडे गए हैं</string>
     <string name="app_notification_articles_channel_description">आपको सूचित करता है जब कोई आपका उल्लेख अथवा आपको उद्दीप्त करते हैं एक निबन्ध में</string>
     <string name="app_notification_articles_channel_message">%1$s ने आपका उल्लेख किया एक निबन्ध में</string>
@@ -3115,9 +3100,6 @@
         <item quantity="other">%1$d साट्स भुगतान</item>
     </plurals>
     <string name="blossom_payment_required">भुगतान आवश्यक इस सेवासंगणक तक आरोहण के लिए : %1$s</string>
-    <string name="blossom_sync_cancel">निरस्त</string>
-    <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके ब्लोस्सम सेवासंगणकों में।</string>
-    <string name="blossom_sync_channel_name">ब्लोस्सम॰ समचरणीकरण</string>
     <string name="blossom_syncing">आपके अभिलेखों की अनुकृति सभी सेवासंगणकों में…</string>
     <string name="bolt12_offers">बोल्ट१२ प्रस्ताव सूची</string>
     <string name="bolt12_offers_section_explainer">एक अथवा अनेक बोल्ट१२ प्रस्ताव जोडें (lno1…)। वे सार्वजनिक रूप से बाँटे जाते हैं जिससे कि कोई भी आपको भुगतान कर सके।</string>
@@ -3217,8 +3199,6 @@
     <string name="call_incoming_video">आगामी दृश्य आह्वान\u2026</string>
     <string name="call_incoming_voice">आगामी ध्वनि आह्वान\u2026</string>
     <string name="call_mute">मौन</string>
-    <string name="call_ongoing">आह्वान</string>
-    <string name="call_ongoing_description">चालू आह्वान सूचना</string>
     <string name="call_permission_denied_video">अमेथिस्ट को चित्रग्राहक तथा ध्वनिग्राहक अभिगमन आवश्यक है दृश्य आह्वान आरम्भ करने के लिए। कृपया इन्हें क्रमक स्थापना विकल्पों में सक्षम करें।</string>
     <string name="call_permission_denied_voice">अमेथिस्ट को ध्वनिग्राहक अभिगमन आवश्यक है ध्वनि आह्वान आरम्भ करने के लिए। कृपया इसे क्रमक स्थापना विकल्पों में सक्षम करें।</string>
     <string name="call_reject">अस्वीकार करें</string>
@@ -3228,7 +3208,6 @@
     <string name="call_settings">आह्वान स्थापना विकल्प</string>
     <string name="call_speaker">वक्ता</string>
     <string name="call_unmute">मौन हटाएँ</string>
-    <string name="call_with">%1$s के साथ आह्वान</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">प्रत्याह्वान जालपता उपलब्ध नहीं %1$s के उत्तर से</string>
     <string name="cancel">निरस्त करें</string>
     <string name="cashu">काशयू अक्षरराशि</string>
@@ -4479,9 +4458,6 @@
     </plurals>
     <string name="pow_mining_title">श्रमप्रमाण खनन</string>
     <string name="pow_notification_cancel_all">निरस्त</string>
-    <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
-    <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
-    <string name="pow_notification_send_without_pow">अभी भेजें</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d द्व्यंक</item>
         <item quantity="other">%1$d द्व्यंक</item>

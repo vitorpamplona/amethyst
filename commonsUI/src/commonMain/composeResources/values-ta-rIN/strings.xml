@@ -1797,17 +1797,6 @@
     <string name="add_to_public_bookmarks">பொது புக்மார்க்குகளில் சேர்க்கவும்</string>
     <string name="ai_writing_setting_description">உரை திருத்தங்கள் மற்றும் தொனி மாற்றங்களை பரிந்துரைக்க சாதனத்திலுள்ள AI மாதிரியை பயன்படுத்துகிறது.</string>
     <string name="ai_writing_setting_title">உரை மேம்பாடுகளை பரிந்துரை செய்யவும்</string>
-    <string name="always_on_notif_channel_description">நிகழ்நேர அறிவிப்புகளுக்காக உங்கள் inbox relays உடன் இணைப்புகளை செயலில் வைக்கிறது</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d inbox relay-உடன் இணைக்கப்பட்டது</item>
-        <item quantity="other">%1$d inbox relays-உடன் இணைக்கப்பட்டது</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d relay-உடன் இணைக்கப்பட்டது</item>
-        <item quantity="other">%1$d relays-உடன் இணைக்கப்பட்டது</item>
-    </plurals>
-    <string name="always_on_notif_connecting">inbox relays உடன் இணைக்கிறது…</string>
-    <string name="always_on_notif_title">Amethyst அறிவிப்புகள் செயலில்</string>
     <string name="app_notification_calls_channel_description">வரும் குரல் மற்றும் வீடியோ அழைப்புகளுக்கான அறிவிப்புகள்</string>
     <string name="app_notification_calls_channel_name">வரும் அழைப்புகள்</string>
     <string name="app_notification_chess_challenge_accepted">%1$s உங்கள் சதுரங்க சவாலை ஏற்றார்</string>
@@ -1923,15 +1912,12 @@
     <string name="call_incoming_video">வரும் வீடியோ அழைப்பு…</string>
     <string name="call_incoming_voice">வரும் குரல் அழைப்பு…</string>
     <string name="call_mute">முடக்கு</string>
-    <string name="call_ongoing">அழைப்புகள்</string>
-    <string name="call_ongoing_description">நடைமுறையில் உள்ள அழைப்பு அறிவிப்பு</string>
     <string name="call_permission_denied_video">வீடியோ அழைப்பை தொடங்க Amethyst க்கு கேமரா மற்றும் மைக்ரோஃபோன் அணுகல் தேவை. பயன்பாட்டு அமைப்புகளில் அவற்றை இயக்கவும்.</string>
     <string name="call_permission_denied_voice">குரல் அழைப்பை தொடங்க Amethyst க்கு மைக்ரோஃபோன் அணுகல் தேவை. பயன்பாட்டு அமைப்புகளில் அதை இயக்கவும்.</string>
     <string name="call_reject">நிராகரி</string>
     <string name="call_settings">அழைப்பு அமைப்புகள்</string>
     <string name="call_speaker">ஸ்பீக்கர்</string>
     <string name="call_unmute">முடக்கு நீக்கு</string>
-    <string name="call_with">%1$s உடன் அழைப்பு</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s இன் பதிலில் callback URL கிடைக்கவில்லை</string>
     <string name="cancel">ரத்து</string>
     <string name="cashu">Cashu வில்லை</string>

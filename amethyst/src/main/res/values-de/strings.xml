@@ -2278,4 +2278,20 @@
     
 
 
+    <string name="always_on_notif_channel_description">Hält Verbindungen zu deinen Inbox-Relays aktiv für Echtzeit-Benachrichtigungen</string>
+    <string name="always_on_notif_channel_name">Relay-Verbindungsdienst</string>
+    <plurals name="always_on_notif_connected">
+    <item quantity="one">Mit %1$d Posteingangs-Relay verbunden</item>
+    <item quantity="other">Mit %1$d Posteingangs-Relays verbunden</item>
+</plurals>
+    <plurals name="always_on_notif_connected_foreground">
+    <item quantity="one">Mit %1$d Relay verbunden</item>
+    <item quantity="other">Mit %1$d Relays verbunden</item>
+</plurals>
+    <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
+    <string name="always_on_notif_title">Amethyst-Benachrichtigungen aktiv</string>
+    <string name="call_ongoing">Anrufe</string>
+    <string name="call_ongoing_description">Benachrichtigung über laufenden Anruf</string>
+    <string name="call_with">Anruf mit %1$s</string>
+    <string name="call_hangup">Auflegen</string>
 </resources>

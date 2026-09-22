@@ -256,4 +256,40 @@
     <string name="health_connect_rationale_activity_label">Health Connect und Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Hält Verbindungen zu deinen Inbox-Relays aktiv für Echtzeit-Benachrichtigungen</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Mit %1$d Posteingangs-Relay verbunden</item>
+        <item quantity="other">Mit %1$d Posteingangs-Relays verbunden</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Mit %1$d Relay verbunden</item>
+        <item quantity="other">Mit %1$d Relays verbunden</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
+    <string name="always_on_notif_hide_details">Details ausblenden</string>
+    <string name="always_on_notif_show_details">Details anzeigen</string>
+    <string name="always_on_notif_tile_subtitle_off">Aus</string>
+    <string name="always_on_notif_tile_subtitle_on">Ein</string>
+    <string name="always_on_notif_title">Amethyst-Benachrichtigungen aktiv</string>
+    <string name="blossom_sync_cancel">Abbrechen</string>
+    <string name="blossom_sync_channel_description">Zeigt den Fortschritt beim Kopieren deiner Dateien über deine Blossom-Server hinweg.</string>
+    <string name="blossom_sync_channel_name">Blossom-Synchronisierung</string>
+    <string name="call_ongoing">Anrufe</string>
+    <string name="call_ongoing_description">Benachrichtigung über laufenden Anruf</string>
+    <string name="call_with">Anruf mit %1$s</string>
+    <string name="pow_notification_channel_description">Zeigt Beiträge an, die noch ihren NIP-13-Arbeitsnachweis schürfen, damit sie fertig werden können, nachdem du die App verlässt.</string>
+    <string name="pow_notification_channel_name">Arbeitsnachweis-Schürfen</string>
+    <string name="pow_notification_send_without_pow">Jetzt senden</string>
+    <string name="blossom_syncing">Deine Dateien werden über die Server kopiert…</string>
+    <string name="call_hangup">Auflegen</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • schürft bei %2$d Bit</item>
+        <item quantity="other">%1$s • schürft bei %2$d Bits</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Arbeitsnachweis wird geschürft… (%1$d Beitrag in der Warteschlange)</item>
+        <item quantity="other">Arbeitsnachweis wird geschürft… (%1$d Beiträge in der Warteschlange)</item>
+    </plurals>
+    <string name="pow_mining_title">Arbeitsnachweis wird geschürft</string>
+    <string name="pow_notification_cancel_all">Abbrechen</string>
 </resources>

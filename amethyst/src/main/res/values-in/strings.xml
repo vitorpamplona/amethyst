@@ -2627,4 +2627,17 @@
 
 
 
+    <string name="always_on_notif_channel_description">Menjaga koneksi ke relay inbox Anda aktif untuk notifikasi real-time</string>
+    <plurals name="always_on_notif_connected">
+    <item quantity="other">Terhubung ke %1$d relay inbox</item>
+</plurals>
+    <plurals name="always_on_notif_connected_foreground">
+    <item quantity="other">Terhubung ke %1$d relay</item>
+</plurals>
+    <string name="always_on_notif_connecting">Menghubungkan ke relay inbox…</string>
+    <string name="always_on_notif_title">Notifikasi Amethyst Aktif</string>
+    <string name="call_ongoing">Panggilan</string>
+    <string name="call_ongoing_description">Notifikasi panggilan berlangsung</string>
+    <string name="call_with">Panggilan dengan %1$s</string>
+    <string name="call_hangup">Tutup telepon</string>
 </resources>

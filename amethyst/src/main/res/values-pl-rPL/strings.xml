@@ -271,4 +271,48 @@
     <string name="health_connect_rationale_activity_label">Health Connect i Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Utrzymuje aktywne połączenia z transmiterami skrzynki odbiorczej, umożliwiając otrzymywanie powiadomień w czasie rzeczywistym</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Połączono z %1$d transmiterem odbiorczym</item>
+        <item quantity="few">Połączono z %1$d transmiterami odbiorczymi</item>
+        <item quantity="many">Połączono z %1$d transmiterami odbiorczymi</item>
+        <item quantity="other">Połączono z %1$d transmiterami odbiorczymi</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Podłączono do %1$d transmitera</item>
+        <item quantity="few">Podłączono do %1$d transmiterów</item>
+        <item quantity="many">Podłączono do %1$d transmiterów</item>
+        <item quantity="other">Podłączono do %1$d transmiterów</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
+    <string name="always_on_notif_hide_details">Ukryj szczegóły</string>
+    <string name="always_on_notif_show_details">Pokaż szczegóły</string>
+    <string name="always_on_notif_tile_subtitle_off">Wył.</string>
+    <string name="always_on_notif_tile_subtitle_on">Wł.</string>
+    <string name="always_on_notif_title">Powiadomienia Ametyst Aktywne</string>
+    <string name="blossom_sync_cancel">Anuluj</string>
+    <string name="blossom_sync_channel_description">Wyświetla postęp kopiowania plików między serwerami Blossom.</string>
+    <string name="blossom_sync_channel_name">Synchronizacja Blossom</string>
+    <string name="call_ongoing">Połączenia</string>
+    <string name="call_ongoing_description">Powiadomienie o trwającym połączeniu</string>
+    <string name="call_with">Zadzwoń przez %1$s</string>
+    <string name="pow_notification_channel_description">Wyświetla posty, które wciąż generują dowód pracy zgodnie ze standardem NIP-13, aby proces ten mógł się zakończyć po zamknięciu aplikacji.</string>
+    <string name="pow_notification_channel_name">Wydobywanie dowodów wykonania pracy</string>
+    <string name="pow_notification_send_without_pow">Wyślij teraz</string>
+    <string name="blossom_syncing">Kopiowanie plików pomiędzy serwerami…</string>
+    <string name="call_hangup">Rozłącz się</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="few">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="many">%1$s • wydobywanie z szybkością %2$d bitów</item>
+        <item quantity="other">%1$s • wydobywanie z szybkością %2$d bitów</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Wydobycie w systemie proof of work… (%1$d wpis w kolejce)</item>
+        <item quantity="few">Wydobywanie w systemie proof of work… (%1$d wpisów w kolejce)</item>
+        <item quantity="many">Wydobywanie w systemie proof of work… (%1$d wpisów w kolejce)</item>
+        <item quantity="other">Dowód pracy w górnictwie… (%1$d posty w kolejce)</item>
+    </plurals>
+    <string name="pow_mining_title">Wydobywanie dowodu wykonania pracy</string>
+    <string name="pow_notification_cancel_all">Anuluj</string>
 </resources>

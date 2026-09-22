@@ -2878,25 +2878,6 @@
     <string name="add_to_public_bookmarks">Přidat do veřejných záložek</string>
     <string name="ai_writing_setting_description">Používá AI model běžící v zařízení k navrhování oprav textu a změn tónu.</string>
     <string name="ai_writing_setting_title">Navrhovat vylepšení textu</string>
-    <string name="always_on_notif_channel_description">Udržuje připojení k vašim inbox relayím aktivní pro oznámení v reálném čase</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Připojeno k %1$d příchozímu relay</item>
-        <item quantity="few">Připojeno k %1$d příchozím relays</item>
-        <item quantity="many">Připojeno k %1$d příchozímu relay</item>
-        <item quantity="other">Připojeno k %1$d příchozím relays</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Připojeno k %1$d relay</item>
-        <item quantity="few">Připojeno k %1$d relays</item>
-        <item quantity="many">Připojeno k %1$d relay</item>
-        <item quantity="other">Připojeno k %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Připojování k inbox relayím\u2026</string>
-    <string name="always_on_notif_hide_details">Skrýt podrobnosti</string>
-    <string name="always_on_notif_show_details">Zobrazit podrobnosti</string>
-    <string name="always_on_notif_tile_subtitle_off">Vypnuto</string>
-    <string name="always_on_notif_tile_subtitle_on">Zapnuto</string>
-    <string name="always_on_notif_title">Amethyst oznámení aktivní</string>
     <string name="app_notification_added_to_group">Byli jste přidáni do %1$s</string>
     <string name="app_notification_articles_channel_description">Upozorní vás, když vás někdo zmíní nebo zvýrazní v článku</string>
     <string name="app_notification_articles_channel_message">%1$s vás zmínil v článku</string>
@@ -3086,9 +3067,6 @@
         <item quantity="other">Zaplatit %1$d satů</item>
     </plurals>
     <string name="blossom_payment_required">Tento server vyžaduje za nahrání platbu: %1$s</string>
-    <string name="blossom_sync_cancel">Zrušit</string>
-    <string name="blossom_sync_channel_description">Zobrazuje průběh kopírování vašich souborů mezi servery Blossom.</string>
-    <string name="blossom_sync_channel_name">Synchronizace Blossom</string>
     <string name="blossom_syncing">Kopírování vašich souborů mezi servery…</string>
     <string name="bolt12_offers">Nabídky BOLT12</string>
     <string name="bolt12_offers_section_explainer">Přidejte jednu nebo více nabídek BOLT12 (lno1…). Jsou sdíleny veřejně, takže vám může kdokoli zaplatit.</string>
@@ -3198,8 +3176,6 @@
     <string name="call_incoming_video">Příchozí videohovor\u2026</string>
     <string name="call_incoming_voice">Příchozí hlasový hovor\u2026</string>
     <string name="call_mute">Ztlumit</string>
-    <string name="call_ongoing">Hovory</string>
-    <string name="call_ongoing_description">Oznámení o probíhajícím hovoru</string>
     <string name="call_permission_denied_video">Amethyst potřebuje přístup ke kameře a mikrofonu, aby mohl zahájit videohovor. Povolte je v nastavení aplikace.</string>
     <string name="call_permission_denied_voice">Amethyst potřebuje přístup k mikrofonu, aby mohl zahájit hlasový hovor. Povolte jej v nastavení aplikace.</string>
     <string name="call_reject">Odmítnout</string>
@@ -3209,7 +3185,6 @@
     <string name="call_settings">Nastavení hovorů</string>
     <string name="call_speaker">Reproduktor</string>
     <string name="call_unmute">Zrušit ztlumení</string>
-    <string name="call_with">Hovor s %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Adresa URL zpětného volání nebyla nalezena v odpovědi %1$s</string>
     <string name="cancel">Zrušit</string>
     <string name="cashu">Cashu Token</string>
@@ -4584,9 +4559,6 @@
     </plurals>
     <string name="pow_mining_title">Těžení proof of work</string>
     <string name="pow_notification_cancel_all">Zrušit</string>
-    <string name="pow_notification_channel_description">Zobrazuje příspěvky, které stále těží svůj NIP-13 proof of work, aby mohly dokončit těžbu i po opuštění aplikace.</string>
-    <string name="pow_notification_channel_name">Těžení proof of work</string>
-    <string name="pow_notification_send_without_pow">Odeslat nyní</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="few">%1$d bity</item>

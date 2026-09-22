@@ -1776,17 +1776,6 @@
     <string name="add_to_public_bookmarks">Aggiungi ai segnalibri pubblici</string>
     <string name="ai_writing_setting_description">Utilizza un modello AI sul dispositivo per proporre correzioni al testo e modifiche al tono.</string>
     <string name="ai_writing_setting_title">Proponi miglioramenti al testo</string>
-    <string name="always_on_notif_channel_description">Mantiene attive le connessioni ai tuoi relay inbox per notifiche in tempo reale</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Connesso a %1$d relay inbox</item>
-        <item quantity="other">Connesso a %1$d relay inbox</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Connesso a %1$d relay</item>
-        <item quantity="other">Connesso a %1$d relay</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Connessione ai relay inbox in corso…</string>
-    <string name="always_on_notif_title">Notifiche Amethyst attive</string>
     <string name="app_notification_calls_channel_description">Notifiche per chiamate vocali e video in arrivo</string>
     <string name="app_notification_calls_channel_name">Chiamate in arrivo</string>
     <string name="app_notification_chess_challenge_accepted">%1$s ha accettato la tua sfida a scacchi</string>
@@ -1894,15 +1883,12 @@
     <string name="call_incoming_video">Videochiamata in arrivo…</string>
     <string name="call_incoming_voice">Chiamata vocale in arrivo…</string>
     <string name="call_mute">Disattiva microfono</string>
-    <string name="call_ongoing">Chiamate</string>
-    <string name="call_ongoing_description">Notifica di chiamata in corso</string>
     <string name="call_permission_denied_video">Amethyst ha bisogno dell'accesso alla fotocamera e al microfono per avviare una videochiamata. Attivali nelle impostazioni dell'app.</string>
     <string name="call_permission_denied_voice">Amethyst ha bisogno dell'accesso al microfono per avviare una chiamata vocale. Attivalo nelle impostazioni dell'app.</string>
     <string name="call_reject">Rifiuta</string>
     <string name="call_settings">Impostazioni chiamata</string>
     <string name="call_speaker">Altoparlante</string>
     <string name="call_unmute">Attiva microfono</string>
-    <string name="call_with">Chiamata con %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL di callback non trovato dalla risposta di %1$s</string>
     <string name="cancel">Cancella</string>
     <string name="cashu">Token di Cashu</string>

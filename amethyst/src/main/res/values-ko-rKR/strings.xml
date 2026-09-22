@@ -159,4 +159,17 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">실시간 알림을 위해 inbox relay에 대한 연결을 유지합니다</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">%1$d개의 inbox relay에 연결됨</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">%1$d개의 relay에 연결됨</item>
+    </plurals>
+    <string name="always_on_notif_connecting">inbox relay에 연결 중…</string>
+    <string name="always_on_notif_title">Amethyst 알림 활성화됨</string>
+    <string name="call_ongoing">통화</string>
+    <string name="call_ongoing_description">진행 중인 통화 알림</string>
+    <string name="call_with">%1$s와(과) 통화</string>
+    <string name="call_hangup">전화 끊기</string>
 </resources>

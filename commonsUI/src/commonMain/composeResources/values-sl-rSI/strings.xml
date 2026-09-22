@@ -2836,23 +2836,6 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="add_to_public_bookmarks">Dodaj v javne zaznamke</string>
     <string name="ai_writing_setting_description">Uporablja model umetne inteligence v napravi za predloge popravkov besedila in spremembe tona.</string>
     <string name="ai_writing_setting_title">Predlagaj tekstovne izboljšave</string>
-    <string name="always_on_notif_channel_description">Ohranja aktivne povezave z vašimi releji za obvestila v realnem času</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Povezano z %1$d vhodnimi releji</item>
-        <item quantity="two">Povezano z %1$d vhodnima relejema</item>
-        <item quantity="few">Povezano z %1$d vhodnimi releji</item>
-        <item quantity="other">Povezano z %1$d vhodnimi releji</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Povezano z %1$d relejem</item>
-        <item quantity="two">Povezano z %1$d relejema</item>
-        <item quantity="few">Povezano z %1$d releji</item>
-        <item quantity="other">Povezano z %1$d releji</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
-    <string name="always_on_notif_tile_subtitle_off">Izklop</string>
-    <string name="always_on_notif_tile_subtitle_on">Vklop</string>
-    <string name="always_on_notif_title">Amethyst obvestila so aktivna</string>
     <string name="app_notification_added_to_group">Dodani ste bili v %1$s</string>
     <string name="app_notification_articles_channel_description">Obvesti vas, ko vas nekdo emeni ali označi v članku</string>
     <string name="app_notification_articles_channel_message">%1$s vas je omenil v članku</string>
@@ -3031,9 +3014,6 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
         <item quantity="other">Plačaj %1$d satov</item>
     </plurals>
     <string name="blossom_payment_required">Ta strežnik za nalaganje zahteva plačilo: %1$s</string>
-    <string name="blossom_sync_cancel">Prekliči</string>
-    <string name="blossom_sync_channel_description">Prikazuje napredek med kopiranjem vaših datotek med vašimi strežniki Blossom.</string>
-    <string name="blossom_sync_channel_name">Blossom sinhronizacija</string>
     <string name="blossom_syncing">Kopiranje vaših datotek med strežniki…</string>
     <string name="bolt12_offers">BOLT12 Ponudbe</string>
     <string name="bolt12_offers_section_explainer">Dodajte eno ali več ponudb BOLT12 (lno1…). Objavljene so javno, tako da vam lahko plača kdo koli.</string>
@@ -3143,15 +3123,12 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="call_incoming_video">Dohodni video klic\u2026</string>
     <string name="call_incoming_voice">Dohodni glasovni klic\u2026</string>
     <string name="call_mute">Utišaj</string>
-    <string name="call_ongoing">Klici</string>
-    <string name="call_ongoing_description">Obvestilo o aktivnem klicu</string>
     <string name="call_permission_denied_video">Amethyst potrebuje dostop do kamere in mikrofona za začetek video klica. Omogoči ju v nastavitvah aplikacije.</string>
     <string name="call_permission_denied_voice">Amethyst potrebuje dostop do mikrofona za začetek glasovnega klica. Omogoči ga v nastavitvah aplikacije.</string>
     <string name="call_reject">Zavrni</string>
     <string name="call_settings">Klicne nastavitve</string>
     <string name="call_speaker">Zvočnik</string>
     <string name="call_unmute">Vklopi zvok</string>
-    <string name="call_with">Pokliči z %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Povratni URL ni bil najden v odzivu od %1$s</string>
     <string name="cancel">Prekliči</string>
     <string name="cashu">Cashu žeton</string>
@@ -4502,9 +4479,6 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     </plurals>
     <string name="pow_mining_title">Rudarjenje dokaza o delu (PoW)</string>
     <string name="pow_notification_cancel_all">Prekliči</string>
-    <string name="pow_notification_channel_description">Prikazuje objave, ki še rudarijo svoj NIP-13 dokaz o delu, da lahko zaključijo postopek, potem ko zapustite aplikacijo.</string>
-    <string name="pow_notification_channel_name">Rudarjenje z dokazom o delu (PoW)</string>
-    <string name="pow_notification_send_without_pow">Pošlji zdaj</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d bit</item>
         <item quantity="two">%1$d bita</item>

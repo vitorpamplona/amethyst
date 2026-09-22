@@ -1809,21 +1809,6 @@
     <string name="add_to_public_bookmarks">Добавить в Публичные закладки</string>
     <string name="ai_writing_setting_description">Использует модель ИИ на устройстве для предложения исправлений текста и изменения тональности.</string>
     <string name="ai_writing_setting_title">Предлагать улучшения текста</string>
-    <string name="always_on_notif_channel_description">Поддерживает активные подключения к входящим relay для уведомлений в реальном времени</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Подключено к %1$d входящему relay</item>
-        <item quantity="few">Подключено к %1$d входящим relay</item>
-        <item quantity="many">Подключено к %1$d входящим relay</item>
-        <item quantity="other">Подключено к %1$d входящих relay</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Подключено к %1$d relay</item>
-        <item quantity="few">Подключено к %1$d relay</item>
-        <item quantity="many">Подключено к %1$d relay</item>
-        <item quantity="other">Подключено к %1$d relay</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Подключение к входящим relay…</string>
-    <string name="always_on_notif_title">Уведомления Amethyst активны</string>
     <string name="app_notification_calls_channel_description">Уведомления о входящих голосовых и видеозвонках</string>
     <string name="app_notification_calls_channel_name">Входящие звонки</string>
     <string name="app_notification_chess_challenge_accepted">%1$s принял(а) ваш вызов на шахматную партию</string>
@@ -1944,15 +1929,12 @@
     <string name="call_incoming_video">Входящий видеозвонок…</string>
     <string name="call_incoming_voice">Входящий голосовой звонок…</string>
     <string name="call_mute">Выключить микрофон</string>
-    <string name="call_ongoing">Звонки</string>
-    <string name="call_ongoing_description">Уведомление о текущем звонке</string>
     <string name="call_permission_denied_video">Amethyst требует доступ к камере и микрофону для совершения видеозвонка. Пожалуйста, включите их в настройках приложения.</string>
     <string name="call_permission_denied_voice">Amethyst требует доступ к микрофону для совершения голосового звонка. Пожалуйста, включите его в настройках приложения.</string>
     <string name="call_reject">Отклонить</string>
     <string name="call_settings">Настройки звонков</string>
     <string name="call_speaker">Громкоговоритель</string>
     <string name="call_unmute">Включить микрофон</string>
-    <string name="call_with">Звонок с %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL обратного вызова не найден в ответе %1$s</string>
     <string name="cancel">Отменить</string>
     <string name="cashu">Cashu-токен</string>

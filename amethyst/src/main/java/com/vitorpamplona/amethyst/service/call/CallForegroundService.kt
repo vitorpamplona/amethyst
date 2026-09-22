@@ -37,13 +37,6 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.app_name
-import com.vitorpamplona.amethyst.commons.resources.call_hangup
-import com.vitorpamplona.amethyst.commons.resources.call_ongoing
-import com.vitorpamplona.amethyst.commons.resources.call_ongoing_description
-import com.vitorpamplona.amethyst.commons.resources.call_with
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking
@@ -222,20 +215,20 @@ class CallForegroundService : Service() {
         }
     }
 
-    private suspend fun createNotificationChannel() {
+    private fun createNotificationChannel() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                loadStringRes(Res.string.call_ongoing),
+                getString(R.string.call_ongoing),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = loadStringRes(Res.string.call_ongoing_description)
+                description = getString(R.string.call_ongoing_description)
             }
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(channel)
     }
 
-    private suspend fun buildNotification(
+    private fun buildNotification(
         peerName: String,
         statusText: String? = null,
     ): Notification {
@@ -259,16 +252,16 @@ class CallForegroundService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        val contentText = statusText ?: loadStringRes(Res.string.call_with, peerName)
+        val contentText = statusText ?: getString(R.string.call_with, peerName)
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
-            .setContentTitle(loadStringRes(Res.string.app_name))
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .setContentIntent(openCallIntent)
-            .addAction(R.drawable.ic_call_end, loadStringRes(Res.string.call_hangup), hangupIntent)
+            .addAction(R.drawable.ic_call_end, getString(R.string.call_hangup), hangupIntent)
             .build()
     }
 }

@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import android.content.Context
 import android.util.LruCache
 import androidx.annotation.DrawableRes
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes as commonsPluralStringRes
@@ -57,6 +61,48 @@ fun pluralStringRes(
     count: Int,
     vararg args: Any,
 ): String = if (args.isEmpty()) commonsPluralStringRes(id, count) else commonsPluralStringRes(id, count, *args)
+
+// Android-resource accessors. A handful of strings deliberately stay in res/:
+// anything a synchronous platform API resolves. A foreground-service notification
+// is built inside Android's startForeground() timeout, so its text cannot come
+// from the Compose catalog, whose only non-composable accessor is suspend. The
+// manifest-referenced keys are here for the same reason.
+//
+// The LruCache is why these exist as helpers at all: Resources.getString measured
+// >1ms on some phones, and a feed re-reads the same label per card.
+private val resourceCache = LruCache<Int, String>(300)
+
+@Composable
+fun stringRes(
+    @StringRes id: Int,
+): String = resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) }
+
+fun stringRes(
+    ctx: Context,
+    @StringRes id: Int,
+): String = resourceCache.get(id) ?: ctx.getString(id).also { resourceCache.put(id, it) }
+
+fun stringRes(
+    ctx: Context,
+    @StringRes id: Int,
+    vararg args: String?,
+): String {
+    val res = ctx.resources
+    return String.format(
+        res.configuration.locales.get(0),
+        resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
+        *args,
+    )
+}
+
+/** Plural resolver for non-composable scope. Not cached: the resolved string
+ *  varies by quantity and resourceCache is keyed by id alone. */
+fun pluralStringRes(
+    ctx: Context,
+    @PluralsRes id: Int,
+    count: Int,
+    vararg formatArgs: Any?,
+): String = ctx.resources.getQuantityString(id, count, *formatArgs)
 
 // Caches most common icons in the app to avoid using disk. Drawables are still
 // Android resources - only strings moved to the Compose catalog.

@@ -1797,19 +1797,6 @@
     <string name="add_to_public_bookmarks">Dodaj u javne oznake</string>
     <string name="ai_writing_setting_description">Koristi AI model na uređaju za predlaganje ispravki teksta i promena tona.</string>
     <string name="ai_writing_setting_title">Predloži poboljšanja teksta</string>
-    <string name="always_on_notif_channel_description">Održava veze sa vašim inbox relays aktivnim za obaveštenja u realnom vremenu</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Povezan sa %1$d dolaznim relay-om</item>
-        <item quantity="few">Povezan sa %1$d dolazna relay-a</item>
-        <item quantity="other">Povezan sa %1$d dolaznih relay-a</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Povezan sa %1$d relay-om</item>
-        <item quantity="few">Povezan sa %1$d relay-a</item>
-        <item quantity="other">Povezan sa %1$d relay-a</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Povezivanje sa inbox relays…</string>
-    <string name="always_on_notif_title">Amethyst obaveštenja aktivna</string>
     <string name="app_notification_calls_channel_description">Obaveštenja za dolazne glasovne i video pozive</string>
     <string name="app_notification_calls_channel_name">Dolazni pozivi</string>
     <string name="app_notification_chess_challenge_accepted">%1$s je prihvatio vaš šahovski izazov</string>
@@ -1919,15 +1906,12 @@
     <string name="call_incoming_video">Dolazni video poziv…</string>
     <string name="call_incoming_voice">Dolazni glasovni poziv…</string>
     <string name="call_mute">Isključi mikrofon</string>
-    <string name="call_ongoing">Pozivi</string>
-    <string name="call_ongoing_description">Obaveštenje o aktivnom pozivu</string>
     <string name="call_permission_denied_video">Amethyst potreban pristup kameri i mikrofonu za pokretanje video poziva. Omogućite ih u podešavanjima aplikacije.</string>
     <string name="call_permission_denied_voice">Amethyst potreban pristup mikrofonu za pokretanje glasovnog poziva. Omogućite ga u podešavanjima aplikacije.</string>
     <string name="call_reject">Odbij</string>
     <string name="call_settings">Podešavanja poziva</string>
     <string name="call_speaker">Zvučnik</string>
     <string name="call_unmute">Uključi mikrofon</string>
-    <string name="call_with">Poziv sa %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL povratnog poziva nije pronađen u odgovoru od %1$s</string>
     <string name="cancel">Otkaži</string>
     <string name="cashu">Cashu token</string>

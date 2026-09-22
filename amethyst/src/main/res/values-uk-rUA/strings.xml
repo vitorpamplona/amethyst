@@ -158,4 +158,23 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Підтримує активні з'єднання з вашими inbox relay для сповіщень у реальному часі</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Підключено до %1$d inbox relay</item>
+        <item quantity="few">Підключено до %1$d inbox relay</item>
+        <item quantity="many">Підключено до %1$d inbox relay</item>
+        <item quantity="other">Підключено до %1$d inbox relay</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Підключено до %1$d relay</item>
+        <item quantity="few">Підключено до %1$d relay</item>
+        <item quantity="many">Підключено до %1$d relay</item>
+        <item quantity="other">Підключено до %1$d relay</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Підключення до inbox relay…</string>
+    <string name="always_on_notif_title">Сповіщення Amethyst активні</string>
+    <string name="call_ongoing">Дзвінки</string>
+    <string name="call_ongoing_description">Сповіщення про поточний дзвінок</string>
+    <string name="call_with">Дзвінок з %1$s</string>
+    <string name="call_hangup">Завершити</string>
 </resources>

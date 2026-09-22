@@ -1806,17 +1806,6 @@
     <string name="add_to_public_bookmarks">Agregar a marcadores públicos</string>
     <string name="ai_writing_setting_description">Usa un modelo de IA en el dispositivo para proponer correcciones de texto y cambios de tono.</string>
     <string name="ai_writing_setting_title">Proponer mejoras de texto</string>
-    <string name="always_on_notif_channel_description">Mantiene las conexiones a tus relays de bandeja de entrada activas para notificaciones en tiempo real</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Conectado a %1$d relay de bandeja de entrada</item>
-        <item quantity="other">Conectado a %1$d relays de bandeja de entrada</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Conectado a %1$d relay</item>
-        <item quantity="other">Conectado a %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Conectando a los relays de bandeja de entrada…</string>
-    <string name="always_on_notif_title">Notificaciones de Amethyst activas</string>
     <string name="app_notification_calls_channel_description">Notificaciones de llamadas de voz y vídeo entrantes</string>
     <string name="app_notification_calls_channel_name">Llamadas entrantes</string>
     <string name="app_notification_chess_challenge_accepted">%1$s ha aceptado tu desafío de ajedrez</string>
@@ -1934,15 +1923,12 @@
     <string name="call_incoming_video">Llamada de vídeo entrante…</string>
     <string name="call_incoming_voice">Llamada de voz entrante…</string>
     <string name="call_mute">Silenciar</string>
-    <string name="call_ongoing">Llamadas</string>
-    <string name="call_ongoing_description">Notificación de llamada en curso</string>
     <string name="call_permission_denied_video">Amethyst necesita acceso a la cámara y al micrófono para iniciar una videollamada. Actívalos en los ajustes de la aplicación.</string>
     <string name="call_permission_denied_voice">Amethyst necesita acceso al micrófono para iniciar una llamada de voz. Actívalo en los ajustes de la aplicación.</string>
     <string name="call_reject">Rechazar</string>
     <string name="call_settings">Ajustes de llamada</string>
     <string name="call_speaker">Altavoz</string>
     <string name="call_unmute">Reactivar</string>
-    <string name="call_with">Llamada con %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">No se encontró la URL de devolución de llamada en la respuesta de %1$s.</string>
     <string name="cancel">Cancelar</string>
     <string name="cashu">Token de Cashu</string>

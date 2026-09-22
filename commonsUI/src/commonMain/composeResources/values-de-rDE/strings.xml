@@ -2856,21 +2856,6 @@
     <string name="add_to_public_bookmarks">Zu den öffentlichen Lesezeichen hinzufügen</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
-    <string name="always_on_notif_channel_description">Hält Verbindungen zu deinen Inbox-Relays aktiv für Echtzeit-Benachrichtigungen</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Mit %1$d Posteingangs-Relay verbunden</item>
-        <item quantity="other">Mit %1$d Posteingangs-Relays verbunden</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Mit %1$d Relay verbunden</item>
-        <item quantity="other">Mit %1$d Relays verbunden</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
-    <string name="always_on_notif_hide_details">Details ausblenden</string>
-    <string name="always_on_notif_show_details">Details anzeigen</string>
-    <string name="always_on_notif_tile_subtitle_off">Aus</string>
-    <string name="always_on_notif_tile_subtitle_on">Ein</string>
-    <string name="always_on_notif_title">Amethyst-Benachrichtigungen aktiv</string>
     <string name="app_notification_added_to_group">Du wurdest zu %1$s hinzugefügt</string>
     <string name="app_notification_articles_channel_description">Benachrichtigt dich, wenn dich jemand in einem Artikel erwähnt oder hervorhebt</string>
     <string name="app_notification_articles_channel_message">%1$s hat dich in einem Artikel erwähnt</string>
@@ -3040,9 +3025,6 @@
         <item quantity="other">%1$d Sats bezahlen</item>
     </plurals>
     <string name="blossom_payment_required">Dieser Server verlangt eine Zahlung zum Hochladen: %1$s</string>
-    <string name="blossom_sync_cancel">Abbrechen</string>
-    <string name="blossom_sync_channel_description">Zeigt den Fortschritt beim Kopieren deiner Dateien über deine Blossom-Server hinweg.</string>
-    <string name="blossom_sync_channel_name">Blossom-Synchronisierung</string>
     <string name="blossom_syncing">Deine Dateien werden über die Server kopiert…</string>
     <string name="bolt12_offers">BOLT12-Angebote</string>
     <string name="bolt12_offers_section_explainer">Füge ein oder mehrere BOLT12-Angebote (lno1…) hinzu. Sie werden öffentlich geteilt, sodass dich jeder bezahlen kann.</string>
@@ -3142,8 +3124,6 @@
     <string name="call_incoming_video">Eingehender Videoanruf\u2026</string>
     <string name="call_incoming_voice">Eingehender Sprachanruf\u2026</string>
     <string name="call_mute">Stummschalten</string>
-    <string name="call_ongoing">Anrufe</string>
-    <string name="call_ongoing_description">Benachrichtigung über laufenden Anruf</string>
     <string name="call_permission_denied_video">Amethyst benötigt Zugriff auf Kamera und Mikrofon, um einen Videoanruf zu starten. Bitte aktiviere sie in den App-Einstellungen.</string>
     <string name="call_permission_denied_voice">Amethyst benötigt Zugriff auf das Mikrofon, um einen Sprachanruf zu starten. Bitte aktiviere ihn in den App-Einstellungen.</string>
     <string name="call_reject">Ablehnen</string>
@@ -3153,7 +3133,6 @@
     <string name="call_settings">Anrufeinstellungen</string>
     <string name="call_speaker">Lautsprecher</string>
     <string name="call_unmute">Stummschaltung aufheben</string>
-    <string name="call_with">Anruf mit %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback-URL aus %1$s Antwort nicht gefunden</string>
     <string name="cancel">Abbrechen</string>
     <string name="cashu">Cashu-Token</string>
@@ -4402,9 +4381,6 @@
     </plurals>
     <string name="pow_mining_title">Arbeitsnachweis wird geschürft</string>
     <string name="pow_notification_cancel_all">Abbrechen</string>
-    <string name="pow_notification_channel_description">Zeigt Beiträge an, die noch ihren NIP-13-Arbeitsnachweis schürfen, damit sie fertig werden können, nachdem du die App verlässt.</string>
-    <string name="pow_notification_channel_name">Arbeitsnachweis-Schürfen</string>
-    <string name="pow_notification_send_without_pow">Jetzt senden</string>
     <plurals name="pow_option_bits">
         <item quantity="one">%1$d Bit</item>
         <item quantity="other">%1$d Bits</item>

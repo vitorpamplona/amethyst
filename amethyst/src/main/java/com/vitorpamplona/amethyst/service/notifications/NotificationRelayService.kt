@@ -40,18 +40,8 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_channel_description
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_channel_name
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connected
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connected_foreground
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connecting
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_hide_details
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_show_details
-import com.vitorpamplona.amethyst.commons.resources.always_on_notif_title
-import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -266,7 +256,7 @@ class NotificationRelayService : Service() {
      * Returns true if the service is foregrounded, false if promotion failed (in which
      * case the service has already been told to stop).
      */
-    private suspend fun ensureForeground(): Boolean {
+    private fun ensureForeground(): Boolean {
         try {
             val notification = buildNotification(connectedRelayCount)
             ServiceCompat.startForeground(
@@ -358,23 +348,23 @@ class NotificationRelayService : Service() {
             }
     }
 
-    private suspend fun updateNotification(connectedRelays: Int) {
+    private fun updateNotification(connectedRelays: Int) {
         val notification = buildNotification(connectedRelays)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
-    private suspend fun buildNotification(connectedRelays: Int): Notification {
+    private fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
             when {
-                connectedRelays <= 0 -> loadStringRes(Res.string.always_on_notif_connecting)
+                connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
                 // Foreground: the pool also holds the feed/finder outbox relays, so the
                 // count reflects all connections, not just the inbox. Backgrounded, the
                 // feeds tear down and only inbox + DM relays remain.
                 MainActivity.isResumed ->
-                    loadPluralStringRes(Res.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
+                    pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
                 else ->
-                    loadPluralStringRes(Res.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
+                    pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
             }
 
         // Tapping goes to the screen that answers the question the notification raises — "why is it
@@ -429,11 +419,11 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         val detailsLabel =
-            loadStringRes(
+            getString(
                 if (detailsExpanded) {
-                    Res.string.always_on_notif_hide_details
+                    R.string.always_on_notif_hide_details
                 } else {
-                    Res.string.always_on_notif_show_details
+                    R.string.always_on_notif_show_details
                 },
             )
 
@@ -449,14 +439,14 @@ class NotificationRelayService : Service() {
         // threshold, so no bundle is formed and nothing gets stapled to it.
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
-            .setContentTitle(loadStringRes(Res.string.always_on_notif_title))
+            .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
             .apply {
                 breakdown?.let {
                     setStyle(
                         NotificationCompat
                             .BigTextStyle()
-                            .setBigContentTitle(loadStringRes(Res.string.always_on_notif_title))
+                            .setBigContentTitle(getString(R.string.always_on_notif_title))
                             .bigText(contentText + "\n\n" + it.joinToString("\n")),
                     )
                 }
@@ -470,14 +460,14 @@ class NotificationRelayService : Service() {
             .build()
     }
 
-    private suspend fun createNotificationChannel() {
+    private fun createNotificationChannel() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                loadStringRes(Res.string.always_on_notif_channel_name),
+                getString(R.string.always_on_notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = loadStringRes(Res.string.always_on_notif_channel_description)
+                description = getString(R.string.always_on_notif_channel_description)
                 setShowBadge(false)
             }
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

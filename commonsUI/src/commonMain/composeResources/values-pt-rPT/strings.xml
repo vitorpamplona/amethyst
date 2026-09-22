@@ -1791,17 +1791,6 @@
     <string name="add_to_public_bookmarks">Adicionar aos Itens Salvos Públicos</string>
     <string name="ai_writing_setting_description">Usa um modelo de IA no dispositivo para sugerir correções de texto e mudanças de tom.</string>
     <string name="ai_writing_setting_title">Sugerir melhorias de texto</string>
-    <string name="always_on_notif_channel_description">Mantém as conexões com seus relays de caixa de entrada ativas para notificações em tempo real</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Conectado a %1$d relay de entrada</item>
-        <item quantity="other">Conectado a %1$d relays de entrada</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Conectado a %1$d relay</item>
-        <item quantity="other">Conectado a %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
-    <string name="always_on_notif_title">Notificações do Amethyst ativas</string>
     <string name="app_notification_calls_channel_description">Notificações de chamadas de voz e vídeo recebidas</string>
     <string name="app_notification_calls_channel_name">Chamadas recebidas</string>
     <string name="app_notification_chess_challenge_accepted">%1$s aceitou seu desafio de xadrez</string>
@@ -1910,15 +1899,12 @@
     <string name="call_incoming_video">Chamada de vídeo recebida\u2026</string>
     <string name="call_incoming_voice">Chamada de voz recebida\u2026</string>
     <string name="call_mute">Silenciar</string>
-    <string name="call_ongoing">Chamadas</string>
-    <string name="call_ongoing_description">Notificação de chamada em andamento</string>
     <string name="call_permission_denied_video">O Amethyst precisa de acesso à câmera e ao microfone para iniciar uma chamada de vídeo. Habilite-os nas configurações do aplicativo.</string>
     <string name="call_permission_denied_voice">O Amethyst precisa de acesso ao microfone para iniciar uma chamada de voz. Habilite-o nas configurações do aplicativo.</string>
     <string name="call_reject">Rejeitar</string>
     <string name="call_settings">Configurações de Chamada</string>
     <string name="call_speaker">Alto-falante</string>
     <string name="call_unmute">Ativar som</string>
-    <string name="call_with">Chamada com %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL de retorno de chamada não encontrado da resposta %1$s</string>
     <string name="cancel">Cancelar</string>
     <string name="cashu">Token Cashu</string>

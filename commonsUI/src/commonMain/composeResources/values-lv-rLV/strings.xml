@@ -1812,19 +1812,6 @@
     <string name="add_to_public_bookmarks">Pievienot publiskajām grāmatzīmēm</string>
     <string name="ai_writing_setting_description">Izmanto ierīcē esošu MI modeli, lai piedāvātu teksta labojumus un toņa izmaiņas.</string>
     <string name="ai_writing_setting_title">Piedāvāt teksta uzlabojumus</string>
-    <string name="always_on_notif_channel_description">Uztur aktīvus savienojumus ar jūsu iesūtnes relay reāllaika paziņojumiem</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="zero">Savienots ar %1$d iesūtnes relay</item>
-        <item quantity="one">Savienots ar %1$d iesūtnes relay</item>
-        <item quantity="other">Savienots ar %1$d iesūtnes relay</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="zero">Savienots ar %1$d relay</item>
-        <item quantity="one">Savienots ar %1$d relay</item>
-        <item quantity="other">Savienots ar %1$d relay</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Savienojas ar iesūtnes relay…</string>
-    <string name="always_on_notif_title">Amethyst paziņojumi aktīvi</string>
     <string name="app_notification_calls_channel_description">Paziņojumi par ienākošajiem balss un video zvaniem</string>
     <string name="app_notification_calls_channel_name">Ienākošie zvani</string>
     <string name="app_notification_chess_challenge_accepted">%1$s pieņēma jūsu šaha izaicinājumu</string>
@@ -1936,15 +1923,12 @@
     <string name="call_incoming_video">Ienākošs video zvans…</string>
     <string name="call_incoming_voice">Ienākošs balss zvans…</string>
     <string name="call_mute">Izslēgt mikrofonu</string>
-    <string name="call_ongoing">Zvani</string>
-    <string name="call_ongoing_description">Notiekošā zvana paziņojums</string>
     <string name="call_permission_denied_video">Amethyst nepieciešama kameras un mikrofona piekļuve, lai sāktu video zvanu. Lūdzu, iespējojiet tos lietotnes iestatījumos.</string>
     <string name="call_permission_denied_voice">Amethyst nepieciešama mikrofona piekļuve, lai sāktu balss zvanu. Lūdzu, iespējojiet to lietotnes iestatījumos.</string>
     <string name="call_reject">Noraidīt</string>
     <string name="call_settings">Zvanu iestatījumi</string>
     <string name="call_speaker">Skaļrunis</string>
     <string name="call_unmute">Ieslēgt mikrofonu</string>
-    <string name="call_with">Zvans ar %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Atsaukšanas URL nav atrasts %1$s atbildē</string>
     <string name="cancel">Atcelt</string>
     <string name="cashu">Cashu žetons</string>

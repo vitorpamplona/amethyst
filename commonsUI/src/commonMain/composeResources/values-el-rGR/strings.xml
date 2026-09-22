@@ -1792,17 +1792,6 @@
     <string name="add_to_public_bookmarks">Προσθήκη στους Δημόσιους Σελιδοδείκτες</string>
     <string name="ai_writing_setting_description">Χρησιμοποιεί ένα τοπικό μοντέλο AI για να προτείνει διορθώσεις κειμένου και αλλαγές τόνου.</string>
     <string name="ai_writing_setting_title">Πρόταση βελτιώσεων κειμένου</string>
-    <string name="always_on_notif_channel_description">Διατηρεί ενεργές τις συνδέσεις στα relays εισερχομένων για πραγματικού χρόνου ειδοποιήσεις</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Συνδέθηκε σε %1$d relay εισερχομένων</item>
-        <item quantity="other">Συνδέθηκε σε %1$d relays εισερχομένων</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Συνδέθηκε σε %1$d relay</item>
-        <item quantity="other">Συνδέθηκε σε %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Σύνδεση στα relays εισερχομένων…</string>
-    <string name="always_on_notif_title">Ειδοποιήσεις Amethyst ενεργές</string>
     <string name="app_notification_calls_channel_description">Ειδοποιήσεις για εισερχόμενες φωνητικές και βιντεοκλήσεις</string>
     <string name="app_notification_calls_channel_name">Εισερχόμενες κλήσεις</string>
     <string name="app_notification_chess_challenge_accepted">Ο %1$s αποδέχθηκε την πρόκλησή σας στο σκάκι</string>
@@ -1916,15 +1905,12 @@
     <string name="call_incoming_video">Εισερχόμενη βιντεοκλήση…</string>
     <string name="call_incoming_voice">Εισερχόμενη φωνητική κλήση…</string>
     <string name="call_mute">Σίγαση</string>
-    <string name="call_ongoing">Κλήσεις</string>
-    <string name="call_ongoing_description">Ειδοποίηση ενεργής κλήσης</string>
     <string name="call_permission_denied_video">Το Amethyst χρειάζεται πρόσβαση στην κάμερα και στο μικρόφωνο για να ξεκινήσει βιντεοκλήση. Ενεργοποιήστε τα στις ρυθμίσεις της εφαρμογής.</string>
     <string name="call_permission_denied_voice">Το Amethyst χρειάζεται πρόσβαση στο μικρόφωνο για να ξεκινήσει φωνητική κλήση. Ενεργοποιήστε το στις ρυθμίσεις της εφαρμογής.</string>
     <string name="call_reject">Απόρριψη</string>
     <string name="call_settings">Ρυθμίσεις κλήσεων</string>
     <string name="call_speaker">Ηχείο</string>
     <string name="call_unmute">Άρση σίγασης</string>
-    <string name="call_with">Κλήση με %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Η διεύθυνση URL επανάκλησης δεν βρέθηκε στην απόκριση του %1$s</string>
     <string name="cancel">Ακύρωση</string>
     <string name="cashu_checking_mint">Έλεγχος του mint…</string>

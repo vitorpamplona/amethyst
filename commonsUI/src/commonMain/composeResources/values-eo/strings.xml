@@ -1834,17 +1834,6 @@
     <string name="add_to_public_bookmarks">Aldoni al Publikaj Legosignoj</string>
     <string name="ai_writing_setting_description">Uzas aparatan AI-modelon por proponi tekstajn korektojn kaj tondoŝanĝojn.</string>
     <string name="ai_writing_setting_title">Proponi tekstajn plibonigojn</string>
-    <string name="always_on_notif_channel_description">Konservas konektojn al viaj enirkestaj relay-oj aktivaj por realtempaj sciigoj</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Konektita al %1$d enirkest-relay</item>
-        <item quantity="other">Konektita al %1$d enirkest-relays</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Konektita al %1$d relay</item>
-        <item quantity="other">Konektita al %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_connecting">Konektante al enirkestaj relay-oj…</string>
-    <string name="always_on_notif_title">Amethyst-Sciigoj Aktivaj</string>
     <string name="app_notification_calls_channel_description">Sciigoj por alvenantaj voĉaj kaj vidaj alvokoj</string>
     <string name="app_notification_calls_channel_name">Alvenantaj alvokoj</string>
     <string name="app_notification_chess_challenge_accepted">%1$s akceptis vian ŝakinviton</string>
@@ -1961,15 +1950,12 @@
     <string name="call_incoming_video">Alvenanta vida alvoko…</string>
     <string name="call_incoming_voice">Alvenanta voĉa alvoko…</string>
     <string name="call_mute">Silentigi</string>
-    <string name="call_ongoing">Alvokoj</string>
-    <string name="call_ongoing_description">Sciigo pri daŭranta alvoko</string>
     <string name="call_permission_denied_video">Amethyst bezonas aliron al fotilo kaj mikrofono por komenci vidan alvokon. Bonvolu ebligi ilin en la aplikaĵagordoj.</string>
     <string name="call_permission_denied_voice">Amethyst bezonas aliron al mikrofono por komenci voĉan alvokon. Bonvolu ebligi ĝin en la aplikaĵagordoj.</string>
     <string name="call_reject">Rifuzi</string>
     <string name="call_settings">Alvokoagordoj</string>
     <string name="call_speaker">Laŭtparolisto</string>
     <string name="call_unmute">Malsilentigi</string>
-    <string name="call_with">Alvoko kun %1$s</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Atgara URL ne trovita en la respondo de %1$s</string>
     <string name="cancel">Nuligi</string>
     <string name="cashu">Cashu Signo</string>

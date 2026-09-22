@@ -259,4 +259,40 @@
     <string name="health_connect_rationale_activity_label">Health Connect és Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">Aktív kapcsolatot tart fenn a beérkező üzenetek átjátszóival a valós idejű értesítések érdekében</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
+        <item quantity="other">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
+        <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
+    </plurals>
+    <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
+    <string name="always_on_notif_hide_details">Részletek elrejtése</string>
+    <string name="always_on_notif_show_details">Részletek megjelenítése</string>
+    <string name="always_on_notif_tile_subtitle_off">Ki</string>
+    <string name="always_on_notif_tile_subtitle_on">Be</string>
+    <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
+    <string name="blossom_sync_cancel">Mégsem</string>
+    <string name="blossom_sync_channel_description">Megjeleníti a folyamatot, miközben a fájljait átmásolja a Blossom kiszolgálókra.</string>
+    <string name="blossom_sync_channel_name">Blossom szinkronizálás</string>
+    <string name="call_ongoing">Hívások</string>
+    <string name="call_ongoing_description">Értesítés a folyamatban lévő hívásról</string>
+    <string name="call_with">Hívás ezzel: %1$s</string>
+    <string name="pow_notification_channel_description">Azokat a bejegyzéseket jeleníti meg, amelyek még mindig a NIP-13 szerinti munkabizonyítást végzik, így azok befejeződhetnek, miután kilép az alkalmazásból.</string>
+    <string name="pow_notification_channel_name">„Munkabizonyítás” bányászata</string>
+    <string name="pow_notification_send_without_pow">Küldés most</string>
+    <string name="blossom_syncing">Fájlok másolása a kiszolgálók között…</string>
+    <string name="call_hangup">Hívás befejezése</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • bányászat %2$d biten</item>
+        <item quantity="other">%1$s • bányászat %2$d biten</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">„Munkabizonyítás” bányászata… (%1$d bejegyzés a sorban)</item>
+        <item quantity="other">Proof of work bányászata… (%1$d bejegyzés a sorban)</item>
+    </plurals>
+    <string name="pow_mining_title">„Munkabizonyítás” bányászata</string>
+    <string name="pow_notification_cancel_all">Mégse</string>
 </resources>

@@ -259,4 +259,40 @@
     <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <string name="always_on_notif_channel_description">आपके आगतपेटिका पुनःप्रसारकों के साथ संयोजन सक्रिय रखता है तत्काल सूचनाओं के लिए</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">संयोजित %1$d आगतपेटिका पुनःप्रसारक के साथ</item>
+        <item quantity="other">संयोजित %1$d आगतपेटिका पुनःप्रसारकों के साथ</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">संयोजित %1$d पुनःप्रसारक के साथ</item>
+        <item quantity="other">संयोजित %1$d पुनःप्रसारकों के साथ</item>
+    </plurals>
+    <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
+    <string name="always_on_notif_hide_details">विवरण छिपाएँ</string>
+    <string name="always_on_notif_show_details">विवरण दिखाएँ</string>
+    <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>
+    <string name="always_on_notif_tile_subtitle_on">सक्रिय</string>
+    <string name="always_on_notif_title">अमेथिस्ट सूचनाएँ सक्रिय</string>
+    <string name="blossom_sync_cancel">निरस्त</string>
+    <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके ब्लोस्सम सेवासंगणकों में।</string>
+    <string name="blossom_sync_channel_name">ब्लोस्सम॰ समचरणीकरण</string>
+    <string name="call_ongoing">आह्वान</string>
+    <string name="call_ongoing_description">चालू आह्वान सूचना</string>
+    <string name="call_with">%1$s के साथ आह्वान</string>
+    <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
+    <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
+    <string name="pow_notification_send_without_pow">अभी भेजें</string>
+    <string name="blossom_syncing">आपके अभिलेखों की अनुकृति सभी सेवासंगणकों में…</string>
+    <string name="call_hangup">समापन</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s। खनन %2$d द्व्यंक पर</item>
+        <item quantity="other">%1$s। खनन %2$d द्व्यंक पर</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">श्रमप्रमाण खनन… (%1$d पत्र पंक्ति में)</item>
+        <item quantity="other">श्रमप्रमाण खनन… (%1$d पत्र पंक्ति में)</item>
+    </plurals>
+    <string name="pow_mining_title">श्रमप्रमाण खनन</string>
+    <string name="pow_notification_cancel_all">निरस्त</string>
 </resources>
