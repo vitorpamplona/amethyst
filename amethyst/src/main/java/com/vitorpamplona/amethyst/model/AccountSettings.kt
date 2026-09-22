@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupDiff
 import com.vitorpamplona.amethyst.commons.model.backups.backupSlot
+import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
@@ -96,6 +97,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
+import java.util.concurrent.ConcurrentHashMap
 
 val DefaultSignerPermissions =
     listOf(
@@ -1172,6 +1174,20 @@ class AccountSettings(
      */
     val backupConflicts = MutableStateFlow<Map<String, ReplaceableBackupConflict>>(emptyMap())
 
+    /**
+     * Slots whose conflict the user chose to decide later. Lives as long as the account is
+     * loaded, so it survives activity recreation, and is cleared when another app changes
+     * the slot again (a new external change deserves a new question).
+     */
+    val snoozedBackupConflicts = MutableStateFlow<Set<String>>(emptySet())
+
+    // Re-runs the update that raised each open conflict, once the user keeps the new version.
+    private val backupConflictRetries = ConcurrentHashMap<String, () -> Unit>()
+
+    // Versions whose conflict is being resolved (accepted or restored). They must not raise
+    // the same conflict again while the resolution is in flight.
+    private val resolvingBackupVersions = ConcurrentSet<HexKey>()
+
     // Externally signed versions the user explicitly chose to keep over the backup.
     private val acceptedExternalVersions = ConcurrentSet<HexKey>()
 
@@ -1179,7 +1195,7 @@ class AccountSettings(
      * Decides whether [incoming] may overwrite the [saved] backup. Versions signed by this app
      * always may. A newer version signed elsewhere that removed items from the saved one is
      * held back and raised as a [ReplaceableBackupConflict]; [retry] re-runs the caller's
-     * update once the user accepts it.
+     * update once the user keeps it.
      */
     private fun <T : Event> acceptIntoBackup(
         saved: T?,
@@ -1187,37 +1203,101 @@ class AccountSettings(
         retry: () -> Unit,
     ): Boolean {
         if (saved?.id == incoming.id) return false
+        if (resolvingBackupVersions.contains(incoming.id)) return false
 
         val slot = backupSlot(incoming)
         val pending = backupConflicts.value[slot]
 
+        // The same version re-emitted by the cache: the open conflict already describes it.
+        if (pending != null && pending.incoming.id == incoming.id) return false
+
+        val isLocal = LocallySignedEvents.contains(incoming.id)
+
         // While a conflict is open, even edits made here are built on top of the external
         // version, so they are still compared with the version the user may want to restore.
-        val reference = pending?.saved ?: saved?.takeUnless { LocallySignedEvents.contains(incoming.id) }
+        val reference = pending?.saved ?: saved?.takeUnless { isLocal }
 
         if (reference != null && !acceptedExternalVersions.contains(incoming.id)) {
             val diff = ReplaceableBackupDiff.detectLoss(reference, incoming)
             if (diff != null) {
-                val conflict =
-                    ReplaceableBackupConflict(reference, incoming, diff) {
-                        acceptedExternalVersions.add(incoming.id)
-                        retry()
-                    }
+                // A local edit keeps the external change as the conflict's cause, and keeps
+                // it snoozed; a new external change is a new question.
+                val cause = if (isLocal && pending != null) pending.cause else incoming
+                val conflict = ReplaceableBackupConflict(reference, incoming, cause, diff)
+                backupConflictRetries[slot] = retry
                 backupConflicts.update { it + (slot to conflict) }
+                if (!isLocal) snoozedBackupConflicts.update { it - slot }
                 return false
             }
         }
 
-        if (backupConflicts.value.containsKey(slot)) {
-            backupConflicts.update { it - slot }
-        }
+        dropBackupConflict(slot)
         return true
     }
 
-    fun dismissBackupConflict(conflict: ReplaceableBackupConflict) {
-        backupConflicts.update { current ->
-            if (current[conflict.slot] === conflict) current - conflict.slot else current
+    private fun dropBackupConflict(slot: String) {
+        if (backupConflicts.value.containsKey(slot)) {
+            backupConflicts.update { it - slot }
         }
+        backupConflictRetries.remove(slot)
+        snoozedBackupConflicts.update { it - slot }
+    }
+
+    /**
+     * Removes [conflict] if it is still the open conflict of its slot. Returns false when it
+     * was already resolved or replaced by a newer one, so callers never act on a stale conflict.
+     */
+    private fun claimBackupConflict(conflict: ReplaceableBackupConflict): (() -> Unit)? {
+        var claimed = false
+        backupConflicts.update { current ->
+            claimed = current[conflict.slot] === conflict
+            if (claimed) current - conflict.slot else current
+        }
+        if (!claimed) return null
+        snoozedBackupConflicts.update { it - conflict.slot }
+        return backupConflictRetries.remove(conflict.slot) ?: {}
+    }
+
+    /** Keeps the new version: the backup moves forward to [ReplaceableBackupConflict.incoming]. */
+    fun keepIncomingVersion(conflict: ReplaceableBackupConflict) {
+        val retry = claimBackupConflict(conflict) ?: return
+        acceptedExternalVersions.add(conflict.incoming.id)
+        retry()
+    }
+
+    /**
+     * Starts restoring the saved version: claims [conflict] and stops its incoming version
+     * from raising it again while the saved one is re-signed. Returns null when the conflict
+     * is stale (already resolved, replaced or dropped); otherwise a token to hand back to
+     * [finishRestoringSavedVersion].
+     */
+    fun startRestoringSavedVersion(conflict: ReplaceableBackupConflict): (() -> Unit)? {
+        val retry = claimBackupConflict(conflict) ?: return null
+        resolvingBackupVersions.add(conflict.incoming.id)
+        return retry
+    }
+
+    /**
+     * Ends a restore. On failure the conflict is reopened so the user can try again, unless
+     * something else (a newer change, a deletion) took the slot meanwhile.
+     */
+    fun finishRestoringSavedVersion(
+        conflict: ReplaceableBackupConflict,
+        token: () -> Unit,
+        restored: Boolean,
+    ) {
+        resolvingBackupVersions.remove(conflict.incoming.id)
+        if (restored) return
+        var reopened = false
+        backupConflicts.update { current ->
+            reopened = !current.containsKey(conflict.slot)
+            if (reopened) current + (conflict.slot to conflict) else current
+        }
+        if (reopened) backupConflictRetries[conflict.slot] = token
+    }
+
+    fun snoozeBackupConflict(conflict: ReplaceableBackupConflict) {
+        snoozedBackupConflicts.update { it + conflict.slot }
     }
 
     fun updateLocalRelayServers(servers: Set<String>) {
@@ -1312,6 +1392,8 @@ class AccountSettings(
      * LocalCache on next launch and resurrect the deleted wallet.
      */
     fun clearCashuWallet() {
+        // A deleted wallet must not be restorable from an open conflict.
+        dropBackupConflict(backupSlotOf(CashuWalletEvent.KIND))
         if (backupCashuWallet != null) {
             backupCashuWallet = null
             saveAccountSettings()
@@ -1320,6 +1402,7 @@ class AccountSettings(
 
     /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
     fun clearNutzapInfo() {
+        dropBackupConflict(backupSlotOf(NutzapInfoEvent.KIND))
         if (backupNutzapInfo != null) {
             backupNutzapInfo = null
             saveAccountSettings()

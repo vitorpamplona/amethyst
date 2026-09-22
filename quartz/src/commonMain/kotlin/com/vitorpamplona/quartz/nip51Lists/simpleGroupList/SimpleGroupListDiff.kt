@@ -31,7 +31,5 @@ class SimpleGroupListDiff(
     val groups: ListDiff<GroupTag>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = groups.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = groups.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(groups.hasRemovals()) || privateItems.isRemoval()
 }

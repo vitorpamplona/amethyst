@@ -32,8 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 interface EventDiff {
     /** The newer version dropped something the older one had. */
     fun removesData(): Boolean
-
-    fun isEmpty(): Boolean
 }
 
 /**
@@ -135,6 +133,14 @@ enum class ContentChange {
     ;
 
     fun isRemoval() = this == CLEARED
+
+    /**
+     * Whether public items that disappeared alongside this change are really gone. When the
+     * private section only just appeared, they were most likely moved into it (made
+     * private), which loses nothing. A rewritten private section can't vouch for them: NIP-44
+     * re-encrypts on every save, so it looks changed even when it holds the same items.
+     */
+    fun publicRemovalsAreLoss(hasPublicRemovals: Boolean) = hasPublicRemovals && this != ADDED
 
     companion object {
         fun between(

@@ -30,6 +30,4 @@ class ConcordCommunityListDiff(
     val communities: ContentChange,
 ) : EventDiff {
     override fun removesData() = communities.isRemoval()
-
-    override fun isEmpty() = communities == ContentChange.NONE
 }

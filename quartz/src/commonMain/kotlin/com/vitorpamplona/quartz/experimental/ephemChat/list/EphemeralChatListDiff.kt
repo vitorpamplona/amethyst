@@ -32,7 +32,5 @@ class EphemeralChatListDiff(
     val rooms: ListDiff<RoomId>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = rooms.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = rooms.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(rooms.hasRemovals()) || privateItems.isRemoval()
 }

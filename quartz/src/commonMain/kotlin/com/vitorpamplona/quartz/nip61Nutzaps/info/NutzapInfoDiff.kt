@@ -36,6 +36,4 @@ class NutzapInfoDiff(
     val p2pkPubkey: ValueChange<HexKey>?,
 ) : EventDiff {
     override fun removesData() = mints.hasRemovals() || relays.hasRemovals() || p2pkPubkey?.isRemoval() == true
-
-    override fun isEmpty() = mints.isEmpty() && relays.isEmpty() && p2pkPubkey == null
 }

@@ -30,6 +30,4 @@ class CashuWalletDiff(
     val wallet: ContentChange,
 ) : EventDiff {
     override fun removesData() = wallet.isRemoval()
-
-    override fun isEmpty() = wallet == ContentChange.NONE
 }

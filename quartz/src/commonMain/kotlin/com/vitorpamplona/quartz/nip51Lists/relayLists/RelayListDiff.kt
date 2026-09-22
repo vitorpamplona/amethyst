@@ -32,7 +32,5 @@ class RelayListDiff(
     val relays: ListDiff<NormalizedRelayUrl>,
     val privateRelays: ContentChange,
 ) : EventDiff {
-    override fun removesData() = relays.hasRemovals() || privateRelays.isRemoval()
-
-    override fun isEmpty() = relays.isEmpty() && privateRelays == ContentChange.NONE
+    override fun removesData() = privateRelays.publicRemovalsAreLoss(relays.hasRemovals()) || privateRelays.isRemoval()
 }

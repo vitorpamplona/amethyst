@@ -30,6 +30,4 @@ class PaymentTargetsDiff(
     val targets: ListDiff<PaymentTarget>,
 ) : EventDiff {
     override fun removesData() = targets.hasRemovals()
-
-    override fun isEmpty() = targets.isEmpty()
 }

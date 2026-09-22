@@ -31,7 +31,5 @@ class GeohashListDiff(
     val geohashes: ListDiff<String>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = geohashes.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = geohashes.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(geohashes.hasRemovals()) || privateItems.isRemoval()
 }

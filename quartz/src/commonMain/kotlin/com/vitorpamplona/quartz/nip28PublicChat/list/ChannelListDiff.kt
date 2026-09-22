@@ -32,7 +32,5 @@ class ChannelListDiff(
     val channels: ListDiff<ChannelTag>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = channels.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = channels.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(channels.hasRemovals()) || privateItems.isRemoval()
 }

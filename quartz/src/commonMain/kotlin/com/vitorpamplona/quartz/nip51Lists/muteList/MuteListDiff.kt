@@ -32,7 +32,5 @@ class MuteListDiff(
     val publicMutes: ListDiff<MuteTag>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = publicMutes.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = publicMutes.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(publicMutes.hasRemovals()) || privateItems.isRemoval()
 }

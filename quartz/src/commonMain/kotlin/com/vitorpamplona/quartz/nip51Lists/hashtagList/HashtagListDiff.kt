@@ -31,7 +31,5 @@ class HashtagListDiff(
     val hashtags: ListDiff<String>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = hashtags.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = hashtags.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(hashtags.hasRemovals()) || privateItems.isRemoval()
 }

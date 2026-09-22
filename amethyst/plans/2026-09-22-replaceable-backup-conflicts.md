@@ -48,14 +48,29 @@ only surviving copy of the user's data is gone.
    channel ids to names from `LocalCache`. It offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
-     `created_at = max(now, incoming + 1)` and publishes it.
+     `created_at = max(now, incoming + 1)` and publishes it through
+     `EventBroadcaster.sendRestoredVersion`: where a normal save of that kind goes, and for
+     the user's own relay lists (NIP-65, DM, key package) also to every relay the restored
+     list names, since the lossy version may have dropped them from the outbox set.
    - **Use new version** — `Account.acceptExternalVersion` whitelists that id and re-runs
      the original update, so the backup moves forward.
-   - **Decide later** — hides it for this session only; the backup stays frozen.
+   - **Decide later** — snoozes the slot in `AccountSettings.snoozedBackupConflicts` while
+     the account is loaded (survives rotation) and until another app changes it again; the
+     backup stays frozen.
+
+   Both resolutions first *claim* the conflict: they act only if it is still the open
+   conflict of its slot, so a stale dialog, a double tap, or a conflict dropped because the
+   wallet/nutzap info was deleted does nothing. While a restore is signing, its incoming
+   version can't re-raise the conflict; a failed restore reopens it. The same incoming
+   version re-emitted by the cache is ignored without re-diffing.
+
+   Public items removed while the private section went from empty to filled are treated as
+   made private, not lost (`ContentChange.publicRemovalsAreLoss`).
 
    While a conflict is open, edits made in Amethyst are compared against the frozen
    saved version too (they are built on top of the external one), so they cannot
-   silently clear the conflict.
+   silently clear the conflict. They move the conflict's `incoming` forward but keep the
+   external version as its `cause` (the dialog shows that date) and keep it snoozed.
 
 Conflicts are not persisted: the frozen backup is reloaded on start, the newer relay
 version replaces it in `LocalCache`, and the same conflict is detected again.

@@ -32,7 +32,5 @@ class CommunityListDiff(
     val communities: ListDiff<CommunityTag>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = communities.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = communities.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(communities.hasRemovals()) || privateItems.isRemoval()
 }

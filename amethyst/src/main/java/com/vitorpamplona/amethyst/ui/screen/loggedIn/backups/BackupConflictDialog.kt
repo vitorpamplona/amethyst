@@ -33,8 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateSetOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -53,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ItemChange
@@ -95,24 +92,24 @@ private const val MAX_VALUE_LENGTH = 80
  * lists what was removed, added and changed, grouped by what each entry is (people, relays,
  * hashtags, profile fields…).
  *
- * One conflict at a time; "decide later" only hides the question for this session: the
- * conflict stays open, so the backup stays frozen on the saved version and the question
- * comes back on the next launch.
+ * One conflict at a time; "decide later" snoozes it while the account stays loaded (so it
+ * survives rotation) and until another app changes that event again: the conflict stays
+ * open, so the backup stays frozen on the saved version and the question comes back on the
+ * next launch.
  */
 @Composable
 fun BackupConflictDialog(accountViewModel: AccountViewModel) {
-    val conflicts by accountViewModel.account.settings.backupConflicts
-        .collectAsStateWithLifecycle()
+    val settings = accountViewModel.account.settings
+    val conflicts by settings.backupConflicts.collectAsStateWithLifecycle()
+    val snoozed by settings.snoozedBackupConflicts.collectAsStateWithLifecycle()
 
-    val snoozed = remember { mutableStateSetOf<HexKey>() }
-
-    val conflict = conflicts.values.firstOrNull { it.incoming.id !in snoozed } ?: return
+    val conflict = conflicts.values.firstOrNull { it.slot !in snoozed } ?: return
 
     BackupConflictDialog(
         conflict = conflict,
         onRestore = { accountViewModel.launchSigner { accountViewModel.account.restoreBackupOver(conflict) } },
         onKeepNew = { accountViewModel.account.acceptExternalVersion(conflict) },
-        onDismiss = { snoozed.add(conflict.incoming.id) },
+        onDismiss = { settings.snoozeBackupConflict(conflict) },
     )
 }
 
@@ -137,7 +134,7 @@ private fun BackupConflictDialog(
                     fontStyle = FontStyle.Italic,
                 )
                 Spacer(Modifier.height(12.dp))
-                Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.incoming.createdAt, context)))
+                Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.cause.createdAt, context)))
 
                 DiffDetails(conflict.diff)
 

@@ -32,7 +32,5 @@ class FavoriteAlgoFeedsListDiff(
     val feeds: ListDiff<AddressBookmark>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = feeds.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = feeds.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(feeds.hasRemovals()) || privateItems.isRemoval()
 }

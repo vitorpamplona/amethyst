@@ -1893,21 +1893,27 @@ class Account(
     /**
      * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
      * version (same kind, tags and content, so NIP-44 private items stay readable) with a
-     * timestamp newer than the external one, and publishes it so it replaces that version.
+     * timestamp newer than the current one, and publishes it so it replaces that version.
+     *
+     * Does nothing if the conflict is stale (already resolved, replaced by a newer one, or
+     * dropped because the event was deleted), which also makes a double tap harmless.
      */
     suspend fun restoreBackupOver(conflict: ReplaceableBackupConflict) {
-        val saved = conflict.saved
-        val createdAt = maxOf(TimeUtils.now(), conflict.incoming.createdAt + 1)
-        val resigned = signer.sign<Event>(createdAt, saved.kind, saved.tags, saved.content)
-        settings.dismissBackupConflict(conflict)
-        sendMyPublicAndPrivateOutbox(resigned)
+        val token = settings.startRestoringSavedVersion(conflict) ?: return
+        var restored = false
+        try {
+            val saved = conflict.saved
+            val createdAt = maxOf(TimeUtils.now(), conflict.incoming.createdAt + 1)
+            val resigned = signer.sign<Event>(createdAt, saved.kind, saved.tags, saved.content)
+            broadcaster.sendRestoredVersion(resigned)
+            restored = true
+        } finally {
+            settings.finishRestoringSavedVersion(conflict, token, restored)
+        }
     }
 
-    /** Resolves a [ReplaceableBackupConflict] in favor of the version from the other client. */
-    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) {
-        settings.dismissBackupConflict(conflict)
-        conflict.keepIncoming()
-    }
+    /** Resolves a [ReplaceableBackupConflict] in favor of the current version. No-op when stale. */
+    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.keepIncomingVersion(conflict)
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

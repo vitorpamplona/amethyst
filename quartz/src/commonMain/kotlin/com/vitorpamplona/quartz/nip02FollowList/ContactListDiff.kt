@@ -31,6 +31,4 @@ class ContactListDiff(
     val follows: ListDiff<ContactTag>,
 ) : EventDiff {
     override fun removesData() = follows.hasRemovals()
-
-    override fun isEmpty() = follows.isEmpty()
 }

@@ -110,6 +110,23 @@ class EventDiffTest {
     }
 
     @Test
+    fun makingPublicItemsPrivateIsNotALoss() {
+        val older = sign<MuteListEvent>(MuteListEvent.KIND, 100, arrayOf(arrayOf("p", alice), arrayOf("word", "crypto")), "")
+        val newer = sign<MuteListEvent>(MuteListEvent.KIND, 200, arrayOf(), "encrypted-now-holding-both")
+        val diff = assertNotNull(newer.diffFrom(older))
+        assertEquals(2, diff.publicMutes.removed.size)
+        assertEquals(ContentChange.ADDED, diff.privateItems)
+        assertFalse(diff.removesData())
+    }
+
+    @Test
+    fun droppingPublicItemsWhileRewritingPrivateOnesIsALoss() {
+        val older = sign<MuteListEvent>(MuteListEvent.KIND, 100, arrayOf(arrayOf("p", alice)), "cipher-a")
+        val newer = sign<MuteListEvent>(MuteListEvent.KIND, 200, arrayOf(), "cipher-b")
+        assertTrue(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
     fun nip65DiffsRelayTypes() {
         val older =
             sign<AdvertisedRelayListEvent>(

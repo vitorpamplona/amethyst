@@ -30,6 +30,4 @@ class Bolt12OfferListDiff(
     val offers: ListDiff<String>,
 ) : EventDiff {
     override fun removesData() = offers.hasRemovals()
-
-    override fun isEmpty() = offers.isEmpty()
 }

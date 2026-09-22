@@ -31,6 +31,4 @@ class AdvertisedRelayListDiff(
     val relays: ListDiff<AdvertisedRelayInfo>,
 ) : EventDiff {
     override fun removesData() = relays.hasRemovals()
-
-    override fun isEmpty() = relays.isEmpty()
 }

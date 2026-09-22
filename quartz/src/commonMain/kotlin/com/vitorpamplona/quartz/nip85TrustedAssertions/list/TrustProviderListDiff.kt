@@ -32,7 +32,5 @@ class TrustProviderListDiff(
     val providers: ListDiff<ServiceProviderTag>,
     val privateItems: ContentChange,
 ) : EventDiff {
-    override fun removesData() = providers.hasRemovals() || privateItems.isRemoval()
-
-    override fun isEmpty() = providers.isEmpty() && privateItems == ContentChange.NONE
+    override fun removesData() = privateItems.publicRemovalsAreLoss(providers.hasRemovals()) || privateItems.isRemoval()
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -120,23 +121,33 @@ enum class BackupEventType {
  * A newer version of one of the account's backed-up replaceable events arrived from outside
  * this app and dropped data the saved version had. The backup keeps [saved] until the user
  * either accepts [incoming] or re-signs [saved] on top of it.
+ *
+ * @property incoming the current version: what "use new version" keeps. Edits made in this
+ * app while the conflict is open are built on top of the external version, so they replace
+ * [incoming] but keep the conflict open.
+ * @property cause the version from the other app that raised the conflict. It stays the same
+ * while local edits move [incoming] forward, so the dialog keeps describing the external change.
+ * @property diff what [incoming] lost compared with [saved].
  */
 @Immutable
 class ReplaceableBackupConflict(
     val saved: Event,
     val incoming: Event,
+    val cause: Event,
     val diff: EventDiff,
-    private val acceptIncoming: () -> Unit,
 ) {
     /** One conflict per replaceable slot: kind for replaceables, kind + d-tag for addressables. */
     val slot: String = backupSlot(incoming)
 
     val eventType: BackupEventType get() = BackupEventType.of(incoming.kind)
-
-    fun keepIncoming() = acceptIncoming()
 }
 
-fun backupSlot(event: Event): String = event.kind.toString() + ":" + (event.tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: "")
+fun backupSlot(event: Event): String = backupSlotOf(event.kind, event.dTag())
+
+fun backupSlotOf(
+    kind: Int,
+    dTag: String = "",
+): String = "$kind:$dTag"
 
 object ReplaceableBackupDiff {
     /**

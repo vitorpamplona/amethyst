@@ -53,8 +53,6 @@ class MetadataDiff(
 
     override fun removesData() = fieldChanges().any { it.isRemoval() } || otherFields.hasRemovals() || identityClaims.hasRemovals()
 
-    override fun isEmpty() = fieldChanges().isEmpty() && otherFields.isEmpty() && identityClaims.isEmpty()
-
     companion object {
         /** JSON keys [UserMetadata] parses into typed fields above. */
         val MODELED_FIELDS = setOf("name", "display_name", "picture", "banner", "website", "about", "pronouns", "nip05", "lud06", "lud16", "clink_offer", "bot", "birthday")

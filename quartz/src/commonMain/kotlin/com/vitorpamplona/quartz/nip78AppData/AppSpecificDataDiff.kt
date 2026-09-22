@@ -30,6 +30,4 @@ class AppSpecificDataDiff(
     val data: ContentChange,
 ) : EventDiff {
     override fun removesData() = data.isRemoval()
-
-    override fun isEmpty() = data == ContentChange.NONE
 }
