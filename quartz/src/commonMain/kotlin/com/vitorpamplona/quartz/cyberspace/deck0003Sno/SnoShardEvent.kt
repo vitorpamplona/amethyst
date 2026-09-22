@@ -42,12 +42,19 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * **Most shards are not reachable, and that is by design.** A shard is an item
  * inside a `kind 33330` bag (`CYBERSPACE_V2.md` §7.6) whose payload is
  * AES-256-GCM ciphertext keyed to the region it was hidden in, so finding one
- * means deriving that region's key: the coordinate system of §2, the key
- * derivation of §7.2 and the discovery scanning of §7.4. Amethyst implements
- * none of that and a reader without the key sees base64 and nothing else — §7.6
- * is explicit that a failed decryption "MUST NOT be treated as an error in the
- * bag". What this class reads is a shard handed over directly: quoted in a
- * note, or fetched by id.
+ * means deriving that region's key: the coordinate system of §2, the Cantor
+ * trees of §4, the derivation of §7.2 and a sweep of the hinted box of §7.7.
+ *
+ * Not for want of somewhere to stand — §7.7 is explicit that "the seeker's own
+ * position never enters this cost, because §7.1 makes looking and walking
+ * equivalent", so a client with no avatar could open a hinted bag. What stops
+ * it is the work: a key is three `O(2^h)` folds of BigInts that double in width
+ * every level, which the spec measures at 816 ms per key at height 16 on a
+ * desktop core and which grows about 2.2x per height above that. Amethyst
+ * implements none of it and a reader without the key sees base64 and nothing
+ * else — §7.6 is explicit that a failed decryption "MUST NOT be treated as an
+ * error in the bag". What this class reads is a shard handed over directly:
+ * quoted in a note, or fetched by id.
  *
  * **An item MAY be unsigned** (§7.6, and §6 of the deck), in which case its
  * `pubkey` is a claim and a client MUST NOT present it as verified authorship.
