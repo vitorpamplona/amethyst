@@ -373,6 +373,7 @@ private fun Nip46RelaysSection(
     connectedRelays: Set<NormalizedRelayUrl>,
     onReconnect: () -> Unit,
 ) {
+    val reconnectingStr = stringRes(Res.string.nip46_signer_reconnecting)
     val context = LocalContext.current
     val anyOffline =
         remember(relays, inboxRelays, connectedRelays) {
@@ -387,7 +388,7 @@ private fun Nip46RelaysSection(
         if (anyOffline) {
             Nip46ReconnectPill {
                 onReconnect()
-                Toast.makeText(context, Res.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, reconnectingStr, Toast.LENGTH_SHORT).show()
             }
         }
     }

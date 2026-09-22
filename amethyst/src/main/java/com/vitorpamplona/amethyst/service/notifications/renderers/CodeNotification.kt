@@ -173,7 +173,7 @@ object CodeNotification {
         patch: StringResource,
         issue: StringResource,
         fallback: StringResource,
-    ): Int {
+    ): StringResource {
         val targetKind = rootId?.let { LocalCache.getNoteIfExists(it)?.event?.kind } ?: return fallback
         return when (targetKind) {
             GitPullRequestEvent.KIND -> pr

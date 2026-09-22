@@ -87,7 +87,7 @@ object NotificationChannels {
                 Entry(
                     nameRes = Res.string.app_notification_scheduled_posts_channel_name,
                     icon = MaterialSymbols.Schedule,
-                    channelId = { loadStringRes(it, Res.string.app_notification_scheduled_posts_channel_id) },
+                    channelId = { loadStringRes(Res.string.app_notification_scheduled_posts_channel_id) },
                     ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
                 ),
                 Entry(

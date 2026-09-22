@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -91,6 +92,7 @@ fun FavoriteAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
 
@@ -123,7 +125,7 @@ fun FavoriteAppsScreen(
         } else {
             FavoriteAppsGrid(
                 apps = apps,
-                onOpen = { FavoriteAppLauncher.launch(context, it) },
+                onOpen = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
                 onRemove = { FavoriteAppsRegistry.remove(it.id) },
                 modifier =
                     Modifier

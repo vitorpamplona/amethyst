@@ -78,7 +78,7 @@ object RelayPurposeSummary {
             named.entries
                 .sortedWith(compareByDescending<Map.Entry<SubPurpose, Set<NormalizedRelayUrl>>> { it.value.size }.thenBy { it.key.name })
                 .map { (purpose, relays) ->
-                    loadPluralStringRes(Res.plurals.relay_purpose_line, relays.size, ctx.getString(SubPurposeLabels.labelOf(purpose)), relays.size)
+                    loadPluralStringRes(Res.plurals.relay_purpose_line, relays.size, loadStringRes(SubPurposeLabels.labelOf(purpose)), relays.size)
                 }.toMutableList()
 
         if (browsing.isNotEmpty()) {

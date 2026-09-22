@@ -142,6 +142,8 @@ fun Nip46SignerScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
+    val copiedStr = stringRes(Res.string.nip46_signer_copied)
+    val regeneratedStr = stringRes(Res.string.nip46_signer_regenerated)
 
     val enabled by account.settings.nip46SignerEnabled.collectAsStateWithLifecycle()
     val secret by account.settings.nip46BunkerSecret.collectAsStateWithLifecycle()
@@ -222,7 +224,7 @@ fun Nip46SignerScreen(
                         uri = uri,
                         onCopy = {
                             scope.launch { clipboard.setText(uri) }
-                            Toast.makeText(context, Res.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, copiedStr, Toast.LENGTH_SHORT).show()
                         },
                         onRegenerate = { confirmRotate = true },
                     )
@@ -264,7 +266,7 @@ fun Nip46SignerScreen(
             onConfirm = {
                 confirmRotate = false
                 signer.rotateAddress()
-                Toast.makeText(context, Res.string.nip46_signer_regenerated, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, regeneratedStr, Toast.LENGTH_SHORT).show()
             },
             onDismiss = { confirmRotate = false },
         )

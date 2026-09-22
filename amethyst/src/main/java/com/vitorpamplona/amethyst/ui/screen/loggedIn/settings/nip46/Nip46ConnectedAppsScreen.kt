@@ -122,6 +122,7 @@ fun Nip46ConnectedAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val reconnectingStr = stringRes(Res.string.nip46_signer_reconnecting)
     val account = accountViewModel.account
     val signerPubKey = remember { account.signer.pubKey }
     val context = LocalContext.current
@@ -186,7 +187,7 @@ fun Nip46ConnectedAppsScreen(
                             online = online,
                             onReconnect = {
                                 account.client.reconnect(ignoreRetryDelays = true)
-                                Toast.makeText(context, Res.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, reconnectingStr, Toast.LENGTH_SHORT).show()
                             },
                             onClick = { nav.nav(Route.ConnectedAppDetail(entry.coordinate)) },
                         )

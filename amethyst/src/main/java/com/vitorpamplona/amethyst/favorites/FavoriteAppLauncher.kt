@@ -28,8 +28,6 @@ import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
@@ -58,13 +56,20 @@ import com.vitorpamplona.quartz.utils.Log
  * failing silently.
  */
 object FavoriteAppLauncher {
+    /**
+     * [stillLoading] is the toast shown when a NostrApp's defining event hasn't
+     * arrived yet. It is passed in already resolved because the launcher runs from
+     * plain onClick lambdas, where neither string accessor - composable or
+     * suspend - can be called.
+     */
     fun launch(
         context: Context,
         app: FavoriteApp,
+        stillLoading: String,
     ) {
         when (app) {
             is FavoriteApp.WebApp -> launchUrl(context, app.url)
-            is FavoriteApp.NostrApp -> launchNostrApp(context, app.coordinate)
+            is FavoriteApp.NostrApp -> launchNostrApp(context, app.coordinate, stillLoading)
         }
     }
 
@@ -114,6 +119,7 @@ object FavoriteAppLauncher {
     private fun launchNostrApp(
         context: Context,
         coordinate: String,
+        stillLoading: String,
     ) {
         val event = LocalCache.getAddressableNoteIfExists(coordinate)?.event
         when (event) {
@@ -147,7 +153,7 @@ object FavoriteAppLauncher {
                 )
             else -> {
                 Log.w("FavoriteAppLauncher") { "Favorited app not resolvable yet: $coordinate" }
-                Toast.makeText(context, Res.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, stillLoading, Toast.LENGTH_SHORT).show()
             }
         }
     }

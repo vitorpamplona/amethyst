@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_static
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_title
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_open
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_tor
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
@@ -120,6 +121,7 @@ private fun EmbeddedNostrAppTab(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
     // Matches FavoriteApp.NostrApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "nostr:$coordinate"
@@ -169,7 +171,7 @@ private fun EmbeddedNostrAppTab(
                 title = title.ifBlank { coordinate },
                 isSandbox = true,
                 onReload = { controller.reload() },
-                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
+                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr) },
                 onInfo = { showAccess = true },
                 onPermissions = { nav.nav(Route.ConnectedAppDetail(permissionCoordinate)) },
                 isFavorite = isFavorite,

@@ -284,9 +284,10 @@ private val conversationSections =
 
 @Composable
 fun NewConversationScreen(nav: INav) {
-    // Accordion: at most one row expanded, keyed by its (unique) title resource id. Survives config
-    // changes so an opened card stays open on rotation.
-    var expandedId by rememberSaveable { mutableStateOf(0) }
+    // Accordion: at most one row expanded, keyed by its (unique) title resource key. The key is
+    // the resource's String id rather than the StringResource itself, which is not Saveable.
+    // Survives config changes so an opened card stays open on rotation.
+    var expandedId by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.new_conversation_title), nav) },
@@ -303,7 +304,7 @@ fun NewConversationScreen(nav: INav) {
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             conversationSections.forEach { section ->
-                item(key = section.header) {
+                item(key = section.header.key) {
                     Text(
                         text = stringRes(section.header),
                         style = MaterialTheme.typography.labelMedium,
@@ -314,11 +315,11 @@ fun NewConversationScreen(nav: INav) {
                 }
 
                 section.types.forEach { type ->
-                    item(key = type.title) {
+                    item(key = type.title.key) {
                         ConversationRow(
                             type = type,
-                            expanded = expandedId == type.title,
-                            onToggle = { expandedId = if (expandedId == type.title) 0 else type.title },
+                            expanded = expandedId == type.title.key,
+                            onToggle = { expandedId = if (expandedId == type.title.key) "" else type.title.key },
                             onCreate = { nav.nav(type.route) },
                         )
                     }

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl as SharedClickableUrl
 
 /**
@@ -40,7 +41,7 @@ fun ClickableUrl(
     urlText: String,
     url: String,
     style: TextStyle = LocalTextStyle.current,
-    onError: (Int, Int) -> Unit = { _, _ -> },
+    onError: (StringResource, StringResource) -> Unit = { _, _ -> },
 ) {
     if (url.startsWith("blossom:")) {
         val context = LocalContext.current

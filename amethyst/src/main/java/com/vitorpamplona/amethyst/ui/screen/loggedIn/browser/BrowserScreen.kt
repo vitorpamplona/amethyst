@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_suggested
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -153,6 +154,7 @@ private fun BrowserLauncher(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
     val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
@@ -304,7 +306,7 @@ private fun BrowserLauncher(
                     suggested = suggested,
                     nsites = followedNsites,
                     napplets = followedNapplets,
-                    onOpenApp = { FavoriteAppLauncher.launch(context, it) },
+                    onOpenApp = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
                     onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
                     onAddApp = { FavoriteAppsRegistry.add(it) },
                     onOpenUrl = { open(it) },

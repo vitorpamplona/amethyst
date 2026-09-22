@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -206,7 +207,7 @@ class AccountZapActions(
         message: String,
         zapType: LnZapEvent.ZapType,
         // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
-        onError: (Int, String?) -> Unit,
+        onError: (StringResource, String?) -> Unit,
         // (code, detail) — the wallet refused or failed the payment; no funds moved.
         onNotPaid: suspend (NwcErrorCode?, String?) -> Unit,
         onTimeout: () -> Unit,

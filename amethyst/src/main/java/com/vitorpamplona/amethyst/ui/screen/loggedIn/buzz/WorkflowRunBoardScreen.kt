@@ -170,6 +170,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The shared **workflow run board** of one Buzz channel — where a team drives an AI agent under a
@@ -997,7 +998,7 @@ private fun styleColors(style: RunStyle): Pair<Color, Color> =
         RunStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun pillContent(state: WorkflowRunState): Pair<Int, MaterialSymbol> =
+private fun pillContent(state: WorkflowRunState): Pair<StringResource, MaterialSymbol> =
     when (state) {
         WorkflowRunState.TRIGGERED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
         WorkflowRunState.RUNNING -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt

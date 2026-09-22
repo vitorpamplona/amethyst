@@ -26,12 +26,13 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_description
 import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_title
+import org.jetbrains.compose.resources.StringResource
 import kotlin.coroutines.cancellation.CancellationException
 
 fun openBlossomUriAsIntent(
     context: Context,
     blossomUri: String,
-    onError: (Int, Int) -> Unit,
+    onError: (StringResource, StringResource) -> Unit,
 ) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, blossomUri.toUri())
