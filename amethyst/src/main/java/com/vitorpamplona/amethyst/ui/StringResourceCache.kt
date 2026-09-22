@@ -41,10 +41,10 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes as commonsStringRes
 // in the same commit; a file moving to commons swaps this import for
 // `com.vitorpamplona.amethyst.commons.ui.stringRes` and nothing else.
 //
-// The Android `R.string` overloads that used to live here (and the LruCache behind
-// them, which existed because Resources.getString measured >1ms on some phones) are
-// gone with the last R.string reference. compose-resources parses each locale file
-// once into a process-wide cache, so repeat lookups are map hits.
+// compose-resources parses each locale file once into a process-wide cache, so
+// repeat lookups are map hits and need no cache of their own. The Android
+// `R.string` overloads further down are a separate, deliberately small tier - see
+// the comment above them.
 
 @Composable
 fun stringRes(id: StringResource): String = commonsStringRes(id)
@@ -52,14 +52,14 @@ fun stringRes(id: StringResource): String = commonsStringRes(id)
 @Composable
 fun stringRes(
     id: StringResource,
-    vararg args: Any,
+    vararg args: Any?,
 ): String = commonsStringRes(id, *args)
 
 @Composable
 fun pluralStringRes(
     id: PluralStringResource,
     count: Int,
-    vararg args: Any,
+    vararg args: Any?,
 ): String = if (args.isEmpty()) commonsPluralStringRes(id, count) else commonsPluralStringRes(id, count, *args)
 
 // Android-resource accessors. A handful of strings deliberately stay in res/:
@@ -85,7 +85,7 @@ fun stringRes(
 fun stringRes(
     ctx: Context,
     @StringRes id: Int,
-    vararg args: String?,
+    vararg args: Any?,
 ): String {
     val res = ctx.resources
     return String.format(

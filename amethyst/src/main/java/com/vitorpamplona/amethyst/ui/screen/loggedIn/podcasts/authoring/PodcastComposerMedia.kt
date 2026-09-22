@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -87,7 +88,7 @@ object PodcastComposerMedia {
         context: Context,
     ): String =
         errors
-            .map { context.getString(it.errorResource, *it.params) }
+            .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()
             .joinToString(".\n")
 

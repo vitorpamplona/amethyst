@@ -66,8 +66,8 @@ class RelayExporter(
         builder: StringBuilder,
     ) {
         if (section.relays.isEmpty()) return
-        builder.appendLine("## ${context.getString(section.titleRes)}")
-        builder.appendLine("# ${context.getString(section.descriptionRes)}")
+        builder.appendLine("## ${loadStringRes(section.titleRes)}")
+        builder.appendLine("# ${loadStringRes(section.descriptionRes)}")
         builder.appendLine()
         section.relays.forEach { relay ->
             builder.appendLine(relay.relay.url)

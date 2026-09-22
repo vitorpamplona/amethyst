@@ -103,7 +103,7 @@ class NappletConsentSummary(
         return NappletConsentInfo(
             appletTitle = title,
             coordinate = identity.coordinate,
-            capabilityLabel = context.getString(capability.labelRes()),
+            capabilityLabel = loadStringRes(capability.labelRes()),
             operationSummary = listOfNotNull(summaryFor(request).ifBlank { null }, consequence?.text).joinToString("\n\n"),
             allowAlways = capability.canGrantAlways,
             iconUrl = iconUrl,
@@ -243,10 +243,10 @@ class NappletConsentSummary(
         // account is far more use than "follows 1 new account" — the user can tell at a glance
         // whether it is who they expected.
         if (oneAdded != null && addedKeys.size == 1 && removedKeys.isEmpty()) {
-            subjectOf(addedKeys.first())?.let { return Consequence(context.getString(oneAdded, it.name), it) }
+            subjectOf(addedKeys.first())?.let { return Consequence(loadStringRes(oneAdded, it.name), it) }
         }
         if (oneRemoved != null && removedKeys.size == 1 && addedKeys.isEmpty()) {
-            subjectOf(removedKeys.first())?.let { return Consequence(context.getString(oneRemoved, it.name), it) }
+            subjectOf(removedKeys.first())?.let { return Consequence(loadStringRes(oneRemoved, it.name), it) }
         }
 
         val parts = listOfNotNull(pluralFor(added, addedKeys.size), pluralFor(removed, removedKeys.size))
@@ -256,7 +256,7 @@ class NappletConsentSummary(
             } else {
                 parts.first()
             }
-        return Consequence(context.getString(template, summary))
+        return Consequence(loadStringRes(template, summary))
     }
 
     /** Resolves a pubkey to a name + picture for the dialog, or null when the user isn't cached. */
@@ -280,7 +280,7 @@ class NappletConsentSummary(
     }
 
     private suspend fun pluralFor(
-        resId: StringResource,
+        resId: PluralStringResource,
         count: Int,
     ): String? = if (count <= 0) null else loadPluralStringRes(resId, count, count)
 

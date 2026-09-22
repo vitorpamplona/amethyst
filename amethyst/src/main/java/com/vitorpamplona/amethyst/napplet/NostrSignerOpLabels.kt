@@ -198,7 +198,7 @@ suspend fun buildConnectInfo(
     val preGranted =
         declared
             .filter { it.requiresConsent && !it.requiresPerUseConsent }
-            .map { context.getString(it.labelRes()) }
+            .map { loadStringRes(it.labelRes()) }
             .sorted()
     return SignerConnectInfo(
         appletTitle = title,

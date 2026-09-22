@@ -114,6 +114,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun NewCommunityScreen(
@@ -300,7 +301,7 @@ private fun CommunityFormScreen(
 }
 
 @Composable
-private fun SectionHeader(resourceId: Int) {
+private fun SectionHeader(resourceId: StringResource) {
     Text(
         text = stringRes(resourceId),
         style = MaterialTheme.typography.titleMedium,

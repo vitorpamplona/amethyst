@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
@@ -176,7 +177,7 @@ object NappletLauncher {
         val useTor = if (profile.exposesNetwork) NappletNetworkRegistry.useTor(identity.coordinate) else true
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
-        val capLabels = declared.map { context.getString(it.labelRes()) }
+        val capLabels = declared.map { loadStringRes(it.labelRes()) }
 
         val themeType = Amethyst.instance.uiPrefs.value.theme.value
         val theme =

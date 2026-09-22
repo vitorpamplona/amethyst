@@ -546,7 +546,7 @@ private fun MaxEventSizeField(model: NewCommunityModel) {
 // --- Helpers ----------------------------------------------------------------------------------
 
 @Composable
-private fun SectionLabel(resourceId: Int) {
+private fun SectionLabel(resourceId: StringResource) {
     Text(
         text = stringRes(resourceId),
         style = MaterialTheme.typography.titleSmall,

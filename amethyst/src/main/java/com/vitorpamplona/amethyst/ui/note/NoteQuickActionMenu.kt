@@ -119,6 +119,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 private fun lightenColor(
     color: Color,
@@ -291,7 +292,7 @@ fun CardBody(
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    val showToast = { stringRes: Int ->
+    val showToast = { stringRes: StringResource ->
         scope.launch {
             Toast
                 .makeText(
