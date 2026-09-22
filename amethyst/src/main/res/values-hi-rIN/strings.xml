@@ -2396,4 +2396,5 @@
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="my_fitness">मेरा स्वास्थ्य</string>
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
 </resources>
