@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_channel_d
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_channel_name
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_tap
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Surfaces a signer consent/connect [android.app.Activity] from the **background**.
@@ -81,7 +82,7 @@ object SignerConsentNotifier {
         activityClass: Class<*>,
         extraKey: String,
         token: String,
-        titleRes: Int,
+        titleRes: StringResource,
     ): Int {
         // When Amethyst already owns the foreground the direct startActivity opens the dialog, so a
         // heads-up notification would just be redundant noise on top of it. Only fall back to the

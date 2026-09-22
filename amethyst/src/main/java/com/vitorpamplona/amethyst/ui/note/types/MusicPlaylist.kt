@@ -49,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -192,7 +192,7 @@ fun MusicPlaylistHeader(
                 Spacer(Modifier.padding(start = 6.dp))
                 val trackCount = trackAddresses.size
                 Text(
-                    text = pluralStringResource(Res.plurals.music_playlist_track_count, trackCount, trackCount),
+                    text = pluralStringRes(Res.plurals.music_playlist_track_count, trackCount, trackCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
@@ -278,7 +278,7 @@ fun MusicPlaylistHeader(
                         HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                         val remaining = trackAddresses.size - MAX_PREVIEW_TRACKS
                         Text(
-                            text = pluralStringResource(Res.plurals.music_playlist_more_tracks, remaining, remaining),
+                            text = pluralStringRes(Res.plurals.music_playlist_more_tracks, remaining, remaining),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.grayText,
                             modifier =
@@ -406,7 +406,7 @@ private fun TrackCountChip(
             )
             Spacer(Modifier.padding(start = 6.dp))
             Text(
-                text = pluralStringResource(Res.plurals.music_playlist_track_count, trackCount, trackCount),
+                text = pluralStringRes(Res.plurals.music_playlist_track_count, trackCount, trackCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,

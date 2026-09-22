@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url
 import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url_explainer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintUrlException
@@ -91,7 +90,7 @@ class MeltProcessor {
             if (sendable <= 0) {
                 throw LightningAddressResolver.LightningAddressError(
                     loadStringRes(Res.string.cashu_failed_redemption),
-                    stringRes(
+                    loadStringRes(
                         context,
                         Res.string.cashu_failed_redemption_explainer_error_msg,
                         "Token value ${token.totalAmount} does not cover fees $fees",

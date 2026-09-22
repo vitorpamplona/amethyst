@@ -140,7 +140,7 @@ class V4VPaymentHandler(
     }
 
     /** Hex-encodes a TLV value string as NIP-47 `pay_keysend` requires (UTF-8 bytes → hex). */
-    private fun hexTlv(value: String): String = value.encodeToByteArray().toHexKey()
+    private suspend fun hexTlv(value: String): String = value.encodeToByteArray().toHexKey()
 
     private suspend fun payNodeSharesViaKeysend(
         shares: List<PodcastValueShare>,

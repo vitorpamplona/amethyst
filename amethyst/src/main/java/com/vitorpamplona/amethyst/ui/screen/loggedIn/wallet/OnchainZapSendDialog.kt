@@ -61,7 +61,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -123,6 +122,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
@@ -398,7 +398,7 @@ fun OnchainZapSendDialog(
                                     TextButton(
                                         onClick = { useSplits = true },
                                     ) {
-                                        Text(pluralStringResource(Res.plurals.onchain_send_use_note_split, onchainSplits.size, onchainSplits.size))
+                                        Text(pluralStringRes(Res.plurals.onchain_send_use_note_split, onchainSplits.size, onchainSplits.size))
                                     }
                                 }
                             }
@@ -808,7 +808,7 @@ private fun SendButton(
             text =
                 when {
                     sats != null && splitWays > 1 ->
-                        pluralStringResource(Res.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
+                        pluralStringRes(Res.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
                     sats != null -> stringRes(Res.string.onchain_send_button_amount, sats)
                     else -> stringRes(Res.string.send)
                 },
@@ -825,7 +825,7 @@ private fun SplitsRecipientSection(
     onDisable: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    SectionLabel(pluralStringResource(Res.plurals.onchain_send_splits_label, splits.size, splits.size))
+    SectionLabel(pluralStringRes(Res.plurals.onchain_send_splits_label, splits.size, splits.size))
 
     val totalWeight = splits.sumOf { it.second }
     // Index the preview by pubkey once — the splits list scan would otherwise
@@ -883,7 +883,7 @@ private fun SplitsRecipientSection(
         Spacer(Modifier.height(6.dp))
         val skipped = skippedLnSplits.size
         Text(
-            text = pluralStringResource(Res.plurals.onchain_send_splits_skipped, skipped, skipped),
+            text = pluralStringRes(Res.plurals.onchain_send_splits_skipped, skipped, skipped),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

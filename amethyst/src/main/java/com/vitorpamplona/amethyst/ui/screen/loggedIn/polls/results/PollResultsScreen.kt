@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.note.types.UserGallery
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -376,7 +377,7 @@ private fun PollTypeChip(state: PollResultsUiState) {
             // chip is what explains why the bars below may sum past 100% — so it carries the count.
             text =
                 if (state.totalSelections != state.totalVoters) {
-                    type + " " + pluralStringResource(Res.plurals.poll_results_selections, state.totalSelections, state.totalSelections)
+                    type + " " + pluralStringRes(Res.plurals.poll_results_selections, state.totalSelections, state.totalSelections)
                 } else {
                     type
                 },
@@ -490,7 +491,7 @@ private fun OptionBar(
                     }
                 }
                 Text(
-                    text = pluralStringResource(Res.plurals.poll_results_option_count, option.voters, option.voters),
+                    text = pluralStringRes(Res.plurals.poll_results_option_count, option.voters, option.voters),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )

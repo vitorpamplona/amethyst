@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
@@ -1011,7 +1012,7 @@ fun ShareMediaAction(
                             Toast
                                 .makeText(
                                     appContext,
-                                    stringRes(Res.string.media_download_has_started_toast),
+                                    loadStringRes(Res.string.media_download_has_started_toast),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             onDismiss()
@@ -1071,7 +1072,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        Toast.makeText(context, stringRes(Res.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, loadStringRes(Res.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
                                         accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
@@ -1135,7 +1136,7 @@ private suspend fun shareImageFile(
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         Log.w("ZoomableContentView", "Failed to share image: $videoUri", e)
-        Toast.makeText(context, context.getString(Res.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, loadStringRes(Res.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -1226,7 +1227,7 @@ private suspend fun shareVideoFile(
             Toast
                 .makeText(
                     context,
-                    context.getString(Res.string.unable_to_share_video),
+                    loadStringRes(Res.string.unable_to_share_video),
                     Toast.LENGTH_SHORT,
                 ).show()
             onError()
@@ -1265,7 +1266,7 @@ private suspend fun shareLocalVideoFile(
         Toast
             .makeText(
                 context,
-                context.getString(Res.string.unable_to_share_video),
+                loadStringRes(Res.string.unable_to_share_video),
                 Toast.LENGTH_SHORT,
             ).show()
     }
@@ -1306,7 +1307,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(Res.string.hash_verification_passed)
+                openDialogMsg.value = loadStringRes(Res.string.hash_verification_passed)
             },
         ) {
             Icon(
@@ -1320,7 +1321,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(Res.string.hash_verification_failed)
+                openDialogMsg.value = loadStringRes(Res.string.hash_verification_failed)
             },
         ) {
             Icon(

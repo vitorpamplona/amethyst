@@ -53,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -93,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
@@ -158,13 +158,13 @@ private fun TotalsHeader(state: ActiveSubscriptionsState) {
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = pluralStringResource(Res.plurals.active_subs_filters, state.totalFilters, state.totalFilters),
+                text = pluralStringRes(Res.plurals.active_subs_filters, state.totalFilters, state.totalFilters),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = pluralStringResource(Res.plurals.active_subs_relays, state.totalRelays, state.totalRelays),
+                text = pluralStringRes(Res.plurals.active_subs_relays, state.totalRelays, state.totalRelays),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -173,7 +173,7 @@ private fun TotalsHeader(state: ActiveSubscriptionsState) {
                 // explain, and a total that claims to be fully attributed would defeat the point.
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = pluralStringResource(Res.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
+                    text = pluralStringRes(Res.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -199,7 +199,7 @@ private fun AccountHeader(account: SubscriptionAccountRow) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = pluralStringResource(Res.plurals.active_subs_relays, account.relays.size, account.relays.size),
+            text = pluralStringRes(Res.plurals.active_subs_relays, account.relays.size, account.relays.size),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.placeholderText,
         )
@@ -241,7 +241,7 @@ private fun PurposeCard(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = pluralStringResource(Res.plurals.active_subs_filters, row.filterCount, row.filterCount),
+                    text = pluralStringRes(Res.plurals.active_subs_filters, row.filterCount, row.filterCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -259,7 +259,7 @@ private fun PurposeCard(
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = pluralStringResource(Res.plurals.active_subs_relays, row.relays.size, row.relays.size),
+                    text = pluralStringRes(Res.plurals.active_subs_relays, row.relays.size, row.relays.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     modifier = Modifier.weight(1f),
@@ -384,7 +384,7 @@ private fun RelayGroupedEntities(
         ) {
             RelayLine(relay, accountViewModel, modifier = Modifier.weight(1f))
             Text(
-                text = pluralStringResource(Res.plurals.active_subs_groups, hosted.size, hosted.size),
+                text = pluralStringRes(Res.plurals.active_subs_groups, hosted.size, hosted.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

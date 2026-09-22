@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun HomeScreen(
@@ -591,7 +592,7 @@ fun WatchAccountForHomeScreen(
 
 @Immutable
 class TabItem(
-    val resource: Int,
+    val resource: StringResource,
     val feedState: FeedContentState,
     val routeForLastRead: String,
     val scrollStateKey: String,

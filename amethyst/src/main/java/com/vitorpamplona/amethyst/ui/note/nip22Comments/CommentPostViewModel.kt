@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -863,7 +862,7 @@ open class CommentPostViewModel :
                 val errorMessages =
                     results.errors
                         .map {
-                            stringRes(
+                            loadStringRes(
                                 context,
                                 it.errorResource,
                                 *it.params,

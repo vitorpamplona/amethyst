@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * The kind 7516 composer, and the only screen allowed to scan a cache's verification secret.
@@ -164,7 +163,7 @@ fun LogGeocacheFindScreen(
                                 if (model.publish()) nav.popBack()
                             }
                         },
-                    ) { Text(stringResource(Res.string.geocache_log_post)) }
+                    ) { Text(stringRes(Res.string.geocache_log_post)) }
                 },
             )
         },
@@ -187,12 +186,12 @@ fun LogGeocacheFindScreen(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = stringResource(Res.string.geocache_log_cache_label),
+                        text = stringRes(Res.string.geocache_log_cache_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = listing?.cacheName()?.trim()?.ifBlank { null } ?: stringResource(Res.string.geocache_unnamed),
+                        text = listing?.cacheName()?.trim()?.ifBlank { null } ?: stringRes(Res.string.geocache_unnamed),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -203,8 +202,8 @@ fun LogGeocacheFindScreen(
                 value = model.message.value,
                 onValueChange = { model.message.value = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(Res.string.geocache_log_your_log)) },
-                placeholder = { Text(stringResource(Res.string.geocache_log_placeholder)) },
+                label = { Text(stringRes(Res.string.geocache_log_your_log)) },
+                placeholder = { Text(stringRes(Res.string.geocache_log_placeholder)) },
                 minLines = 4,
             )
 
@@ -213,7 +212,7 @@ fun LogGeocacheFindScreen(
                     value = model.missionAnswer.value,
                     onValueChange = { model.missionAnswer.value = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.geocache_log_mission_answer)) },
+                    label = { Text(stringRes(Res.string.geocache_log_mission_answer)) },
                     minLines = 2,
                 )
             }
@@ -228,7 +227,7 @@ fun LogGeocacheFindScreen(
                     if (model.isUploading.value) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(stringResource(Res.string.geocache_log_add_photo))
+                        Text(stringRes(Res.string.geocache_log_add_photo))
                     }
                 }
 
@@ -242,7 +241,7 @@ fun LogGeocacheFindScreen(
             }
 
             Text(
-                text = stringResource(Res.string.geocache_log_proof_section),
+                text = stringRes(Res.string.geocache_log_proof_section),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -250,7 +249,7 @@ fun LogGeocacheFindScreen(
 
             if (listing?.requiresVerification() != true) {
                 Text(
-                    text = stringResource(Res.string.geocache_log_proof_optional),
+                    text = stringRes(Res.string.geocache_log_proof_optional),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -258,21 +257,21 @@ fun LogGeocacheFindScreen(
                 when (model.scanOutcome.value) {
                     ScanOutcome.VERIFIED ->
                         ProofStamp(
-                            text = stringResource(Res.string.geocache_log_proof_verified),
+                            text = stringRes(Res.string.geocache_log_proof_verified),
                             color = rememberGeocachePalette().proven,
                             glyph = "🔐",
                             celebrate = true,
                         )
                     ScanOutcome.NOT_A_KEY ->
                         ProofStamp(
-                            text = stringResource(Res.string.geocache_log_proof_bad_code),
+                            text = stringRes(Res.string.geocache_log_proof_bad_code),
                             color = MaterialTheme.colorScheme.error,
                             glyph = "⚠️",
                             celebrate = false,
                         )
                     ScanOutcome.WRONG_CACHE ->
                         ProofStamp(
-                            text = stringResource(Res.string.geocache_log_proof_wrong_cache),
+                            text = stringRes(Res.string.geocache_log_proof_wrong_cache),
                             color = MaterialTheme.colorScheme.error,
                             glyph = "⚠️",
                             celebrate = false,
@@ -290,15 +289,15 @@ fun LogGeocacheFindScreen(
                     Spacer(Modifier.size(6.dp))
                     Text(
                         if (model.hasProof()) {
-                            stringResource(Res.string.geocache_log_scan_again)
+                            stringRes(Res.string.geocache_log_scan_again)
                         } else {
-                            stringResource(Res.string.geocache_log_scan_code)
+                            stringRes(Res.string.geocache_log_scan_code)
                         },
                     )
                 }
 
                 Text(
-                    text = stringResource(Res.string.geocache_log_proof_explain),
+                    text = stringRes(Res.string.geocache_log_proof_explain),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -312,7 +311,7 @@ fun LogGeocacheFindScreen(
             }
 
             Text(
-                text = stringResource(Res.string.geocache_log_no_location_attached),
+                text = stringRes(Res.string.geocache_log_no_location_attached),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

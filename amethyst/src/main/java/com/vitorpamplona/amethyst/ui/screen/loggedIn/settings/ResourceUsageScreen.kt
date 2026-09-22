@@ -55,7 +55,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
@@ -133,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_verifies
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_wakelock
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_worker_runs
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
@@ -144,6 +144,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -587,7 +588,7 @@ private fun AlwaysOnServiceSection(
         }
         MetricRow(
             Res.string.resource_usage_alwayson_uptime,
-            "${formatDurationMs(s.alwaysOnMs)} · ${pluralStringResource(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
+            "${formatDurationMs(s.alwaysOnMs)} · ${pluralStringRes(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
         )
         SettingsDivider()
         MetricRow(
@@ -633,7 +634,7 @@ private fun TorServiceSection(
         }
         MetricRow(
             Res.string.resource_usage_alwayson_uptime,
-            "${formatDurationMs(s.torMs)} · ${pluralStringResource(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
+            "${formatDurationMs(s.torMs)} · ${pluralStringRes(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
         )
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             TextButton(
@@ -700,10 +701,10 @@ private fun SendReportSection(
                                     action = Intent.ACTION_SEND
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, buildReport())
-                                    putExtra(Intent.EXTRA_TITLE, stringRes(Res.string.resource_usage_send_section))
+                                    putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.resource_usage_send_section))
                                 }
                             context.startActivity(
-                                Intent.createChooser(send, stringRes(Res.string.resource_usage_share_button)),
+                                Intent.createChooser(send, loadStringRes(Res.string.resource_usage_share_button)),
                             )
                         }
                     },

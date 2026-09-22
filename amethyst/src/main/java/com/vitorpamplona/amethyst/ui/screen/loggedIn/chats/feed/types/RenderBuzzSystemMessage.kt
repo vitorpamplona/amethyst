@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_archived
@@ -57,6 +56,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatSystemMessage
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -192,15 +192,15 @@ private fun ttlDurationText(seconds: Long): String =
     when {
         seconds >= TimeUtils.ONE_DAY -> {
             val n = (seconds / TimeUtils.ONE_DAY).toInt()
-            pluralStringResource(Res.plurals.duration_days, n, n)
+            pluralStringRes(Res.plurals.duration_days, n, n)
         }
         seconds >= TimeUtils.ONE_HOUR -> {
             val n = (seconds / TimeUtils.ONE_HOUR).toInt()
-            pluralStringResource(Res.plurals.duration_hours, n, n)
+            pluralStringRes(Res.plurals.duration_hours, n, n)
         }
         else -> {
             val n = (seconds / TimeUtils.ONE_MINUTE).toInt().coerceAtLeast(1)
-            pluralStringResource(Res.plurals.duration_minutes, n, n)
+            pluralStringRes(Res.plurals.duration_minutes, n, n)
         }
     }
 

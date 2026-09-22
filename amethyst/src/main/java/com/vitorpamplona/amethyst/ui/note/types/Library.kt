@@ -48,7 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -281,7 +281,7 @@ fun RenderBookshelfDirectory(
             label = stringRes(Res.string.library_directory),
             title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
             subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
-            detail = if (itemCount > 0) pluralStringResource(Res.plurals.library_directory_items, itemCount, itemCount) else null,
+            detail = if (itemCount > 0) pluralStringRes(Res.plurals.library_directory_items, itemCount, itemCount) else null,
             banner = remember(noteEvent) { noteEvent.image()?.ifBlank { null } },
             accountViewModel = accountViewModel,
         )
@@ -365,7 +365,7 @@ private fun DirectoryContents(
 
             val remaining = items.size - MAX_PREVIEW_ITEMS
             Text(
-                text = pluralStringResource(Res.plurals.library_directory_more_items, remaining, remaining),
+                text = pluralStringRes(Res.plurals.library_directory_more_items, remaining, remaining),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),

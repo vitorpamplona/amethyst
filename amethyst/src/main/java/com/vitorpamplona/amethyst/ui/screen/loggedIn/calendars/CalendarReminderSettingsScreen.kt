@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -123,7 +123,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
                                 icon = {},
                             ) {
-                                Text(pluralStringResource(Res.plurals.calendar_reminder_settings_lead_choice, choice, choice))
+                                Text(pluralStringRes(Res.plurals.calendar_reminder_settings_lead_choice, choice, choice))
                             }
                         }
                     }

@@ -72,7 +72,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.davotoula.lightcompressor.hls.HlsLadder
@@ -138,7 +137,7 @@ fun NewHlsVideoScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringResource(Res.string.share_hls_video),
+                caption = stringRes(Res.string.share_hls_video),
                 nav = nav,
             )
         },
@@ -359,7 +358,7 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
 
     // Server picker — reads the user's configured Blossom servers from the account
     Text(
-        text = stringResource(Res.string.file_server),
+        text = stringRes(Res.string.file_server),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -555,7 +554,7 @@ private fun ProgressBody(
             when {
                 // Currently in flight: present-tense, file label in the line.
                 state is HlsPublishState.Uploading && state.currentLabel.isNotBlank() -> {
-                    stringResource(
+                    stringRes(
                         Res.string.hls_state_uploading_with_label_format,
                         state.currentLabel,
                         state.done,
@@ -604,7 +603,7 @@ private fun ProgressBody(
             onClick = { vm.cancel() },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(Res.string.cancel))
+            Text(stringRes(Res.string.cancel))
         }
     }
 }

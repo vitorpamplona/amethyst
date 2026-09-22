@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_wakelo
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -185,14 +185,14 @@ private fun reasonDescription(alert: ResourceUsageAlerts.Alert): String =
             )
 
         ResourceUsageAlerts.Reason.PROCESS_CHURN ->
-            pluralStringResource(
+            pluralStringRes(
                 Res.plurals.resource_usage_reason_churn,
                 alert.value.toInt(),
                 alert.value.toInt(),
             )
 
         ResourceUsageAlerts.Reason.RECONNECT_CHURN ->
-            pluralStringResource(
+            pluralStringRes(
                 Res.plurals.resource_usage_reason_reconnects,
                 alert.value.toInt(),
                 alert.value.toInt(),

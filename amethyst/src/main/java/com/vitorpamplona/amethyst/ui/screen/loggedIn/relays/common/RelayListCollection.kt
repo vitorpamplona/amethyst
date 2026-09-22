@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_section
 import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.trusted_section
 import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
+import org.jetbrains.compose.resources.StringResource
 
 data class RelayListCollection(
     val homeRelays: List<BasicRelaySetupInfo>,
@@ -79,7 +80,7 @@ data class RelayListCollection(
 
 data class RelaySection(
     val fileName: String,
-    val titleRes: Int,
-    val descriptionRes: Int,
+    val titleRes: StringResource,
+    val descriptionRes: StringResource,
     val relays: List<BasicRelaySetupInfo>,
 )

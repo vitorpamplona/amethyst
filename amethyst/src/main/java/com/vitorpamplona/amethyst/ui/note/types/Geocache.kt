@@ -36,13 +36,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 /**
@@ -99,7 +99,7 @@ fun distanceToCache(
 ): String? {
     val here = accountViewModel.account.geolocationFlow().value as? LocationState.LocationResult.Success ?: return null
 
-    val nearby = stringResource(Res.string.geocache_nearby)
+    val nearby = stringRes(Res.string.geocache_nearby)
 
     return remember(noteEvent, here, nearby) {
         val cache = noteEvent.location()?.toGeoHash() ?: return@remember null

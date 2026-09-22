@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.report_malware
 import com.vitorpamplona.amethyst.commons.resources.report_nudity_porn
 import com.vitorpamplona.amethyst.commons.resources.report_spam_scam
 import com.vitorpamplona.amethyst.commons.resources.unblock_user
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -107,10 +108,10 @@ fun UserProfileDropDownMenu(
                         putExtra(Intent.EXTRA_TEXT, externalLinkForUser(user))
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(Res.string.quick_action_share_browser_link),
+                            loadStringRes(Res.string.quick_action_share_browser_link),
                         )
                     }
-                val shareIntent = Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
+                val shareIntent = Intent.createChooser(sendIntent, loadStringRes(Res.string.quick_action_share))
                 context.startActivity(shareIntent)
                 onDismiss()
             }

@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.tor.explainerId
 import com.vitorpamplona.amethyst.ui.tor.resourceId
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -302,8 +303,8 @@ private fun PresetTile(torSettings: TorSettingsFlow) {
 private fun TorSwitchTile(
     flow: MutableStateFlow<Boolean>,
     icon: MaterialSymbol,
-    title: Int,
-    description: Int,
+    title: StringResource,
+    description: StringResource,
 ) {
     val checked by flow.collectAsStateWithLifecycle()
     SettingsSwitchTile(

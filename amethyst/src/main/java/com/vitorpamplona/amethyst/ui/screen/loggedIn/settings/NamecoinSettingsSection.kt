@@ -62,7 +62,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -451,7 +450,7 @@ private fun ServerTestResultRow(result: ServerTestResult) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = stringResource(Res.string.namecoin_response_time, result.responseTimeMs),
+                    text = stringRes(Res.string.namecoin_response_time, result.responseTimeMs),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

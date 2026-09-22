@@ -52,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -272,7 +271,7 @@ private fun SignerConnectScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(Res.string.cancel))
+                        Text(stringRes(Res.string.cancel))
                     }
                     Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
                         Text(stringRes(Res.string.napplet_connect_button))

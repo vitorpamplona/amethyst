@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.pack_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -299,12 +300,12 @@ private fun ListActionsMenuButton(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(Res.string.quick_action_share_browser_link),
+                                loadStringRes(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
-                        Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
+                        Intent.createChooser(sendIntent, loadStringRes(Res.string.quick_action_share))
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }

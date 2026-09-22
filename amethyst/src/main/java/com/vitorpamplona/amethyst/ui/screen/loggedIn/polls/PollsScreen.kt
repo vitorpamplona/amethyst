@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun PollsScreen(
@@ -203,7 +204,7 @@ fun WatchAccountForPollsScreen(
 
 @Immutable
 class PollsTabItem(
-    val resource: Int,
+    val resource: StringResource,
     val feedState: FeedContentState,
     val routeForLastRead: String,
     val scrollStateKey: String,

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing
 import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing_with_end
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 
 /**
  * Localised "starts in 2 hours" / "started 5 minutes ago" / "Happening now · ends in 2 hours"
@@ -41,7 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing_wi
  * mid-event sees how much time is left rather than the misleading "started X minutes ago" that
  * DateUtils would produce on its own.
  */
-fun relativeTimeLabel(
+suspend fun relativeTimeLabel(
     context: Context,
     view: CalendarAppointmentView,
     nowSeconds: Long,
@@ -50,7 +51,7 @@ fun relativeTimeLabel(
     val end = view.endSeconds
 
     if (end != null && start <= nowSeconds && nowSeconds <= end) {
-        val ongoing = context.getString(Res.string.calendar_relative_ongoing)
+        val ongoing = loadStringRes(Res.string.calendar_relative_ongoing)
         val endsIn =
             DateUtils
                 .getRelativeTimeSpanString(
@@ -59,7 +60,7 @@ fun relativeTimeLabel(
                     if (view.isAllDay) DateUtils.DAY_IN_MILLIS else DateUtils.MINUTE_IN_MILLIS,
                     DateUtils.FORMAT_ABBREV_RELATIVE,
                 ).toString()
-        return context.getString(Res.string.calendar_relative_ongoing_with_end, ongoing, endsIn)
+        return loadStringRes(Res.string.calendar_relative_ongoing_with_end, ongoing, endsIn)
     }
 
     val minResolution =

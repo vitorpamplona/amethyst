@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
+import org.jetbrains.compose.resources.StringResource
 
 private sealed interface RedeemState {
     /** Showing the local preview, waiting for the user to tap Join. Nothing has been sent. */
@@ -80,7 +81,7 @@ private sealed interface RedeemState {
      * offer a retry that would just loop back onto the same spinner.
      */
     data class Failed(
-        val messageRes: Int,
+        val messageRes: StringResource,
         val canRetry: Boolean,
     ) : RedeemState
 }

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.migrate_bookmarks_success
 import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -180,7 +181,7 @@ private fun RenderOldBookmarkScreen(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(Res.string.migrate_bookmarks_success),
+                                        loadStringRes(Res.string.migrate_bookmarks_success),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }

@@ -61,7 +61,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -243,6 +242,7 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
@@ -644,7 +644,7 @@ private fun CollapsedNoteCompose(
             // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
             // Always shown — even "+0 replies" — so every collapsed card looks the same.
             Text(
-                text = pluralStringResource(Res.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                text = pluralStringRes(Res.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
                 color = MaterialTheme.colorScheme.placeholderText,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelMedium,

@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_your_podcast
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.MyPodcastFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -181,7 +181,7 @@ fun PodcastAuthoringScreen(
             }
 
             if (episodes.isNotEmpty()) {
-                item { SectionHeader(pluralStringResource(Res.plurals.podcast_episode_count, episodes.size, episodes.size)) }
+                item { SectionHeader(pluralStringRes(Res.plurals.podcast_episode_count, episodes.size, episodes.size)) }
                 items(episodes, key = { it.id }) { ep ->
                     EpisodeRow(
                         title = ep.title() ?: stringRes(Res.string.podcast_untitled),
@@ -192,7 +192,7 @@ fun PodcastAuthoringScreen(
             }
 
             if (trailers.isNotEmpty()) {
-                item { SectionHeader(pluralStringResource(Res.plurals.podcast_trailer_count, trailers.size, trailers.size)) }
+                item { SectionHeader(pluralStringRes(Res.plurals.podcast_trailer_count, trailers.size, trailers.size)) }
                 items(trailers, key = { it.id }) { tr ->
                     EpisodeRow(
                         title = tr.title() ?: stringRes(Res.string.podcast_untitled),

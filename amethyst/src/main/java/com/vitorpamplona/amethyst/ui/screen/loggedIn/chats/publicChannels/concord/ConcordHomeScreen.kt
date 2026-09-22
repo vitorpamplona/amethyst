@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -335,8 +335,8 @@ private fun CommunityHeader(
                         ?.memberCount() ?: 0
                 }
             val parts = mutableListOf<String>()
-            if (channelKeys.isNotEmpty()) parts += pluralStringResource(Res.plurals.concord_channel_count, channelKeys.size, channelKeys.size)
-            if (memberCount > 0) parts += pluralStringResource(Res.plurals.concord_member_count, memberCount, memberCount)
+            if (channelKeys.isNotEmpty()) parts += pluralStringRes(Res.plurals.concord_channel_count, channelKeys.size, channelKeys.size)
+            if (memberCount > 0) parts += pluralStringRes(Res.plurals.concord_member_count, memberCount, memberCount)
             val subtitle = parts.joinToString(" · ")
             if (subtitle.isNotEmpty()) {
                 Text(

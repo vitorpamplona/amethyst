@@ -60,7 +60,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -85,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -209,7 +209,7 @@ internal fun StageGrid(
                 )
                 Text(
                     text =
-                        pluralStringResource(
+                        pluralStringRes(
                             Res.plurals.nest_listener_count,
                             listenerCount,
                             listenerCount,

@@ -183,7 +183,7 @@ fun NewGeocacheScreen(
                         onClick = {
                             scope.launch { if (model.publish()) nav.popBack() }
                         },
-                    ) { Text(stringResource(Res.string.geocache_new_publish)) }
+                    ) { Text(stringRes(Res.string.geocache_new_publish)) }
                 },
             )
         },
@@ -198,7 +198,7 @@ fun NewGeocacheScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ComposerSection(stringResource(Res.string.geocache_new_section_where), 1)
+            ComposerSection(stringRes(Res.string.geocache_new_section_where), 1)
 
             val point =
                 remember(model.geohash.value) {
@@ -221,14 +221,14 @@ fun NewGeocacheScreen(
             }
 
             OutlinedButton(onClick = { pickingLocation = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(Res.string.geocache_new_pick_location))
+                Text(stringRes(Res.string.geocache_new_pick_location))
             }
 
-            WarningBox(stringResource(Res.string.geocache_new_location_warning))
+            WarningBox(stringRes(Res.string.geocache_new_location_warning))
 
             if (model.hasLocation()) {
                 Text(
-                    text = stringResource(Res.string.geocache_new_ladder, model.geohash.value),
+                    text = stringRes(Res.string.geocache_new_ladder, model.geohash.value),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -243,12 +243,12 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_what), 2)
+            ComposerSection(stringRes(Res.string.geocache_new_section_what), 2)
 
             OutlinedTextField(
                 value = model.name.value,
                 onValueChange = { model.name.value = it },
-                label = { Text(stringResource(Res.string.geocache_new_name)) },
+                label = { Text(stringRes(Res.string.geocache_new_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -256,7 +256,7 @@ fun NewGeocacheScreen(
             OutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
-                label = { Text(stringResource(Res.string.geocache_new_description)) },
+                label = { Text(stringRes(Res.string.geocache_new_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -281,8 +281,8 @@ fun NewGeocacheScreen(
                 }
             }
 
-            StarRow(stringResource(Res.string.geocache_new_difficulty), model.difficulty.value) { model.difficulty.value = it }
-            StarRow(stringResource(Res.string.geocache_new_terrain), model.terrain.value) { model.terrain.value = it }
+            StarRow(stringRes(Res.string.geocache_new_difficulty), model.difficulty.value) { model.difficulty.value = it }
+            StarRow(stringRes(Res.string.geocache_new_terrain), model.terrain.value) { model.terrain.value = it }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
@@ -292,7 +292,7 @@ fun NewGeocacheScreen(
                     if (model.isUploading.value) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Text("📷  " + stringResource(Res.string.geocache_log_add_photo))
+                        Text("📷  " + stringRes(Res.string.geocache_log_add_photo))
                     }
                 }
             }
@@ -325,7 +325,7 @@ fun NewGeocacheScreen(
                             ) {
                                 Icon(
                                     symbol = MaterialSymbols.Close,
-                                    contentDescription = stringResource(Res.string.geocache_photo_remove),
+                                    contentDescription = stringRes(Res.string.geocache_photo_remove),
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -335,12 +335,12 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_extras), 3)
+            ComposerSection(stringRes(Res.string.geocache_new_section_extras), 3)
 
             OutlinedTextField(
                 value = model.hint.value,
                 onValueChange = { model.hint.value = it },
-                label = { Text(stringResource(Res.string.geocache_new_hint)) },
+                label = { Text(stringRes(Res.string.geocache_new_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )
@@ -348,14 +348,14 @@ fun NewGeocacheScreen(
             if (model.hint.value.isNotBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = stringResource(Res.string.geocache_new_hint_scramble),
+                        text = stringRes(Res.string.geocache_new_hint_scramble),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f),
                     )
                     Switch(checked = model.scrambleHint.value, onCheckedChange = { model.scrambleHint.value = it })
                 }
                 Text(
-                    text = stringResource(Res.string.geocache_new_hint_preview),
+                    text = stringRes(Res.string.geocache_new_hint_preview),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -369,13 +369,13 @@ fun NewGeocacheScreen(
             OutlinedTextField(
                 value = model.mission.value,
                 onValueChange = { model.mission.value = it },
-                label = { Text(stringResource(Res.string.geocache_new_mission)) },
+                label = { Text(stringRes(Res.string.geocache_new_mission)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )
 
             Text(
-                text = stringResource(Res.string.geocache_new_modifiers),
+                text = stringRes(Res.string.geocache_new_modifiers),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -390,11 +390,11 @@ fun NewGeocacheScreen(
                 }
             }
 
-            ComposerSection(stringResource(Res.string.geocache_new_section_proof), 4)
+            ComposerSection(stringRes(Res.string.geocache_new_section_proof), 4)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(Res.string.geocache_new_require_proof),
+                    text = stringRes(Res.string.geocache_new_require_proof),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -409,12 +409,12 @@ fun NewGeocacheScreen(
                 ) {
                     QrCodeDrawer(secret)
                     Text(
-                        text = stringResource(Res.string.geocache_new_proof_ready),
+                        text = stringRes(Res.string.geocache_new_proof_ready),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-                    WarningBox(stringResource(Res.string.geocache_owner_qr_warning))
+                    WarningBox(stringRes(Res.string.geocache_owner_qr_warning))
                 }
             }
         }

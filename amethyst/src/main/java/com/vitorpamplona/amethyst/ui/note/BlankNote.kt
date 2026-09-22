@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.post_was_hidden_due_to_too_m
 import com.vitorpamplona.amethyst.commons.resources.show_anyway
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -155,7 +155,7 @@ fun HiddenNote(
             ) {
                 if (hasExcessiveHashtags) {
                     Text(
-                        text = pluralStringResource(Res.plurals.post_was_hidden_due_to_too_many_hashtags, hashtagLimit, hashtagLimit),
+                        text = pluralStringRes(Res.plurals.post_was_hidden_due_to_too_many_hashtags, hashtagLimit, hashtagLimit),
                         color = Color.Gray,
                         textAlign = TextAlign.Center,
                     )

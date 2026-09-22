@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SdpType
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_screen_sharing
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallAudioManager
 import com.vitorpamplona.amethyst.service.call.CallForegroundService
@@ -577,7 +578,7 @@ class CallSession(
         scope.launch { stopScreenShareNow() }
     }
 
-    private fun stopScreenShareNow() {
+    private suspend fun stopScreenShareNow() {
         val resources = mediaManager.stopScreenShare() ?: return
         try {
             val restoredTrack =
@@ -844,7 +845,7 @@ class CallSession(
 
     // ---- Foreground service ----
 
-    private fun ensureForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
+    private suspend fun ensureForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
         if (foregroundServiceStarted) {
             updateForegroundServiceNotification(isScreenSharing)
             return
@@ -853,7 +854,7 @@ class CallSession(
         startForegroundService(isScreenSharing)
     }
 
-    private fun startForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
+    private suspend fun startForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
             val isVideo = mediaManager.isVideoEnabled.value
@@ -866,7 +867,7 @@ class CallSession(
                     putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                     if (isScreenSharing) {
-                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(Res.string.call_screen_sharing))
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, loadStringRes(Res.string.call_screen_sharing))
                     }
                 }
             context.startForegroundService(intent)
@@ -875,7 +876,7 @@ class CallSession(
         }
     }
 
-    private fun updateForegroundServiceNotification(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
+    private suspend fun updateForegroundServiceNotification(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
         if (!foregroundServiceStarted) return
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
@@ -889,7 +890,7 @@ class CallSession(
                     putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                     if (isScreenSharing) {
-                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(Res.string.call_screen_sharing))
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, loadStringRes(Res.string.call_screen_sharing))
                     }
                 }
             context.startService(intent)

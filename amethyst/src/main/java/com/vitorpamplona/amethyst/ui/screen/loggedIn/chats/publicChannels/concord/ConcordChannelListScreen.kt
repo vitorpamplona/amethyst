@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -770,7 +771,7 @@ private fun InviteLinkDialog(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, link)
                     }
-                context.startActivity(Intent.createChooser(send, stringRes(Res.string.concord_invite_title)))
+                context.startActivity(Intent.createChooser(send, loadStringRes(Res.string.concord_invite_title)))
                 onDismiss()
             }) {
                 Text(stringRes(Res.string.quick_action_share))

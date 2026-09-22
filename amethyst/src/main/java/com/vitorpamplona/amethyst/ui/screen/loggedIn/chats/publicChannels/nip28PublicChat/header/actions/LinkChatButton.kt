@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -65,13 +66,13 @@ fun LinkChatButton(
                     action = Intent.ACTION_SEND
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, channel.toNostrUri())
-                    putExtra(Intent.EXTRA_TITLE, stringRes(Res.string.quick_action_share_browser_link))
+                    putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.quick_action_share_browser_link))
                 }
 
             val shareIntent =
                 Intent.createChooser(
                     sendIntent,
-                    stringRes(Res.string.quick_action_copy_note_id),
+                    loadStringRes(Res.string.quick_action_copy_note_id),
                 )
 
             context.startActivity(shareIntent)

@@ -520,11 +520,11 @@ private fun BrowserHome(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (apps.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-fav") { SectionHeader(stringResource(Res.string.browser_favorites)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-fav") { SectionHeader(stringRes(Res.string.browser_favorites)) }
             favoriteAppItems(apps, onOpenApp, onRemoveApp)
         }
         if (recents.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-rec") { SectionHeader(stringResource(Res.string.favorite_app_recent)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-rec") { SectionHeader(stringRes(Res.string.favorite_app_recent)) }
             items(recents, span = { GridItemSpan(maxLineSpan) }, key = { "r:" + it.url }) { entry ->
                 RecentRow(
                     entry = entry,
@@ -549,7 +549,7 @@ private fun BrowserHome(
             }
         }
         if (suggested.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringResource(Res.string.browser_suggested)) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "h-sug") { SectionHeader(stringRes(Res.string.browser_suggested)) }
             items(suggested, span = { GridItemSpan(maxLineSpan) }, key = { "s:" + it.app.url }) { entry ->
                 SuggestedRow(
                     entry = entry,
@@ -603,7 +603,7 @@ private fun SuggestedRow(
             )
         }
         IconButton(onClick = onAddFavorite) {
-            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(Res.string.favorite_app_add))
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }
 }
@@ -710,7 +710,7 @@ private fun NostrAppRow(
             }
         }
         IconButton(onClick = onAddFavorite) {
-            Icon(MaterialSymbols.StarBorder, contentDescription = stringResource(Res.string.favorite_app_add))
+            Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }
 }

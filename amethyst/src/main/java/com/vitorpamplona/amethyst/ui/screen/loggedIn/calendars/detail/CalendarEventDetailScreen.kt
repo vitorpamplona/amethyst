@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.CalendarRsvpRow
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalendar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
@@ -121,7 +122,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * Dedicated detail screen for a NIP-52 calendar appointment (kind 31922 or 31923). Renders the
@@ -489,7 +489,7 @@ private fun CollectionMembersSection(
     nav: INav,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(pluralStringResource(Res.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
+        SectionTitle(pluralStringRes(Res.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
         if (memberAddresses.isEmpty()) {
             Text(
                 text = stringRes(Res.string.calendar_collection_empty_members),

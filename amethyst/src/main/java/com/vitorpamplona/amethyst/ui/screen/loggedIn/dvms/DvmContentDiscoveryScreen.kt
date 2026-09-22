@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -398,7 +399,7 @@ fun DvmPaymentActions(
                                 thankYou
                             } else {
                                 response?.error?.takeIf { it.isNotBlank() }
-                                    ?: stringRes(Res.string.clink_debit_no_response)
+                                    ?: loadStringRes(Res.string.clink_debit_no_response)
                             },
                         )
                     }
@@ -415,7 +416,7 @@ fun DvmPaymentActions(
                         onResponse = { response ->
                             onStatusUpdate(
                                 response.nwcFailureDetail(context)?.let { detail ->
-                                    stringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
+                                    loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
                                 } ?: thankYou,
                             )
                         },

@@ -203,7 +203,7 @@ fun EditPodcastShowScreen(
 private fun Field(
     state: androidx.compose.runtime.MutableState<String>,
     labelRes: StringResource,
-    placeholderRes: Int?,
+    placeholderRes: StringResource?,
     isError: Boolean = false,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
     keyboardType: KeyboardType = KeyboardType.Text,

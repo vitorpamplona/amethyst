@@ -57,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -105,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
@@ -652,7 +652,7 @@ fun RelayGroupChannelListScreen(
                         if (dmRows.size > INLINE_DM_LIMIT) {
                             val extra = dmRows.size - INLINE_DM_LIMIT
                             item(key = "dm-see-all") {
-                                SeeAllRow(pluralStringResource(Res.plurals.buzz_dm_see_all_count, extra, extra)) {
+                                SeeAllRow(pluralStringRes(Res.plurals.buzz_dm_see_all_count, extra, extra)) {
                                     nav.nav(Route.BuzzDmList(relay.url))
                                 }
                             }
@@ -997,7 +997,7 @@ private fun RelayGroupChannelRow(
             val subtitle =
                 channel.summary()?.takeIf { it.isNotBlank() }
                     ?: if (memberCount > 0) {
-                        pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
+                        pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount)
                     } else {
                         null
                     }

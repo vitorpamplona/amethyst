@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The drawer's layout: which destinations it lists, under which heading, in which order.
@@ -49,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 @Immutable
 data class DrawerSection(
     val id: DrawerSectionId,
-    val titleRes: Int,
+    val titleRes: StringResource,
     val icon: MaterialSymbol,
     val items: List<NavBarItem>,
     /**

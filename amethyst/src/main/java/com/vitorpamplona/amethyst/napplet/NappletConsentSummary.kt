@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_storage
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_upload
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -85,12 +86,12 @@ class NappletConsentSummary(
     private val context: Context,
     private val account: Account,
 ) {
-    fun info(
+    suspend fun info(
         identity: NappletIdentity,
         capability: NappletCapability,
         request: NappletRequest,
     ): NappletConsentInfo {
-        val untitled = context.getString(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
+        val untitled = loadStringRes(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
         val (title, iconUrl) =
             if (identity.authorPubKey == "browser") {
                 val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
@@ -152,14 +153,14 @@ class NappletConsentSummary(
      * the dialog reads "publish a kind 3 event" while the user is actually about to replace their
      * whole social graph — the summary would be technically true and practically useless.
      */
-    private fun consequenceFor(request: NappletRequest): Consequence? =
+    private suspend fun consequenceFor(request: NappletRequest): Consequence? =
         when (request) {
             is NappletRequest.Publish -> consequenceFor(request.kind, request.tags)
             is NappletRequest.SignEvent -> consequenceFor(request.kind, request.tags)
             else -> null
         }
 
-    private fun consequenceFor(
+    private suspend fun consequenceFor(
         kind: Int,
         tags: Array<Array<String>>,
     ): Consequence? =
@@ -235,7 +236,7 @@ class NappletConsentSummary(
         val addedKeys = next.filter { it !in previous }
         val removedKeys = previous.filter { it !in next }
         if (addedKeys.isEmpty() && removedKeys.isEmpty()) {
-            return Consequence(context.getString(Res.string.napplet_consent_diff_none))
+            return Consequence(loadStringRes(Res.string.napplet_consent_diff_none))
         }
 
         // The overwhelmingly common edit is a single follow/unfollow. Naming and picturing that one
@@ -251,7 +252,7 @@ class NappletConsentSummary(
         val parts = listOfNotNull(pluralFor(added, addedKeys.size), pluralFor(removed, removedKeys.size))
         val summary =
             if (parts.size == 2) {
-                context.getString(Res.string.napplet_consent_diff_joiner, parts[0], parts[1])
+                loadStringRes(Res.string.napplet_consent_diff_joiner, parts[0], parts[1])
             } else {
                 parts.first()
             }
@@ -279,7 +280,7 @@ class NappletConsentSummary(
     }
 
     private suspend fun pluralFor(
-        resId: Int,
+        resId: StringResource,
         count: Int,
     ): String? = if (count <= 0) null else loadPluralStringRes(resId, count, count)
 
@@ -290,41 +291,41 @@ class NappletConsentSummary(
 
     private suspend fun summaryFor(request: NappletRequest): String =
         when (request) {
-            is NappletRequest.GetPublicKey -> context.getString(Res.string.napplet_consent_get_pubkey)
-            is NappletRequest.IdentityRead -> context.getString(Res.string.napplet_consent_identity_read)
+            is NappletRequest.GetPublicKey -> loadStringRes(Res.string.napplet_consent_get_pubkey)
+            is NappletRequest.IdentityRead -> loadStringRes(Res.string.napplet_consent_identity_read)
             is NappletRequest.Publish -> {
                 val preview = request.content.take(160).trim()
                 if (preview.isEmpty()) {
-                    context.getString(Res.string.napplet_consent_publish, request.kind)
+                    loadStringRes(Res.string.napplet_consent_publish, request.kind)
                 } else {
-                    context.getString(Res.string.napplet_consent_publish_preview, request.kind) + "\n“$preview”"
+                    loadStringRes(Res.string.napplet_consent_publish_preview, request.kind) + "\n“$preview”"
                 }
             }
             is NappletRequest.SignEvent -> {
                 val preview = request.content.take(160).trim()
                 if (preview.isEmpty()) {
-                    context.getString(Res.string.napplet_consent_sign, request.kind)
+                    loadStringRes(Res.string.napplet_consent_sign, request.kind)
                 } else {
-                    context.getString(Res.string.napplet_consent_sign, request.kind) + "\n“$preview”"
+                    loadStringRes(Res.string.napplet_consent_sign, request.kind) + "\n“$preview”"
                 }
             }
-            is NappletRequest.PublishEncrypted -> context.getString(Res.string.napplet_consent_publish_encrypted)
+            is NappletRequest.PublishEncrypted -> loadStringRes(Res.string.napplet_consent_publish_encrypted)
             is NappletRequest.Nip44Encrypt -> {
                 val preview = request.plaintext.take(160).trim()
-                val summary = context.getString(Res.string.napplet_consent_nip44_encrypt, counterpartyLabel(request.peer))
+                val summary = loadStringRes(Res.string.napplet_consent_nip44_encrypt, counterpartyLabel(request.peer))
                 if (preview.isEmpty()) summary else summary + "\n\u201C$preview\u201D"
             }
             // The ciphertext is meaningless to show, so name the counterparty instead — that is
             // the decision the user is actually making ("let this page read messages from X").
-            is NappletRequest.Nip44Decrypt -> context.getString(Res.string.napplet_consent_nip44_decrypt, counterpartyLabel(request.peer))
-            is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> context.getString(Res.string.napplet_consent_query)
+            is NappletRequest.Nip44Decrypt -> loadStringRes(Res.string.napplet_consent_nip44_decrypt, counterpartyLabel(request.peer))
+            is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> loadStringRes(Res.string.napplet_consent_query)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->
-                context.getString(Res.string.napplet_consent_storage)
+                loadStringRes(Res.string.napplet_consent_storage)
             is NappletRequest.NotifyCreate -> {
                 val preview = request.title.take(80).trim()
-                if (preview.isEmpty()) context.getString(Res.string.napplet_consent_notify) else context.getString(Res.string.napplet_consent_notify) + "\n“$preview”"
+                if (preview.isEmpty()) loadStringRes(Res.string.napplet_consent_notify) else loadStringRes(Res.string.napplet_consent_notify) + "\n“$preview”"
             }
-            is NappletRequest.NotifyList, is NappletRequest.NotifyDismiss -> context.getString(Res.string.napplet_consent_notify)
+            is NappletRequest.NotifyList, is NappletRequest.NotifyDismiss -> loadStringRes(Res.string.napplet_consent_notify)
             is NappletRequest.PayInvoice -> {
                 // getAmountInSats returns ZERO (not null, not a throw) for an amountless BOLT11, so a
                 // naive read renders "pay 0 sats" — telling the user a payment is free when the amount
@@ -333,12 +334,12 @@ class NappletConsentSummary(
                 if (sats != null && sats > 0) {
                     loadPluralStringRes(Res.plurals.napplet_consent_pay_amount, sats.toInt(), sats)
                 } else {
-                    context.getString(Res.string.napplet_consent_pay_no_amount)
+                    loadStringRes(Res.string.napplet_consent_pay_no_amount)
                 }
             }
             NappletRequest.ResourceInfo, is NappletRequest.ResourceBytes, is NappletRequest.ResourceBytesMany ->
-                context.getString(Res.string.napplet_consent_resource)
-            is NappletRequest.UploadBlob -> context.getString(Res.string.napplet_consent_upload)
+                loadStringRes(Res.string.napplet_consent_resource)
+            is NappletRequest.UploadBlob -> loadStringRes(Res.string.napplet_consent_upload)
             // Resolved in the broker before consent (negotiation / shell-mediated / cosmetic); never shown.
             is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction, is NappletRequest.ThemeGet -> ""
         }

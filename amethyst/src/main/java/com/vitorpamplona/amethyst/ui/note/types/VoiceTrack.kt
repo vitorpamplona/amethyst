@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size75Modifier
@@ -255,7 +255,7 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
     ) {
         Icon(
             symbol = if (state.showPlay) MaterialSymbols.PlayCircleOutline else MaterialSymbols.PauseCircleOutline,
-            contentDescription = if (state.showPlay) stringResource(Res.string.play) else stringResource(Res.string.pause),
+            contentDescription = if (state.showPlay) stringRes(Res.string.play) else stringRes(Res.string.pause),
             modifier = Size50Modifier,
             tint = Color.White,
         )

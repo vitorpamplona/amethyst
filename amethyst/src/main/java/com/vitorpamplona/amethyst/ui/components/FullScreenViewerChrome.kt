@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.download_to_phone
 import com.vitorpamplona.amethyst.commons.resources.media_download_has_started_toast
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -307,7 +308,7 @@ fun ViewerSaveToGalleryButton(
                     Toast
                         .makeText(
                             localContext,
-                            stringRes(Res.string.media_download_has_started_toast),
+                            loadStringRes(Res.string.media_download_has_started_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -327,7 +328,7 @@ fun ViewerSaveToGalleryButton(
                     Toast
                         .makeText(
                             localContext,
-                            stringRes(Res.string.media_download_has_started_toast),
+                            loadStringRes(Res.string.media_download_has_started_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }

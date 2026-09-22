@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -101,7 +100,7 @@ fun FavoriteAppsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(Res.string.favorite_apps)) })
+            TopAppBar(title = { Text(stringRes(Res.string.favorite_apps)) })
         },
         bottomBar = {
             AppBottomBar(Route.FavoriteApps, nav, accountViewModel) { route -> nav.navBottomBar(route) }
@@ -235,7 +234,7 @@ internal fun FavoriteAppCell(
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(Res.string.favorite_app_remove)) },
+                text = { Text(stringRes(Res.string.favorite_app_remove)) },
                 leadingIcon = { Icon(MaterialSymbols.Delete, contentDescription = null) },
                 onClick = {
                     menuOpen = false

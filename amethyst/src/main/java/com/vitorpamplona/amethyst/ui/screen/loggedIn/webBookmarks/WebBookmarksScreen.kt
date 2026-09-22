@@ -178,7 +178,7 @@ private fun RenderWebBookmarksScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringResource(Res.string.web_bookmark_add_title),
+                        contentDescription = stringRes(Res.string.web_bookmark_add_title),
                     )
                 }
             }
@@ -341,7 +341,7 @@ private fun WebBookmarkCard(
                 IconButton(onClick = { showEditDialog = true }) {
                     Icon(
                         symbol = MaterialSymbols.Edit,
-                        contentDescription = stringResource(Res.string.web_bookmark_edit_title),
+                        contentDescription = stringRes(Res.string.web_bookmark_edit_title),
                     )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
@@ -514,7 +514,7 @@ fun WebBookmarkEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

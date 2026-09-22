@@ -60,10 +60,11 @@ import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 class MessagesTabItem(
-    val resource: Int,
+    val resource: StringResource,
     val scrollStateKey: String,
     val feedContentState: FeedContentState,
 )

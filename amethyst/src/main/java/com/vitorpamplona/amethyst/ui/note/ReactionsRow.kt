@@ -1251,7 +1251,7 @@ private data class OnchainZapRequest(
  * splits) to the manual payment screen. The shared tail of every zap flow.
  */
 @OptIn(ExperimentalUuidApi::class)
-fun payViaIntentOrManualSplit(
+suspend fun payViaIntentOrManualSplit(
     payables: ImmutableList<ZapPaymentHandler.Payable>,
     context: Context,
     accountViewModel: AccountViewModel,

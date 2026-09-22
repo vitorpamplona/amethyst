@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_browsing
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -81,7 +82,7 @@ object RelayPurposeSummary {
                 }.toMutableList()
 
         if (browsing.isNotEmpty()) {
-            lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, browsing.size, ctx.getString(Res.string.relay_purpose_browsing), browsing.size))
+            lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, browsing.size, loadStringRes(Res.string.relay_purpose_browsing), browsing.size))
         }
         return lines
     }

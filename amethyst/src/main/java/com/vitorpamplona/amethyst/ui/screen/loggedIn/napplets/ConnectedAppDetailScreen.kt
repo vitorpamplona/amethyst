@@ -191,7 +191,7 @@ fun ConnectedAppDetailScreen(
     val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
         .collectAsStateWithLifecycle()
     val nip46Activity = remember(allActivity, nip46Client) { allActivity.filter { nip46Client != null && it.clientPubKey == nip46Client } }
-    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringResource(Res.string.nip46_signer_remote_app)
+    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringRes(Res.string.nip46_signer_remote_app)
 
     Scaffold(
         topBar = {
@@ -463,7 +463,7 @@ private fun Nip46AppHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    stringResource(Res.string.nip46_signer_remote_app),
+                    stringRes(Res.string.nip46_signer_remote_app),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -727,7 +727,7 @@ private fun CapabilityPermissionDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -752,9 +752,9 @@ private fun GrantOption(
 private fun NostrSignerOp.opLabel(): String =
     when (this) {
         is NostrSignerOp.SignKind -> stringRes(Res.string.napplet_op_sign_kind, kind)
-        NostrSignerOp.Encrypt -> stringResource(Res.string.napplet_op_encrypt)
-        NostrSignerOp.Decrypt -> stringResource(Res.string.napplet_op_decrypt)
-        is NostrSignerOp.DecryptFrom -> stringResource(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
+        NostrSignerOp.Encrypt -> stringRes(Res.string.napplet_op_encrypt)
+        NostrSignerOp.Decrypt -> stringRes(Res.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> stringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
 
 @Composable

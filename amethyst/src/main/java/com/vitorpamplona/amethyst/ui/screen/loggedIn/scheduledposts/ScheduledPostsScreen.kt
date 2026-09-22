@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_subtitle_que
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -458,7 +459,7 @@ private fun ScheduledPostCardExpandedPanel(
                                     Toast
                                         .makeText(
                                             context,
-                                            stringRes(Res.string.scheduled_posts_event_id_copied),
+                                            loadStringRes(Res.string.scheduled_posts_event_id_copied),
                                             Toast.LENGTH_SHORT,
                                         ).show()
                                 },

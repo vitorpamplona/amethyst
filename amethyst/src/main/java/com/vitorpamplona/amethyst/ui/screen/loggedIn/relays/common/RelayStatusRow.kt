@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -196,7 +195,7 @@ fun RelayStatusRow(
             )
 
             Text(
-                text = stringResource(Res.string.uptime, successRate),
+                text = stringRes(Res.string.uptime, successRate),
                 maxLines = 1,
                 fontSize = Font12SP,
                 modifier = HalfStartPadding,

@@ -39,7 +39,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -96,7 +95,7 @@ private fun RenderDraftListScreen(
                 showDeleteDialog = false
             },
             title = {
-                Text(text = stringResource(Res.string.drafts))
+                Text(text = stringRes(Res.string.drafts))
             },
             text = {
                 Text(text = stringRes(Res.string.delete_all_drafts_confirmation))

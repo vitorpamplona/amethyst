@@ -56,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
@@ -408,7 +408,7 @@ private fun GroupPickRow(
             val subtitle =
                 channel.summary()?.takeIf { it.isNotBlank() }
                     ?: if (memberCount > 0) {
-                        pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
+                        pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount)
                     } else {
                         null
                     }

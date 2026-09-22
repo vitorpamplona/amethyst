@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
 import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -293,7 +294,7 @@ fun CardBody(
             Toast
                 .makeText(
                     context,
-                    stringRes(stringRes),
+                    loadStringRes(stringRes),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -496,14 +497,14 @@ fun CardBody(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(Res.string.quick_action_share_browser_link),
+                                loadStringRes(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
                         Intent.createChooser(
                             sendIntent,
-                            stringRes(Res.string.quick_action_share),
+                            loadStringRes(Res.string.quick_action_share),
                         )
                     context.startActivity(shareIntent)
                     onDismiss()

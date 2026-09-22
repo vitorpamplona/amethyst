@@ -154,6 +154,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.flow.emptyFlow
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -938,7 +939,7 @@ private fun ConcordServerRoomCompose(
 private fun ChannelTitleWithLabelInfo(
     channelName: String,
     labelIcon: MaterialSymbol,
-    label: Int,
+    label: StringResource,
     modifier: Modifier,
     labelContentDescription: String? = null,
 ) {

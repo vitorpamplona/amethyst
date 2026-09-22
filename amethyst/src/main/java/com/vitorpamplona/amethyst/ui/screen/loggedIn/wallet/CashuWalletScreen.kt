@@ -70,7 +70,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -162,6 +161,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -655,7 +655,7 @@ private fun PendingQuoteBanner(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text =
-                        pluralStringResource(
+                        pluralStringRes(
                             Res.plurals.cashu_pending_quotes_title,
                             count,
                             count,
@@ -714,7 +714,7 @@ private fun UntrustedMintBanner(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text =
-                        pluralStringResource(
+                        pluralStringRes(
                             Res.plurals.cashu_untrusted_mint_title,
                             count,
                             count,

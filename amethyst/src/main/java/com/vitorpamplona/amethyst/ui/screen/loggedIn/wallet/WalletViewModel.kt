@@ -237,7 +237,7 @@ class WalletViewModel : ViewModel() {
     // Both used to be swallowed silently — now we surface them so the user
     // can distinguish "wallet never answered" from "wallet answered with
     // something we can't read".
-    private fun unreadableResponseError(response: Response?): String =
+    private suspend fun unreadableResponseError(response: Response?): String =
         if (response == null) {
             text(Res.string.wallet_connect_decrypt_failed)
         } else {
@@ -420,15 +420,15 @@ class WalletViewModel : ViewModel() {
 
     private fun getWalletUri(walletId: String?): Nip47WalletConnect.Nip47URINorm? = _wallets.value.firstOrNull { it.id == walletId }?.uri
 
-    private fun getSelectedWalletUri(): Nip47WalletConnect.Nip47URINorm? = getWalletUri(_selectedWalletId.value)
+    private suspend fun getSelectedWalletUri(): Nip47WalletConnect.Nip47URINorm? = getWalletUri(_selectedWalletId.value)
 
-    fun fetchAllBalances() {
+    suspend fun fetchAllBalances() {
         _wallets.value.forEach { wallet ->
             fetchBalanceForWallet(wallet.id)
         }
     }
 
-    private fun fetchBalanceForWallet(walletId: String) {
+    private suspend fun fetchBalanceForWallet(walletId: String) {
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -460,7 +460,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun fetchInfoForWallet(walletId: String) {
+    suspend fun fetchInfoForWallet(walletId: String) {
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -479,7 +479,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    private fun updateWalletInfo(
+    private suspend fun updateWalletInfo(
         walletId: String,
         transform: (WalletInfo) -> WalletInfo,
     ) {
@@ -496,7 +496,7 @@ class WalletViewModel : ViewModel() {
 
     // --- Methods below operate on the selected wallet ---
 
-    fun fetchBalance() {
+    suspend fun fetchBalance() {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -534,7 +534,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun fetchInfo() {
+    suspend fun fetchInfo() {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -555,7 +555,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun fetchTransactions() {
+    suspend fun fetchTransactions() {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -609,7 +609,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun loadMoreTransactions() {
+    suspend fun loadMoreTransactions() {
         if (_isLoadingMore.value || !_hasMoreTransactions.value) return
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
@@ -663,7 +663,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun sendPayment(bolt11: String) {
+    suspend fun sendPayment(bolt11: String) {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -698,7 +698,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun createInvoice(
+    suspend fun createInvoice(
         amountSats: Long,
         description: String? = null,
     ) {

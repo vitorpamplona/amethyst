@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Git / code notifications — NIP-34 issues (1621), patches (1617), pull requests
@@ -171,7 +172,7 @@ object CodeNotification {
         pr: Int,
         patch: Int,
         issue: Int,
-        fallback: Int,
+        fallback: StringResource,
     ): Int {
         val targetKind = rootId?.let { LocalCache.getNoteIfExists(it)?.event?.kind } ?: return fallback
         return when (targetKind) {
@@ -188,7 +189,7 @@ object CodeNotification {
         id: String,
         createdAt: Long,
         authorPubkey: String,
-        titleRes: Int,
+        titleRes: StringResource,
         subject: String?,
     ) {
         val note = LocalCache.getNoteIfExists(id) ?: return

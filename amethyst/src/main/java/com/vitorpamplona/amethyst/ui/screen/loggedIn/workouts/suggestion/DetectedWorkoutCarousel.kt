@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
@@ -248,7 +248,7 @@ private fun summaryLine(workout: DetectedWorkout): String {
     parts.add(formatWorkoutDuration(workout.durationSeconds))
     if (workout.sessionCount > 1) {
         val sessions = workout.sessionCount
-        parts.add(pluralStringResource(Res.plurals.workout_suggestion_combined_sessions, sessions, sessions))
+        parts.add(pluralStringRes(Res.plurals.workout_suggestion_combined_sessions, sessions, sessions))
     }
     return parts.joinToString(" · ")
 }

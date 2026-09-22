@@ -32,9 +32,9 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_body
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -103,7 +103,7 @@ class CalendarReminderWorker(
             val title = view.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
             val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
             val body =
-                pluralStringRes(
+                loadPluralStringRes(
                     applicationContext,
                     Res.plurals.calendar_reminder_body,
                     minutesAway,

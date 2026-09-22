@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.always_on_notif_hide_details
 import com.vitorpamplona.amethyst.commons.resources.always_on_notif_show_details
 import com.vitorpamplona.amethyst.commons.resources.always_on_notif_title
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -168,7 +169,7 @@ class NotificationRelayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onCreate() {
+    override suspend fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
         Amethyst.instance.alwaysOnSession.setActive(true)
@@ -176,7 +177,7 @@ class NotificationRelayService : Service() {
         ensureForeground()
     }
 
-    override fun onStartCommand(
+    override suspend fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,
@@ -265,7 +266,7 @@ class NotificationRelayService : Service() {
      * Returns true if the service is foregrounded, false if promotion failed (in which
      * case the service has already been told to stop).
      */
-    private fun ensureForeground(): Boolean {
+    private suspend fun ensureForeground(): Boolean {
         try {
             val notification = buildNotification(connectedRelayCount)
             ServiceCompat.startForeground(
@@ -357,7 +358,7 @@ class NotificationRelayService : Service() {
             }
     }
 
-    private fun updateNotification(connectedRelays: Int) {
+    private suspend fun updateNotification(connectedRelays: Int) {
         val notification = buildNotification(connectedRelays)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -366,7 +367,7 @@ class NotificationRelayService : Service() {
     private suspend fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
             when {
-                connectedRelays <= 0 -> getString(Res.string.always_on_notif_connecting)
+                connectedRelays <= 0 -> loadStringRes(Res.string.always_on_notif_connecting)
                 // Foreground: the pool also holds the feed/finder outbox relays, so the
                 // count reflects all connections, not just the inbox. Backgrounded, the
                 // feeds tear down and only inbox + DM relays remain.
@@ -448,14 +449,14 @@ class NotificationRelayService : Service() {
         // threshold, so no bundle is formed and nothing gets stapled to it.
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(Res.string.always_on_notif_title))
+            .setContentTitle(loadStringRes(Res.string.always_on_notif_title))
             .setContentText(contentText)
             .apply {
                 breakdown?.let {
                     setStyle(
                         NotificationCompat
                             .BigTextStyle()
-                            .setBigContentTitle(getString(Res.string.always_on_notif_title))
+                            .setBigContentTitle(loadStringRes(Res.string.always_on_notif_title))
                             .bigText(contentText + "\n\n" + it.joinToString("\n")),
                     )
                 }
@@ -469,14 +470,14 @@ class NotificationRelayService : Service() {
             .build()
     }
 
-    private fun createNotificationChannel() {
+    private suspend fun createNotificationChannel() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                getString(Res.string.always_on_notif_channel_name),
+                loadStringRes(Res.string.always_on_notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = getString(Res.string.always_on_notif_channel_description)
+                description = loadStringRes(Res.string.always_on_notif_channel_description)
                 setShowBadge(false)
             }
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -170,7 +171,7 @@ private fun ConcordIconHero(
                     throw e
                 } catch (e: Exception) {
                     Log.w("ConcordImageUpload", "Community icon upload failed", e)
-                    val msg = e.message?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.failed_to_upload_media_no_details)
+                    val msg = e.message?.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.failed_to_upload_media_no_details)
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 } finally {
                     uploading = false
@@ -241,7 +242,7 @@ private fun ConcordBannerHero(
                     throw e
                 } catch (e: Exception) {
                     Log.w("ConcordImageUpload", "Community banner upload failed", e)
-                    val msg = e.message?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.failed_to_upload_media_no_details)
+                    val msg = e.message?.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.failed_to_upload_media_no_details)
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 } finally {
                     uploading = false

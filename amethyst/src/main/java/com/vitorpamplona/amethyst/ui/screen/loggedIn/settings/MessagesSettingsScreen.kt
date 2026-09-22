@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -109,8 +110,8 @@ fun MessagesSettingsScreenPreview() {
  */
 private data class ChatFeedTypeUi(
     val type: ChatFeedType,
-    val titleRes: Int,
-    val descRes: Int,
+    val titleRes: StringResource,
+    val descRes: StringResource,
     val accent: Color,
 )
 

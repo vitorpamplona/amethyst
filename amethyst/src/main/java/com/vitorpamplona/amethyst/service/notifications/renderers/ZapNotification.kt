@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import org.jetbrains.compose.resources.StringResource
 import java.math.BigDecimal
 
 /**
@@ -183,7 +184,7 @@ object ZapNotification {
 
     private suspend fun fromLine(
         context: Context,
-        fromRes: Int,
+        fromRes: StringResource,
         user: String,
         excerpt: String,
     ): String {

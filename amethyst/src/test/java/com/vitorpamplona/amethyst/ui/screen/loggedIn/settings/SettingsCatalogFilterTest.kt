@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import org.jetbrains.compose.resources.StringResource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,7 +37,7 @@ class SettingsCatalogFilterTest {
         )
 
     private fun entry(
-        titleRes: Int,
+        titleRes: StringResource,
         keywordsRes: Int? = null,
         isDanger: Boolean = false,
     ) = SettingsEntry(

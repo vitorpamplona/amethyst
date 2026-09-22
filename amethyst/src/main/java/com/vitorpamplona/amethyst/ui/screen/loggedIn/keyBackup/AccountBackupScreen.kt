@@ -128,6 +128,7 @@ import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /** Best-effort delay before the plaintext nsec is wiped from the clipboard. */
 private const val CLIPBOARD_CLEAR_DELAY_MS = 60_000L
@@ -482,7 +483,7 @@ private fun encryptCopyNSec(
 private fun QrCodeButtonBase(
     accountViewModel: AccountViewModel,
     isEnabled: Boolean = true,
-    contentDescription: Int,
+    contentDescription: StringResource,
     onDialogShow: () -> String?,
 ) {
     val context = LocalContext.current

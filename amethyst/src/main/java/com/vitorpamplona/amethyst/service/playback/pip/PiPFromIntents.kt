@@ -64,7 +64,7 @@ fun rememberVideoDataFromIntents(): MutableState<MediaItemData?> {
     return videoData
 }
 
-fun Activity.processIntentForPiP(intent: Intent): MediaItemData? {
+suspend fun Activity.processIntentForPiP(intent: Intent): MediaItemData? {
     val videoDataOnCreation = IntentExtras.loadBundle(intent.extras)
     val bounds = IntentExtras.loadBounds(intent.extras)
     val ratio = videoDataOnCreation?.aspectRatio ?: videoDataOnCreation?.videoUri?.let { MediaAspectRatioCache.get(it) }

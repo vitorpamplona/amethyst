@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -76,7 +77,6 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import org.jetbrains.compose.resources.pluralStringResource
 
 @Composable
 fun CalendarCollectionsView(
@@ -213,7 +213,7 @@ fun CalendarCollectionCard(
                     )
                 }
                 Text(
-                    text = pluralStringResource(Res.plurals.calendar_collection_count, count, count),
+                    text = pluralStringRes(Res.plurals.calendar_collection_count, count, count),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )

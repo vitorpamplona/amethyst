@@ -95,6 +95,7 @@ import kotlinx.coroutines.flow.first
 import net.engawapg.lib.zoomable.ZoomState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ZoomableImageDialog(
@@ -365,7 +366,7 @@ private fun DialogContent(
 
 private fun showToastOnMain(
     context: Context,
-    resId: Int,
+    resId: StringResource,
 ) {
     Handler(Looper.getMainLooper()).post {
         Toast.makeText(context.applicationContext, resId, Toast.LENGTH_SHORT).show()

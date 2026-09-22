@@ -126,7 +126,7 @@ fun ConnectedAppsScreen(
     ConnectedAppsFilterAssemblerSubscription(accountViewModel, nappletAuthors)
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(Res.string.napplet_permissions_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.napplet_permissions_title), nav) },
     ) { padding ->
         val current = items
         when {

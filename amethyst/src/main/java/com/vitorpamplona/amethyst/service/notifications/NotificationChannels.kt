@@ -31,11 +31,12 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_name
 import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_id
 import com.vitorpamplona.amethyst.commons.resources.app_notification_scheduled_posts_channel_name
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Registry of user-facing notification channels and helpers to read their
@@ -60,7 +61,7 @@ object NotificationChannels {
      * settings page has something to open even before the first notification fires.
      */
     data class Entry(
-        val nameRes: Int,
+        val nameRes: StringResource,
         val icon: MaterialSymbol,
         val channelId: suspend (Context) -> String,
         val ensure: suspend (Context) -> Unit,
@@ -86,7 +87,7 @@ object NotificationChannels {
                 Entry(
                     nameRes = Res.string.app_notification_scheduled_posts_channel_name,
                     icon = MaterialSymbols.Schedule,
-                    channelId = { stringRes(it, Res.string.app_notification_scheduled_posts_channel_id) },
+                    channelId = { loadStringRes(it, Res.string.app_notification_scheduled_posts_channel_id) },
                     ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
                 ),
                 Entry(

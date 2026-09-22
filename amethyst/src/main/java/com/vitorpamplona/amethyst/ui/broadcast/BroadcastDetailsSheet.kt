@@ -63,7 +63,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -444,7 +443,7 @@ private fun RelayResultRow(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Refresh,
-                    contentDescription = stringResource(Res.string.retry),
+                    contentDescription = stringRes(Res.string.retry),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )

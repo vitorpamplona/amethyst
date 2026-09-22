@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -278,7 +278,7 @@ private fun MinichatChip(
                 modifier = Size14Modifier,
             )
             Text(
-                text = pluralStringResource(Res.plurals.chat_minichat_reply_count, count, count),
+                text = pluralStringRes(Res.plurals.chat_minichat_reply_count, count, count),
                 fontSize = Font12SP,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.grayText,

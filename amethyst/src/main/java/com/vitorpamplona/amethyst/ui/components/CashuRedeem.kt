@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
 import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
@@ -240,7 +241,7 @@ fun CashuPreviewNew(
                         context.startActivity(intent)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        toast(stringRes(Res.string.cashu), stringRes(Res.string.cashu_no_wallet_found))
+                        toast(loadStringRes(Res.string.cashu), loadStringRes(Res.string.cashu_no_wallet_found))
                     }
                 },
                 shape = ButtonBorder,

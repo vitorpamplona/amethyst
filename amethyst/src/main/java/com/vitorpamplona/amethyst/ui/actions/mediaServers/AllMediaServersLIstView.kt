@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.utils.Rfc3986
+import org.jetbrains.compose.resources.StringResource
 
 /** Vibrant palette for server monograms; picked deterministically from the host name. */
 private val MonogramColors =
@@ -611,7 +612,7 @@ private fun HealthIndicator(health: ServerHealth) {
     }
 
     val color: Color
-    val label: Int
+    val label: StringResource
     when (health) {
         ServerHealth.Online -> {
             color = MaterialTheme.colorScheme.allGoodColor

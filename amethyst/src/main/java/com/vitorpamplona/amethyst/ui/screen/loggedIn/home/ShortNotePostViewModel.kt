@@ -255,7 +255,7 @@ open class ShortNotePostViewModel :
             pTags = value
         }
 
-    override fun onAudienceChanged() = draftTag.newVersion()
+    override suspend fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
@@ -1857,7 +1857,7 @@ open class ShortNotePostViewModel :
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    fun selectVoiceRecording(recording: RecordingResult) {
+    suspend fun selectVoiceRecording(recording: RecordingResult) {
         // Cancel any ongoing processing and delete existing files
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
@@ -1876,11 +1876,11 @@ open class ShortNotePostViewModel :
             )
         }
 
-    fun selectPreset(preset: VoicePreset) {
+    suspend fun selectPreset(preset: VoicePreset) {
         voiceAnonymization.selectPreset(preset, voiceLocalFile)
     }
 
-    fun removeVoiceMessage() {
+    suspend fun removeVoiceMessage() {
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
@@ -1891,7 +1891,7 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
     }
 
-    private fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
+    private suspend fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
         toDelete?.let { file ->
             try {
                 if (file.delete()) {

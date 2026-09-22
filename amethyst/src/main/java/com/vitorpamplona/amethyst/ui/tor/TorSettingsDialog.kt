@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ConnectTorDialog(
@@ -334,7 +335,7 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
 @Composable
 fun SwitchSettingsRow(
-    name: Int,
+    name: StringResource,
     desc: Int,
     checked: MutableState<Boolean>,
 ) {

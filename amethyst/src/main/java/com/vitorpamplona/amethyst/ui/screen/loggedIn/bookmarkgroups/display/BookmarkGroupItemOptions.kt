@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -248,12 +249,12 @@ fun BookmarkGroupItemOptionsMenu(
                         )
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(Res.string.quick_action_share_browser_link),
+                            loadStringRes(Res.string.quick_action_share_browser_link),
                         )
                     }
 
                 val shareIntent =
-                    Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
+                    Intent.createChooser(sendIntent, loadStringRes(Res.string.quick_action_share))
                 actContext.startActivity(shareIntent)
                 onDismiss()
             }

@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found
 import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.show_qr
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -108,7 +109,7 @@ fun PaymentTargetsDialog(
                                 Toast
                                     .makeText(
                                         context,
-                                        stringRes(Res.string.copied_to_clipboard),
+                                        loadStringRes(Res.string.copied_to_clipboard),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -121,7 +122,7 @@ fun PaymentTargetsDialog(
                                 // wipe whatever the wallet app already had open.
                                 runCatching { uriHandler.openUri(paymentTargetUri(target)) }
                                     .onSuccess { onDismiss() }
-                                    .onFailure { errorMessage = stringRes(Res.string.no_payment_app_found) }
+                                    .onFailure { errorMessage = loadStringRes(Res.string.no_payment_app_found) }
                             }
                         },
                     )

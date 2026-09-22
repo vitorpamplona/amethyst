@@ -54,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -435,7 +435,7 @@ private fun AudienceReview(
     when (cap) {
         is AudienceCap.OverHard ->
             NoteLine(
-                text = pluralStringResource(Res.plurals.audience_hard_cap, cap.total, cap.total, AudienceSelection.HARD_CAP),
+                text = pluralStringRes(Res.plurals.audience_hard_cap, cap.total, cap.total, AudienceSelection.HARD_CAP),
                 color = MaterialTheme.colorScheme.error,
                 symbol = MaterialSymbols.Warning,
             )
@@ -443,9 +443,9 @@ private fun AudienceReview(
             NoteLine(
                 text =
                     if (isPrivate) {
-                        pluralStringResource(Res.plurals.audience_soft_cap_private, cap.total, cap.total)
+                        pluralStringRes(Res.plurals.audience_soft_cap_private, cap.total, cap.total)
                     } else {
-                        pluralStringResource(Res.plurals.audience_soft_cap_public, cap.total, cap.total)
+                        pluralStringRes(Res.plurals.audience_soft_cap_public, cap.total, cap.total)
                     },
                 color = MaterialTheme.colorScheme.warningColor,
                 symbol = MaterialSymbols.Warning,
@@ -463,9 +463,9 @@ private fun AudienceReview(
         Text(
             text =
                 if (cap is AudienceCap.OverSoft) {
-                    pluralStringResource(Res.plurals.audience_add_anyway, additions.size, additions.size)
+                    pluralStringRes(Res.plurals.audience_add_anyway, additions.size, additions.size)
                 } else {
-                    pluralStringResource(Res.plurals.audience_add_people, additions.size, additions.size)
+                    pluralStringRes(Res.plurals.audience_add_people, additions.size, additions.size)
                 },
         )
     }

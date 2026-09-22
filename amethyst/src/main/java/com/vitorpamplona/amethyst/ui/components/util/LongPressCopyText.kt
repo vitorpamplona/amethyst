@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -94,7 +95,7 @@ fun LongPressCopyText(
                 onLongClick = {
                     scope.launch {
                         clipboard.setText(copyValue)
-                        Toast.makeText(context, stringRes(toastResId), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, loadStringRes(toastResId), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onLongClickLabel = longClickLabel,

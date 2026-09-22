@@ -63,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -127,6 +126,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_unknown_error
 import com.vitorpamplona.amethyst.commons.resources.marmot_user_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.members
 import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -282,7 +283,7 @@ fun MarmotGroupInfoScreen(
                             )
                         }
                         Text(
-                            text = pluralStringResource(Res.plurals.marmot_member_count, members.size, members.size),
+                            text = pluralStringRes(Res.plurals.marmot_member_count, members.size, members.size),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp),
@@ -341,7 +342,7 @@ fun MarmotGroupInfoScreen(
                                         Toast
                                             .makeText(
                                                 context,
-                                                stringRes(Res.string.marmot_enable_encrypted_media_needs_server),
+                                                loadStringRes(Res.string.marmot_enable_encrypted_media_needs_server),
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                         return@Button
@@ -354,7 +355,7 @@ fun MarmotGroupInfoScreen(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        stringRes(Res.string.marmot_encrypted_media_enabled_toast),
+                                                        loadStringRes(Res.string.marmot_encrypted_media_enabled_toast),
                                                         Toast.LENGTH_SHORT,
                                                     ).show()
                                             }
@@ -363,7 +364,7 @@ fun MarmotGroupInfoScreen(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        stringRes(
+                                                        loadStringRes(
                                                             context,
                                                             Res.string.marmot_failed_to_enable_encrypted_media,
                                                             e.message,
@@ -465,7 +466,7 @@ fun MarmotGroupInfoScreen(
                 onAdd = { user ->
                     isAdding = true
                     isAddError = false
-                    addStatus = stringRes(Res.string.marmot_adding_user, user.toBestDisplayName())
+                    addStatus = loadStringRes(Res.string.marmot_adding_user, user.toBestDisplayName())
                     val targetPubkey = user.pubkeyHex
                     val targetName = user.toBestDisplayName()
                     scope.launch(Dispatchers.IO) {
@@ -477,11 +478,11 @@ fun MarmotGroupInfoScreen(
                                 addSearchInput = ""
                                 userSuggestions.reset()
                             } else {
-                                addStatus = stringRes(Res.string.marmot_failed_to_add_user, targetName, result.removePrefix("Error: "))
+                                addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, result.removePrefix("Error: "))
                                 isAddError = true
                             }
                         } catch (e: Exception) {
-                            addStatus = stringRes(Res.string.marmot_failed_to_add_user, targetName, e.message ?: stringRes(Res.string.marmot_unknown_error))
+                            addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, e.message ?: loadStringRes(Res.string.marmot_unknown_error))
                             isAddError = true
                         } finally {
                             isAdding = false
@@ -508,7 +509,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.marmot_failed_to_leave_group, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_leave_group, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -538,7 +539,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(
+                                    loadStringRes(
                                         context,
                                         if (ended) {
                                             Res.string.marmot_group_disbanded_toast
@@ -559,7 +560,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.marmot_failed_to_disband, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_disband, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -581,7 +582,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(Res.string.marmot_member_removed), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_member_removed), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -589,7 +590,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.marmot_failed_to_remove_member, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_remove_member, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -611,7 +612,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.grantMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(Res.string.marmot_admin_granted), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_admin_granted), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -619,7 +620,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.marmot_failed_to_grant_admin, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -641,7 +642,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.revokeMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(Res.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -649,7 +650,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.marmot_failed_to_revoke_admin, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }

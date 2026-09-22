@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
@@ -139,7 +139,7 @@ fun PowOverrideButton(
                     Text(
                         if (defaultDifficulty != null && defaultDifficulty > 0) {
                             withEta(
-                                pluralStringResource(Res.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty),
+                                pluralStringRes(Res.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty),
                                 defaultDifficulty,
                             )
                         } else {
@@ -169,7 +169,7 @@ fun PowOverrideButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            withEta(pluralStringResource(Res.plurals.pow_option_bits, preset, preset), preset),
+                            withEta(pluralStringRes(Res.plurals.pow_option_bits, preset, preset), preset),
                             fontWeight = if (isOverridden && effectiveDifficulty == preset) FontWeight.Bold else null,
                         )
                     },

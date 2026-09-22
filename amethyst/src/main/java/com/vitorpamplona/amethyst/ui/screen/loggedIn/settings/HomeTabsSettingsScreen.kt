@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import org.jetbrains.compose.resources.StringResource
 
 @Preview
 @Composable
@@ -151,7 +152,7 @@ private fun HomeTabsSection(ui: UiSettingsFlow) {
 /** One toggleable Home content group, mapping a [HomeFeedType] to its display title + icon. */
 private data class HomeFeedTypeUi(
     val type: HomeFeedType,
-    val titleRes: Int,
+    val titleRes: StringResource,
     val icon: MaterialSymbol,
 )
 

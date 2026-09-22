@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -101,6 +100,7 @@ import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -485,7 +485,7 @@ private fun BatchedConsentDialog(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            pluralStringResource(Res.plurals.nip46_signer_batch_title, pending.size, pending.size),
+                            pluralStringRes(Res.plurals.nip46_signer_batch_title, pending.size, pending.size),
                             style = MaterialTheme.typography.titleLarge,
                         )
                         account.accountName?.let { name ->

@@ -35,7 +35,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -115,7 +115,7 @@ fun MarmotGroupChatScreen(
                             }
                             if (memberCount > 0) {
                                 Text(
-                                    text = pluralStringResource(Res.plurals.marmot_member_count, memberCount, memberCount),
+                                    text = pluralStringRes(Res.plurals.marmot_member_count, memberCount, memberCount),
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }

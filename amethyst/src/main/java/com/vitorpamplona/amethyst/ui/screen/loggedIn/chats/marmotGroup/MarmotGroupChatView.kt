@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_remove
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_not_a_member
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -342,7 +343,7 @@ private fun MarmotGroupFileUploadDialog(
                         Toast
                             .makeText(
                                 context,
-                                stringRes(Res.string.marmot_not_a_member),
+                                loadStringRes(Res.string.marmot_not_a_member),
                                 Toast.LENGTH_SHORT,
                             ).show()
                     }

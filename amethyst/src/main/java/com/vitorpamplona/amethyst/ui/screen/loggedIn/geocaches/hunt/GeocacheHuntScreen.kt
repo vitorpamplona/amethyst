@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * One curated hunt: a banner, a progress bar and the caches in the order the curator put them.
@@ -142,7 +141,7 @@ fun GeocacheHuntScreen(
             if (hunt == null) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        text = stringResource(Res.string.geocache_loading),
+                        text = stringRes(Res.string.geocache_loading),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -187,7 +186,7 @@ fun GeocacheHuntScreen(
             )
 
             Text(
-                text = stringResource(Res.string.geocache_hunt_progress, doneCount, caches.size),
+                text = stringRes(Res.string.geocache_hunt_progress, doneCount, caches.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -195,7 +194,7 @@ fun GeocacheHuntScreen(
             Button(
                 onClick = { nav.nav(Route.Geocaches(GeocacheTab.MAP)) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(Res.string.geocache_hunt_start)) }
+            ) { Text(stringRes(Res.string.geocache_hunt_start)) }
 
             caches.forEachIndexed { index, cacheAddress ->
                 GeocacheHuntStop(
@@ -243,7 +242,7 @@ private fun GeocacheHuntStop(
                 Text(
                     text =
                         listing?.cacheName()?.trim()?.ifBlank { null }
-                            ?: stringResource(Res.string.geocache_unnamed),
+                            ?: stringRes(Res.string.geocache_unnamed),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                 )

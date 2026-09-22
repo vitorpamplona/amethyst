@@ -81,7 +81,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,6 +132,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -859,7 +859,7 @@ private fun BlossomPaymentDialog(
                 Spacer(Modifier.size(8.dp))
                 Text(
                     if (amountSats != null) {
-                        pluralStringResource(Res.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
+                        pluralStringRes(Res.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
                     } else {
                         stringRes(Res.string.blossom_pay)
                     },

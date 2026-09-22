@@ -54,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -84,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -564,7 +564,7 @@ fun RenderSoftwareReleaseBody(
             Spacer(StdVertSpacer)
             val n = assets.size
             Text(
-                text = pluralStringResource(Res.plurals.nip82_assets_count, n, n),
+                text = pluralStringRes(Res.plurals.nip82_assets_count, n, n),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

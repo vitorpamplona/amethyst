@@ -92,7 +92,7 @@ sealed interface ReplyState {
  * Returns false when nothing is posted under [notId] any more — the user swiped it away while
  * the reply was in flight. Nothing is re-posted in that case: they are done with it.
  */
-fun NotificationManager.renderReplyState(
+suspend fun NotificationManager.renderReplyState(
     applicationContext: Context,
     notId: Int,
     state: ReplyState,

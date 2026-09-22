@@ -239,7 +239,7 @@ fun RelayAuthSettingsScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringResource(Res.string.relay_auth_settings_title),
+                caption = stringRes(Res.string.relay_auth_settings_title),
                 nav = nav,
                 actions = { AccountChip(accountViewModel) },
             )

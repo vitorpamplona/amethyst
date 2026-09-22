@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
@@ -65,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import org.jetbrains.compose.resources.StringResource
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.round
 
@@ -222,7 +222,7 @@ class ZapPaymentHandler(
             errors.forEach {
                 val message =
                     if (it.user != null) {
-                        stringRes(
+                        loadStringRes(
                             context,
                             Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                             it.user.toBestDisplayName(),
@@ -349,7 +349,7 @@ class ZapPaymentHandler(
         }
     }
 
-    private fun calculateZapValue(
+    private suspend fun calculateZapValue(
         amountMilliSats: Long,
         weight: Double,
         totalWeight: Double,
@@ -442,11 +442,11 @@ class ZapPaymentHandler(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 onError(
-                    stringRes(
+                    loadStringRes(
                         context,
                         Res.string.error_unable_to_fetch_invoice,
                     ),
-                    stringRes(
+                    loadStringRes(
                         context,
                         Res.string.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
                         e.message,
@@ -545,7 +545,7 @@ class ZapPaymentHandler(
 
         mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
             private suspend fun reportBolt12Error(
-                msgRes: Int,
+                msgRes: StringResource,
                 detail: String?,
             ) {
                 val msg = if (detail != null) loadStringRes(msgRes, detail) else loadStringRes(msgRes)

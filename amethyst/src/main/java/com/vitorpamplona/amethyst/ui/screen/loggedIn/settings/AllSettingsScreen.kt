@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -117,7 +118,7 @@ fun AllSettingsScreen(
         filterSettings(
             catalog = catalog,
             query = query,
-            stringLookup = { stringRes(it) },
+            stringLookup = { loadStringRes(it) },
         )
 
     Scaffold(
@@ -169,7 +170,7 @@ fun AllSettingsScreen(
                 showResetMarmotDialog = false
                 isResettingMarmot = true
                 scope.launch(Dispatchers.IO) {
-                    val successMessage = stringRes(Res.string.reset_marmot_success)
+                    val successMessage = loadStringRes(Res.string.reset_marmot_success)
                     try {
                         accountViewModel.resetMarmotState()
                         launch(Dispatchers.Main) {
@@ -177,7 +178,7 @@ fun AllSettingsScreen(
                         }
                     } catch (e: Exception) {
                         val failureMessage =
-                            stringRes(Res.string.reset_marmot_failure, e.message ?: "")
+                            loadStringRes(Res.string.reset_marmot_failure, e.message ?: "")
                         launch(Dispatchers.Main) {
                             Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
                         }

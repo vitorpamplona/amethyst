@@ -244,7 +244,7 @@ private fun UnavailableTab(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(Res.string.favorite_apps)) }) },
+        topBar = { TopAppBar(title = { Text(stringRes(Res.string.favorite_apps)) }) },
         bottomBar = {
             AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },

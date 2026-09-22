@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.bolt12_pay_with_wallet
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -101,7 +102,7 @@ fun Bolt12OffersDialog(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(Res.string.copied_to_clipboard),
+                                    loadStringRes(Res.string.copied_to_clipboard),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Stable identifiers for every destination the navigation surfaces can show — the bottom bar pins a
@@ -159,7 +160,7 @@ fun Set<NavBarItem>.toNames(): List<String> = map { it.name }.sorted()
 
 data class NavBarItemDef(
     val id: NavBarItem,
-    val labelRes: Int,
+    val labelRes: StringResource,
     val icon: MaterialSymbol,
     val resolveRoute: (AccountViewModel) -> Route,
 )
@@ -549,7 +550,7 @@ val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { 
  * Every [NavBarItem] in [NavBarCatalog] appears in exactly one category (see [BottomBarCategories]).
  */
 data class NavBarCategory(
-    val titleRes: Int,
+    val titleRes: StringResource,
     val icon: MaterialSymbol,
     val items: List<NavBarItem>,
 )

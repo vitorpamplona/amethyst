@@ -398,7 +398,7 @@ private fun SendPaymentLoaded(
     // Payment callbacks arrive on IO/relay threads. Snapshot state writes are
     // thread-safe, but every other payment flow in the app marshals UI state
     // to Main (see ReusableZapButton's progress handling) — match that.
-    fun postStage(newStage: PaymentFlowStage) {
+    suspend fun postStage(newStage: PaymentFlowStage) {
         scope.launch { stage = newStage }
     }
 
@@ -408,7 +408,7 @@ private fun SendPaymentLoaded(
      * the explicit amount + Pay tap, so it IS the confirmation. The external
      * entry hands off to another wallet app (which confirms on its own).
      */
-    fun payBolt11(invoice: String) {
+    suspend fun payBolt11(invoice: String) {
         val settings = accountViewModel.account.settings
         val pickedSource =
             if (selectedBolt11SourceId == EXTERNAL_WALLET_SOURCE_ID) {
@@ -461,7 +461,7 @@ private fun SendPaymentLoaded(
         }
     }
 
-    fun sendLightning(amount: Long) {
+    suspend fun sendLightning(amount: Long) {
         val address = lud16 ?: return
         stage = PaymentFlowStage.InProgress(requestingInvoiceLabel)
         accountViewModel.sendSats(
@@ -522,7 +522,7 @@ private fun SendPaymentLoaded(
         scope.launch { runClinkOfferRequest(offer, requestAmount, followMoved = true) }
     }
 
-    fun sendCashu(amount: Long) {
+    suspend fun sendCashu(amount: Long) {
         stage = PaymentFlowStage.InProgress(sendingNutzapLabel, progress = 0.05f)
         accountViewModel.sendNutzapToUser(
             recipientPubKey = user.pubkeyHex,

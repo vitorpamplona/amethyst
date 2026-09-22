@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * NIP-9B structured-rules editor section embedded in the community form.
@@ -125,7 +126,7 @@ internal fun CommunityRulesEditorSection(
 
 private data class KnownKind(
     val kind: Int,
-    val labelRes: Int,
+    val labelRes: StringResource,
 )
 
 private val KNOWN_KINDS =

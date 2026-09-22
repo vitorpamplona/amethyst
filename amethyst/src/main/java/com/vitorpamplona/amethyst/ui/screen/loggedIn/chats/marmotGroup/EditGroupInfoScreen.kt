@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -133,7 +134,7 @@ fun EditGroupInfoScreen(
                             }
                             launch(Dispatchers.Main) {
                                 Toast
-                                    .makeText(context, stringRes(Res.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
+                                    .makeText(context, loadStringRes(Res.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
                                     .show()
                             }
                             nav.popBack()
@@ -143,7 +144,7 @@ fun EditGroupInfoScreen(
                                 Toast
                                     .makeText(
                                         context,
-                                        stringRes(Res.string.marmot_failed_to_update, e.message),
+                                        loadStringRes(Res.string.marmot_failed_to_update, e.message),
                                         Toast.LENGTH_LONG,
                                     ).show()
                             }

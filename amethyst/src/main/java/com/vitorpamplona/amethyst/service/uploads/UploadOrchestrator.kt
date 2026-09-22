@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.jetbrains.compose.resources.StringResource
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -77,7 +78,7 @@ sealed class UploadingState {
     ) : UploadingFinalState()
 
     class Error(
-        val errorResource: Int,
+        val errorResource: StringResource,
         val params: Array<out String>,
     ) : UploadingFinalState()
 }
@@ -92,7 +93,7 @@ class UploadOrchestrator {
         }
 
     fun error(
-        resId: Int,
+        resId: StringResource,
         vararg params: String,
     ) = UploadingState.Error(resId, params).also { updateState(0.0, it) }
 

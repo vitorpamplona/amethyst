@@ -25,10 +25,11 @@ import com.vitorpamplona.amethyst.commons.resources.voice_preset_deep
 import com.vitorpamplona.amethyst.commons.resources.voice_preset_high
 import com.vitorpamplona.amethyst.commons.resources.voice_preset_neutral
 import com.vitorpamplona.amethyst.commons.resources.voice_preset_none
+import org.jetbrains.compose.resources.StringResource
 
 enum class VoicePreset(
     val pitchFactor: Double,
-    val labelRes: Int,
+    val labelRes: StringResource,
 ) {
     NONE(1.0, Res.string.voice_preset_none),
     DEEP(1.4, Res.string.voice_preset_deep),

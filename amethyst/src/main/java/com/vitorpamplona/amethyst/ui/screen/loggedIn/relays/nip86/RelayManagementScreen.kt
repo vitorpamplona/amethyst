@@ -152,6 +152,7 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun RelayManagementScreen(
@@ -380,7 +381,7 @@ private fun RelayManagementContent(
 }
 
 private enum class ManagementTab(
-    val titleRes: Int,
+    val titleRes: StringResource,
 ) {
     PUBKEYS(Res.string.relay_management_tab_pubkeys),
     EVENTS(Res.string.relay_management_tab_events),

@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -82,9 +81,11 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_secti
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -253,7 +254,7 @@ fun BlossomImportScreen(
                                     is ImportStart.Started -> nav.popBack()
                                     ImportStart.Busy ->
                                         Toast
-                                            .makeText(context, stringRes(Res.string.blossom_import_busy), Toast.LENGTH_LONG)
+                                            .makeText(context, loadStringRes(Res.string.blossom_import_busy), Toast.LENGTH_LONG)
                                             .show()
                                     ImportStart.Empty -> {}
                                 }
@@ -373,7 +374,7 @@ private fun ScanStatusLabel(
         is SourceScanState.Found -> {
             val count = scan.count
             Text(
-                text = pluralStringResource(Res.plurals.blossom_import_files_found, count, count),
+                text = pluralStringRes(Res.plurals.blossom_import_files_found, count, count),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (count > 0) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.grayText,
             )
@@ -404,13 +405,13 @@ private fun ImportResultCard(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = pluralStringResource(Res.plurals.blossom_import_found_files, count, count),
+            text = pluralStringRes(Res.plurals.blossom_import_found_files, count, count),
             style = MaterialTheme.typography.bodyMedium,
         )
         FilledTonalButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
             Icon(symbol = MaterialSymbols.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text(pluralStringResource(Res.plurals.blossom_import_start_button, count, count))
+            Text(pluralStringRes(Res.plurals.blossom_import_start_button, count, count))
         }
     }
 }

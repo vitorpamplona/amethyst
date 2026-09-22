@@ -140,7 +140,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
@@ -1228,7 +1227,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
+    suspend fun canPayBolt12ViaNwc(): Boolean = account.zaps.canZapViaBolt12()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
@@ -1236,7 +1235,7 @@ class AccountViewModel(
      * plain payment, not a NIP-B1 zap (no Nostr receipt); the outcome is surfaced as
      * a toast. Callers should gate on [hasNwcWallet].
      */
-    fun payBolt12OfferViaNwc(
+    suspend fun payBolt12OfferViaNwc(
         offer: String,
         amountMillisats: Long,
     ) = launchSigner {
@@ -1261,7 +1260,7 @@ class AccountViewModel(
      * errors on [toastManager]. The external-wallet intent fallback is skipped while [streaming]
      * (you can't auto-fire a wallet app every minute); streaming is gated to NWC/CLINK callers.
      */
-    fun payV4V(
+    suspend fun payV4V(
         value: PodcastValue,
         totalSats: Long,
         podcastName: String?,
@@ -2732,7 +2731,7 @@ class AccountViewModel(
         }
     }
 
-    fun meltCashu(
+    suspend fun meltCashu(
         token: CashuToken,
         context: Context,
         onDone: (String, String) -> Unit,
@@ -2762,7 +2761,7 @@ class AccountViewModel(
                         )
                     onDone(
                         loadStringRes(Res.string.cashu_successful_redemption),
-                        stringRes(
+                        loadStringRes(
                             context,
                             Res.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
@@ -2782,7 +2781,7 @@ class AccountViewModel(
         } else {
             onDone(
                 loadStringRes(Res.string.no_lightning_address_set),
-                stringRes(
+                loadStringRes(
                     context,
                     Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                     account.userProfile().toBestDisplayName(),

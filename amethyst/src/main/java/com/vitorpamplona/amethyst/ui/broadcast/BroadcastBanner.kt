@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatTimeLeft
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -271,7 +272,7 @@ private fun MiningContent(
             )
 
             Text(
-                text = pluralStringResource(Res.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
+                text = pluralStringRes(Res.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,

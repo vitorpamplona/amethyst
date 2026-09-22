@@ -74,8 +74,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -117,12 +115,14 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_connect
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_status_no_relays
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_turn_on
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -189,7 +189,7 @@ fun Nip46SignerScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(Res.string.nip46_signer_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.nip46_signer_title), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -377,11 +377,11 @@ private fun LiveStatusCard(
                     if (liveRelayCount < relayCount) {
                         stringRes(Res.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
                     } else {
-                        pluralStringResource(Res.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
+                        pluralStringRes(Res.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
                     }
                 Text(
                     buildString {
-                        append(pluralStringResource(Res.plurals.nip46_signer_connected_count, connectedCount, connectedCount))
+                        append(pluralStringRes(Res.plurals.nip46_signer_connected_count, connectedCount, connectedCount))
                         append(" · ")
                         append(relayStatus)
                     },
@@ -551,7 +551,7 @@ private fun ConnectedAppsRow(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    pluralStringResource(Res.plurals.nip46_signer_connected_count, count, count),
+                    pluralStringRes(Res.plurals.nip46_signer_connected_count, count, count),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -608,7 +608,7 @@ private fun ReadOnlyNotice() {
         ) {
             Icon(MaterialSymbols.Key, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
             Text(
-                stringResource(Res.string.nip46_signer_readonly),
+                stringRes(Res.string.nip46_signer_readonly),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -616,17 +616,17 @@ private fun ReadOnlyNotice() {
     }
 }
 
-private fun describe(
+private suspend fun describe(
     context: Context,
     result: Nip46SignerState.ConnectResult,
 ): String =
     when (result) {
         is Nip46SignerState.ConnectResult.Connected ->
-            result.name?.let { context.getString(Res.string.nip46_signer_connected_named, it) }
-                ?: context.getString(Res.string.nip46_signer_connected_ok)
-        Nip46SignerState.ConnectResult.InvalidUri -> context.getString(Res.string.nip46_signer_connect_invalid)
-        Nip46SignerState.ConnectResult.NoRelays -> context.getString(Res.string.nip46_signer_connect_no_relays)
-        Nip46SignerState.ConnectResult.NotWriteable -> context.getString(Res.string.nip46_signer_readonly)
-        Nip46SignerState.ConnectResult.Declined -> context.getString(Res.string.nip46_signer_connect_declined)
-        is Nip46SignerState.ConnectResult.Failed -> context.getString(Res.string.nip46_signer_connect_failed, result.reason)
+            result.name?.let { loadStringRes(Res.string.nip46_signer_connected_named, it) }
+                ?: loadStringRes(Res.string.nip46_signer_connected_ok)
+        Nip46SignerState.ConnectResult.InvalidUri -> loadStringRes(Res.string.nip46_signer_connect_invalid)
+        Nip46SignerState.ConnectResult.NoRelays -> loadStringRes(Res.string.nip46_signer_connect_no_relays)
+        Nip46SignerState.ConnectResult.NotWriteable -> loadStringRes(Res.string.nip46_signer_readonly)
+        Nip46SignerState.ConnectResult.Declined -> loadStringRes(Res.string.nip46_signer_connect_declined)
+        is Nip46SignerState.ConnectResult.Failed -> loadStringRes(Res.string.nip46_signer_connect_failed, result.reason)
     }

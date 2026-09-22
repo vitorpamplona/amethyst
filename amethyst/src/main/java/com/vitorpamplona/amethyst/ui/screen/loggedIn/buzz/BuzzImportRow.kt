@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordUnreadBadge
@@ -246,7 +246,7 @@ private fun BuzzChannelPreviewLine(
     val preview: String =
         if (event == null) {
             if (memberCount > 0) {
-                pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
+                pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount)
             } else {
                 stringRes(Res.string.relay_group_no_messages_yet)
             }

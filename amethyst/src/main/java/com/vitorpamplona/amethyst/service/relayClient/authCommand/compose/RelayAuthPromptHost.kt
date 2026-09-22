@@ -51,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -103,6 +102,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -568,7 +568,7 @@ private fun secondaryLine(
 ): String? {
     val others = purposes.filter { it !== primary }
     if (others.isEmpty()) return null
-    return pluralStringResource(Res.plurals.relay_auth_also_holding_back, others.size, others.size)
+    return pluralStringRes(Res.plurals.relay_auth_also_holding_back, others.size, others.size)
 }
 
 /** A short label for a set of counterparties: the first person's name, or "Alice and 4 others". */
@@ -581,7 +581,7 @@ private fun counterpartyLabel(
     val name = rememberCounterpartyName(first, accountViewModel)
     if (pubkeys.size == 1) return name
     val others = pubkeys.size - 1
-    return pluralStringResource(Res.plurals.relay_auth_name_and_n_others, others, name, others)
+    return pluralStringRes(Res.plurals.relay_auth_name_and_n_others, others, name, others)
 }
 
 /**

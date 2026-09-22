@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_l
 import com.vitorpamplona.amethyst.commons.resources.share_as_image
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -68,9 +69,9 @@ fun ShareActionRows(
                 action = Intent.ACTION_SEND
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
-                putExtra(Intent.EXTRA_TITLE, stringRes(Res.string.quick_action_share_browser_link))
+                putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.quick_action_share_browser_link))
             }
-        val shareIntent = Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
+        val shareIntent = Intent.createChooser(sendIntent, loadStringRes(Res.string.quick_action_share))
         actContext.startActivity(shareIntent)
         onDismiss()
     }

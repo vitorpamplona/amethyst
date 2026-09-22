@@ -30,9 +30,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_hide_a_cache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
-import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun NewGeocacheButton(nav: INav) {
@@ -44,7 +44,7 @@ fun NewGeocacheButton(nav: INav) {
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringResource(Res.string.geocache_hide_a_cache),
+            contentDescription = stringRes(Res.string.geocache_hide_a_cache),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

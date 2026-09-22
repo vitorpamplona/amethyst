@@ -63,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.reply_notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -382,7 +382,7 @@ private fun AudienceSummary(
             users.size == 2 -> stringRes(Res.string.audience_summary_two, first, second)
             else -> {
                 val others = users.size - AudienceSelection.SUMMARY_NAMES
-                pluralStringResource(Res.plurals.audience_summary_others, others, first, second, others)
+                pluralStringRes(Res.plurals.audience_summary_others, others, first, second, others)
             }
         }
 

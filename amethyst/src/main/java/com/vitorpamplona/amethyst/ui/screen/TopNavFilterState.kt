@@ -62,6 +62,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import org.jetbrains.compose.resources.StringResource
 
 @Stable
 class TopNavFilterState(
@@ -579,7 +580,7 @@ class RelayName(
 
 @Stable
 class ResourceName(
-    val resourceId: Int,
+    val resourceId: StringResource,
 ) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 

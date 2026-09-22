@@ -171,13 +171,13 @@ class VoiceReplyViewModel : ViewModel() {
         }
     }
 
-    fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
+    suspend fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
 
-    fun selectPreset(preset: VoicePreset) {
+    suspend fun selectPreset(preset: VoicePreset) {
         voiceAnonymization.selectPreset(preset, voiceLocalFile)
     }
 
-    fun sendVoiceReply(onSuccess: () -> Unit) {
+    suspend fun sendVoiceReply(onSuccess: () -> Unit) {
         val note = replyToNote ?: return
         val recording = voiceRecording ?: return
         val fileToUpload = activeFile ?: recording.file

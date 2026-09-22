@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.model.Account
@@ -170,7 +171,7 @@ class AccountNappletGateways(
      * grant just no-ops). The in-app registry in [NappletNotificationStore] is the source of truth for
      * the napplet's own `notify.list`/`dismiss`; this is the user-visible surface.
      */
-    private fun postSystemNotification(
+    private suspend fun postSystemNotification(
         id: String,
         title: String,
         body: String,
@@ -181,14 +182,14 @@ class AccountNappletGateways(
         val channel =
             NotificationChannelCompat
                 .Builder(NOTIFY_CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName(context.getString(Res.string.napplet_cap_notify))
+                .setName(loadStringRes(Res.string.napplet_cap_notify))
                 .build()
         manager.createNotificationChannel(channel)
         val notification =
             NotificationCompat
                 .Builder(context, NOTIFY_CHANNEL_ID)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(title.ifBlank { context.getString(Res.string.napplet_cap_notify) })
+                .setContentTitle(title.ifBlank { loadStringRes(Res.string.napplet_cap_notify) })
                 .setContentText(body)
                 .setAutoCancel(true)
                 .build()

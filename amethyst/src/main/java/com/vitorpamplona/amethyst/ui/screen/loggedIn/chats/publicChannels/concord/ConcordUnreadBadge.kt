@@ -32,13 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 
 /** Counts above this render as "N+" so a very busy channel doesn't blow out the row. */
 private const val CONCORD_UNREAD_CAP = 99
@@ -55,7 +55,7 @@ fun ConcordUnreadBadge(
 ) {
     if (count <= 0) return
     val label = if (count > CONCORD_UNREAD_CAP) "$CONCORD_UNREAD_CAP+" else count.toString()
-    val description = pluralStringResource(Res.plurals.concord_unread_messages, count, count)
+    val description = pluralStringRes(Res.plurals.concord_unread_messages, count, count)
     Box(
         modifier =
             modifier

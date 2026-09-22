@@ -40,7 +40,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.navigation.drawer.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -169,7 +169,7 @@ private fun SummaryCard(totalHidden: Int) {
         title = stringRes(Res.string.drawer_settings_title),
         trailing = {
             Text(
-                text = pluralStringResource(Res.plurals.drawer_settings_hidden_count, totalHidden, totalHidden),
+                text = pluralStringRes(Res.plurals.drawer_settings_hidden_count, totalHidden, totalHidden),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
@@ -203,7 +203,7 @@ private fun SectionCard(
         trailing = {
             if (hiddenHere > 0) {
                 Text(
-                    text = pluralStringResource(Res.plurals.drawer_settings_hidden_count, hiddenHere, hiddenHere),
+                    text = pluralStringRes(Res.plurals.drawer_settings_hidden_count, hiddenHere, hiddenHere),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

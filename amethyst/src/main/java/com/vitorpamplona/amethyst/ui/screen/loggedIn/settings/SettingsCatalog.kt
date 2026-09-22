@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import org.jetbrains.compose.resources.StringResource
 
 /** Leading-icon representation mirroring the two [SettingsItem] overloads. */
 sealed interface SettingsIcon {
@@ -42,16 +42,16 @@ sealed interface SettingsIcon {
  * separators are interchangeable and multi-word phrases ("zap split") carry no phrase grouping.
  */
 data class SettingsEntry(
-    @StringRes val titleRes: Int,
+    val titleRes: StringResource,
     val icon: SettingsIcon,
-    @StringRes val keywordsRes: Int? = null,
+    val keywordsRes: StringResource? = null,
     val isDanger: Boolean = false,
     val onClick: () -> Unit,
 )
 
 /** One category card on the settings screen. */
 data class SettingsCategory(
-    @StringRes val titleRes: Int,
+    val titleRes: StringResource,
     val isDanger: Boolean = false,
     val entries: List<SettingsEntry>,
 )

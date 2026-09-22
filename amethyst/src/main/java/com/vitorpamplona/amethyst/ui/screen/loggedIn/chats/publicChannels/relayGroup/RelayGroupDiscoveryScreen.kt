@@ -49,7 +49,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
@@ -392,7 +392,7 @@ private fun RelayRailHeader(
                 }
             }
             Text(
-                text = pluralStringResource(Res.plurals.relay_group_relay_group_count, groupCount, groupCount),
+                text = pluralStringRes(Res.plurals.relay_group_relay_group_count, groupCount, groupCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -589,7 +589,7 @@ private fun RelayGroupPreviewLine(
         } else {
             val memberCount = channel.memberCount()
             if (memberCount > 0) {
-                pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
+                pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount)
             } else {
                 return
             }

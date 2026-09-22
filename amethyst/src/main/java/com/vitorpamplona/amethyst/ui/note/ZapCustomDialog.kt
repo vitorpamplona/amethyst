@@ -545,7 +545,7 @@ fun DisplayPayable(
     }
 }
 
-fun payViaIntent(
+suspend fun payViaIntent(
     invoice: String,
     context: Context,
     onPaid: () -> Unit,
@@ -577,7 +577,7 @@ fun payViaIntent(
  * the offer, collects the amount, and completes the payment; this is a plain intent,
  * not a NIP-57/NIP-B1 zap, so it produces no Nostr receipt.
  */
-fun payViaBolt12Intent(
+suspend fun payViaBolt12Intent(
     offer: String,
     context: Context,
     onPaid: () -> Unit,

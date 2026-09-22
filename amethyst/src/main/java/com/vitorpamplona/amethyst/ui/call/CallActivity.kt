@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_hangup
 import com.vitorpamplona.amethyst.commons.resources.call_mute
 import com.vitorpamplona.amethyst.commons.resources.call_unmute
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
@@ -294,7 +295,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterPipIfActive() {
+    private suspend fun enterPipIfActive() {
         val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         val isActive =
@@ -311,7 +312,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private fun updatePipParams() {
+    private suspend fun updatePipParams() {
         if (!isInPipMode.value) return
         try {
             setPictureInPictureParams(buildPipParams())
@@ -319,7 +320,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildPipParams(): PictureInPictureParams {
+    private suspend fun buildPipParams(): PictureInPictureParams {
         val aspectRatio = computePipAspectRatio()
         val builder =
             PictureInPictureParams
@@ -347,7 +348,7 @@ class CallActivity : AppCompatActivity() {
         return Rational(9, 16)
     }
 
-    private fun buildPipActions(): List<RemoteAction> {
+    private suspend fun buildPipActions(): List<RemoteAction> {
         val actions = mutableListOf<RemoteAction>()
 
         // Mute / Unmute toggle
@@ -382,8 +383,8 @@ class CallActivity : AppCompatActivity() {
         val hangupAction =
             RemoteAction(
                 Icon.createWithResource(this, R.drawable.ic_call_end),
-                getString(Res.string.call_hangup),
-                getString(Res.string.call_hangup),
+                loadStringRes(Res.string.call_hangup),
+                loadStringRes(Res.string.call_hangup),
                 hangupIntent,
             )
         actions.add(hangupAction)

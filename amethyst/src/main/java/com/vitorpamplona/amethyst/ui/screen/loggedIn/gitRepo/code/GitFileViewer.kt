@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
 import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
 import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_plain_text
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -214,7 +215,7 @@ private fun CodeBar(
             onClick = {
                 scope.launch {
                     clipboard.setText(code)
-                    Toast.makeText(context, stringRes(Res.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, loadStringRes(Res.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
                 }
             },
         ) {
