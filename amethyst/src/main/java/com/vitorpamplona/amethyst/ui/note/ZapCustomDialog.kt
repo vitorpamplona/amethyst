@@ -99,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private
 import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
@@ -486,6 +485,7 @@ fun DisplayPayable(
     payable: ZapPaymentHandler.Payable,
     accountViewModel: AccountViewModel,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val paid = rememberSaveable(payable) { mutableStateOf(false) }
 
     Row(
@@ -535,7 +535,7 @@ fun DisplayPayable(
         val context = LocalContext.current
 
         PayButton(isActive = !paid.value) {
-            payViaIntent(payable.invoice, context, { paid.value = true }) {
+            payViaIntent(payable.invoice, context, noWalletFoundStr, { paid.value = true }) {
                 accountViewModel.toastManager.toast(
                     Res.string.error_dialog_zap_error,
                     UserBasedErrorMessage(it, payable.info.user),
@@ -545,9 +545,10 @@ fun DisplayPayable(
     }
 }
 
-suspend fun payViaIntent(
+fun payViaIntent(
     invoice: String,
     context: Context,
+    noWalletFound: String,
     onPaid: () -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -561,9 +562,9 @@ suspend fun payViaIntent(
         if (e is CancellationException) throw e
         // don't display ugly error messages
         // if (e.message != null) {
-        //   onError(loadStringRes(Res.string.no_wallet_found_with_error, e.message!!))
+        //   onError(stringRes(Res.string.no_wallet_found_with_error, e.message!!))
         // } else {
-        onError(loadStringRes(Res.string.no_wallet_found))
+        onError(noWalletFound)
         // }
     }
 }
@@ -577,9 +578,10 @@ suspend fun payViaIntent(
  * the offer, collects the amount, and completes the payment; this is a plain intent,
  * not a NIP-57/NIP-B1 zap, so it produces no Nostr receipt.
  */
-suspend fun payViaBolt12Intent(
+fun payViaBolt12Intent(
     offer: String,
     context: Context,
+    noWalletFound: String,
     onPaid: () -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -591,7 +593,7 @@ suspend fun payViaBolt12Intent(
         onPaid()
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        onError(loadStringRes(Res.string.no_wallet_found))
+        onError(noWalletFound)
     }
 }
 

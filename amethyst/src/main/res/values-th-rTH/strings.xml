@@ -176,4 +176,13 @@
     <string name="voice_post">โพสต์เสียง</string>
     <string name="voice_reply">ตอบกลับด้วยเสียง</string>
     <string name="private_message">ข้อความส่วนตัว</string>
+    <string name="nest_notification_channel_description">เปิดเสียงต่อเนื่องขณะที่ห้องเปิดอยู่</string>
+    <string name="nest_notification_listening">Nest เชื่อมต่อแล้ว</string>
+    <string name="nest_notification_stop">หยุด</string>
+    <string name="nest_notification_text">แตะเพื่อกลับ</string>
+    <string name="nest_leave">ออก</string>
+    <string name="nest_mute">ปิดเสียง</string>
+    <string name="nest_unmute">เปิดเสียง</string>
+    <string name="call_mute">ปิดเสียง</string>
+    <string name="call_unmute">เปิดเสียง</string>
 </resources>

@@ -180,4 +180,14 @@
     <string name="voice_post">Chapisho la Sauti</string>
     <string name="voice_reply">Jibu la Sauti</string>
     <string name="private_message">Ujumbe wa Siri</string>
+    <string name="nest_notification_broadcasting">Nest — Moja kwa Moja</string>
+    <string name="nest_notification_channel_description">Inaweka sauti ikicheza wakati chumba kiko wazi.</string>
+    <string name="nest_notification_listening">Nest imeunganishwa</string>
+    <string name="nest_notification_stop">Simama</string>
+    <string name="nest_notification_text">Gonga kurudi.</string>
+    <string name="nest_leave">Ondoka</string>
+    <string name="nest_mute">Zima sauti</string>
+    <string name="nest_unmute">Washa sauti</string>
+    <string name="call_mute">Kimya</string>
+    <string name="call_unmute">Ondoa kimya</string>
 </resources>

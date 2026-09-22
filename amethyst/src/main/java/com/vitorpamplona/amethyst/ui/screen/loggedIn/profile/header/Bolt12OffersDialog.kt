@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.bolt12_pay_with_wallet
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -76,6 +77,7 @@ fun Bolt12OffersDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -111,6 +113,7 @@ fun Bolt12OffersDialog(
                         payViaBolt12Intent(
                             offer = offer,
                             context = context,
+                            noWalletFoundStr,
                             onPaid = { onDismiss() },
                             onError = { msg ->
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()

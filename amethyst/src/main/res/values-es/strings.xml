@@ -2893,4 +2893,15 @@
     <string name="voice_post">Publicación de voz</string>
     <string name="voice_reply">Respuesta de voz</string>
     <string name="private_message">Mensaje privado</string>
+    <string name="nest_notification_broadcasting">Nest — En vivo</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Mantiene la reproducción de audio mientras una sala está abierta.</string>
+    <string name="nest_notification_listening">Nest conectado</string>
+    <string name="nest_notification_stop">Detener</string>
+    <string name="nest_notification_text">Toca para regresar.</string>
+    <string name="nest_leave">Salir</string>
+    <string name="nest_mute">Silenciar</string>
+    <string name="nest_unmute">Reactivar</string>
+    <string name="call_mute">Silenciar</string>
+    <string name="call_unmute">Reactivar</string>
 </resources>

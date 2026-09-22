@@ -2895,4 +2895,15 @@
     <string name="voice_post">语音帖子</string>
     <string name="voice_reply">语音回复</string>
     <string name="private_message">私信</string>
+    <string name="nest_notification_broadcasting">语音聊天室 — 在线</string>
+    <string name="nest_notification_channel">语音聊天房</string>
+    <string name="nest_notification_channel_description">当聊天室开放时保持音频播放。</string>
+    <string name="nest_notification_listening">语音聊天室已连接</string>
+    <string name="nest_notification_stop">停止</string>
+    <string name="nest_notification_text">轻触返回。</string>
+    <string name="nest_leave">离开</string>
+    <string name="nest_mute">静音</string>
+    <string name="nest_unmute">取消静音</string>
+    <string name="call_mute">静音</string>
+    <string name="call_unmute">取消静音</string>
 </resources>

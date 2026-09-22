@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_raise_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_reactions_button
 import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nest_talk
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.zap_description
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
@@ -468,6 +469,7 @@ private fun NestZapButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -508,7 +510,7 @@ private fun NestZapButton(
                         zappingProgress = 0f
                         if (it.size == 1) {
                             val payable = it.first()
-                            payViaIntent(payable.invoice, context, { }) { error ->
+                            payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                                 zappingProgress = 0f
                                 accountViewModel.toastManager.toast(
                                     Res.string.error_dialog_zap_error,
@@ -571,7 +573,7 @@ private fun NestZapButton(
                 zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
-                    payViaIntent(payable.invoice, context, { }) { error ->
+                    payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                         zappingProgress = 0f
                         accountViewModel.toastManager.toast(
                             Res.string.error_dialog_zap_error,
@@ -610,7 +612,7 @@ private fun NestZapButton(
                 zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
-                    payViaIntent(payable.invoice, context, { }) { error ->
+                    payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                         zappingProgress = 0f
                         accountViewModel.toastManager.toast(
                             Res.string.error_dialog_zap_error,

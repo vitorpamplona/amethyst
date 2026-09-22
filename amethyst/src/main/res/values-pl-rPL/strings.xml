@@ -350,4 +350,15 @@
     <string name="pow_kind_report">Zgłoś</string>
     <string name="private_message">Wiadomość prywatna</string>
     <string name="pow_kind_chat_message">Wiadomość Czatu</string>
+    <string name="nest_notification_broadcasting">Nest — Na żywo</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Kontynuuje odtwarzanie dźwięku, jeżeli pokój jest otwarty.</string>
+    <string name="nest_notification_listening">Nest jest podłączony</string>
+    <string name="nest_notification_stop">Zatrzymaj</string>
+    <string name="nest_notification_text">Kliknij, aby wrócić.</string>
+    <string name="nest_leave">Wyjdź</string>
+    <string name="nest_mute">Wycisz</string>
+    <string name="nest_unmute">Włącz dźwięk</string>
+    <string name="call_mute">Wycisz</string>
+    <string name="call_unmute">Włącz dźwięk</string>
 </resources>

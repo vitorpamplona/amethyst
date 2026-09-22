@@ -177,4 +177,14 @@
     <string name="voice_post">音声投稿</string>
     <string name="voice_reply">音声返信</string>
     <string name="private_message">プライベートメッセージ</string>
+    <string name="nest_notification_broadcasting">Nest — ライブ中</string>
+    <string name="nest_notification_channel_description">ルームが開いている間オーディオを再生し続けます。</string>
+    <string name="nest_notification_listening">Nest に接続しました</string>
+    <string name="nest_notification_stop">停止</string>
+    <string name="nest_notification_text">タップして戻る。</string>
+    <string name="nest_leave">退出</string>
+    <string name="nest_mute">ミュート</string>
+    <string name="nest_unmute">ミュート解除</string>
+    <string name="call_mute">ミュート</string>
+    <string name="call_unmute">ミュート解除</string>
 </resources>

@@ -2646,4 +2646,15 @@
     <string name="voice_post">Postingan Suara</string>
     <string name="voice_reply">Balasan Suara</string>
     <string name="private_message">Pesan Pribadi</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Menjaga audio tetap berjalan saat ruang terbuka.</string>
+    <string name="nest_notification_listening">Nest terhubung</string>
+    <string name="nest_notification_stop">Berhenti</string>
+    <string name="nest_notification_text">Ketuk untuk kembali.</string>
+    <string name="nest_leave">Tinggalkan</string>
+    <string name="nest_mute">Bisukan</string>
+    <string name="nest_unmute">Aktifkan suara</string>
+    <string name="call_mute">Bisukan</string>
+    <string name="call_unmute">Aktifkan suara</string>
 </resources>

@@ -180,4 +180,13 @@
     <string name="voice_post">Äänijulkaisu</string>
     <string name="voice_reply">Äänivastaus</string>
     <string name="private_message">Yksityinen viesti</string>
+    <string name="nest_notification_channel_description">Pitää äänen toistossa huoneen ollessa auki.</string>
+    <string name="nest_notification_listening">Nest yhdistetty</string>
+    <string name="nest_notification_stop">Lopeta</string>
+    <string name="nest_notification_text">Palaa napauttamalla.</string>
+    <string name="nest_leave">Poistu</string>
+    <string name="nest_mute">Mykistä</string>
+    <string name="nest_unmute">Poista mykistys</string>
+    <string name="call_mute">Mykistä</string>
+    <string name="call_unmute">Poista mykistys</string>
 </resources>

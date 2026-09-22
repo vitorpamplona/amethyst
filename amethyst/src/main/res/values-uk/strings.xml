@@ -2665,4 +2665,15 @@
     <string name="voice_post">Голосова публікація</string>
     <string name="voice_reply">Голосова відповідь</string>
     <string name="private_message">Приватне повідомлення</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Підтримує відтворення аудіо, поки кімната відкрита.</string>
+    <string name="nest_notification_listening">Nest підключено</string>
+    <string name="nest_notification_stop">Зупинити</string>
+    <string name="nest_notification_text">Торкніться, щоб повернутися.</string>
+    <string name="nest_leave">Вийти</string>
+    <string name="nest_mute">Вимкнути звук</string>
+    <string name="nest_unmute">Увімкнути звук</string>
+    <string name="call_mute">Вимкнути мікрофон</string>
+    <string name="call_unmute">Увімкнути мікрофон</string>
 </resources>

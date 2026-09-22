@@ -347,4 +347,15 @@
     <string name="pow_kind_report">Nahlášení</string>
     <string name="private_message">Soukromá zpráva</string>
     <string name="pow_kind_chat_message">Chatová zpráva</string>
+    <string name="nest_notification_broadcasting">Nest — Živě</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Přehrává zvuk, dokud je místnost otevřená.</string>
+    <string name="nest_notification_listening">Nest připojen</string>
+    <string name="nest_notification_stop">Zastavit</string>
+    <string name="nest_notification_text">Klepnutím se vrátíte.</string>
+    <string name="nest_leave">Opustit</string>
+    <string name="nest_mute">Ztlumit</string>
+    <string name="nest_unmute">Zrušit ztlumení</string>
+    <string name="call_mute">Ztlumit</string>
+    <string name="call_unmute">Zrušit ztlumení</string>
 </resources>

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_promote_moderator
 import com.vitorpamplona.amethyst.commons.resources.nest_promote_speaker
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_template_null
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -434,6 +435,7 @@ private fun ParticipantZapDialog(
     zapSplitUnsupported: String,
     onClose: () -> Unit,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
     val targetMetadataNote =
         remember(target) {
@@ -452,7 +454,7 @@ private fun ParticipantZapDialog(
         onPayViaIntent = { payables ->
             if (payables.size == 1) {
                 val payable = payables.first()
-                payViaIntent(payable.invoice, context, { }) { error ->
+                payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                     accountViewModel.toastManager.toast(
                         Res.string.error_dialog_zap_error,
                         UserBasedErrorMessage(error, payable.info.user),

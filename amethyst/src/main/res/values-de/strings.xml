@@ -2300,4 +2300,15 @@
     <string name="voice_post">Sprachbeitrag</string>
     <string name="voice_reply">Sprachantwort</string>
     <string name="private_message">Private Nachricht</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_channel">Audioräume</string>
+    <string name="nest_notification_channel_description">Hält Audio aktiv, solange ein Raum geöffnet ist.</string>
+    <string name="nest_notification_listening">Nest verbunden</string>
+    <string name="nest_notification_stop">Stoppen</string>
+    <string name="nest_notification_text">Tippen zum Zurückkehren.</string>
+    <string name="nest_leave">Verlassen</string>
+    <string name="nest_mute">Stummschalten</string>
+    <string name="nest_unmute">Stummschaltung aufheben</string>
+    <string name="call_mute">Stummschalten</string>
+    <string name="call_unmute">Stummschaltung aufheben</string>
 </resources>

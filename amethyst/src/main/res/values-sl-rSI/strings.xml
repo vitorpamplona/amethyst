@@ -344,4 +344,15 @@
     <string name="pow_kind_report">Prijavi</string>
     <string name="private_message">Zasebno sporočilo</string>
     <string name="pow_kind_chat_message">Sporočilo klepeta</string>
+    <string name="nest_notification_broadcasting">Gnezdo — V živo</string>
+    <string name="nest_notification_channel">Gnezda</string>
+    <string name="nest_notification_channel_description">Ohrani predvajanje zvoka, ko je soba odprta.</string>
+    <string name="nest_notification_listening">Gnezdo je povezano</string>
+    <string name="nest_notification_stop">Stop</string>
+    <string name="nest_notification_text">Dotaknite se za vrnitev</string>
+    <string name="nest_leave">Zapusti</string>
+    <string name="nest_mute">Utišaj</string>
+    <string name="nest_unmute">Vklopi zvok</string>
+    <string name="call_mute">Utišaj</string>
+    <string name="call_unmute">Vklopi zvok</string>
 </resources>

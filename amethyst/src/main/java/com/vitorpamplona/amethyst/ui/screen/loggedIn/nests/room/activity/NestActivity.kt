@@ -36,17 +36,13 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.nest_leave
-import com.vitorpamplona.amethyst.commons.resources.nest_mute
-import com.vitorpamplona.amethyst.commons.resources.nest_unmute
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -247,7 +243,7 @@ class NestActivity : AppCompatActivity() {
      * Gated on `isConnected` so PIP from the lobby/Connecting state
      * doesn't freeze a half-rendered card in Recents.
      */
-    suspend fun enterPip() {
+    fun enterPip() {
         if (!isConnected.value) return
         if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
         runCatching { enterPictureInPictureMode(buildPipParams()) }
@@ -275,14 +271,14 @@ class NestActivity : AppCompatActivity() {
         isInPipMode.value = isInPictureInPictureMode
     }
 
-    private suspend fun updatePipParams() {
+    private fun updatePipParams() {
         // Pre-stage params even outside PIP so the next entry shows the
         // correct mute icon (audit Android #15). setPictureInPictureParams
         // is legal in any state on API 26+.
         runCatching { setPictureInPictureParams(buildPipParams()) }
     }
 
-    private suspend fun buildPipParams(): PictureInPictureParams =
+    private fun buildPipParams(): PictureInPictureParams =
         PictureInPictureParams
             .Builder()
             // Landscape ratio — the PIP layout is a horizontal row of
@@ -292,7 +288,7 @@ class NestActivity : AppCompatActivity() {
             .setActions(buildPipActions())
             .build()
 
-    private suspend fun buildPipActions(): List<RemoteAction> {
+    private fun buildPipActions(): List<RemoteAction> {
         val muteIntent =
             PendingIntent.getBroadcast(
                 this,
@@ -308,13 +304,13 @@ class NestActivity : AppCompatActivity() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         val muteIconRes = if (isMuted.value) R.drawable.ic_mic_off else R.drawable.ic_mic_on
-        val muteLabel = loadStringRes(if (isMuted.value) Res.string.nest_unmute else Res.string.nest_mute)
+        val muteLabel = stringRes(this, if (isMuted.value) R.string.nest_unmute else R.string.nest_mute)
         return listOf(
             RemoteAction(Icon.createWithResource(this, muteIconRes), muteLabel, muteLabel, muteIntent),
             RemoteAction(
                 Icon.createWithResource(this, R.drawable.ic_call_end),
-                loadStringRes(Res.string.nest_leave),
-                loadStringRes(Res.string.nest_leave),
+                stringRes(this, R.string.nest_leave),
+                stringRes(this, R.string.nest_leave),
                 leaveIntent,
             ),
         )

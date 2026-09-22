@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_message
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
@@ -621,6 +622,7 @@ private fun QuickZapAmountRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
@@ -648,7 +650,7 @@ private fun QuickZapAmountRow(
         // Handoff to an external wallet: we can't observe whether it completes, so clear
         // the optimistic indicator rather than leave it spinning forever.
         accountViewModel.endZapInFlight(note.idHex)
-        payViaIntentOrManualSplit(payables, context, accountViewModel, nav)
+        payViaIntentOrManualSplit(payables, context, noWalletFoundStr, accountViewModel, nav)
     }
 
     Row(

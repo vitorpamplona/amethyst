@@ -175,4 +175,14 @@
     <string name="voice_post">Bài đăng giọng nói</string>
     <string name="voice_reply">Trả lời giọng nói</string>
     <string name="private_message">Tin nhắn Riêng tư</string>
+    <string name="nest_notification_broadcasting">Nest — Trực tiếp</string>
+    <string name="nest_notification_channel_description">Giữ âm thanh phát trong khi phòng đang mở.</string>
+    <string name="nest_notification_listening">Nest đã kết nối</string>
+    <string name="nest_notification_stop">Dừng</string>
+    <string name="nest_notification_text">Nhấn để quay lại.</string>
+    <string name="nest_leave">Rời</string>
+    <string name="nest_mute">Tắt tiếng</string>
+    <string name="nest_unmute">Bật tiếng</string>
+    <string name="call_mute">Tắt tiếng</string>
+    <string name="call_unmute">Bật tiếng</string>
 </resources>

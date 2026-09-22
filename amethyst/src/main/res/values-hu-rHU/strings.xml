@@ -322,4 +322,15 @@
     <string name="pow_kind_report">Jelentés</string>
     <string name="private_message">Privát üzenet</string>
     <string name="pow_kind_chat_message">Csevegési üzenet</string>
+    <string name="nest_notification_broadcasting">Hangszoba – Élő</string>
+    <string name="nest_notification_channel">Hangszobák</string>
+    <string name="nest_notification_channel_description">Hang lejátszása, amíg a szoba meg van nyitva.</string>
+    <string name="nest_notification_listening">Hangszoba kapcsódott</string>
+    <string name="nest_notification_stop">Leállítás</string>
+    <string name="nest_notification_text">Koppintson ide a visszalépéshez.</string>
+    <string name="nest_leave">Elhagyás</string>
+    <string name="nest_mute">Némítás</string>
+    <string name="nest_unmute">Némítás megszüntetése</string>
+    <string name="call_mute">Némítás</string>
+    <string name="call_unmute">Némítás megszüntetése</string>
 </resources>

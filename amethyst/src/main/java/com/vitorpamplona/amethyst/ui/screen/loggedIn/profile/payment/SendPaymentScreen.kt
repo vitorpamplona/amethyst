@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_nonzap
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_private
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_tier_label_rate_eta
 import com.vitorpamplona.amethyst.commons.resources.send_payment_building_tx
@@ -393,12 +394,13 @@ private fun SendPaymentLoaded(
     val successTitle = stringRes(Res.string.send_payment_success)
     val sentToWalletLabel = stringRes(Res.string.send_payment_sent_to_wallet)
     val clinkNoResponseLabel = stringRes(Res.string.clink_debit_no_response)
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val invoiceErrorLabel = stringRes(Res.string.error_dialog_pay_invoice_error)
 
     // Payment callbacks arrive on IO/relay threads. Snapshot state writes are
     // thread-safe, but every other payment flow in the app marshals UI state
     // to Main (see ReusableZapButton's progress handling) — match that.
-    suspend fun postStage(newStage: PaymentFlowStage) {
+    fun postStage(newStage: PaymentFlowStage) {
         scope.launch { stage = newStage }
     }
 
@@ -458,6 +460,7 @@ private fun SendPaymentLoaded(
                     payViaIntent(
                         invoice,
                         context,
+                        noWalletFoundStr,
                         onPaid = { scope.launch { postStage(PaymentFlowStage.Success(successTitle, sentToWalletLabel)) } },
                         onError = { scope.launch { postStage(PaymentFlowStage.Failure(it)) } },
                     )
@@ -473,7 +476,7 @@ private fun SendPaymentLoaded(
             user = user,
             milliSats = amount * 1000,
             message = message,
-            onNewInvoice = ::payBolt11,
+            onNewInvoice = { invoice -> scope.launch { payBolt11(invoice) } },
             onError = { _, msg -> scope.launch { postStage(PaymentFlowStage.Failure(msg)) } },
             onProgress = {},
             context = context,
@@ -668,12 +671,14 @@ private fun SendPaymentLoaded(
             },
         onSend = {
             val amount = amountSats ?: return@SendPaymentContent
-            when (selectedMethod) {
-                ProfilePaymentMethod.LIGHTNING -> sendLightning(amount)
-                ProfilePaymentMethod.CLINK -> sendClink(amount)
-                ProfilePaymentMethod.ONCHAIN -> sendOnchain(amount)
-                ProfilePaymentMethod.CASHU -> sendCashu(amount)
-                null -> {}
+            scope.launch {
+                when (selectedMethod) {
+                    ProfilePaymentMethod.LIGHTNING -> sendLightning(amount)
+                    ProfilePaymentMethod.CLINK -> sendClink(amount)
+                    ProfilePaymentMethod.ONCHAIN -> sendOnchain(amount)
+                    ProfilePaymentMethod.CASHU -> sendCashu(amount)
+                    null -> {}
+                }
             }
         },
         onDone = { nav.popBack() },

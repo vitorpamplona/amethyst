@@ -183,4 +183,14 @@
     <string name="voice_post">Balss ziņa</string>
     <string name="voice_reply">Balss atbilde</string>
     <string name="private_message">Privāta ziņa</string>
+    <string name="nest_notification_broadcasting">Nest — Tiešraide</string>
+    <string name="nest_notification_channel_description">Turpina atskaņot audio, kamēr telpa ir atvērta.</string>
+    <string name="nest_notification_listening">Nest savienots</string>
+    <string name="nest_notification_stop">Apturēt</string>
+    <string name="nest_notification_text">Pieskarieties, lai atgrieztos.</string>
+    <string name="nest_leave">Atstāt</string>
+    <string name="nest_mute">Izslēgt skaņu</string>
+    <string name="nest_unmute">Ieslēgt skaņu</string>
+    <string name="call_mute">Izslēgt mikrofonu</string>
+    <string name="call_unmute">Ieslēgt mikrofonu</string>
 </resources>

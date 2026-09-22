@@ -41,18 +41,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_broadcasting
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_channel
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_channel_description
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_listening
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_stop
-import com.vitorpamplona.amethyst.commons.resources.nest_notification_text
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -362,7 +355,7 @@ class NestForegroundService : Service() {
         return START_STICKY
     }
 
-    private suspend fun startForegroundWithType(includeMic: Boolean) {
+    private fun startForegroundWithType(includeMic: Boolean) {
         promoted = includeMic
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -379,7 +372,7 @@ class NestForegroundService : Service() {
         }
     }
 
-    private suspend fun buildNotification(): Notification {
+    private fun buildNotification(): Notification {
         val openIntent =
             PendingIntent.getActivity(
                 this,
@@ -397,33 +390,33 @@ class NestForegroundService : Service() {
 
         val title =
             if (promoted) {
-                loadStringRes(Res.string.nest_notification_broadcasting)
+                stringRes(this, R.string.nest_notification_broadcasting)
             } else {
-                loadStringRes(Res.string.nest_notification_listening)
+                stringRes(this, R.string.nest_notification_listening)
             }
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText(loadStringRes(Res.string.nest_notification_text))
+            .setContentText(stringRes(this, R.string.nest_notification_text))
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .setContentIntent(openIntent)
-            .addAction(0, loadStringRes(Res.string.nest_notification_stop), stopIntent)
+            .addAction(0, stringRes(this, R.string.nest_notification_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .build()
     }
 
-    private suspend fun createNotificationChannel() {
+    private fun createNotificationChannel() {
         val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (mgr.getNotificationChannel(CHANNEL_ID) == null) {
             mgr.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    loadStringRes(Res.string.nest_notification_channel),
+                    stringRes(this, R.string.nest_notification_channel),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = loadStringRes(Res.string.nest_notification_channel_description)
+                    description = stringRes(this, R.string.nest_notification_channel_description)
                     setShowBadge(false)
                 },
             )

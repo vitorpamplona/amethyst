@@ -176,4 +176,13 @@
     <string name="voice_post">Post vocale</string>
     <string name="voice_reply">Risposta vocale</string>
     <string name="private_message">Messaggio privato</string>
+    <string name="nest_notification_channel_description">Mantiene l'audio attivo mentre una stanza è aperta.</string>
+    <string name="nest_notification_listening">Nest connesso</string>
+    <string name="nest_notification_stop">Ferma</string>
+    <string name="nest_notification_text">Tocca per tornare.</string>
+    <string name="nest_leave">Esci</string>
+    <string name="nest_mute">Silenzia</string>
+    <string name="nest_unmute">Attiva audio</string>
+    <string name="call_mute">Disattiva microfono</string>
+    <string name="call_unmute">Attiva microfono</string>
 </resources>

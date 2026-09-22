@@ -204,4 +204,14 @@
     <string name="voice_reply">Réponse vocale</string>
     <string name="pow_kind_report">Signaler</string>
     <string name="private_message">Message privé</string>
+    <string name="nest_notification_broadcasting">Nest — En direct</string>
+    <string name="nest_notification_channel_description">Maintient l'audio actif pendant qu'une salle est ouverte.</string>
+    <string name="nest_notification_listening">Nest connecté</string>
+    <string name="nest_notification_stop">Arrêter</string>
+    <string name="nest_notification_text">Appuyer pour revenir.</string>
+    <string name="nest_leave">Quitter</string>
+    <string name="nest_mute">Couper le son</string>
+    <string name="nest_unmute">Activer le son</string>
+    <string name="call_mute">Couper le son</string>
+    <string name="call_unmute">Réactiver le son</string>
 </resources>

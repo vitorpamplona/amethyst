@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_amount_via
 import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_via_source
 import com.vitorpamplona.amethyst.commons.resources.clink_confirm_payment_title
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
@@ -63,6 +64,7 @@ fun InvoicePaymentDispatcher(
     onError: (String) -> Unit,
     onSuccess: () -> Unit = {},
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     if (bolt11 == null) return
     val context = LocalContext.current
@@ -72,7 +74,7 @@ fun InvoicePaymentDispatcher(
     if (source == null) {
         // No in-app wallet configured -> hand off to an external wallet app (it confirms).
         LaunchedEffect(bolt11) {
-            payViaIntent(bolt11, context, onSuccess, onError)
+            payViaIntent(bolt11, context, noWalletFoundStr, onSuccess, onError)
             onClear()
         }
         return

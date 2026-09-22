@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.one_vote_per_user_on_atomic_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_author_no_vote
 import com.vitorpamplona.amethyst.commons.resources.poll_is_closed_explainer
@@ -532,6 +533,7 @@ fun ZapVote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val errorDialogZapErrorStr = stringRes(Res.string.error_dialog_zap_error)
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
@@ -601,7 +603,7 @@ fun ZapVote(
                                 onPayViaIntent = {
                                     if (it.size == 1) {
                                         val payable = it.first()
-                                        payViaIntent(payable.invoice, context, { }) { error ->
+                                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                                             zappingProgress = 0f
                                             showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
                                         }
@@ -642,7 +644,7 @@ fun ZapVote(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) { error ->
+                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                             zappingProgress = 0f
                             showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
                         }

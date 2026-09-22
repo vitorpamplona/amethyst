@@ -41,11 +41,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.call_hangup
-import com.vitorpamplona.amethyst.commons.resources.call_mute
-import com.vitorpamplona.amethyst.commons.resources.call_unmute
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
@@ -53,6 +48,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.Account
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.coroutines.launch
@@ -295,7 +291,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun enterPipIfActive() {
+    private fun enterPipIfActive() {
         val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         val isActive =
@@ -312,7 +308,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun updatePipParams() {
+    private fun updatePipParams() {
         if (!isInPipMode.value) return
         try {
             setPictureInPictureParams(buildPipParams())
@@ -320,7 +316,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun buildPipParams(): PictureInPictureParams {
+    private fun buildPipParams(): PictureInPictureParams {
         val aspectRatio = computePipAspectRatio()
         val builder =
             PictureInPictureParams
@@ -348,7 +344,7 @@ class CallActivity : AppCompatActivity() {
         return Rational(9, 16)
     }
 
-    private suspend fun buildPipActions(): List<RemoteAction> {
+    private fun buildPipActions(): List<RemoteAction> {
         val actions = mutableListOf<RemoteAction>()
 
         // Mute / Unmute toggle
@@ -366,8 +362,8 @@ class CallActivity : AppCompatActivity() {
                     this,
                     if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on,
                 ),
-                loadStringRes(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
-                loadStringRes(if (isMuted) Res.string.call_unmute else Res.string.call_mute),
+                stringRes(this, if (isMuted) R.string.call_unmute else R.string.call_mute),
+                stringRes(this, if (isMuted) R.string.call_unmute else R.string.call_mute),
                 muteIntent,
             )
         actions.add(muteAction)
@@ -383,8 +379,8 @@ class CallActivity : AppCompatActivity() {
         val hangupAction =
             RemoteAction(
                 Icon.createWithResource(this, R.drawable.ic_call_end),
-                loadStringRes(Res.string.call_hangup),
-                loadStringRes(Res.string.call_hangup),
+                stringRes(this, R.string.call_hangup),
+                stringRes(this, R.string.call_hangup),
                 hangupIntent,
             )
         actions.add(hangupAction)

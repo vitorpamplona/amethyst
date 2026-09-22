@@ -178,4 +178,15 @@
     <string name="voice_post">Ovozli post</string>
     <string name="voice_reply">Ovozli javob</string>
     <string name="private_message">Shaxsiy Xabar</string>
+    <string name="nest_notification_broadcasting">Nest — Jonli</string>
+    <string name="nest_notification_channel">Nestlar</string>
+    <string name="nest_notification_channel_description">Xona ochiq bo'lganda audio ijrosini davom ettiradi.</string>
+    <string name="nest_notification_listening">Nest ulandi</string>
+    <string name="nest_notification_stop">To'xtatish</string>
+    <string name="nest_notification_text">Qaytish uchun bosing.</string>
+    <string name="nest_leave">Chiqish</string>
+    <string name="nest_mute">Ovozni o'chirish</string>
+    <string name="nest_unmute">Ovozni yoqish</string>
+    <string name="call_mute">Ovozni o'chirish</string>
+    <string name="call_unmute">Ovozni yoqish</string>
 </resources>

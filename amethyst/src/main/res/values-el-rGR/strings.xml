@@ -179,4 +179,14 @@
     <string name="voice_post">Φωνητική ανάρτηση</string>
     <string name="voice_reply">Φωνητική απάντηση</string>
     <string name="private_message">Ιδιωτικό Μήνυμα</string>
+    <string name="nest_notification_broadcasting">Nest — Ζωντανά</string>
+    <string name="nest_notification_channel_description">Διατηρεί τον ήχο σε αναπαραγωγή ενώ το δωμάτιο είναι ανοιχτό.</string>
+    <string name="nest_notification_listening">Nest συνδεδεμένο</string>
+    <string name="nest_notification_stop">Διακοπή</string>
+    <string name="nest_notification_text">Πατήστε για επιστροφή.</string>
+    <string name="nest_leave">Αποχώρηση</string>
+    <string name="nest_mute">Σίγαση</string>
+    <string name="nest_unmute">Άρση σίγασης</string>
+    <string name="call_mute">Σίγαση</string>
+    <string name="call_unmute">Άρση σίγασης</string>
 </resources>

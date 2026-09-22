@@ -178,4 +178,14 @@
     <string name="voice_post">Glasovna objava</string>
     <string name="voice_reply">Glasovni odgovor</string>
     <string name="private_message">Privatna poruka</string>
+    <string name="nest_notification_broadcasting">Nest — Uživo</string>
+    <string name="nest_notification_channel_description">Održava zvuk dok je soba otvorena.</string>
+    <string name="nest_notification_listening">Nest povezan</string>
+    <string name="nest_notification_stop">Zaustavi</string>
+    <string name="nest_notification_text">Dodirnite za povratak.</string>
+    <string name="nest_leave">Napusti</string>
+    <string name="nest_mute">Utišaj</string>
+    <string name="nest_unmute">Uključi zvuk</string>
+    <string name="call_mute">Isključi mikrofon</string>
+    <string name="call_unmute">Uključi mikrofon</string>
 </resources>

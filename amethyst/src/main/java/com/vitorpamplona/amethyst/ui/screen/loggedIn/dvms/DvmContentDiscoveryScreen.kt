@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_pay_invoice_from_dvm
 import com.vitorpamplona.amethyst.commons.resources.dvm_requesting_job
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -375,6 +376,7 @@ fun DvmPaymentActions(
     nav: INav,
     onStatusUpdate: (String) -> Unit,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     val status = latestStatus.status() ?: return
 
@@ -427,6 +429,7 @@ fun DvmPaymentActions(
                     payViaIntent(
                         invoice,
                         context,
+                        noWalletFoundStr,
                         onPaid = {
                             onStatusUpdate(thankYou)
                         },

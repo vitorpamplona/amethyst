@@ -322,4 +322,15 @@
     <string name="pow_kind_report">वृत्तान्त</string>
     <string name="private_message">निजी सन्देश</string>
     <string name="pow_kind_chat_message">चर्चा सन्देश</string>
+    <string name="nest_notification_broadcasting">निलय - वर्तमान</string>
+    <string name="nest_notification_channel">निलय</string>
+    <string name="nest_notification_channel_description">ध्वनि चालू रखता है जब शाला खुला है।</string>
+    <string name="nest_notification_listening">निलय संयोजित</string>
+    <string name="nest_notification_stop">अवरोधन</string>
+    <string name="nest_notification_text">लौटने के लिए दबाएँ।</string>
+    <string name="nest_leave">निर्गमन</string>
+    <string name="nest_mute">मौन</string>
+    <string name="nest_unmute">मौन हटाएँ</string>
+    <string name="call_mute">मौन</string>
+    <string name="call_unmute">मौन हटाएँ</string>
 </resources>

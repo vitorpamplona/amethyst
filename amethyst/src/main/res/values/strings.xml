@@ -651,4 +651,15 @@
     <string name="pow_kind_report">Report</string>
     <string name="private_message">Private Message</string>
     <string name="pow_kind_chat_message">Chat message</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
+    <string name="nest_notification_listening">Nest connected</string>
+    <string name="nest_notification_stop">Stop</string>
+    <string name="nest_notification_text">Tap to return.</string>
+    <string name="nest_leave">Leave</string>
+    <string name="nest_mute">Mute</string>
+    <string name="nest_unmute">Unmute</string>
+    <string name="call_mute">Mute</string>
+    <string name="call_unmute">Unmute</string>
 </resources>

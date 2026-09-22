@@ -319,4 +319,15 @@
     <string name="pow_kind_report">Rapport</string>
     <string name="private_message">Privat meddelande</string>
     <string name="pow_kind_chat_message">Chattmeddelande</string>
+    <string name="nest_notification_broadcasting">Nest — Live</string>
+    <string name="nest_notification_channel">Ljudrum</string>
+    <string name="nest_notification_channel_description">Håller ljudet igång medan rummet är öppet.</string>
+    <string name="nest_notification_listening">Nest anslutet</string>
+    <string name="nest_notification_stop">Stoppa</string>
+    <string name="nest_notification_text">Tryck för att återgå.</string>
+    <string name="nest_leave">Lämna</string>
+    <string name="nest_mute">Tysta</string>
+    <string name="nest_unmute">Slå på ljud</string>
+    <string name="call_mute">Ljud av</string>
+    <string name="call_unmute">Ljud på</string>
 </resources>

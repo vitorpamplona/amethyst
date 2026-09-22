@@ -178,4 +178,15 @@
     <string name="voice_post">Post de voz</string>
     <string name="voice_reply">Resposta em voz</string>
     <string name="private_message">Mensagem Privada</string>
+    <string name="nest_notification_broadcasting">Nest — Ao vivo</string>
+    <string name="nest_notification_channel">Salas de áudio</string>
+    <string name="nest_notification_channel_description">Mantém o áudio tocando enquanto a sala está aberta.</string>
+    <string name="nest_notification_listening">Nest conectado</string>
+    <string name="nest_notification_stop">Parar</string>
+    <string name="nest_notification_text">Toque para voltar.</string>
+    <string name="nest_leave">Sair</string>
+    <string name="nest_mute">Silenciar</string>
+    <string name="nest_unmute">Ativar som</string>
+    <string name="call_mute">Silenciar</string>
+    <string name="call_unmute">Ativar som</string>
 </resources>

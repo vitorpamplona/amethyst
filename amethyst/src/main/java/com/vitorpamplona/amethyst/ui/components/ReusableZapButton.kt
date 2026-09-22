@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_zap_to_a_draft_note
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.no_zap_amount_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.thank_you
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -113,6 +114,7 @@ fun ReusableZapButton(
     config: ZapButtonConfig = ZapButtonConfig(),
     callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
     var onchainZapAmount by remember { mutableStateOf<Long?>(null) }
     var showOnchainDialog by remember { mutableStateOf(false) }
@@ -154,7 +156,7 @@ fun ReusableZapButton(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) {
+                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) {
                             zappingProgress = 0f
                             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
@@ -194,7 +196,7 @@ fun ReusableZapButton(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) {
+                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) {
                             zappingProgress = 0f
                             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }

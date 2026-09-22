@@ -177,4 +177,14 @@
     <string name="voice_post">語音貼文</string>
     <string name="voice_reply">語音回覆</string>
     <string name="private_message">私人訊息</string>
+    <string name="nest_notification_broadcasting">Nest — 直播中</string>
+    <string name="nest_notification_channel_description">在房間開啟期間保持音訊播放。</string>
+    <string name="nest_notification_listening">Nest 已連線</string>
+    <string name="nest_notification_stop">停止</string>
+    <string name="nest_notification_text">點擊以返回。</string>
+    <string name="nest_leave">離開</string>
+    <string name="nest_mute">靜音</string>
+    <string name="nest_unmute">取消靜音</string>
+    <string name="call_mute">靜音</string>
+    <string name="call_unmute">取消靜音</string>
 </resources>

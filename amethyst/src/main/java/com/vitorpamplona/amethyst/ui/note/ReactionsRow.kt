@@ -139,6 +139,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found_for_type
 import com.vitorpamplona.amethyst.commons.resources.no_reaction_type_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.no_reactions_setup
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.resources.open_all_reactions_to_this_post
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
@@ -1251,16 +1252,17 @@ private data class OnchainZapRequest(
  * splits) to the manual payment screen. The shared tail of every zap flow.
  */
 @OptIn(ExperimentalUuidApi::class)
-suspend fun payViaIntentOrManualSplit(
+fun payViaIntentOrManualSplit(
     payables: ImmutableList<ZapPaymentHandler.Payable>,
     context: Context,
+    noWalletFound: String,
     accountViewModel: AccountViewModel,
     nav: INav,
     onPaymentError: () -> Unit = {},
 ) {
     if (payables.size == 1) {
         val payable = payables.first()
-        payViaIntent(payable.invoice, context, { }) { error ->
+        payViaIntent(payable.invoice, context, noWalletFound, { }) { error ->
             onPaymentError()
             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
         }
@@ -1283,6 +1285,7 @@ fun ZapReaction(
     showCounter: Boolean = true,
     nav: INav,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
     // null = closed; OnchainZapRequest(amount=null) = open with no prefill;
@@ -1322,7 +1325,7 @@ fun ZapReaction(
                                 }
                             },
                             onPayViaIntent = {
-                                payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                                payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                             },
                             onCustomAmount = {
                                 wantsToSetCustomZap = true
@@ -1368,7 +1371,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                    payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onReloadNutzap = { amount ->
                     wantsToZap = false
@@ -1402,7 +1405,7 @@ fun ZapReaction(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) { error ->
+                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                             zappingProgress = 0f
                             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
                         }

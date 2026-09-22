@@ -2577,4 +2577,15 @@
     <string name="voice_post">Голосовая публикация</string>
     <string name="voice_reply">Голосовой ответ</string>
     <string name="private_message">Личное сообщение</string>
+    <string name="nest_notification_broadcasting">Nest — в эфире</string>
+    <string name="nest_notification_channel">Nests</string>
+    <string name="nest_notification_channel_description">Позволяет воспроизводить звук, пока комната открыта.</string>
+    <string name="nest_notification_listening">Nest подключён</string>
+    <string name="nest_notification_stop">Стоп</string>
+    <string name="nest_notification_text">Нажмите, чтобы вернуться.</string>
+    <string name="nest_leave">Выйти</string>
+    <string name="nest_mute">Выключить микрофон</string>
+    <string name="nest_unmute">Включить микрофон</string>
+    <string name="call_mute">Выключить микрофон</string>
+    <string name="call_unmute">Включить микрофон</string>
 </resources>

@@ -187,4 +187,14 @@
     <string name="voice_post">منشور صوتي</string>
     <string name="voice_reply">رد صوتي</string>
     <string name="private_message">رسالة خاصة</string>
+    <string name="nest_notification_broadcasting">Nest — مباشر</string>
+    <string name="nest_notification_channel_description">يبقي الصوت قيد التشغيل أثناء فتح الغرفة.</string>
+    <string name="nest_notification_listening">Nest متصل</string>
+    <string name="nest_notification_stop">إيقاف</string>
+    <string name="nest_notification_text">اضغط للعودة.</string>
+    <string name="nest_leave">مغادرة</string>
+    <string name="nest_mute">كتم الصوت</string>
+    <string name="nest_unmute">إلغاء كتم الصوت</string>
+    <string name="call_mute">كتم الصوت</string>
+    <string name="call_unmute">إلغاء كتم الصوت</string>
 </resources>

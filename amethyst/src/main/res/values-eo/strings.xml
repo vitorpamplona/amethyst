@@ -72,4 +72,15 @@
     <string name="voice_post">Voĉa Afiŝo</string>
     <string name="voice_reply">Voĉa Respondo</string>
     <string name="private_message">Privata Mesaĝo</string>
+    <string name="nest_notification_broadcasting">Nesto — Viva</string>
+    <string name="nest_notification_channel">Nestoj</string>
+    <string name="nest_notification_channel_description">Konservas aŭdion luданте dum ĉambro estas malfermita.</string>
+    <string name="nest_notification_listening">Nesto konektita</string>
+    <string name="nest_notification_stop">Halti</string>
+    <string name="nest_notification_text">Tuŝetu por reveni.</string>
+    <string name="nest_leave">Forlasi</string>
+    <string name="nest_mute">Silentigi</string>
+    <string name="nest_unmute">Malsilentigi</string>
+    <string name="call_mute">Silentigi</string>
+    <string name="call_unmute">Malsilentigi</string>
 </resources>

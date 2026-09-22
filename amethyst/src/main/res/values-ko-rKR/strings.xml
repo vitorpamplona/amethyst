@@ -178,4 +178,14 @@
     <string name="voice_post">음성 게시물</string>
     <string name="voice_reply">음성 답글</string>
     <string name="private_message">비공개 메시지</string>
+    <string name="nest_notification_broadcasting">Nest — 라이브</string>
+    <string name="nest_notification_channel_description">방이 열려 있는 동안 오디오를 계속 재생합니다.</string>
+    <string name="nest_notification_listening">Nest 연결됨</string>
+    <string name="nest_notification_stop">중지</string>
+    <string name="nest_notification_text">탭하여 돌아가기.</string>
+    <string name="nest_leave">나가기</string>
+    <string name="nest_mute">음소거</string>
+    <string name="nest_unmute">음소거 해제</string>
+    <string name="call_mute">음소거</string>
+    <string name="call_unmute">음소거 해제</string>
 </resources>

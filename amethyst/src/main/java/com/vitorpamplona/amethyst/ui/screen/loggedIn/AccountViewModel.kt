@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_t
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_event
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_recipient
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_private_note
@@ -1310,6 +1311,11 @@ class AccountViewModel(
                 senderName = account.userProfile().toBestDisplayName(),
             )
 
+        // onPayInvoicesViaIntent is a plain callback the payment handler invokes later,
+        // so both strings are resolved here, while still inside the signer coroutine.
+        val noWalletFoundStr = loadStringRes(Res.string.no_wallet_found)
+        val zapErrorTitle = loadStringRes(Res.string.error_dialog_zap_error)
+
         V4VPaymentHandler(account).pay(
             value = value,
             totalMilliSats = totalMilliSats,
@@ -1326,8 +1332,8 @@ class AccountViewModel(
             onPayInvoicesViaIntent = { invoices ->
                 if (!streaming) {
                     invoices.forEach { invoice ->
-                        payViaIntent(invoice, context, onPaid = {}, onError = {
-                            toastManager.toast(loadStringRes(Res.string.error_dialog_zap_error), it)
+                        payViaIntent(invoice, context, noWalletFoundStr, onPaid = {}, onError = {
+                            toastManager.toast(zapErrorTitle, it)
                         })
                     }
                 }
