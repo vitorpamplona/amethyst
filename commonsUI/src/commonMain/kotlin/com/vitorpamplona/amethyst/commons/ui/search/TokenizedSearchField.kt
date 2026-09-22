@@ -156,7 +156,7 @@ fun TokenizedSearchField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() }),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = remember(state.settleCaret, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state.settleCaret, styles, displayName, groupName, scopeName) },
+            visualTransformation = remember(state.settleCaret, state.value.composition, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state.settleCaret, styles, displayName, groupName, scopeName, state.value.composition) },
             decorationBox = { inner ->
                 if (decorationBox != null) {
                     decorationBox(inner)

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.search
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
@@ -101,6 +102,13 @@ private class RewriteOffsetMapping(
  * to [SearchTokenizer.drawable], so a half-typed `#bit` stays plain text under the cursor rather
  * than reflowing on every keystroke. Pass null for a field nobody is typing in.
  *
+ * [composition] is the IME's composing region, and a token it touches is never rewritten either.
+ * Android's keyboard bridge asks for the on-screen bounds of every composing character through the
+ * offset mapping and assumes each one lands on a drawn character; a region inside a chip collapses
+ * onto the chip's far end, and a chip at the end of the field then reads one past the text and
+ * crashes the app. Drawing the touched token as typed keeps the mapping one-to-one under the
+ * composition. Pass null when nothing is being composed.
+ *
  * [displayName] is asked for a key token's owner and [groupName] for a group's id; returning null
  * leaves the token short-formed rather than named, which is what something that has not arrived
  * yet should look like — an invented name would be worse than a visible id.
@@ -117,6 +125,7 @@ class SearchTokenTransformation(
      * is already resolved and must return null rather than wait for anything.
      */
     private val scopeName: (String, String) -> String? = { _, _ -> null },
+    private val composition: TextRange? = null,
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val segments = SearchTokenizer.drawable(text.text, caret)
@@ -128,7 +137,7 @@ class SearchTokenTransformation(
             val raw = seg.rawText
             val start = at
             at += raw.length
-            val replacement = drawnForm(seg, raw)
+            val replacement = if (composing(start, at)) raw else drawnForm(seg, raw)
             // Only a length change needs a mapping entry; a same-length restyle leaves offsets alone.
             if (replacement.length != raw.length) rewrites.add(Rewrite(start, at, replacement))
             val from = builder.length
@@ -140,6 +149,15 @@ class SearchTokenTransformation(
             builder.toAnnotatedString(),
             RewriteOffsetMapping(rewrites, originalLength = text.text.length, transformedLength = builder.length),
         )
+    }
+
+    /** True when the IME's composing region shares at least one character with [start]..[end). */
+    private fun composing(
+        start: Int,
+        end: Int,
+    ): Boolean {
+        val c = composition ?: return false
+        return !c.collapsed && c.min < end && start < c.max
     }
 
     /** What a segment draws as. Everything but a key and a pointer draws as it was typed. */

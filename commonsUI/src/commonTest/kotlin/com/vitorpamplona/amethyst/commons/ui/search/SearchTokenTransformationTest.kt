@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.search
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TransformedText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -221,5 +222,57 @@ class SearchTokenTransformationTest {
         // The parser reads it to the end of the input, so the chip has to cover the same span.
         assertEquals("hello world", transform("\"hello world").text.text)
         assertMapsSafely("\"hello world")
+    }
+
+    /**
+     * What Android's keyboard bridge (`LegacyCursorAnchorInfoBuilder.addCharacterBounds`) does with
+     * the composing region: it maps both ends, asks the layout for the bounds of the range between
+     * them — which throws unless the start is a drawn character — and then indexes that array with
+     * every composing character's mapped offset.
+     */
+    private fun assertComposingSafely(
+        text: String,
+        composition: TextRange,
+        caret: Int? = composition.max,
+    ) {
+        val out = SearchTokenTransformation(caret, STYLES, { null }, composition = composition).filter(AnnotatedString(text))
+        val drawn = out.text.text
+        val start = out.offsetMapping.originalToTransformed(composition.min)
+        val end = out.offsetMapping.originalToTransformed(composition.max)
+        assertTrue(start in 0 until drawn.length, "composition start maps to $start, outside 0 until ${drawn.length} for \"$text\" $composition")
+        assertTrue(end in start..drawn.length, "composition end maps to $end, outside $start..${drawn.length} for \"$text\" $composition")
+        (composition.min until composition.max).forEach {
+            val mapped = out.offsetMapping.originalToTransformed(it)
+            assertTrue(mapped in start until end, "composing offset $it maps to $mapped, outside $start until $end for \"$text\" $composition")
+        }
+    }
+
+    @Test
+    fun aComposingRegionInsideATrailingChipDoesNotReadPastTheText() {
+        // The crash report: the keyboard composing `world"` inside a settled phrase at the end of
+        // the field. Drawn as a chip, the region collapsed onto offset == length and the IME
+        // bridge threw "offset(n) is out of bounds [0, n)".
+        val text = "bitcoin \"hello world\""
+        assertComposingSafely(text, TextRange(15, text.length), caret = 7)
+        assertComposingSafely(text, TextRange(9, 14), caret = 7)
+        assertComposingSafely(text, TextRange(8, text.length), caret = 7)
+    }
+
+    @Test
+    fun aComposingRegionOverAnyRewrittenTokenMapsOneToOne() {
+        listOf("from:$NPUB", "kind:20", "bitcoin kind:20", "to:$NPUB rest").forEach { text ->
+            (0 until text.length).forEach { from ->
+                (from + 1..text.length).forEach { to -> assertComposingSafely(text, TextRange(from, to), caret = null) }
+            }
+        }
+    }
+
+    @Test
+    fun aTokenTheKeyboardIsComposingDrawsAsTyped() {
+        val text = "bitcoin \"hello world\""
+        val out = SearchTokenTransformation(null, STYLES, { null }, composition = TextRange(15, text.length)).filter(AnnotatedString(text))
+        assertEquals(text, out.text.text)
+        // Nothing composed: the phrase is a chip again.
+        assertEquals("bitcoin hello world", transform(text).text.text)
     }
 }
