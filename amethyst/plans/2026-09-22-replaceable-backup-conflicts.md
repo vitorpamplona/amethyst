@@ -14,10 +14,15 @@ only surviving copy of the user's data is gone.
 
 1. **Know what we signed.** `LocallySignedEvents` (commons, `model/backups/`) records the
    ids of replaceable/addressable events passing through `justConsumeMyOwnEvent`, the
-   choke point for every local publish and for the backup restore at startup.
+   choke point for every local publish and for the backup restore at startup. It is a
+   bounded LRU (500 ids): only the latest versions of each list matter.
 2. **Only question lossy external rewrites.** `AccountSettings.acceptIntoBackup` guards
    every `update*` backup method. A newer version that was not signed here is diffed by
-   `ReplaceableBackupDiff.detectLoss` against the backup:
+   `ReplaceableBackupDiff.diff` against the backup into a `BackupDiff`: the
+   `BackupEventType` (profile, follow list, mute list, each relay list, wallet…) plus
+   removed / added / changed `BackupEntry`s, each typed (`BackupEntryType`: person, relay,
+   hashtag, word, thread, profile field, mint, trust provider…) so the UI can label them.
+   It only counts as a loss when something was removed:
    - tags matched by name + value (a new relay hint or petname is an edit, not a loss;
      `alt`/`client`/`d`/`expiration` are ignored);
    - kind 0: any filled profile field that is now missing or blank;
@@ -28,7 +33,10 @@ only surviving copy of the user's data is gone.
    backup is updated silently as before.
 3. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
-   `BackupConflictDialog` (shown from `LoggedInPage`) lists what's missing and offers:
+   `BackupConflictDialog` (shown from `LoggedInPage`) is specific to the event: it names it
+   ("Your mute list changed in another app"), says what that event is for, and lists what
+   was removed, added and changed, grouped by entry type (people by display name, relays
+   with their read/write marker, profile fields old → new…). It offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)` and publishes it.

@@ -55,8 +55,11 @@ class ReplaceableBackupDiffTest {
     fun followListRewrittenFromScratchIsALoss() {
         val saved = sign(3, 100, arrayOf(arrayOf("p", alice), arrayOf("p", bob)))
         val incoming = sign(3, 200, arrayOf(arrayOf("p", carol)))
-        val loss = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
-        assertEquals(listOf(alice, bob), loss.removedTags.map { it[1] })
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertEquals(BackupEventType.FOLLOW_LIST, diff.eventType)
+        assertEquals(listOf(alice, bob), diff.removed.map { it.value })
+        assertTrue(diff.removed.all { it.type == BackupEntryType.PERSON })
+        assertEquals(listOf(carol), diff.added.map { it.value })
     }
 
     @Test
@@ -64,6 +67,42 @@ class ReplaceableBackupDiffTest {
         val saved = sign(3, 100, arrayOf(arrayOf("p", alice, "wss://a.com", "al")))
         val incoming = sign(3, 200, arrayOf(arrayOf("p", alice, "wss://b.com")))
         assertNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+    }
+
+    @Test
+    fun relayMarkerChangeIsReportedAsChanged() {
+        val saved =
+            sign(
+                10002,
+                100,
+                arrayOf(arrayOf("r", "wss://a.com"), arrayOf("r", "wss://b.com", "read"), arrayOf("r", "wss://c.com")),
+            )
+        val incoming = sign(10002, 200, arrayOf(arrayOf("r", "wss://a.com", "write"), arrayOf("r", "wss://b.com", "read")))
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertEquals(BackupEventType.OUTBOX_INBOX_RELAYS, diff.eventType)
+        assertEquals(listOf("wss://c.com"), diff.removed.map { it.value })
+        assertEquals(BackupEntryType.RELAY, diff.removed.single().type)
+        val change = diff.changed.single()
+        assertEquals("wss://a.com", change.before.value)
+        assertNull(change.before.detail)
+        assertEquals("write", change.after.detail)
+    }
+
+    @Test
+    fun muteListEntriesAreTyped() {
+        val saved =
+            sign(
+                10000,
+                100,
+                arrayOf(arrayOf("p", alice), arrayOf("t", "spam"), arrayOf("word", "crypto"), arrayOf("e", bob)),
+            )
+        val incoming = sign(10000, 200, arrayOf())
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertEquals(BackupEventType.MUTE_LIST, diff.eventType)
+        assertEquals(
+            listOf(BackupEntryType.PERSON, BackupEntryType.HASHTAG, BackupEntryType.WORD, BackupEntryType.THREAD),
+            diff.removed.map { it.type },
+        )
     }
 
     @Test
@@ -84,9 +123,9 @@ class ReplaceableBackupDiffTest {
     fun clearedPrivateItemsAreALoss() {
         val saved = sign(10000, 100, arrayOf(arrayOf("p", alice)), "encrypted-private-items")
         val incoming = sign(10000, 200, arrayOf(arrayOf("p", alice)), "")
-        val loss = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
-        assertTrue(loss.contentCleared)
-        assertTrue(loss.removedTags.isEmpty())
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertTrue(diff.privateItemsCleared)
+        assertTrue(diff.removed.isEmpty())
     }
 
     @Test
@@ -100,9 +139,42 @@ class ReplaceableBackupDiffTest {
     fun profileMissingFieldsIsALoss() {
         val saved = sign(0, 100, arrayOf(), """{"name":"vitor","about":"hi","lud16":"v@x.com","banner":""}""")
         val incoming = sign(0, 200, arrayOf(), """{"name":"vitor2","about":"hi","banner":"https://b"}""")
-        val loss = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
-        assertEquals(listOf("lud16"), loss.removedFields)
-        assertFalse(loss.contentCleared)
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertEquals(BackupEventType.PROFILE, diff.eventType)
+        assertEquals(listOf("lud16"), diff.removed.map { it.value })
+        assertEquals("v@x.com", diff.removed.single().detail)
+        assertEquals(listOf("banner"), diff.added.map { it.value })
+        val nameChange = diff.changed.single()
+        assertEquals("vitor", nameChange.before.detail)
+        assertEquals("vitor2", nameChange.after.detail)
+        assertFalse(diff.privateItemsCleared)
+    }
+
+    @Test
+    fun privateItemsRewrittenButNotClearedAreFlaggedAsChanged() {
+        val saved = sign(10000, 100, arrayOf(arrayOf("p", alice)), "cipher-a")
+        val incoming = sign(10000, 200, arrayOf(), "cipher-b")
+        val diff = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming))
+        assertTrue(diff.privateItemsChanged)
+        assertFalse(diff.privateItemsCleared)
+    }
+
+    @Test
+    fun trustProviderEntriesCarryTheService() {
+        val saved = sign(10040, 100, arrayOf(arrayOf("30382:rank", alice, "wss://a.com")))
+        val incoming = sign(10040, 200, arrayOf())
+        val entry = assertNotNull(ReplaceableBackupDiff.detectLoss(saved, incoming)).removed.single()
+        assertEquals(BackupEntryType.TRUST_PROVIDER, entry.type)
+        assertEquals(alice, entry.value)
+        assertEquals("rank", entry.detail)
+    }
+
+    @Test
+    fun locallySignedEventsForgetTheOldestBeyondCapacity() {
+        val first = sign(10000, 1, arrayOf())
+        LocallySignedEvents.mark(first)
+        repeat(600) { LocallySignedEvents.mark(sign(10000, 2L + it, arrayOf())) }
+        assertFalse(LocallySignedEvents.contains(first.id))
     }
 
     @Test

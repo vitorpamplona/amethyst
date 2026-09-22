@@ -1196,10 +1196,10 @@ class AccountSettings(
         val reference = pending?.saved ?: saved?.takeUnless { LocallySignedEvents.contains(incoming.id) }
 
         if (reference != null && !acceptedExternalVersions.contains(incoming.id)) {
-            val loss = ReplaceableBackupDiff.detectLoss(reference, incoming)
-            if (loss != null) {
+            val diff = ReplaceableBackupDiff.detectLoss(reference, incoming)
+            if (diff != null) {
                 val conflict =
-                    ReplaceableBackupConflict(reference, incoming, loss) {
+                    ReplaceableBackupConflict(reference, incoming, diff) {
                         acceptedExternalVersions.add(incoming.id)
                         retry()
                     }
