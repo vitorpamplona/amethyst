@@ -78,7 +78,7 @@ fun PodcastEpisodeListItem(
     val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
 
     val context = LocalContext.current
-    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
+    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, prefix = "") }
     val seasonEpisodeLabel =
         when {
             season != null && episodeNumber != null -> stringRes(Res.string.podcast_season_episode, season, episodeNumber)

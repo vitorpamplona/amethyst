@@ -70,7 +70,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -79,6 +78,15 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.one_vote_per_user_on_atomic_votes
+import com.vitorpamplona.amethyst.commons.resources.poll_author_no_vote
+import com.vitorpamplona.amethyst.commons.resources.poll_is_closed_explainer
+import com.vitorpamplona.amethyst.commons.resources.poll_unable_to_vote
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -548,30 +556,30 @@ fun ZapVote(
                     when {
                         !accountViewModel.isWriteable() -> {
                             accountViewModel.toastManager.toast(
-                                R.string.read_only_user,
-                                R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+                                Res.string.read_only_user,
+                                Res.string.login_with_a_private_key_to_be_able_to_send_zaps,
                             )
                         }
 
                         pollViewModel.isPollClosed() -> {
                             accountViewModel.toastManager.toast(
-                                R.string.poll_unable_to_vote,
-                                R.string.poll_is_closed_explainer,
+                                Res.string.poll_unable_to_vote,
+                                Res.string.poll_is_closed_explainer,
                             )
                         }
 
                         isLoggedUser -> {
                             accountViewModel.toastManager.toast(
-                                R.string.poll_unable_to_vote,
-                                R.string.poll_author_no_vote,
+                                Res.string.poll_unable_to_vote,
+                                Res.string.poll_author_no_vote,
                             )
                         }
 
                         pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value -> {
                             // only allow one vote per option when min==max, i.e. atomic vote amount specified
                             accountViewModel.toastManager.toast(
-                                R.string.poll_unable_to_vote,
-                                R.string.one_vote_per_user_on_atomic_votes,
+                                Res.string.poll_unable_to_vote,
+                                Res.string.one_vote_per_user_on_atomic_votes,
                             )
                             return@combinedClickable
                         }
@@ -594,7 +602,7 @@ fun ZapVote(
                                         val payable = it.first()
                                         payViaIntent(payable.invoice, context, { }) { error ->
                                             zappingProgress = 0f
-                                            showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                                            showErrorMessageDialog = StringToastMsg(stringRes(Res.string.error_dialog_zap_error), error)
                                         }
                                     } else {
                                         val uid = Uuid.random().toString()
@@ -635,7 +643,7 @@ fun ZapVote(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) { error ->
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                            showErrorMessageDialog = StringToastMsg(stringRes(Res.string.error_dialog_zap_error), error)
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -667,7 +675,7 @@ fun ZapVote(
             zappingProgress = 1f
             Icon(
                 symbol = MaterialSymbols.Bolt,
-                contentDescription = stringRes(R.string.zaps),
+                contentDescription = stringRes(Res.string.zaps),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -675,7 +683,7 @@ fun ZapVote(
             if (zappingProgress < 0.1 || zappingProgress > 0.99) {
                 Icon(
                     symbol = MaterialSymbols.Bolt,
-                    contentDescription = stringRes(id = R.string.zaps),
+                    contentDescription = stringRes(id = Res.string.zaps),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )

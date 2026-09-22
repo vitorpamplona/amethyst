@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -59,14 +58,74 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_best_for
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_title
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_cons
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_title
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_con_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_ephemeral_title
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_location_title
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_marmot_title
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_pros
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_con_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_public_chat_title
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_relay_group_title
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_direct
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_encrypted
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_relay
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,6 +134,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.StringResource
 
 // Per-type accent colors. Each protocol gets its own hue so private-vs-public reads at a glance
 // instead of via text. Used at full strength for the icon tile (white glyph on top) and, tint-mixed,
@@ -98,11 +158,11 @@ private val ColorLocation = Color(0xFF0891B2)
 private class ConversationType(
     val icon: MaterialSymbol,
     val color: Color,
-    @StringRes val title: Int,
-    @StringRes val tagline: Int,
-    @StringRes val chip: Int,
-    @StringRes val bestFor: Int,
-    @StringRes val cta: Int,
+    val title: StringResource,
+    val tagline: StringResource,
+    val chip: StringResource,
+    val bestFor: StringResource,
+    val cta: StringResource,
     val pros: List<Int>,
     val cons: List<Int>,
     val route: Route,
@@ -110,7 +170,7 @@ private class ConversationType(
 
 @Immutable
 private class ConversationSection(
-    @StringRes val header: Int,
+    val header: StringResource,
     val types: List<ConversationType>,
 )
 
@@ -119,103 +179,103 @@ private class ConversationSection(
 private val conversationSections =
     listOf(
         ConversationSection(
-            header = R.string.new_conversation_section_direct,
+            header = Res.string.new_conversation_section_direct,
             types =
                 listOf(
                     ConversationType(
                         icon = MaterialSymbols.Mail,
                         color = ColorPrivate,
-                        title = R.string.new_conversation_dm_title,
-                        tagline = R.string.new_conversation_dm_tagline,
-                        chip = R.string.new_conversation_dm_chip,
-                        bestFor = R.string.new_conversation_dm_best,
-                        cta = R.string.new_conversation_dm_cta,
-                        pros = listOf(R.string.new_conversation_dm_pro_1, R.string.new_conversation_dm_pro_2),
-                        cons = listOf(R.string.new_conversation_dm_con_1),
+                        title = Res.string.new_conversation_dm_title,
+                        tagline = Res.string.new_conversation_dm_tagline,
+                        chip = Res.string.new_conversation_dm_chip,
+                        bestFor = Res.string.new_conversation_dm_best,
+                        cta = Res.string.new_conversation_dm_cta,
+                        pros = listOf(Res.string.new_conversation_dm_pro_1, Res.string.new_conversation_dm_pro_2),
+                        cons = listOf(Res.string.new_conversation_dm_con_1),
                         route = Route.NewGroupDM(),
                     ),
                 ),
         ),
         ConversationSection(
-            header = R.string.new_conversation_section_encrypted,
+            header = Res.string.new_conversation_section_encrypted,
             types =
                 listOf(
                     ConversationType(
                         icon = MaterialSymbols.Lock,
                         color = ColorMarmot,
-                        title = R.string.new_conversation_marmot_title,
-                        tagline = R.string.new_conversation_marmot_tagline,
-                        chip = R.string.new_conversation_marmot_chip,
-                        bestFor = R.string.new_conversation_marmot_best,
-                        cta = R.string.new_conversation_marmot_cta,
-                        pros = listOf(R.string.new_conversation_marmot_pro_1, R.string.new_conversation_marmot_pro_2),
-                        cons = listOf(R.string.new_conversation_marmot_con_1),
+                        title = Res.string.new_conversation_marmot_title,
+                        tagline = Res.string.new_conversation_marmot_tagline,
+                        chip = Res.string.new_conversation_marmot_chip,
+                        bestFor = Res.string.new_conversation_marmot_best,
+                        cta = Res.string.new_conversation_marmot_cta,
+                        pros = listOf(Res.string.new_conversation_marmot_pro_1, Res.string.new_conversation_marmot_pro_2),
+                        cons = listOf(Res.string.new_conversation_marmot_con_1),
                         route = Route.CreateMarmotGroup,
                     ),
                     ConversationType(
                         icon = MaterialSymbols.Groups,
                         color = ColorConcord,
-                        title = R.string.new_conversation_concord_title,
-                        tagline = R.string.new_conversation_concord_tagline,
-                        chip = R.string.new_conversation_concord_chip,
-                        bestFor = R.string.new_conversation_concord_best,
-                        cta = R.string.new_conversation_concord_cta,
-                        pros = listOf(R.string.new_conversation_concord_pro_1, R.string.new_conversation_concord_pro_2),
-                        cons = listOf(R.string.new_conversation_concord_con_1),
+                        title = Res.string.new_conversation_concord_title,
+                        tagline = Res.string.new_conversation_concord_tagline,
+                        chip = Res.string.new_conversation_concord_chip,
+                        bestFor = Res.string.new_conversation_concord_best,
+                        cta = Res.string.new_conversation_concord_cta,
+                        pros = listOf(Res.string.new_conversation_concord_pro_1, Res.string.new_conversation_concord_pro_2),
+                        cons = listOf(Res.string.new_conversation_concord_con_1),
                         route = Route.ConcordCreate,
                     ),
                 ),
         ),
         ConversationSection(
-            header = R.string.new_conversation_section_relay,
+            header = Res.string.new_conversation_section_relay,
             types =
                 listOf(
                     ConversationType(
                         icon = MaterialSymbols.Public,
                         color = ColorPublic,
-                        title = R.string.new_conversation_public_chat_title,
-                        tagline = R.string.new_conversation_public_chat_tagline,
-                        chip = R.string.new_conversation_public_chat_chip,
-                        bestFor = R.string.new_conversation_public_chat_best,
-                        cta = R.string.new_conversation_public_chat_cta,
-                        pros = listOf(R.string.new_conversation_public_chat_pro_1, R.string.new_conversation_public_chat_pro_2),
-                        cons = listOf(R.string.new_conversation_public_chat_con_1, R.string.new_conversation_public_chat_con_2),
+                        title = Res.string.new_conversation_public_chat_title,
+                        tagline = Res.string.new_conversation_public_chat_tagline,
+                        chip = Res.string.new_conversation_public_chat_chip,
+                        bestFor = Res.string.new_conversation_public_chat_best,
+                        cta = Res.string.new_conversation_public_chat_cta,
+                        pros = listOf(Res.string.new_conversation_public_chat_pro_1, Res.string.new_conversation_public_chat_pro_2),
+                        cons = listOf(Res.string.new_conversation_public_chat_con_1, Res.string.new_conversation_public_chat_con_2),
                         route = Route.ChannelMetadataEdit(),
                     ),
                     ConversationType(
                         icon = MaterialSymbols.Dns,
                         color = ColorRelay,
-                        title = R.string.new_conversation_relay_group_title,
-                        tagline = R.string.new_conversation_relay_group_tagline,
-                        chip = R.string.new_conversation_relay_group_chip,
-                        bestFor = R.string.new_conversation_relay_group_best,
-                        cta = R.string.new_conversation_relay_group_cta,
-                        pros = listOf(R.string.new_conversation_relay_group_pro_1, R.string.new_conversation_relay_group_pro_2),
-                        cons = listOf(R.string.new_conversation_relay_group_con_1),
+                        title = Res.string.new_conversation_relay_group_title,
+                        tagline = Res.string.new_conversation_relay_group_tagline,
+                        chip = Res.string.new_conversation_relay_group_chip,
+                        bestFor = Res.string.new_conversation_relay_group_best,
+                        cta = Res.string.new_conversation_relay_group_cta,
+                        pros = listOf(Res.string.new_conversation_relay_group_pro_1, Res.string.new_conversation_relay_group_pro_2),
+                        cons = listOf(Res.string.new_conversation_relay_group_con_1),
                         route = Route.RelayGroupBrowse,
                     ),
                     ConversationType(
                         icon = MaterialSymbols.Timer,
                         color = ColorEphemeral,
-                        title = R.string.new_conversation_ephemeral_title,
-                        tagline = R.string.new_conversation_ephemeral_tagline,
-                        chip = R.string.new_conversation_ephemeral_chip,
-                        bestFor = R.string.new_conversation_ephemeral_best,
-                        cta = R.string.new_conversation_ephemeral_cta,
-                        pros = listOf(R.string.new_conversation_ephemeral_pro_1, R.string.new_conversation_ephemeral_pro_2),
-                        cons = listOf(R.string.new_conversation_ephemeral_con_1, R.string.new_conversation_ephemeral_con_2),
+                        title = Res.string.new_conversation_ephemeral_title,
+                        tagline = Res.string.new_conversation_ephemeral_tagline,
+                        chip = Res.string.new_conversation_ephemeral_chip,
+                        bestFor = Res.string.new_conversation_ephemeral_best,
+                        cta = Res.string.new_conversation_ephemeral_cta,
+                        pros = listOf(Res.string.new_conversation_ephemeral_pro_1, Res.string.new_conversation_ephemeral_pro_2),
+                        cons = listOf(Res.string.new_conversation_ephemeral_con_1, Res.string.new_conversation_ephemeral_con_2),
                         route = Route.NewEphemeralChat,
                     ),
                     ConversationType(
                         icon = MaterialSymbols.LocationOn,
                         color = ColorLocation,
-                        title = R.string.new_conversation_location_title,
-                        tagline = R.string.new_conversation_location_tagline,
-                        chip = R.string.new_conversation_location_chip,
-                        bestFor = R.string.new_conversation_location_best,
-                        cta = R.string.new_conversation_location_cta,
-                        pros = listOf(R.string.new_conversation_location_pro_1, R.string.new_conversation_location_pro_2),
-                        cons = listOf(R.string.new_conversation_location_con_1),
+                        title = Res.string.new_conversation_location_title,
+                        tagline = Res.string.new_conversation_location_tagline,
+                        chip = Res.string.new_conversation_location_chip,
+                        bestFor = Res.string.new_conversation_location_best,
+                        cta = Res.string.new_conversation_location_cta,
+                        pros = listOf(Res.string.new_conversation_location_pro_1, Res.string.new_conversation_location_pro_2),
+                        cons = listOf(Res.string.new_conversation_location_con_1),
                         route = Route.NewGeohashChat,
                     ),
                 ),
@@ -400,7 +460,7 @@ private fun ColumnHeader(text: String) {
 
 @Composable
 private fun ProConRow(
-    @StringRes text: Int,
+    text: StringResource,
     accent: Color,
     isPro: Boolean,
 ) {

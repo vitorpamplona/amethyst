@@ -59,10 +59,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.add_media_server
 import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_uploads
 import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_uploads_caption
@@ -72,6 +72,9 @@ import com.vitorpamplona.amethyst.commons.resources.delete_media_server
 import com.vitorpamplona.amethyst.commons.resources.media_server_added
 import com.vitorpamplona.amethyst.commons.resources.media_server_primary_badge
 import com.vitorpamplona.amethyst.commons.resources.media_server_reorder
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_offline
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_online
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_slow
 import com.vitorpamplona.amethyst.commons.resources.media_servers_add_section
 import com.vitorpamplona.amethyst.commons.resources.media_servers_add_url_label
 import com.vitorpamplona.amethyst.commons.resources.media_servers_cache_section
@@ -79,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_servers_priority_secti
 import com.vitorpamplona.amethyst.commons.resources.media_servers_recommended_label
 import com.vitorpamplona.amethyst.commons.resources.media_servers_reorder_hint
 import com.vitorpamplona.amethyst.commons.resources.media_servers_upload_section
+import com.vitorpamplona.amethyst.commons.resources.my_blossom_data
 import com.vitorpamplona.amethyst.commons.resources.no_blossom_server_message
 import com.vitorpamplona.amethyst.commons.resources.use_default_servers
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -250,7 +254,7 @@ private fun UploadBehaviorSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringRes(id = R.string.my_blossom_data),
+                text = stringRes(id = Res.string.my_blossom_data),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
@@ -449,7 +453,7 @@ private fun AddServerSection(
         color = MaterialTheme.colorScheme.grayText,
         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
     )
-    MediaServerEditField(R.string.add_a_blossom_server) { onAddServer(it) }
+    MediaServerEditField(Res.string.add_a_blossom_server) { onAddServer(it) }
 }
 
 /** A recommended server as a tappable pill. Once added it reads as done and stops responding. */
@@ -611,15 +615,15 @@ private fun HealthIndicator(health: ServerHealth) {
     when (health) {
         ServerHealth.Online -> {
             color = MaterialTheme.colorScheme.allGoodColor
-            label = R.string.media_server_status_online
+            label = Res.string.media_server_status_online
         }
         ServerHealth.Slow -> {
             color = MaterialTheme.colorScheme.warningColor
-            label = R.string.media_server_status_slow
+            label = Res.string.media_server_status_slow
         }
         else -> {
             color = MaterialTheme.colorScheme.error
-            label = R.string.media_server_status_offline
+            label = Res.string.media_server_status_offline
         }
     }
 

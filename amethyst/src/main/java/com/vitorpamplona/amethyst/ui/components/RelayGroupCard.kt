@@ -45,13 +45,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_open
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -181,7 +181,7 @@ private fun RelayGroupCardContent(
                                 modifier = Modifier.size(14.dp),
                             )
                             Text(
-                                text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
+                                text = pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

@@ -96,18 +96,21 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.blossom_delete_from_host
 import com.vitorpamplona.amethyst.commons.resources.blossom_file_details
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_menu
 import com.vitorpamplona.amethyst.commons.resources.blossom_mirror_to_missing
 import com.vitorpamplona.amethyst.commons.resources.blossom_more_actions
+import com.vitorpamplona.amethyst.commons.resources.blossom_not_on_all_servers
+import com.vitorpamplona.amethyst.commons.resources.blossom_on_all_servers
 import com.vitorpamplona.amethyst.commons.resources.blossom_open
 import com.vitorpamplona.amethyst.commons.resources.blossom_pay
+import com.vitorpamplona.amethyst.commons.resources.blossom_pay_sats
 import com.vitorpamplona.amethyst.commons.resources.blossom_payment_message
 import com.vitorpamplona.amethyst.commons.resources.blossom_payment_server_says
 import com.vitorpamplona.amethyst.commons.resources.blossom_payment_title
@@ -119,8 +122,12 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_send
 import com.vitorpamplona.amethyst.commons.resources.blossom_stored_on
 import com.vitorpamplona.amethyst.commons.resources.blossom_sync_all
 import com.vitorpamplona.amethyst.commons.resources.blossom_sync_gaps
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.resources.manage_stored_files_empty
+import com.vitorpamplona.amethyst.commons.resources.my_blossom_data
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -197,7 +204,7 @@ fun BlossomBlobManagerScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text(stringRes(R.string.my_blossom_data)) },
+                title = { Text(stringRes(Res.string.my_blossom_data)) },
                 showBackButton = nav.canPop(),
                 popBack = { nav.popBack() },
                 actions = {
@@ -233,7 +240,7 @@ fun BlossomBlobManagerScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(error ?: "", color = MaterialTheme.colorScheme.grayText)
                         Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = { vm.refresh() }) { Text(stringRes(R.string.retry)) }
+                        OutlinedButton(onClick = { vm.refresh() }) { Text(stringRes(Res.string.retry)) }
                     }
 
                 blobs.isEmpty() ->
@@ -479,7 +486,7 @@ private fun SyncBadge(
             symbol = if (synced) MaterialSymbols.CheckCircle else MaterialSymbols.CloudUpload,
             contentDescription =
                 stringRes(
-                    if (synced) R.string.blossom_on_all_servers else R.string.blossom_not_on_all_servers,
+                    if (synced) Res.string.blossom_on_all_servers else Res.string.blossom_not_on_all_servers,
                 ),
             modifier = Modifier.size(13.dp),
             tint = accent,
@@ -554,10 +561,10 @@ private fun BlossomBlobViewer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ViewerIconButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(R.string.back), onDismiss)
+                ViewerIconButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.back), onDismiss)
                 Spacer(Modifier.weight(1f))
                 if (url != null) {
-                    ViewerIconButton(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+                    ViewerIconButton(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
                         shareUrl(context, url)
                     }
                 }
@@ -711,7 +718,7 @@ private fun BlobActionsContent(
             DetailAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy)) {
                 scope.launch { clipboard.setText(url) }
             }
-            DetailAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+            DetailAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
                 shareUrl(context, url)
             }
             DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.blossom_open)) {
@@ -852,7 +859,7 @@ private fun BlossomPaymentDialog(
                 Spacer(Modifier.size(8.dp))
                 Text(
                     if (amountSats != null) {
-                        pluralStringResource(R.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
+                        pluralStringResource(Res.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
                     } else {
                         stringRes(Res.string.blossom_pay)
                     },
@@ -860,7 +867,7 @@ private fun BlossomPaymentDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -914,7 +921,7 @@ private fun BlossomReportDialog(
             }) { Text(stringRes(Res.string.blossom_send)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

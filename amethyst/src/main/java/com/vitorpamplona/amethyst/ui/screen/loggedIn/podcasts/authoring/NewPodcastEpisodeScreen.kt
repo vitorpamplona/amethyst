@@ -61,13 +61,19 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.podcast_cover_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.podcast_cover_upload_hint
+import com.vitorpamplona.amethyst.commons.resources.podcast_edit_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_picked
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_chapters_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_delete
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_duration_label
@@ -79,6 +85,10 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_topics_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_topics_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_transcript_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_video_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -91,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadPlaceholder
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Composer for a Podcasting-2.0 episode. Cover art + audio file upload at the top (or paste URLs),
@@ -136,7 +147,7 @@ fun NewPodcastEpisodeScreen(
     Scaffold(
         topBar = {
             SendingTopBar(
-                titleRes = if (vm.isEditing) R.string.podcast_edit_episode else R.string.podcast_new_episode,
+                titleRes = if (vm.isEditing) Res.string.podcast_edit_episode else Res.string.podcast_new_episode,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
@@ -156,7 +167,7 @@ fun NewPodcastEpisodeScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isBusy) UploadInProgressBanner(R.string.podcast_publishing_banner)
+            if (isBusy) UploadInProgressBanner(Res.string.podcast_publishing_banner)
 
             CoverImagePicker(
                 cover = vm.coverMedia.value,
@@ -165,8 +176,8 @@ fun NewPodcastEpisodeScreen(
                 onDelete = { vm.clearPickedCover() },
                 accountViewModel = accountViewModel,
                 enabled = !isBusy,
-                ctaRes = R.string.podcast_cover_upload_cta,
-                hintRes = R.string.podcast_cover_upload_hint,
+                ctaRes = Res.string.podcast_cover_upload_cta,
+                hintRes = Res.string.podcast_cover_upload_hint,
             )
 
             AudioFilePickerRow(
@@ -243,9 +254,9 @@ fun NewPodcastEpisodeScreen(
                     )
                 }
 
-                UrlField(vm.videoUrl, R.string.podcast_episode_video_label)
-                UrlField(vm.transcriptUrl, R.string.podcast_episode_transcript_label)
-                UrlField(vm.chaptersUrl, R.string.podcast_episode_chapters_label)
+                UrlField(vm.videoUrl, Res.string.podcast_episode_video_label)
+                UrlField(vm.transcriptUrl, Res.string.podcast_episode_transcript_label)
+                UrlField(vm.chaptersUrl, Res.string.podcast_episode_chapters_label)
 
                 OutlinedTextField(
                     value = vm.topics.value,
@@ -281,7 +292,7 @@ fun NewPodcastEpisodeScreen(
 @Composable
 private fun UrlField(
     state: androidx.compose.runtime.MutableState<String>,
-    labelRes: Int,
+    labelRes: StringResource,
 ) {
     OutlinedTextField(
         value = state.value,
@@ -325,14 +336,14 @@ private fun AudioFilePickerRow(
                 )
             }
             if (enabled) {
-                TextButton(onClick = onClear) { Text(stringRes(R.string.cancel)) }
+                TextButton(onClick = onClear) { Text(stringRes(Res.string.cancel)) }
             }
         }
     } else {
         UploadPlaceholder(
             iconSymbol = MaterialSymbols.MusicNote,
-            ctaRes = R.string.podcast_episode_audio_upload_cta,
-            hintRes = R.string.podcast_episode_audio_upload_hint,
+            ctaRes = Res.string.podcast_episode_audio_upload_cta,
+            hintRes = Res.string.podcast_episode_audio_upload_hint,
             onClick = onPick,
             aspectRatio = null,
             enabled = enabled,
@@ -382,7 +393,7 @@ private fun DeleteEpisodeRow(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirming = false }) { Text(stringRes(R.string.cancel)) }
+                TextButton(onClick = { confirming = false }) { Text(stringRes(Res.string.cancel)) }
             },
         )
     }

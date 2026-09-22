@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.service.cashu.melt
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cashu.melt.MeltResult
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url
+import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url_explainer
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
@@ -85,10 +90,10 @@ class MeltProcessor {
             val sendable = token.totalAmount - fees
             if (sendable <= 0) {
                 throw LightningAddressResolver.LightningAddressError(
-                    stringRes(context, R.string.cashu_failed_redemption),
+                    loadStringRes(Res.string.cashu_failed_redemption),
                     stringRes(
                         context,
-                        R.string.cashu_failed_redemption_explainer_error_msg,
+                        Res.string.cashu_failed_redemption_explainer_error_msg,
                         "Token value ${token.totalAmount} does not cover fees $fees",
                     ),
                 )
@@ -121,13 +126,13 @@ class MeltProcessor {
             // message, not the mint's, so don't dress it up as "the mint said".
             if (e is MintUrlException) {
                 throw LightningAddressResolver.LightningAddressError(
-                    stringRes(context, R.string.cashu_unsafe_mint_url),
-                    stringRes(context, R.string.cashu_unsafe_mint_url_explainer, e.message),
+                    loadStringRes(Res.string.cashu_unsafe_mint_url),
+                    loadStringRes(Res.string.cashu_unsafe_mint_url_explainer, e.message),
                 )
             }
             throw LightningAddressResolver.LightningAddressError(
-                stringRes(context, R.string.cashu_failed_redemption),
-                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                loadStringRes(Res.string.cashu_failed_redemption),
+                loadStringRes(Res.string.cashu_failed_redemption_explainer_error_msg, e.message),
             )
         }
     }

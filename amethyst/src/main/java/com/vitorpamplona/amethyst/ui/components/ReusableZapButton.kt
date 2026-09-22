@@ -44,11 +44,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.donate_now
+import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_zap_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_send_zaps
+import com.vitorpamplona.amethyst.commons.resources.no_zap_amount_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.thank_you
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
@@ -144,7 +148,7 @@ fun ReusableZapButton(
                 onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, toUser)
                     }
                 },
                 onPayViaIntent = {
@@ -152,7 +156,7 @@ fun ReusableZapButton(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) {
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -181,7 +185,7 @@ fun ReusableZapButton(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = {
@@ -192,7 +196,7 @@ fun ReusableZapButton(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) {
                             zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
                     } else {
                         val uid = Uuid.random().toString()
@@ -316,8 +320,8 @@ private fun handleZapClick(
 ) {
     if (baseNote.isDraft()) {
         accountViewModel.toastManager.toast(
-            R.string.draft_note,
-            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+            Res.string.draft_note,
+            Res.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
         return
     }
@@ -327,15 +331,15 @@ private fun handleZapClick(
     when {
         choices.isEmpty() -> {
             accountViewModel.toastManager.toast(
-                stringRes(context, R.string.error_dialog_zap_error),
-                stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
+                Res.string.error_dialog_zap_error,
+                Res.string.no_zap_amount_setup_long_press_to_change,
             )
         }
 
         !accountViewModel.isWriteable() -> {
             accountViewModel.toastManager.toast(
-                stringRes(context, R.string.error_dialog_zap_error),
-                stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+                Res.string.error_dialog_zap_error,
+                Res.string.login_with_a_private_key_to_be_able_to_send_zaps,
             )
         }
 

@@ -60,14 +60,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_groups_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_message_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations
@@ -126,7 +127,7 @@ fun MarmotGroupListScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -342,7 +343,7 @@ fun MarmotGroupListItem(
                 }
             } else {
                 Text(
-                    text = pluralStringResource(R.plurals.marmot_message_count, chatroom.messages.size, chatroom.messages.size),
+                    text = pluralStringResource(Res.plurals.marmot_message_count, chatroom.messages.size, chatroom.messages.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

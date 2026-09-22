@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import android.content.Context
 import android.net.Uri
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -29,7 +30,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
@@ -84,7 +84,7 @@ class ConcordImageUploader(
             val result =
                 when (finalState) {
                     is UploadingState.Finished -> finalState.result
-                    is UploadingState.Error -> throw IllegalStateException(stringRes(context, finalState.errorResource, *finalState.params))
+                    is UploadingState.Error -> throw IllegalStateException(loadStringRes(finalState.errorResource, *finalState.params))
                 }
 
             val server =

@@ -44,21 +44,52 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_client_tag_explainer
+import com.vitorpamplona.amethyst.commons.resources.add_client_tag_title
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_setting_description
+import com.vitorpamplona.amethyst.commons.resources.ai_writing_setting_title
+import com.vitorpamplona.amethyst.commons.resources.auto_create_drafts_setting_description
+import com.vitorpamplona.amethyst.commons.resources.auto_create_drafts_setting_title
+import com.vitorpamplona.amethyst.commons.resources.compose_settings
 import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_description
 import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_hint
 import com.vitorpamplona.amethyst.commons.resources.compose_signature_setting_title
 import com.vitorpamplona.amethyst.commons.resources.pow_categories_explainer
 import com.vitorpamplona.amethyst.commons.resources.pow_categories_title
+import com.vitorpamplona.amethyst.commons.resources.pow_category_comments
+import com.vitorpamplona.amethyst.commons.resources.pow_category_comments_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_gift_wraps
+import com.vitorpamplona.amethyst.commons.resources.pow_category_gift_wraps_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_long_form
+import com.vitorpamplona.amethyst.commons.resources.pow_category_long_form_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_other_public
+import com.vitorpamplona.amethyst.commons.resources.pow_category_other_public_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_public_chat
+import com.vitorpamplona.amethyst.commons.resources.pow_category_public_chat_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reactions
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reactions_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reports
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reports_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reposts
+import com.vitorpamplona.amethyst.commons.resources.pow_category_reposts_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_short_notes
+import com.vitorpamplona.amethyst.commons.resources.pow_category_short_notes_explainer
+import com.vitorpamplona.amethyst.commons.resources.pow_category_voice
+import com.vitorpamplona.amethyst.commons.resources.pow_category_voice_explainer
 import com.vitorpamplona.amethyst.commons.resources.pow_custom_difficulty_explainer
 import com.vitorpamplona.amethyst.commons.resources.pow_custom_difficulty_title
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_estimate
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_explainer
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_off
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_title
+import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
+import com.vitorpamplona.amethyst.commons.resources.suggest_workouts_setting_description
+import com.vitorpamplona.amethyst.commons.resources.suggest_workouts_setting_title
+import com.vitorpamplona.amethyst.commons.resources.tracked_broadcasts_setting_description
+import com.vitorpamplona.amethyst.commons.resources.tracked_broadcasts_setting_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
@@ -75,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ComposeSettingsScreen(
@@ -83,7 +115,7 @@ fun ComposeSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.compose_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.compose_settings), nav)
         },
     ) { padding ->
         ComposeSettingsContent(
@@ -107,12 +139,12 @@ fun ComposeSettingsContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        SettingsSection(R.string.compose_settings) {
+        SettingsSection(Res.string.compose_settings) {
             BooleanSwitchTile(
                 flow = sharedPrefs.automaticallyCreateDrafts,
                 icon = MaterialSymbols.Drafts,
-                title = R.string.auto_create_drafts_setting_title,
-                description = R.string.auto_create_drafts_setting_description,
+                title = Res.string.auto_create_drafts_setting_title,
+                description = Res.string.auto_create_drafts_setting_description,
             )
             SettingsDivider()
             // The F-Droid build ships no on-device model, so the toggle would do nothing there.
@@ -120,23 +152,23 @@ fun ComposeSettingsContent(
                 BooleanSwitchTile(
                     flow = sharedPrefs.automaticallyProposeAiImprovements,
                     icon = MaterialSymbols.AutoAwesome,
-                    title = R.string.ai_writing_setting_title,
-                    description = R.string.ai_writing_setting_description,
+                    title = Res.string.ai_writing_setting_title,
+                    description = Res.string.ai_writing_setting_description,
                 )
                 SettingsDivider()
             }
             BooleanSwitchTile(
                 flow = sharedPrefs.useTrackedBroadcasts,
                 icon = MaterialSymbols.CellTower,
-                title = R.string.tracked_broadcasts_setting_title,
-                description = R.string.tracked_broadcasts_setting_description,
+                title = Res.string.tracked_broadcasts_setting_title,
+                description = Res.string.tracked_broadcasts_setting_description,
             )
             SettingsDivider()
             BooleanSwitchTile(
                 flow = sharedPrefs.suggestWorkoutsFromHealthConnect,
                 icon = MaterialSymbols.DirectionsRun,
-                title = R.string.suggest_workouts_setting_title,
-                description = R.string.suggest_workouts_setting_description,
+                title = Res.string.suggest_workouts_setting_title,
+                description = Res.string.suggest_workouts_setting_description,
             )
             SettingsDivider()
             AddClientTagTile(accountViewModel)
@@ -144,7 +176,7 @@ fun ComposeSettingsContent(
             SignatureTile(sharedPrefs.composeSignature)
         }
 
-        SettingsSection(R.string.pow_settings_title) {
+        SettingsSection(Res.string.pow_settings_title) {
             PowDifficultyTile(accountViewModel)
             SettingsDivider()
             PowCategoryChecklist(accountViewModel)
@@ -213,7 +245,7 @@ private fun PowTimeEstimate(difficulty: Int) {
     val estimate by
         produceState<String?>(initialValue = null, difficulty) {
             val rate = deviceHashesPerSecond()
-            value = formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, rate))
+            value = formatApproxDuration(PoWEstimator.estimateSeconds(difficulty, rate))
         }
 
     estimate?.let {
@@ -261,31 +293,31 @@ private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {
 @StringRes
 private fun PoWCategory.titleRes(): Int =
     when (this) {
-        PoWCategory.SHORT_NOTES -> R.string.pow_category_short_notes
-        PoWCategory.COMMENTS -> R.string.pow_category_comments
-        PoWCategory.REPORTS -> R.string.pow_category_reports
-        PoWCategory.LONG_FORM -> R.string.pow_category_long_form
-        PoWCategory.VOICE -> R.string.pow_category_voice
-        PoWCategory.REPOSTS -> R.string.pow_category_reposts
-        PoWCategory.REACTIONS -> R.string.pow_category_reactions
-        PoWCategory.PUBLIC_CHAT -> R.string.pow_category_public_chat
-        PoWCategory.GIFT_WRAPS -> R.string.pow_category_gift_wraps
-        PoWCategory.OTHER_PUBLIC -> R.string.pow_category_other_public
+        PoWCategory.SHORT_NOTES -> Res.string.pow_category_short_notes
+        PoWCategory.COMMENTS -> Res.string.pow_category_comments
+        PoWCategory.REPORTS -> Res.string.pow_category_reports
+        PoWCategory.LONG_FORM -> Res.string.pow_category_long_form
+        PoWCategory.VOICE -> Res.string.pow_category_voice
+        PoWCategory.REPOSTS -> Res.string.pow_category_reposts
+        PoWCategory.REACTIONS -> Res.string.pow_category_reactions
+        PoWCategory.PUBLIC_CHAT -> Res.string.pow_category_public_chat
+        PoWCategory.GIFT_WRAPS -> Res.string.pow_category_gift_wraps
+        PoWCategory.OTHER_PUBLIC -> Res.string.pow_category_other_public
     }
 
 @StringRes
 private fun PoWCategory.descriptionRes(): Int =
     when (this) {
-        PoWCategory.SHORT_NOTES -> R.string.pow_category_short_notes_explainer
-        PoWCategory.COMMENTS -> R.string.pow_category_comments_explainer
-        PoWCategory.REPORTS -> R.string.pow_category_reports_explainer
-        PoWCategory.LONG_FORM -> R.string.pow_category_long_form_explainer
-        PoWCategory.VOICE -> R.string.pow_category_voice_explainer
-        PoWCategory.REPOSTS -> R.string.pow_category_reposts_explainer
-        PoWCategory.REACTIONS -> R.string.pow_category_reactions_explainer
-        PoWCategory.PUBLIC_CHAT -> R.string.pow_category_public_chat_explainer
-        PoWCategory.GIFT_WRAPS -> R.string.pow_category_gift_wraps_explainer
-        PoWCategory.OTHER_PUBLIC -> R.string.pow_category_other_public_explainer
+        PoWCategory.SHORT_NOTES -> Res.string.pow_category_short_notes_explainer
+        PoWCategory.COMMENTS -> Res.string.pow_category_comments_explainer
+        PoWCategory.REPORTS -> Res.string.pow_category_reports_explainer
+        PoWCategory.LONG_FORM -> Res.string.pow_category_long_form_explainer
+        PoWCategory.VOICE -> Res.string.pow_category_voice_explainer
+        PoWCategory.REPOSTS -> Res.string.pow_category_reposts_explainer
+        PoWCategory.REACTIONS -> Res.string.pow_category_reactions_explainer
+        PoWCategory.PUBLIC_CHAT -> Res.string.pow_category_public_chat_explainer
+        PoWCategory.GIFT_WRAPS -> Res.string.pow_category_gift_wraps_explainer
+        PoWCategory.OTHER_PUBLIC -> Res.string.pow_category_other_public_explainer
     }
 
 @Composable
@@ -314,8 +346,8 @@ private fun AddClientTagTile(accountViewModel: AccountViewModel) {
 
     SwitchTile(
         icon = MaterialSymbols.Code,
-        title = R.string.add_client_tag_title,
-        description = R.string.add_client_tag_explainer,
+        title = Res.string.add_client_tag_title,
+        description = Res.string.add_client_tag_explainer,
         checked = addClientTag,
         onCheckedChange = accountViewModel::updateAddClientTag,
     )
@@ -325,8 +357,8 @@ private fun AddClientTagTile(accountViewModel: AccountViewModel) {
 private fun BooleanSwitchTile(
     flow: MutableStateFlow<BooleanType>,
     icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: StringResource,
+    description: StringResource,
 ) {
     val value by flow.collectAsState()
 
@@ -344,8 +376,8 @@ private fun BooleanSwitchTile(
 @Composable
 private fun SwitchTile(
     icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: StringResource,
+    description: StringResource,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {

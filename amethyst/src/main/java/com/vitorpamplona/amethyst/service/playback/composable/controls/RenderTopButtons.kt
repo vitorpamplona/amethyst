@@ -52,12 +52,17 @@ import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.captions_turn_off
+import com.vitorpamplona.amethyst.commons.resources.captions_turn_on
+import com.vitorpamplona.amethyst.commons.resources.cast_stop_casting
+import com.vitorpamplona.amethyst.commons.resources.cast_to_device
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
 import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
@@ -306,7 +311,7 @@ fun RenderTopButtons(
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
     val captionsIcon = if (captionsEnabled) MaterialSymbols.ClosedCaption else MaterialSymbols.ClosedCaptionDisabled
     val captionsContentDescription =
-        stringRes(if (captionsEnabled) R.string.captions_turn_off else R.string.captions_turn_on)
+        stringRes(if (captionsEnabled) Res.string.captions_turn_off else Res.string.captions_turn_on)
     val shareDialogVisible = remember { mutableStateOf(false) }
     val castDialogVisible = remember { mutableStateOf(false) }
     val castSessionState by Amethyst.instance.castRegistry.sessionState
@@ -315,7 +320,7 @@ fun RenderTopButtons(
         (castSessionState as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
     val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
     val castContentDescription =
-        stringRes(if (isThisVideoCasting) R.string.cast_stop_casting else R.string.cast_to_device)
+        stringRes(if (isThisVideoCasting) Res.string.cast_stop_casting else Res.string.cast_to_device)
     val onCastButtonClick =
         remember(isThisVideoCasting) {
             {
@@ -419,7 +424,7 @@ fun RenderTopButtons(
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
                         symbol = MaterialSymbols.Share,
-                        contentDescription = stringRes(R.string.share_or_save),
+                        contentDescription = stringRes(Res.string.share_or_save),
                         onClick = { shareDialogVisible.value = true },
                     )
                 }
@@ -428,7 +433,7 @@ fun RenderTopButtons(
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
                         symbol = MaterialSymbols.SaveAlt,
-                        contentDescription = stringRes(R.string.download_to_phone),
+                        contentDescription = stringRes(Res.string.download_to_phone),
                         onClick = saveAction,
                     )
                 }

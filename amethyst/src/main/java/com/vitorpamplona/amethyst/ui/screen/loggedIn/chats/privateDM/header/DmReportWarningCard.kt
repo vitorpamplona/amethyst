@@ -55,11 +55,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_dismiss
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_hide
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_icon
@@ -307,7 +307,7 @@ private fun OverflowChip(count: Int) {
 @Composable
 private fun reportWarningHeadline(state: UserReportWarningState): String =
     pluralStringResource(
-        R.plurals.dm_sender_reported,
+        Res.plurals.dm_sender_reported,
         state.reporterCount,
         state.reporterCount,
     )

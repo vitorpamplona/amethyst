@@ -25,7 +25,9 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_tile_subtitle_off
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_tile_subtitle_on
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -120,9 +122,9 @@ class NotificationServiceTileService : TileService() {
             tile.subtitleCompat(
                 getString(
                     if (enabled) {
-                        R.string.always_on_notif_tile_subtitle_on
+                        Res.string.always_on_notif_tile_subtitle_on
                     } else {
-                        R.string.always_on_notif_tile_subtitle_off
+                        Res.string.always_on_notif_tile_subtitle_off
                     },
                 ),
             )

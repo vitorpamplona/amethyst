@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 
 class RelayExporter(
     val context: Context,
@@ -35,20 +37,20 @@ class RelayExporter(
                 action = Intent.ACTION_SEND
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_TITLE, context.getString(R.string.export_relay_settings))
+                putExtra(Intent.EXTRA_TITLE, context.getString(Res.string.export_relay_settings))
             }
 
         val shareIntent =
             Intent.createChooser(
                 sendIntent,
-                context.getString(R.string.export_relay_settings),
+                context.getString(Res.string.export_relay_settings),
             )
         context.startActivity(shareIntent)
     }
 
     fun buildExportText(collection: RelayListCollection): String {
         val builder = StringBuilder()
-        builder.appendLine("# ${context.getString(R.string.relay_settings)}")
+        builder.appendLine("# ${context.getString(Res.string.relay_settings)}")
         builder.appendLine()
 
         collection.sections().forEach { section ->

@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
 import com.vitorpamplona.amethyst.commons.resources.calendar_empty_collections_subtitle
 import com.vitorpamplona.amethyst.commons.resources.calendar_empty_collections_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_export_event
+import com.vitorpamplona.amethyst.commons.resources.calendar_export_share_title
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
@@ -156,6 +157,7 @@ fun CalendarCollectionCard(
     val description = remember(note.idHex) { event.content.take(180) }
     val count = remember(note.idHex) { event.calendarEventAddresses().size }
     val context = LocalContext.current
+    val icsChooserTitle = stringRes(Res.string.calendar_export_share_title)
 
     // Calendar collections are addressable (kind 31924); route to the dedicated
     // CalendarEventDetail screen instead of the generic Route.Note thread view, which
@@ -220,7 +222,7 @@ fun CalendarCollectionCard(
                 val members = collectMembers(event)
                 val ics = IcsExport.calendarToIcs(event, members, TimeUtils.now())
                 val filename = IcsExport.calendarFilename(event)
-                shareIcs(context, filename, ics)
+                shareIcs(context, filename, ics, icsChooserTitle)
             }) {
                 Icon(
                     symbol = MaterialSymbols.Share,

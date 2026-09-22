@@ -33,9 +33,12 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Text composable that opens [onClick] on a tap and copies [copyValue] to the
@@ -70,8 +73,8 @@ fun LongPressCopyText(
     softWrap: Boolean = true,
     overflow: TextOverflow = TextOverflow.Ellipsis,
     maxLines: Int = Int.MAX_VALUE,
-    toastResId: Int = R.string.copied_to_clipboard,
-    onLongClickLabelResId: Int = R.string.copy_to_clipboard,
+    toastResId: StringResource = Res.string.copied_to_clipboard,
+    onLongClickLabelResId: StringResource = Res.string.copy_to_clipboard,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -91,7 +94,7 @@ fun LongPressCopyText(
                 onLongClick = {
                     scope.launch {
                         clipboard.setText(copyValue)
-                        Toast.makeText(context, stringRes(context, toastResId), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, stringRes(toastResId), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onLongClickLabel = longClickLabel,

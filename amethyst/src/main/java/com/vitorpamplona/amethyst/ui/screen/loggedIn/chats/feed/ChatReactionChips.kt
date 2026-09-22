@@ -51,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -59,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_minichat_reply_count
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
@@ -277,7 +278,7 @@ private fun MinichatChip(
                 modifier = Size14Modifier,
             )
             Text(
-                text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
+                text = pluralStringResource(Res.plurals.chat_minichat_reply_count, count, count),
                 fontSize = Font12SP,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.grayText,

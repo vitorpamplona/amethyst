@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_branches
 import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
 import com.vitorpamplona.amethyst.commons.resources.git_repo_default_branch
+import com.vitorpamplona.amethyst.commons.resources.git_repo_item_count
 import com.vitorpamplona.amethyst.commons.resources.git_repo_retry
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -166,7 +166,7 @@ fun RepoInfoBar(
             }
             InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
             Text(
-                text = pluralStringResource(R.plurals.git_repo_item_count, entryCount, entryCount),
+                text = pluralStringResource(Res.plurals.git_repo_item_count, entryCount, entryCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             )

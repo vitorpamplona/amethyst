@@ -53,15 +53,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.chat_minichat_title
 import com.vitorpamplona.amethyst.commons.resources.chat_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_open_channel
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -166,7 +167,7 @@ fun MinichatScreen(
                 title = { Text(stringRes(Res.string.chat_minichat_title), maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
                 actions = {
@@ -270,7 +271,7 @@ fun MinichatScreen(
                     shape = EditFieldBorder,
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.reply_here),
+                            text = stringRes(Res.string.reply_here),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },

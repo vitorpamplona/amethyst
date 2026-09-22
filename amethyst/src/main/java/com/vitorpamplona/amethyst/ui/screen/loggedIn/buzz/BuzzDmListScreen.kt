@@ -64,22 +64,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_invalid
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_add_member_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_body
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_empty_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_hidden_count
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_just_you
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_more
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.now
+import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -194,7 +198,7 @@ fun HiddenDmHeader(
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = pluralStringResource(R.plurals.buzz_dm_hidden_count, count, count),
+            text = pluralStringResource(Res.plurals.buzz_dm_hidden_count, count, count),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -252,7 +256,7 @@ private fun DmRowCard(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = timeAgoShort(row.lastActivity, stringRes(R.string.now)),
+                text = timeAgoShort(row.lastActivity, stringRes(Res.string.now)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -287,7 +291,7 @@ private fun DmRowCard(
                     // relay-side flag (kind-41012 / the 30622 snapshot), never a departure — so a
                     // hidden conversation must offer its own way back rather than vanishing for good.
                     DropdownMenuItem(
-                        text = { Text(stringRes(if (isHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
+                        text = { Text(stringRes(if (isHidden) Res.string.add_to_messages else Res.string.remove_from_messages)) },
                         leadingIcon = {
                             Icon(
                                 symbol = if (isHidden) MaterialSymbols.Add else MaterialSymbols.VisibilityOff,
@@ -431,7 +435,7 @@ private fun AddDmMemberDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

@@ -35,11 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.search_button
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -118,7 +118,7 @@ fun ProfileTopBar(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     symbol = MaterialSymbols.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
+                    contentDescription = stringRes(Res.string.more_options),
                 )
 
                 UserProfileDropDownMenu(

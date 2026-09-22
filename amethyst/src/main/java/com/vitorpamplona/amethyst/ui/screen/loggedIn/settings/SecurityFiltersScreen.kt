@@ -37,16 +37,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blocked_users
+import com.vitorpamplona.amethyst.commons.resources.filter_spam_from_strangers_explainer
+import com.vitorpamplona.amethyst.commons.resources.filter_spam_from_strangers_title
+import com.vitorpamplona.amethyst.commons.resources.hidden_words
+import com.vitorpamplona.amethyst.commons.resources.hide_community_rules_violations_explainer
+import com.vitorpamplona.amethyst.commons.resources.hide_community_rules_violations_title
 import com.vitorpamplona.amethyst.commons.resources.max_hashtag_limit_explainer
 import com.vitorpamplona.amethyst.commons.resources.max_hashtag_limit_title
 import com.vitorpamplona.amethyst.commons.resources.report_warning_threshold_explainer
 import com.vitorpamplona.amethyst.commons.resources.report_warning_threshold_title
+import com.vitorpamplona.amethyst.commons.resources.security_filters
+import com.vitorpamplona.amethyst.commons.resources.security_section_blocked_content
+import com.vitorpamplona.amethyst.commons.resources.security_section_filtering_preferences
 import com.vitorpamplona.amethyst.commons.resources.security_unlimited
+import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_title
 import com.vitorpamplona.amethyst.commons.resources.show_sensitive_content_explainer
 import com.vitorpamplona.amethyst.commons.resources.show_sensitive_content_title
+import com.vitorpamplona.amethyst.commons.resources.spamming_users
+import com.vitorpamplona.amethyst.commons.resources.warn_when_posts_have_reports_from_your_follows_explainer
+import com.vitorpamplona.amethyst.commons.resources.warn_when_posts_have_reports_from_your_follows_title
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -64,7 +76,7 @@ fun SecurityFiltersScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(id = R.string.security_filters), nav) },
+        topBar = { TopBarWithBackButton(stringRes(id = Res.string.security_filters), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -82,7 +94,7 @@ fun SecurityFiltersScreen(
 
 @Composable
 private fun SecurityPreferencesSection(accountViewModel: AccountViewModel) {
-    SettingsSection(R.string.security_section_filtering_preferences) {
+    SettingsSection(Res.string.security_section_filtering_preferences) {
         SensitiveContentTile(accountViewModel)
         SettingsDivider()
         FilterSpamTile(accountViewModel)
@@ -129,8 +141,8 @@ private fun FilterSpamTile(accountViewModel: AccountViewModel) {
 
     SettingsSwitchTile(
         icon = MaterialSymbols.FilterAlt,
-        title = R.string.filter_spam_from_strangers_title,
-        description = R.string.filter_spam_from_strangers_explainer,
+        title = Res.string.filter_spam_from_strangers_title,
+        description = Res.string.filter_spam_from_strangers_explainer,
         checked = filterSpam,
         onCheckedChange = accountViewModel::updateFilterSpam,
     )
@@ -143,8 +155,8 @@ private fun HideCommunityViolationsTile(accountViewModel: AccountViewModel) {
 
     SettingsSwitchTile(
         icon = MaterialSymbols.Shield,
-        title = R.string.hide_community_rules_violations_title,
-        description = R.string.hide_community_rules_violations_explainer,
+        title = Res.string.hide_community_rules_violations_title,
+        description = Res.string.hide_community_rules_violations_explainer,
         checked = hideViolations,
         onCheckedChange = { accountViewModel.account.settings.changeHideCommunityRulesViolations(it) },
     )
@@ -158,8 +170,8 @@ private fun WarnReportsTile(accountViewModel: AccountViewModel) {
 
     SettingsSwitchTile(
         icon = MaterialSymbols.Report,
-        title = R.string.warn_when_posts_have_reports_from_your_follows_title,
-        description = R.string.warn_when_posts_have_reports_from_your_follows_explainer,
+        title = Res.string.warn_when_posts_have_reports_from_your_follows_title,
+        description = Res.string.warn_when_posts_have_reports_from_your_follows_explainer,
         checked = warnReports,
         onCheckedChange = accountViewModel::updateWarnReports,
     )
@@ -207,30 +219,30 @@ private fun BlockedContentSection(
     val hidden by accountViewModel.account.hiddenUsers.flow
         .collectAsStateWithLifecycle()
 
-    SettingsSection(R.string.security_section_blocked_content) {
+    SettingsSection(Res.string.security_section_blocked_content) {
         SettingsItem(
-            title = R.string.blocked_users,
+            title = Res.string.blocked_users,
             icon = MaterialSymbols.PersonOff,
             trailing = { SettingsCountBadge(hidden.hiddenUsers.size) },
             onClick = { nav.nav(Route.BlockedUsers) },
         )
         SettingsDivider()
         SettingsItem(
-            title = R.string.spamming_users,
+            title = Res.string.spamming_users,
             icon = MaterialSymbols.Block,
             trailing = { SettingsCountBadge(hidden.spammers.size) },
             onClick = { nav.nav(Route.SpammingUsers) },
         )
         SettingsDivider()
         SettingsItem(
-            title = R.string.hidden_words,
+            title = Res.string.hidden_words,
             icon = MaterialSymbols.VisibilityOff,
             trailing = { SettingsCountBadge(hidden.hiddenWords.size) },
             onClick = { nav.nav(Route.HiddenWords) },
         )
         SettingsDivider()
         SettingsItem(
-            title = R.string.settings_muted_threads_title,
+            title = Res.string.settings_muted_threads_title,
             icon = MaterialSymbols.Forum,
             trailing = { SettingsCountBadge(hidden.mutedThreads.size) },
             onClick = { nav.nav(Route.MutedThreads) },

@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
@@ -67,7 +66,10 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.follow_pack_broadcast
 import com.vitorpamplona.amethyst.commons.resources.follow_pack_delete
+import com.vitorpamplona.amethyst.commons.resources.follow_pack_edit_list_metadata
 import com.vitorpamplona.amethyst.commons.resources.pack_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -286,7 +288,7 @@ private fun ListActionsMenuButton(
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
                     val sendIntent =
                         Intent().apply {
                             action = Intent.ACTION_SEND
@@ -297,16 +299,16 @@ private fun ListActionsMenuButton(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(context, R.string.quick_action_share_browser_link),
+                                stringRes(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
-                        Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                        Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
                     context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_pack_edit_list_metadata)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.follow_pack_edit_list_metadata)) {
                     onEditList()
                     isActionListOpen.value = false
                 }

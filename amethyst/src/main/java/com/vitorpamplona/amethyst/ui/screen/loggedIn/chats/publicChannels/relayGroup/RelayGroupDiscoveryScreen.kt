@@ -49,13 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -67,7 +65,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_live
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_favorite_relay
+import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_message_count_short_capped
+import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_group_count
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
@@ -392,7 +392,7 @@ private fun RelayRailHeader(
                 }
             }
             Text(
-                text = pluralStringResource(R.plurals.relay_group_relay_group_count, groupCount, groupCount),
+                text = pluralStringResource(Res.plurals.relay_group_relay_group_count, groupCount, groupCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -542,7 +542,7 @@ private fun RelayGroupRailRowContent(
                 // load, so it tracks whatever the preview shows.
                 lastNote?.createdAt()?.let { ts ->
                     Text(
-                        text = timeAgo(ts, LocalContext.current, prefix = ""),
+                        text = timeAgo(ts, prefix = ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -589,7 +589,7 @@ private fun RelayGroupPreviewLine(
         } else {
             val memberCount = channel.memberCount()
             if (memberCount > 0) {
-                pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+                pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
             } else {
                 return
             }

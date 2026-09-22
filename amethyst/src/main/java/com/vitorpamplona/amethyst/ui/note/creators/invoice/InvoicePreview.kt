@@ -39,12 +39,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.invoice_expired
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -111,7 +113,7 @@ fun InvoicePreview(
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringRes(context, R.string.error_dialog_pay_invoice_error),
+            title = stringRes(Res.string.error_dialog_pay_invoice_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )
@@ -141,7 +143,7 @@ fun InvoicePreview(
         copyValue = lnInvoice,
     ) {
         amount?.let {
-            PaymentCardAmount(amount = it, unit = stringRes(R.string.sats))
+            PaymentCardAmount(amount = it, unit = stringRes(Res.string.sats))
         }
 
         description?.let {
@@ -170,7 +172,7 @@ fun InvoicePreview(
             onClick = { payingInvoice = lnInvoice },
             shape = ButtonBorder,
         ) {
-            Text(text = stringRes(R.string.pay))
+            Text(text = stringRes(Res.string.pay))
         }
     }
 }

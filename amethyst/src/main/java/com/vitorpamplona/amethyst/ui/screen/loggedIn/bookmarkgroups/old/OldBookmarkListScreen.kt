@@ -48,13 +48,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.migrate_bookmarks_button
+import com.vitorpamplona.amethyst.commons.resources.migrate_bookmarks_success
 import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
@@ -180,7 +180,7 @@ private fun RenderOldBookmarkScreen(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.migrate_bookmarks_success),
+                                        context.getString(Res.string.migrate_bookmarks_success),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }

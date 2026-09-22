@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.resources.share_as_image
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -59,23 +62,23 @@ fun ShareActionRows(
     // by event id. The two image routes resolve the note from this same id.
     val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
 
-    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
         val sendIntent =
             Intent().apply {
                 action = Intent.ACTION_SEND
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
-                putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
+                putExtra(Intent.EXTRA_TITLE, stringRes(Res.string.quick_action_share_browser_link))
             }
-        val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+        val shareIntent = Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
         actContext.startActivity(shareIntent)
         onDismiss()
     }
-    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image)) {
+    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
         nav.nav(Route.ShareNoteAsImageFile(shareId))
         onDismiss()
     }
-    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image_url)) {
+    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image_url)) {
         nav.nav(Route.ShareNoteAsImage(shareId))
         onDismiss()
     }

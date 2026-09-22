@@ -26,8 +26,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_git_authors
+import com.vitorpamplona.amethyst.commons.resources.kind_good_wiki_authors
+import com.vitorpamplona.amethyst.commons.resources.kind_media_follows
+import com.vitorpamplona.amethyst.commons.resources.kind_media_starter_pack
+import com.vitorpamplona.amethyst.commons.resources.kind_mute_set_for_kind
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -51,7 +56,7 @@ fun RenderGitAuthorList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateAuthors(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_git_authors),
+        title = stringRes(Res.string.kind_git_authors),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -75,7 +80,7 @@ fun RenderMediaFollowList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateFollows(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_media_follows),
+        title = stringRes(Res.string.kind_media_follows),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -99,7 +104,7 @@ fun RenderGoodWikiAuthorList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateAuthors(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_good_wiki_authors),
+        title = stringRes(Res.string.kind_good_wiki_authors),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -129,7 +134,7 @@ fun RenderKindMuteSet(
     val mutedKind = remember(noteEvent) { noteEvent.dTag() }
 
     ListCard(
-        title = stringRes(R.string.kind_mute_set_for_kind, mutedKind),
+        title = stringRes(Res.string.kind_mute_set_for_kind, mutedKind),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -155,7 +160,7 @@ fun RenderMediaStarterPack(
     val members = remember(noteEvent) { noteEvent.followIds() }
 
     ListCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_media_starter_pack),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_media_starter_pack),
         description = noteEvent.description(),
         items = members,
         hasUnreadablePrivateItems = false,

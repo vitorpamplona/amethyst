@@ -81,11 +81,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
 import com.vitorpamplona.amethyst.commons.resources.search_by_hashtag
 import com.vitorpamplona.amethyst.commons.resources.search_filters_open
@@ -879,7 +879,7 @@ private fun DisplaySearchResults(
                     )
                 },
                 channelLastTime = null,
-                channelLastContent = stringRes(R.string.ephemeral_relay_chat),
+                channelLastContent = stringRes(Res.string.ephemeral_relay_chat),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),

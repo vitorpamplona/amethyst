@@ -46,13 +46,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.about_us
 import com.vitorpamplona.amethyst.commons.resources.channel_name
+import com.vitorpamplona.amethyst.commons.resources.description
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_group
 import com.vitorpamplona.amethyst.commons.resources.picture_url
+import com.vitorpamplona.amethyst.commons.resources.public_chat
+import com.vitorpamplona.amethyst.commons.resources.public_chat_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_title
+import com.vitorpamplona.amethyst.commons.resources.public_chat_title
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -148,7 +155,7 @@ private fun ChannelMetadataScaffold(
         topBar = {
             if (postViewModel.isNewChannel()) {
                 CreatingTopBar(
-                    titleRes = R.string.public_chat,
+                    titleRes = Res.string.public_chat,
                     isActive = { canPost },
                     onCancel = {
                         postViewModel.clear()
@@ -162,15 +169,15 @@ private fun ChannelMetadataScaffold(
                             nav.popBack()
                         } catch (e: SignerExceptions.ReadOnlyException) {
                             accountViewModel.toastManager.toast(
-                                R.string.read_only_user,
-                                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                                Res.string.read_only_user,
+                                Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                             )
                         }
                     },
                 )
             } else {
                 SavingTopBar(
-                    titleRes = R.string.public_chat,
+                    titleRes = Res.string.public_chat,
                     isActive = { canPost },
                     onCancel = {
                         postViewModel.clear()
@@ -182,8 +189,8 @@ private fun ChannelMetadataScaffold(
                             nav.popBack()
                         } catch (e: SignerExceptions.ReadOnlyException) {
                             accountViewModel.toastManager.toast(
-                                R.string.read_only_user,
-                                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                                Res.string.read_only_user,
+                                Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                             )
                         }
                     },
@@ -204,8 +211,8 @@ private fun ChannelMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    R.string.public_chat_title,
-                    R.string.public_chat_explainer,
+                    Res.string.public_chat_title,
+                    Res.string.public_chat_explainer,
                     SettingsCategoryFirstModifier,
                 )
 
@@ -220,8 +227,8 @@ private fun ChannelMetadataScaffold(
                 Description(postViewModel)
 
                 SettingsCategory(
-                    R.string.public_chat_relays_title,
-                    R.string.public_chat_relays_explainer,
+                    Res.string.public_chat_relays_title,
+                    Res.string.public_chat_relays_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -254,7 +261,7 @@ private fun ChannelMetadataScaffold(
 @Composable
 private fun Description(postViewModel: ChannelMetadataViewModel) {
     OutlinedTextField(
-        label = { Text(text = stringRes(R.string.description)) },
+        label = { Text(text = stringRes(Res.string.description)) },
         modifier = Modifier.fillMaxWidth(),
         value = postViewModel.channelDescription.value,
         onValueChange = { postViewModel.channelDescription.value = it },

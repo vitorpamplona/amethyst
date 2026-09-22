@@ -39,10 +39,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.interest_set_creation_screen_title
 import com.vitorpamplona.amethyst.commons.resources.interest_set_name_label
 import com.vitorpamplona.amethyst.commons.resources.interest_set_name_placeholder
+import com.vitorpamplona.amethyst.commons.resources.interest_set_rename
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
@@ -108,7 +111,7 @@ fun InterestSetMetadataTopBar(
 ) {
     if (viewModel.isNewList) {
         CreatingTopBar(
-            titleRes = R.string.interest_set_creation_screen_title,
+            titleRes = Res.string.interest_set_creation_screen_title,
             isActive = viewModel::canPost,
             onCancel = {
                 viewModel.clear()
@@ -120,15 +123,15 @@ fun InterestSetMetadataTopBar(
                     nav.popBack()
                 } catch (_: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },
         )
     } else {
         SavingTopBar(
-            titleRes = R.string.interest_set_rename,
+            titleRes = Res.string.interest_set_rename,
             isActive = viewModel::canPost,
             onCancel = {
                 viewModel.clear()
@@ -140,8 +143,8 @@ fun InterestSetMetadataTopBar(
                     nav.popBack()
                 } catch (_: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },

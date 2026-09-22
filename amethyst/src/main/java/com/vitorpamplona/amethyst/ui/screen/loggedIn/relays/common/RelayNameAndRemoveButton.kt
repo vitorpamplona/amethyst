@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.paid_relay
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.tor_relay
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -109,7 +110,7 @@ fun RelayNameAndRemoveButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Cancel,
-                    contentDescription = stringRes(id = R.string.remove),
+                    contentDescription = stringRes(id = Res.string.remove),
                     modifier =
                         Modifier
                             .padding(start = 10.dp)

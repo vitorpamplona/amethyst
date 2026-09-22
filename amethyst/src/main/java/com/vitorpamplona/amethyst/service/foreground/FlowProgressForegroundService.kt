@@ -32,6 +32,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
@@ -99,7 +100,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
     /** Keep the service (and notification) alive while this is true; stop once it goes false. */
     protected abstract fun isActive(value: T): Boolean
 
-    protected abstract fun render(value: T): Content
+    protected abstract suspend fun render(value: T): Content
 
     /** Invoked by the cancel action. */
     protected abstract fun cancelAll()
@@ -264,7 +265,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
         }
     }
 
-    private fun buildNotification(value: T): Notification {
+    private suspend fun buildNotification(value: T): Notification {
         val content = render(value)
         val style =
             when (val bar = content.bar) {
@@ -293,7 +294,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
                 .setContentText(content.text)
                 .setStyle(style)
                 .setContentIntent(tapIntent)
-                .addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
+                .addAction(0, loadStringRes(cancelLabelRes), cancelIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setCategory(NotificationCompat.CATEGORY_PROGRESS)
@@ -303,17 +304,17 @@ abstract class FlowProgressForegroundService<T> : Service() {
         val secondaryLabel = secondaryLabelRes
         val secondaryPending = secondaryIntent
         if (secondaryLabel != null && secondaryPending != null) {
-            builder.addAction(0, stringRes(this, secondaryLabel), secondaryPending)
+            builder.addAction(0, loadStringRes(secondaryLabel), secondaryPending)
         }
 
         return builder.build()
     }
 
-    private fun ensureChannel() {
+    private suspend fun ensureChannel() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(channelId) != null) return
         manager.createNotificationChannel(
-            NotificationChannel(channelId, stringRes(this, channelNameRes), NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(channelId, loadStringRes(channelNameRes), NotificationManager.IMPORTANCE_LOW).apply {
                 description = stringRes(this@FlowProgressForegroundService, channelDescRes)
                 setShowBadge(false)
             },

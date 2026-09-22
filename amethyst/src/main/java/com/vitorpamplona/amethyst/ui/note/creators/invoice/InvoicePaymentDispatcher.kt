@@ -28,10 +28,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_amount_via_source
+import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_via_source
 import com.vitorpamplona.amethyst.commons.resources.clink_confirm_payment_title
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
@@ -104,7 +109,7 @@ fun InvoicePaymentDispatcher(
                         } else {
                             onError(
                                 response?.failureDetail()
-                                    ?: stringRes(context, R.string.clink_debit_no_response),
+                                    ?: stringRes(Res.string.clink_debit_no_response),
                             )
                         }
                     }
@@ -125,10 +130,10 @@ private fun ConfirmPaymentDialog(
     val context = LocalContext.current
     val message =
         if (amountSats != null) {
-            val amountText = "$amountSats ${stringRes(context, R.string.sats)}"
-            stringRes(context, R.string.clink_confirm_pay_amount_via_source, amountText, sourceName)
+            val amountText = "$amountSats ${stringRes(Res.string.sats)}"
+            stringRes(Res.string.clink_confirm_pay_amount_via_source, amountText, sourceName)
         } else {
-            stringRes(context, R.string.clink_confirm_pay_via_source, sourceName)
+            stringRes(Res.string.clink_confirm_pay_via_source, sourceName)
         }
 
     AlertDialog(
@@ -136,10 +141,10 @@ private fun ConfirmPaymentDialog(
         title = { Text(stringRes(Res.string.clink_confirm_payment_title)) },
         text = { Text(message) },
         confirmButton = {
-            Button(onClick = onConfirm) { Text(stringRes(R.string.pay)) }
+            Button(onClick = onConfirm) { Text(stringRes(Res.string.pay)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

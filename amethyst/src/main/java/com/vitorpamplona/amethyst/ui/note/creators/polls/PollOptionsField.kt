@@ -41,13 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_poll_option_button
 import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.poll_multiple_choice
 import com.vitorpamplona.amethyst.commons.resources.poll_option_description
+import com.vitorpamplona.amethyst.commons.resources.poll_option_index
+import com.vitorpamplona.amethyst.commons.resources.poll_single_choice
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -77,7 +79,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
                 },
                 label = {
                     Text(
-                        text = stringRes(R.string.poll_option_index, option.key + 1),
+                        text = stringRes(Res.string.poll_option_index, option.key + 1),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -142,12 +144,12 @@ fun PollTypeSelector(
         FilterChip(
             selected = selectedType == PollType.SINGLE_CHOICE,
             onClick = { onTypeSelected(PollType.SINGLE_CHOICE) },
-            label = { Text(stringRes(R.string.poll_single_choice)) },
+            label = { Text(stringRes(Res.string.poll_single_choice)) },
         )
         FilterChip(
             selected = selectedType == PollType.MULTI_CHOICE,
             onClick = { onTypeSelected(PollType.MULTI_CHOICE) },
-            label = { Text(stringRes(R.string.poll_multiple_choice)) },
+            label = { Text(stringRes(Res.string.poll_multiple_choice)) },
         )
     }
 }

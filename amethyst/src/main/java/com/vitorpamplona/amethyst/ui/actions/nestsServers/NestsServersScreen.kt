@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -62,8 +61,13 @@ import com.vitorpamplona.amethyst.commons.resources.nests_servers_add_relay_fiel
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_empty
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_explainer
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_my_explainer
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_my_section
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_recommended_explainer
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_recommended_section
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_relay_label
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_remove
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_title
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_use_defaults
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -121,7 +125,7 @@ private fun NestsServersScaffold(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.nests_servers_title,
+                titleRes = Res.string.nests_servers_title,
                 onCancel = {
                     viewModel.refresh()
                     onClose()
@@ -170,8 +174,8 @@ private fun NestsServersBody(viewModel: NestsServersViewModel) {
     ) {
         item {
             SettingsCategory(
-                R.string.nests_servers_my_section,
-                R.string.nests_servers_my_explainer,
+                Res.string.nests_servers_my_section,
+                Res.string.nests_servers_my_explainer,
                 SettingsCategoryFirstModifier,
             )
         }
@@ -202,8 +206,8 @@ private fun NestsServersBody(viewModel: NestsServersViewModel) {
 
         item {
             SettingsCategoryWithButton(
-                title = R.string.nests_servers_recommended_section,
-                description = R.string.nests_servers_recommended_explainer,
+                title = Res.string.nests_servers_recommended_section,
+                description = Res.string.nests_servers_recommended_explainer,
                 modifier = SettingsCategorySpacingModifier,
             ) {
                 OutlinedButton(

@@ -81,7 +81,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
+import com.vitorpamplona.amethyst.commons.resources.share_as_image
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_generating
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_watermark
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -151,13 +157,15 @@ fun ShareNoteAsImageFileScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val shareImageTitle = stringRes(Res.string.share_as_image)
+    val shareUrlTitle = stringRes(Res.string.share_as_image_url)
     val graphicsLayer = rememberGraphicsLayer()
 
     // Guards against capturing/sharing more than once across recompositions.
     var shared by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.share_as_image), nav) },
     ) { pad ->
         Box(
             modifier =
@@ -199,7 +207,7 @@ fun ShareNoteAsImageFileScreen(
                         withContext(Dispatchers.IO) {
                             saveBitmapToCache(context, bitmap.asAndroidBitmap())
                         }
-                    startShareImageFileIntent(context, uri)
+                    startShareImageFileIntent(context, uri, shareImageTitle)
                     nav.popBack()
                 }
             }
@@ -271,19 +279,19 @@ fun ShareNoteAsImageScreen(
                     val result = finalState.result
                     if (result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         account.settings.changeDefaultFileServer(server)
-                        startShareUrlIntent(context, result.url)
+                        startShareUrlIntent(context, result.url, shareUrlTitle)
                         nav.popBack()
                     } else {
                         accountViewModel.toastManager.toast(
-                            R.string.failed_to_upload_media_no_details,
-                            R.string.server_did_not_provide_a_url_after_uploading,
+                            Res.string.failed_to_upload_media_no_details,
+                            Res.string.server_did_not_provide_a_url_after_uploading,
                         )
                     }
                 }
 
                 is UploadingState.Error -> {
                     accountViewModel.toastManager.toast(
-                        R.string.failed_to_upload_media_no_details,
+                        Res.string.failed_to_upload_media_no_details,
                         finalState.errorResource,
                         *finalState.params,
                     )
@@ -293,7 +301,7 @@ fun ShareNoteAsImageScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image_url), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.share_as_image_url), nav) },
         bottomBar = {
             ShareBottomBar(
                 serverName = selectedServer.name,
@@ -353,7 +361,7 @@ fun ShareNoteAsImageScreen(
                 if (captured != null) {
                     Image(
                         bitmap = captured,
-                        contentDescription = stringRes(R.string.share_as_image),
+                        contentDescription = stringRes(Res.string.share_as_image),
                         contentScale = ContentScale.FillWidth,
                         modifier =
                             Modifier
@@ -424,7 +432,7 @@ private fun ShareBottomBar(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TextSpinner(
-                label = stringRes(R.string.file_server),
+                label = stringRes(Res.string.file_server),
                 placeholder = serverName,
                 options = serverOptions,
                 onSelect = onSelectServer,
@@ -442,7 +450,7 @@ private fun ShareBottomBar(
                     modifier = Size18Modifier,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(stringRes(R.string.quick_action_share))
+                Text(stringRes(Res.string.quick_action_share))
             }
         }
     }
@@ -529,6 +537,7 @@ private fun saveBitmapToCache(
 private fun startShareUrlIntent(
     context: Context,
     url: String,
+    chooserTitle: String,
 ) {
     val sendIntent =
         Intent().apply {
@@ -536,13 +545,14 @@ private fun startShareUrlIntent(
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
         }
-    val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.share_as_image_url))
+    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
     context.startActivity(shareIntent)
 }
 
 private fun startShareImageFileIntent(
     context: Context,
     uri: Uri,
+    chooserTitle: String,
 ) {
     val sendIntent =
         Intent().apply {
@@ -554,6 +564,6 @@ private fun startShareImageFileIntent(
             clipData = ClipData.newUri(context.contentResolver, "Image", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-    val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.share_as_image))
+    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
     context.startActivity(shareIntent)
 }

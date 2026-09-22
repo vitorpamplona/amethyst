@@ -77,11 +77,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.davotoula.lightcompressor.hls.HlsLadder
 import com.davotoula.lightcompressor.utils.CompressorUtils
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.hls_change_video
 import com.vitorpamplona.amethyst.commons.resources.hls_codec_fallback_notice
 import com.vitorpamplona.amethyst.commons.resources.hls_codec_h264
@@ -105,9 +106,11 @@ import com.vitorpamplona.amethyst.commons.resources.hls_state_transcoding_format
 import com.vitorpamplona.amethyst.commons.resources.hls_state_uploaded_format
 import com.vitorpamplona.amethyst.commons.resources.hls_state_uploading_format
 import com.vitorpamplona.amethyst.commons.resources.hls_state_uploading_idle
+import com.vitorpamplona.amethyst.commons.resources.hls_state_uploading_with_label_format
 import com.vitorpamplona.amethyst.commons.resources.hls_title_label
 import com.vitorpamplona.amethyst.commons.resources.hls_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.hls_try_again
+import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -135,7 +138,7 @@ fun NewHlsVideoScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringResource(R.string.share_hls_video),
+                caption = stringResource(Res.string.share_hls_video),
                 nav = nav,
             )
         },
@@ -356,7 +359,7 @@ private fun FormFields(vm: NewHlsVideoViewModel) {
 
     // Server picker — reads the user's configured Blossom servers from the account
     Text(
-        text = stringResource(R.string.file_server),
+        text = stringResource(Res.string.file_server),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -553,7 +556,7 @@ private fun ProgressBody(
                 // Currently in flight: present-tense, file label in the line.
                 state is HlsPublishState.Uploading && state.currentLabel.isNotBlank() -> {
                     stringResource(
-                        R.string.hls_state_uploading_with_label_format,
+                        Res.string.hls_state_uploading_with_label_format,
                         state.currentLabel,
                         state.done,
                         state.total,
@@ -601,7 +604,7 @@ private fun ProgressBody(
             onClick = { vm.cancel() },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.cancel))
+            Text(stringResource(Res.string.cancel))
         }
     }
 }

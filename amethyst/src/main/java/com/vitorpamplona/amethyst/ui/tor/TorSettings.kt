@@ -20,7 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.tor_custom
+import com.vitorpamplona.amethyst.commons.resources.tor_custom_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_default
+import com.vitorpamplona.amethyst.commons.resources.tor_default_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_external
+import com.vitorpamplona.amethyst.commons.resources.tor_full_privacy
+import com.vitorpamplona.amethyst.commons.resources.tor_full_privacy_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_internal
+import com.vitorpamplona.amethyst.commons.resources.tor_off
+import com.vitorpamplona.amethyst.commons.resources.tor_small_payloads
+import com.vitorpamplona.amethyst.commons.resources.tor_small_payloads_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_when_needed
+import com.vitorpamplona.amethyst.commons.resources.tor_when_needed_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorType
 
@@ -33,28 +46,28 @@ private const val RE_EXPORTS = 0
 val TorType.resourceId: Int
     get() =
         when (this) {
-            TorType.OFF -> R.string.tor_off
-            TorType.INTERNAL -> R.string.tor_internal
-            TorType.EXTERNAL -> R.string.tor_external
+            TorType.OFF -> Res.string.tor_off
+            TorType.INTERNAL -> Res.string.tor_internal
+            TorType.EXTERNAL -> Res.string.tor_external
         }
 
 // Android-specific resource ID mappings for TorPresetType
 val TorPresetType.resourceId: Int
     get() =
         when (this) {
-            TorPresetType.ONLY_WHEN_NEEDED -> R.string.tor_when_needed
-            TorPresetType.DEFAULT -> R.string.tor_default
-            TorPresetType.SMALL_PAYLOADS -> R.string.tor_small_payloads
-            TorPresetType.FULL_PRIVACY -> R.string.tor_full_privacy
-            TorPresetType.CUSTOM -> R.string.tor_custom
+            TorPresetType.ONLY_WHEN_NEEDED -> Res.string.tor_when_needed
+            TorPresetType.DEFAULT -> Res.string.tor_default
+            TorPresetType.SMALL_PAYLOADS -> Res.string.tor_small_payloads
+            TorPresetType.FULL_PRIVACY -> Res.string.tor_full_privacy
+            TorPresetType.CUSTOM -> Res.string.tor_custom
         }
 
 val TorPresetType.explainerId: Int
     get() =
         when (this) {
-            TorPresetType.ONLY_WHEN_NEEDED -> R.string.tor_when_needed_explainer
-            TorPresetType.DEFAULT -> R.string.tor_default_explainer
-            TorPresetType.SMALL_PAYLOADS -> R.string.tor_small_payloads_explainer
-            TorPresetType.FULL_PRIVACY -> R.string.tor_full_privacy_explainer
-            TorPresetType.CUSTOM -> R.string.tor_custom_explainer
+            TorPresetType.ONLY_WHEN_NEEDED -> Res.string.tor_when_needed_explainer
+            TorPresetType.DEFAULT -> Res.string.tor_default_explainer
+            TorPresetType.SMALL_PAYLOADS -> Res.string.tor_small_payloads_explainer
+            TorPresetType.FULL_PRIVACY -> Res.string.tor_full_privacy_explainer
+            TorPresetType.CUSTOM -> Res.string.tor_custom_explainer
         }

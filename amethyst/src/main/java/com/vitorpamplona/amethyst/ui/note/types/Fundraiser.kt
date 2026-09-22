@@ -41,11 +41,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.fundraiser_ends
 import com.vitorpamplona.amethyst.commons.resources.fundraiser_onchain_donation
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -85,7 +87,7 @@ fun RenderFundraiser(
             Box {
                 MyAsyncImage(
                     imageUrl = it,
-                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentDescription = stringRes(Res.string.preview_card_image_for, it),
                     contentScale = ContentScale.FillWidth,
                     mainImageModifier = Modifier.fillMaxWidth(),
                     loadedImageModifier = Modifier,
@@ -130,7 +132,7 @@ fun RenderFundraiser(
                     val context = LocalContext.current
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = stringRes(Res.string.fundraiser_ends, timeAheadNoDot(it, context)),
+                        text = stringRes(Res.string.fundraiser_ends, timeAheadNoDot(it)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
@@ -179,8 +181,8 @@ private fun OnChainDonation(
                         scope.launch {
                             clipboard.setText(address)
                             accountViewModel.toastManager.toast(
-                                R.string.copy_to_clipboard,
-                                R.string.copied_to_clipboard,
+                                Res.string.copy_to_clipboard,
+                                Res.string.copied_to_clipboard,
                             )
                         }
                     },

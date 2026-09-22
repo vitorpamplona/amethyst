@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
@@ -47,14 +48,14 @@ class RelayZipExporter(
                 action = Intent.ACTION_SEND
                 type = "application/zip"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TITLE, context.getString(R.string.export_relay_settings))
+                putExtra(Intent.EXTRA_TITLE, context.getString(Res.string.export_relay_settings))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
         val shareIntent =
             Intent.createChooser(
                 sendIntent,
-                context.getString(R.string.export_relay_settings),
+                context.getString(Res.string.export_relay_settings),
             )
         context.startActivity(shareIntent)
     }

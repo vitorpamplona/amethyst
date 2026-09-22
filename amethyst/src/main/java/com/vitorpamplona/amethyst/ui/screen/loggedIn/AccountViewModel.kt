@@ -39,7 +39,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -61,12 +60,45 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_sent
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_event
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_recipient
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_private_note
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_title
+import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
+import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.signer_illegal_state_exception_description
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_description
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
+import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
@@ -297,11 +329,11 @@ class AccountViewModel(
         // silently — the composer already returned when it was enqueued.
         viewModelScope.launch {
             Amethyst.instance.powPublishQueue.failures.collect { failure ->
-                val kindLabel = stringRes(Amethyst.instance.appContext, powKindLabelRes(failure.kind))
+                val kindLabel = loadStringRes(powKindLabelRes(failure.kind))
                 if (failure.willRetryOnRestart) {
-                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed_retry, kindLabel)
+                    toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
                 } else {
-                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                    toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
                 }
             }
         }
@@ -635,7 +667,7 @@ class AccountViewModel(
         roleIds: List<String>,
     ) = launchSigner {
         if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
-            toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
+            toastManager.toast(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)
         }
     }
 
@@ -1210,10 +1242,10 @@ class AccountViewModel(
     ) = launchSigner {
         account.zaps.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
             when (response) {
-                is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
+                is PaySuccessResponse -> toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
                 is IErrorResponseLike ->
-                    toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, response.errorMessage() ?: "")
-                else -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, "")
+                    toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_failed, response.errorMessage() ?: "")
+                else -> toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_failed, "")
             }
         }
     }
@@ -1296,7 +1328,7 @@ class AccountViewModel(
                 if (!streaming) {
                     invoices.forEach { invoice ->
                         payViaIntent(invoice, context, onPaid = {}, onError = {
-                            toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
+                            toastManager.toast(loadStringRes(Res.string.error_dialog_zap_error), it)
                         })
                     }
                 }
@@ -1322,8 +1354,8 @@ class AccountViewModel(
         // on a private rumor that would leak the rumor id to public relays.
         if (baseNote.isPrivateRumor()) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_private_note),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_private_note),
                 baseNote.author,
             )
             return@launchSigner
@@ -1331,8 +1363,8 @@ class AccountViewModel(
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_recipient),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_no_recipient),
                 null,
             )
             return@launchSigner
@@ -1340,8 +1372,8 @@ class AccountViewModel(
         val zappedEvent = baseNote.toEventHint<com.vitorpamplona.quartz.nip01Core.core.Event>()
         if (zappedEvent == null) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_event),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_no_event),
                 baseNote.author,
             )
             return@launchSigner
@@ -1361,7 +1393,7 @@ class AccountViewModel(
             // noise.
         } catch (e: Exception) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_title),
                 describeMintError(e),
                 baseNote.author,
             )
@@ -1393,7 +1425,7 @@ class AccountViewModel(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_title),
                 describeMintError(e),
                 getUserIfExists(recipientPubKey),
             )
@@ -1648,18 +1680,18 @@ class AccountViewModel(
             throw e
         } catch (_: SignerExceptions.ReadOnlyException) {
             toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_be_able_to_sign_events,
             )
         } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
             toastManager.toast(
-                R.string.unauthorized_exception,
-                R.string.unauthorized_exception_description,
+                Res.string.unauthorized_exception,
+                Res.string.unauthorized_exception_description,
             )
         } catch (_: SignerExceptions.SignerNotFoundException) {
             toastManager.toast(
-                R.string.signer_not_found_exception,
-                R.string.signer_not_found_exception_description,
+                Res.string.signer_not_found_exception,
+                Res.string.signer_not_found_exception_description,
             )
         } catch (e: SignerExceptions.TimedOutException) {
             Log.w("AccountViewModel", "TimedOutException", e)
@@ -1675,8 +1707,8 @@ class AccountViewModel(
             Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
         } catch (e: IllegalStateException) {
             toastManager.toast(
-                R.string.signer_not_found_exception,
-                R.string.signer_illegal_state_exception_description,
+                Res.string.signer_not_found_exception,
+                Res.string.signer_illegal_state_exception_description,
                 e,
             )
         }
@@ -2677,8 +2709,8 @@ class AccountViewModel(
     ) {
         if (baseNote.isDraft()) {
             toastManager.toast(
-                R.string.draft_note,
-                R.string.it_s_not_possible_to_quote_to_a_draft_note,
+                Res.string.draft_note,
+                Res.string.it_s_not_possible_to_quote_to_a_draft_note,
             )
             return
         }
@@ -2694,8 +2726,8 @@ class AccountViewModel(
             }
         } else {
             toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_boost_posts,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_be_able_to_boost_posts,
             )
         }
     }
@@ -2729,10 +2761,10 @@ class AccountViewModel(
                                     .toSet(),
                         )
                     onDone(
-                        stringRes(context, R.string.cashu_successful_redemption),
+                        loadStringRes(Res.string.cashu_successful_redemption),
                         stringRes(
                             context,
-                            R.string.cashu_successful_redemption_explainer,
+                            Res.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
                             meltResult.fees.toString(),
                         ),
@@ -2742,17 +2774,17 @@ class AccountViewModel(
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     onDone(
-                        stringRes(context, R.string.cashu_failed_redemption),
-                        stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                        loadStringRes(Res.string.cashu_failed_redemption),
+                        loadStringRes(Res.string.cashu_failed_redemption_explainer_error_msg, e.message),
                     )
                 }
             }
         } else {
             onDone(
-                stringRes(context, R.string.no_lightning_address_set),
+                loadStringRes(Res.string.no_lightning_address_set),
                 stringRes(
                     context,
-                    R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                    Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                     account.userProfile().toBestDisplayName(),
                 ),
             )
@@ -3011,12 +3043,12 @@ class AccountViewModel(
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast
-                            .makeText(localContext.applicationContext, R.string.video_saved_to_the_gallery, Toast.LENGTH_SHORT)
+                            .makeText(localContext.applicationContext, Res.string.video_saved_to_the_gallery, Toast.LENGTH_SHORT)
                             .show()
                     }
                 },
                 onError = {
-                    toastManager.toast(R.string.failed_to_save_the_video, null, it)
+                    toastManager.toast(Res.string.failed_to_save_the_video, null, it)
                 },
             )
         }

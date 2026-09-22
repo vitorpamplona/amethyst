@@ -33,12 +33,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.conversations
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_articles
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_attestations
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_birds
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_chess
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_classifieds
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_comments
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_ephemeral_chat
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_fundraisers
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_highlights
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_interactive_stories
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_live_activities
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_music
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_nips
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_pictures
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_podcasts
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_polls
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_ratings
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_reposts
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_shorts
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_text_notes
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_torrents
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_videos
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_voice
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_wiki
+import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.home_tabs_settings
+import com.vitorpamplona.amethyst.commons.resources.new_threads
+import com.vitorpamplona.amethyst.commons.resources.settings_section_home_content_types
+import com.vitorpamplona.amethyst.commons.resources.settings_section_home_tabs
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -92,10 +120,10 @@ private fun HomeTabsSection(ui: UiSettingsFlow) {
 
     val activeCount = listOf(showNewThreads, showConversations, showEverything).count { it }
 
-    SettingsSection(R.string.settings_section_home_tabs) {
+    SettingsSection(Res.string.settings_section_home_tabs) {
         SettingsSwitchTile(
             icon = MaterialSymbols.Forum,
-            title = R.string.new_threads,
+            title = Res.string.new_threads,
             checked = showNewThreads,
             // Don't allow disabling the last remaining tab.
             enabled = !(showNewThreads && activeCount == 1),
@@ -104,7 +132,7 @@ private fun HomeTabsSection(ui: UiSettingsFlow) {
         SettingsDivider()
         SettingsSwitchTile(
             icon = MaterialSymbols.Chat,
-            title = R.string.conversations,
+            title = Res.string.conversations,
             checked = showConversations,
             enabled = !(showConversations && activeCount == 1),
             onCheckedChange = { ui.showHomeConversationsTab.tryEmit(it) },
@@ -112,7 +140,7 @@ private fun HomeTabsSection(ui: UiSettingsFlow) {
         SettingsDivider()
         SettingsSwitchTile(
             icon = MaterialSymbols.Public,
-            title = R.string.home_tab_everything,
+            title = Res.string.home_tab_everything,
             checked = showEverything,
             enabled = !(showEverything && activeCount == 1),
             onCheckedChange = { ui.showHomeEverythingTab.tryEmit(it) },
@@ -130,30 +158,30 @@ private data class HomeFeedTypeUi(
 // Ordered by how common each group is on a typical home feed (everyday posts first, niche last).
 private val HOME_FEED_TYPES =
     listOf(
-        HomeFeedTypeUi(HomeFeedType.TEXT_NOTES, R.string.home_content_type_text_notes, MaterialSymbols.EditNote),
-        HomeFeedTypeUi(HomeFeedType.REPOSTS, R.string.home_content_type_reposts, MaterialSymbols.Forward),
-        HomeFeedTypeUi(HomeFeedType.COMMENTS, R.string.home_content_type_comments, MaterialSymbols.Chat),
-        HomeFeedTypeUi(HomeFeedType.PICTURES, R.string.home_content_type_pictures, MaterialSymbols.Image),
-        HomeFeedTypeUi(HomeFeedType.VIDEOS, R.string.home_content_type_videos, MaterialSymbols.Videocam),
-        HomeFeedTypeUi(HomeFeedType.SHORTS, R.string.home_content_type_shorts, MaterialSymbols.SmartDisplay),
-        HomeFeedTypeUi(HomeFeedType.ARTICLES, R.string.home_content_type_articles, MaterialSymbols.AutoMirrored.Article),
-        HomeFeedTypeUi(HomeFeedType.WIKI, R.string.home_content_type_wiki, MaterialSymbols.MenuBook),
-        HomeFeedTypeUi(HomeFeedType.HIGHLIGHTS, R.string.home_content_type_highlights, MaterialSymbols.FormatQuote),
-        HomeFeedTypeUi(HomeFeedType.POLLS, R.string.home_content_type_polls, MaterialSymbols.Poll),
-        HomeFeedTypeUi(HomeFeedType.CLASSIFIEDS, R.string.home_content_type_classifieds, MaterialSymbols.Storefront),
-        HomeFeedTypeUi(HomeFeedType.TORRENTS, R.string.home_content_type_torrents, MaterialSymbols.Download),
-        HomeFeedTypeUi(HomeFeedType.VOICE, R.string.home_content_type_voice, MaterialSymbols.Mic),
-        HomeFeedTypeUi(HomeFeedType.LIVE_ACTIVITIES, R.string.home_content_type_live_activities, MaterialSymbols.Sensors),
-        HomeFeedTypeUi(HomeFeedType.EPHEMERAL_CHAT, R.string.home_content_type_ephemeral_chat, MaterialSymbols.Forum),
-        HomeFeedTypeUi(HomeFeedType.INTERACTIVE_STORIES, R.string.home_content_type_interactive_stories, MaterialSymbols.AutoAwesome),
-        HomeFeedTypeUi(HomeFeedType.CHESS, R.string.home_content_type_chess, MaterialSymbols.ChessKnight),
-        HomeFeedTypeUi(HomeFeedType.BIRDS, R.string.home_content_type_birds, MaterialSymbols.TravelExplore),
-        HomeFeedTypeUi(HomeFeedType.ATTESTATIONS, R.string.home_content_type_attestations, MaterialSymbols.Shield),
-        HomeFeedTypeUi(HomeFeedType.NIPS, R.string.home_content_type_nips, MaterialSymbols.Code),
-        HomeFeedTypeUi(HomeFeedType.MUSIC, R.string.home_content_type_music, MaterialSymbols.MusicNote),
-        HomeFeedTypeUi(HomeFeedType.PODCASTS, R.string.home_content_type_podcasts, MaterialSymbols.Podcasts),
-        HomeFeedTypeUi(HomeFeedType.FUNDRAISERS, R.string.home_content_type_fundraisers, MaterialSymbols.Paid),
-        HomeFeedTypeUi(HomeFeedType.RATINGS, R.string.home_content_type_ratings, MaterialSymbols.Star),
+        HomeFeedTypeUi(HomeFeedType.TEXT_NOTES, Res.string.home_content_type_text_notes, MaterialSymbols.EditNote),
+        HomeFeedTypeUi(HomeFeedType.REPOSTS, Res.string.home_content_type_reposts, MaterialSymbols.Forward),
+        HomeFeedTypeUi(HomeFeedType.COMMENTS, Res.string.home_content_type_comments, MaterialSymbols.Chat),
+        HomeFeedTypeUi(HomeFeedType.PICTURES, Res.string.home_content_type_pictures, MaterialSymbols.Image),
+        HomeFeedTypeUi(HomeFeedType.VIDEOS, Res.string.home_content_type_videos, MaterialSymbols.Videocam),
+        HomeFeedTypeUi(HomeFeedType.SHORTS, Res.string.home_content_type_shorts, MaterialSymbols.SmartDisplay),
+        HomeFeedTypeUi(HomeFeedType.ARTICLES, Res.string.home_content_type_articles, MaterialSymbols.AutoMirrored.Article),
+        HomeFeedTypeUi(HomeFeedType.WIKI, Res.string.home_content_type_wiki, MaterialSymbols.MenuBook),
+        HomeFeedTypeUi(HomeFeedType.HIGHLIGHTS, Res.string.home_content_type_highlights, MaterialSymbols.FormatQuote),
+        HomeFeedTypeUi(HomeFeedType.POLLS, Res.string.home_content_type_polls, MaterialSymbols.Poll),
+        HomeFeedTypeUi(HomeFeedType.CLASSIFIEDS, Res.string.home_content_type_classifieds, MaterialSymbols.Storefront),
+        HomeFeedTypeUi(HomeFeedType.TORRENTS, Res.string.home_content_type_torrents, MaterialSymbols.Download),
+        HomeFeedTypeUi(HomeFeedType.VOICE, Res.string.home_content_type_voice, MaterialSymbols.Mic),
+        HomeFeedTypeUi(HomeFeedType.LIVE_ACTIVITIES, Res.string.home_content_type_live_activities, MaterialSymbols.Sensors),
+        HomeFeedTypeUi(HomeFeedType.EPHEMERAL_CHAT, Res.string.home_content_type_ephemeral_chat, MaterialSymbols.Forum),
+        HomeFeedTypeUi(HomeFeedType.INTERACTIVE_STORIES, Res.string.home_content_type_interactive_stories, MaterialSymbols.AutoAwesome),
+        HomeFeedTypeUi(HomeFeedType.CHESS, Res.string.home_content_type_chess, MaterialSymbols.ChessKnight),
+        HomeFeedTypeUi(HomeFeedType.BIRDS, Res.string.home_content_type_birds, MaterialSymbols.TravelExplore),
+        HomeFeedTypeUi(HomeFeedType.ATTESTATIONS, Res.string.home_content_type_attestations, MaterialSymbols.Shield),
+        HomeFeedTypeUi(HomeFeedType.NIPS, Res.string.home_content_type_nips, MaterialSymbols.Code),
+        HomeFeedTypeUi(HomeFeedType.MUSIC, Res.string.home_content_type_music, MaterialSymbols.MusicNote),
+        HomeFeedTypeUi(HomeFeedType.PODCASTS, Res.string.home_content_type_podcasts, MaterialSymbols.Podcasts),
+        HomeFeedTypeUi(HomeFeedType.FUNDRAISERS, Res.string.home_content_type_fundraisers, MaterialSymbols.Paid),
+        HomeFeedTypeUi(HomeFeedType.RATINGS, Res.string.home_content_type_ratings, MaterialSymbols.Star),
     )
 
 /**
@@ -166,7 +194,7 @@ private fun HomeContentTypesSection(accountViewModel: AccountViewModel) {
     val enabled by accountViewModel.account.settings.enabledHomeFeedTypes
         .collectAsStateWithLifecycle()
 
-    SettingsSection(R.string.settings_section_home_content_types) {
+    SettingsSection(Res.string.settings_section_home_content_types) {
         HOME_FEED_TYPES.forEachIndexed { index, item ->
             if (index > 0) SettingsDivider()
             SettingsSwitchTile(

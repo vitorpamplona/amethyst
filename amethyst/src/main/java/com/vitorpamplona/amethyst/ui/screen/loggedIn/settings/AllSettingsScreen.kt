@@ -51,13 +51,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -115,7 +117,7 @@ fun AllSettingsScreen(
         filterSettings(
             catalog = catalog,
             query = query,
-            stringLookup = { stringRes(context, it) },
+            stringLookup = { stringRes(it) },
         )
 
     Scaffold(
@@ -167,7 +169,7 @@ fun AllSettingsScreen(
                 showResetMarmotDialog = false
                 isResettingMarmot = true
                 scope.launch(Dispatchers.IO) {
-                    val successMessage = stringRes(context, R.string.reset_marmot_success)
+                    val successMessage = stringRes(Res.string.reset_marmot_success)
                     try {
                         accountViewModel.resetMarmotState()
                         launch(Dispatchers.Main) {
@@ -175,7 +177,7 @@ fun AllSettingsScreen(
                         }
                     } catch (e: Exception) {
                         val failureMessage =
-                            stringRes(context, R.string.reset_marmot_failure, e.message ?: "")
+                            stringRes(Res.string.reset_marmot_failure, e.message ?: "")
                         launch(Dispatchers.Main) {
                             Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
                         }
@@ -273,7 +275,7 @@ private fun ResetMarmotStateDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

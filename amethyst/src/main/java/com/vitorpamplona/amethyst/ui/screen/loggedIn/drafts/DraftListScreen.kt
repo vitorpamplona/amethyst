@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -49,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.delete_all
 import com.vitorpamplona.amethyst.commons.resources.delete_all_drafts_confirmation
+import com.vitorpamplona.amethyst.commons.resources.drafts
 import com.vitorpamplona.amethyst.commons.resources.no
 import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -96,7 +96,7 @@ private fun RenderDraftListScreen(
                 showDeleteDialog = false
             },
             title = {
-                Text(text = stringResource(R.string.drafts))
+                Text(text = stringResource(Res.string.drafts))
             },
             text = {
                 Text(text = stringRes(Res.string.delete_all_drafts_confirmation))
@@ -132,7 +132,7 @@ private fun RenderDraftListScreen(
             ShorterTopAppBar(
                 title = {
                     Text(
-                        text = stringRes(id = R.string.drafts),
+                        text = stringRes(id = Res.string.drafts),
                     )
                 },
                 navigationIcon = {

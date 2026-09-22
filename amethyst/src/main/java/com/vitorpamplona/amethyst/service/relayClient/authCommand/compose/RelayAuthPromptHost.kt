@@ -63,7 +63,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPrompt
@@ -72,8 +71,19 @@ import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_also_holding_back
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_always_allow_everywhere
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_always_everywhere_body
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_always_everywhere_title
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_always_log_in
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_log_in
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_login_as
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_name_and_n_others
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_never
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_never_allow_everywhere
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_never_everywhere_body
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_never_everywhere_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_not_now
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_relay_asks
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_remember_relay
@@ -300,11 +310,11 @@ private fun RelayAuthPromptDialog(
                             } else {
                                 ButtonDefaults.outlinedButtonColors()
                             },
-                    ) { Text(if (rememberRelay) stringRes(R.string.relay_auth_never) else stringRes(Res.string.relay_auth_not_now)) }
+                    ) { Text(if (rememberRelay) stringRes(Res.string.relay_auth_never) else stringRes(Res.string.relay_auth_not_now)) }
                     Button(
                         onClick = { onChoice(if (rememberRelay) UserAuthChoice.ALWAYS_ALLOW else UserAuthChoice.ALLOW_ONCE) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(if (rememberRelay) stringRes(R.string.relay_auth_always_log_in) else stringRes(Res.string.relay_auth_log_in)) }
+                    ) { Text(if (rememberRelay) stringRes(Res.string.relay_auth_always_log_in) else stringRes(Res.string.relay_auth_log_in)) }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -313,10 +323,10 @@ private fun RelayAuthPromptDialog(
                     TextButton(
                         onClick = { confirming = UserAuthChoice.NEVER_ALLOW_EVERYWHERE },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) { Text(stringRes(R.string.relay_auth_never_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringRes(Res.string.relay_auth_never_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
                     TextButton(
                         onClick = { confirming = UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE },
-                    ) { Text(stringRes(R.string.relay_auth_always_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringRes(Res.string.relay_auth_always_allow_everywhere), style = MaterialTheme.typography.labelMedium) }
                 }
             }
         },
@@ -343,12 +353,12 @@ private fun PolicyEverywhereConfirmation(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(stringRes(if (always) R.string.relay_auth_always_everywhere_title else R.string.relay_auth_never_everywhere_title))
+            Text(stringRes(if (always) Res.string.relay_auth_always_everywhere_title else Res.string.relay_auth_never_everywhere_title))
         },
         text = {
             Text(
                 stringRes(
-                    if (always) R.string.relay_auth_always_everywhere_body else R.string.relay_auth_never_everywhere_body,
+                    if (always) Res.string.relay_auth_always_everywhere_body else Res.string.relay_auth_never_everywhere_body,
                     accountName,
                 ),
             )
@@ -370,10 +380,10 @@ private fun PolicyEverywhereConfirmation(
                         )
                     },
             ) {
-                Text(stringRes(if (always) R.string.relay_auth_always_allow_everywhere else R.string.relay_auth_never_allow_everywhere))
+                Text(stringRes(if (always) Res.string.relay_auth_always_allow_everywhere else Res.string.relay_auth_never_allow_everywhere))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
 }
 
@@ -558,7 +568,7 @@ private fun secondaryLine(
 ): String? {
     val others = purposes.filter { it !== primary }
     if (others.isEmpty()) return null
-    return pluralStringResource(R.plurals.relay_auth_also_holding_back, others.size, others.size)
+    return pluralStringResource(Res.plurals.relay_auth_also_holding_back, others.size, others.size)
 }
 
 /** A short label for a set of counterparties: the first person's name, or "Alice and 4 others". */
@@ -571,7 +581,7 @@ private fun counterpartyLabel(
     val name = rememberCounterpartyName(first, accountViewModel)
     if (pubkeys.size == 1) return name
     val others = pubkeys.size - 1
-    return pluralStringResource(R.plurals.relay_auth_name_and_n_others, others, name, others)
+    return pluralStringResource(Res.plurals.relay_auth_name_and_n_others, others, name, others)
 }
 
 /**

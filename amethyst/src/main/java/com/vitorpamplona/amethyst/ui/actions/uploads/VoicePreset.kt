@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_deep
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_high
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_neutral
+import com.vitorpamplona.amethyst.commons.resources.voice_preset_none
 
 enum class VoicePreset(
     val pitchFactor: Double,
     val labelRes: Int,
 ) {
-    NONE(1.0, R.string.voice_preset_none),
-    DEEP(1.4, R.string.voice_preset_deep),
-    HIGH(0.75, R.string.voice_preset_high),
-    NEUTRAL(1.1, R.string.voice_preset_neutral),
+    NONE(1.0, Res.string.voice_preset_none),
+    DEEP(1.4, Res.string.voice_preset_deep),
+    HIGH(0.75, Res.string.voice_preset_high),
+    NEUTRAL(1.1, Res.string.voice_preset_neutral),
 }

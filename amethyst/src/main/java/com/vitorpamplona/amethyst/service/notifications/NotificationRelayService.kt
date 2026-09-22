@@ -40,8 +40,17 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_channel_description
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_channel_name
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connected
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connected_foreground
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_connecting
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_hide_details
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_show_details
+import com.vitorpamplona.amethyst.commons.resources.always_on_notif_title
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -354,17 +363,17 @@ class NotificationRelayService : Service() {
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun buildNotification(connectedRelays: Int): Notification {
+    private suspend fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
             when {
-                connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
+                connectedRelays <= 0 -> getString(Res.string.always_on_notif_connecting)
                 // Foreground: the pool also holds the feed/finder outbox relays, so the
                 // count reflects all connections, not just the inbox. Backgrounded, the
                 // feeds tear down and only inbox + DM relays remain.
                 MainActivity.isResumed ->
-                    pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
+                    loadPluralStringRes(Res.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
                 else ->
-                    pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
+                    loadPluralStringRes(Res.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
             }
 
         // Tapping goes to the screen that answers the question the notification raises — "why is it
@@ -421,9 +430,9 @@ class NotificationRelayService : Service() {
         val detailsLabel =
             getString(
                 if (detailsExpanded) {
-                    R.string.always_on_notif_hide_details
+                    Res.string.always_on_notif_hide_details
                 } else {
-                    R.string.always_on_notif_show_details
+                    Res.string.always_on_notif_show_details
                 },
             )
 
@@ -439,14 +448,14 @@ class NotificationRelayService : Service() {
         // threshold, so no bundle is formed and nothing gets stapled to it.
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.always_on_notif_title))
+            .setContentTitle(getString(Res.string.always_on_notif_title))
             .setContentText(contentText)
             .apply {
                 breakdown?.let {
                     setStyle(
                         NotificationCompat
                             .BigTextStyle()
-                            .setBigContentTitle(getString(R.string.always_on_notif_title))
+                            .setBigContentTitle(getString(Res.string.always_on_notif_title))
                             .bigText(contentText + "\n\n" + it.joinToString("\n")),
                     )
                 }
@@ -464,10 +473,10 @@ class NotificationRelayService : Service() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.always_on_notif_channel_name),
+                getString(Res.string.always_on_notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = getString(R.string.always_on_notif_channel_description)
+                description = getString(Res.string.always_on_notif_channel_description)
                 setShowBadge(false)
             }
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

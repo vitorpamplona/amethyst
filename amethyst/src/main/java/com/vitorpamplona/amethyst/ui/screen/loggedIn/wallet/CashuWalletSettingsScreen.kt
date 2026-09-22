@@ -59,11 +59,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_wallet_confirm_title
@@ -84,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_recreate_key_subtitle
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_nothing_found
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_result
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_running
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_subtitle
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_restore_title
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_subtitle
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_title
+import com.vitorpamplona.amethyst.commons.resources.danger_zone
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -132,7 +135,7 @@ fun CashuWalletSettingsScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -187,7 +190,7 @@ fun CashuWalletSettingsScreen(
                                 stringRes(Res.string.cashu_settings_restore_nothing_found)
                             } else {
                                 stringRes(
-                                    R.string.cashu_settings_restore_result,
+                                    Res.string.cashu_settings_restore_result,
                                     s.totalSatsRecovered.toString(),
                                     s.proofsRecovered.toString(),
                                 )
@@ -211,7 +214,7 @@ fun CashuWalletSettingsScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringRes(R.string.danger_zone),
+                        text = stringRes(Res.string.danger_zone),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.error,
@@ -274,7 +277,7 @@ fun CashuWalletSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showStopNutzapsConfirm = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -295,7 +298,7 @@ fun CashuWalletSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showRecreateKeyConfirm = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -355,7 +358,7 @@ fun CashuWalletSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showImportKeyDialog = false }, enabled = !working) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -383,7 +386,7 @@ fun CashuWalletSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteWalletConfirm = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

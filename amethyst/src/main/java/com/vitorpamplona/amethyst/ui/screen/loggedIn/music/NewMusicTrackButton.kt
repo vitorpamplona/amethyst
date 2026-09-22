@@ -25,9 +25,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_music_track
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -51,7 +52,7 @@ fun NewMusicTrackButton(
     ) {
         Icon(
             symbol = MaterialSymbols.MusicNote,
-            contentDescription = stringRes(R.string.new_music_track),
+            contentDescription = stringRes(Res.string.new_music_track),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

@@ -66,7 +66,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.don_t_have_an_account
+import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
@@ -315,7 +315,7 @@ fun PasswordField(
                                 stringRes(Res.string.show_password)
                             } else {
                                 stringRes(
-                                    R.string.hide_password,
+                                    Res.string.hide_password,
                                 )
                             },
                     )

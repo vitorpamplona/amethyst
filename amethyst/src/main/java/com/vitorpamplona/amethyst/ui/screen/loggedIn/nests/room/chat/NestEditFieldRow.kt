@@ -35,8 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -139,7 +140,7 @@ fun NestEditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(R.string.reply_here),
+                    text = stringRes(Res.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

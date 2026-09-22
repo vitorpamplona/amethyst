@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_me
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -35,7 +37,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postCo
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replyGroupKeyFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replySummaryIdFor
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
@@ -95,7 +96,7 @@ object ReplyNotification {
                     ParentMessage(
                         senderName =
                             if (parentIsFromMe || parentAuthor == null) {
-                                stringRes(context, R.string.app_notification_me)
+                                loadStringRes(Res.string.app_notification_me)
                             } else {
                                 parentAuthor.toBestDisplayName()
                             },

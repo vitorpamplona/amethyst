@@ -63,18 +63,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.no
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_add_title
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_delete
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_description_label
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.web_bookmark_edit_title
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_open_url
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_save
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_tags_label
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.web_bookmark_title_label
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_label
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_placeholder
+import com.vitorpamplona.amethyst.commons.resources.web_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.yes
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -145,7 +148,7 @@ private fun RenderWebBookmarksScreen(
         topBar = {
             ShorterTopAppBar(
                 title = {
-                    Text(text = stringRes(id = R.string.web_bookmarks))
+                    Text(text = stringRes(id = Res.string.web_bookmarks))
                 },
                 navigationIcon = {
                     if (nav.canPop()) {
@@ -175,7 +178,7 @@ private fun RenderWebBookmarksScreen(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringResource(R.string.web_bookmark_add_title),
+                        contentDescription = stringResource(Res.string.web_bookmark_add_title),
                     )
                 }
             }
@@ -338,7 +341,7 @@ private fun WebBookmarkCard(
                 IconButton(onClick = { showEditDialog = true }) {
                     Icon(
                         symbol = MaterialSymbols.Edit,
-                        contentDescription = stringResource(R.string.web_bookmark_edit_title),
+                        contentDescription = stringResource(Res.string.web_bookmark_edit_title),
                     )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
@@ -431,7 +434,7 @@ fun WebBookmarkEditDialog(
         title = {
             Text(
                 stringResource(
-                    if (isEditing) R.string.web_bookmark_edit_title else R.string.web_bookmark_add_title,
+                    if (isEditing) Res.string.web_bookmark_edit_title else Res.string.web_bookmark_add_title,
                 ),
             )
         },
@@ -511,7 +514,7 @@ fun WebBookmarkEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

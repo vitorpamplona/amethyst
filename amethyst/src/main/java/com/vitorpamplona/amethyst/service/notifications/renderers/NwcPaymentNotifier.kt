@@ -21,14 +21,15 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_channel_message
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -57,7 +58,7 @@ object NwcPaymentNotifier {
         val id = tx.payment_hash ?: tx.invoice ?: tx.created_at?.toString() ?: return
         val time = tx.settled_at ?: tx.created_at ?: TimeUtils.now()
 
-        val title = stringRes(context, R.string.app_notification_payments_channel_message, amount)
+        val title = loadStringRes(Res.string.app_notification_payments_channel_message, amount)
         val comment = tx.parsedMetadata()?.displayComment() ?: tx.displayDescription()
         val body = comment ?: title
 

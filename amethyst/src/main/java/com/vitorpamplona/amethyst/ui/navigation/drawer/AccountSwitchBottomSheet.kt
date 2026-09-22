@@ -55,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -65,8 +64,12 @@ import com.vitorpamplona.amethyst.commons.resources.account_switch_active_accoun
 import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_btn
 import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
 import com.vitorpamplona.amethyst.commons.resources.are_you_sure_you_want_to_log_out
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.log_out
 import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast_zero
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -301,7 +304,7 @@ private fun LogoutButton(
                     Text(
                         text =
                             pluralStringResource(
-                                id = R.plurals.scheduled_posts_logout_warning,
+                                id = Res.plurals.scheduled_posts_logout_warning,
                                 count = unpublishedCount,
                                 unpublishedCount,
                             ),
@@ -327,12 +330,12 @@ private fun LogoutButton(
                             if (confirmedCount > 0) {
                                 pluralStringRes(
                                     context,
-                                    R.plurals.scheduled_posts_logout_toast,
+                                    Res.plurals.scheduled_posts_logout_toast,
                                     confirmedCount,
                                     confirmedCount,
                                 )
                             } else {
-                                stringRes(context, R.string.scheduled_posts_logout_toast_zero)
+                                stringRes(Res.string.scheduled_posts_logout_toast_zero)
                             }
                         android.widget.Toast
                             .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
@@ -346,7 +349,7 @@ private fun LogoutButton(
                 TextButton(
                     onClick = { logoutDialog = false },
                 ) {
-                    Text(text = stringRes(R.string.cancel))
+                    Text(text = stringRes(Res.string.cancel))
                 }
             },
         )

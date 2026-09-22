@@ -22,13 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
 import android.content.Context
 import android.net.Uri
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2Cipher
@@ -175,12 +176,12 @@ class MarmotFileUploader(
             } else {
                 val errorMessage =
                     if (state is UploadingState.Error) {
-                        stringRes(context, state.errorResource, *state.params)
+                        loadStringRes(state.errorResource, *state.params)
                     } else {
                         "Upload failed for $filename"
                     }
                 onError(
-                    stringRes(context, R.string.failed_to_upload_media_no_details),
+                    loadStringRes(Res.string.failed_to_upload_media_no_details),
                     errorMessage,
                 )
                 viewState.mediaUploadTracker.finishUpload()

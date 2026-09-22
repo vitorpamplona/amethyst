@@ -29,11 +29,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_messages
+import com.vitorpamplona.amethyst.commons.resources.buzz_pin
+import com.vitorpamplona.amethyst.commons.resources.buzz_unpin
+import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -61,7 +65,7 @@ fun BuzzPinDropdownItem(
                 modifier = Modifier.size(20.dp),
             )
         },
-        text = { Text(stringRes(if (isStarred) R.string.buzz_unpin else R.string.buzz_pin)) },
+        text = { Text(stringRes(if (isStarred) Res.string.buzz_unpin else Res.string.buzz_pin)) },
         onClick = {
             closeMenu()
             stars.toggle(groupId.id)
@@ -93,7 +97,7 @@ fun RelayGroupMessagesDropdownItem(
                 modifier = Modifier.size(20.dp),
             )
         },
-        text = { Text(stringRes(if (onMyList) R.string.remove_from_messages else R.string.add_to_messages)) },
+        text = { Text(stringRes(if (onMyList) Res.string.remove_from_messages else Res.string.add_to_messages)) },
         onClick = {
             closeMenu()
             if (onMyList) {

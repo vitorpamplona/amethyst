@@ -50,13 +50,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.resources.rating_stars_out_of_five
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -208,7 +210,7 @@ internal fun RatingStars(
     // The glyphs can only show whole and half stars, so anything else would drop precision
     // silently; the numeral carries it. Next to five filled stars a "5" is just noise.
     val showLabel = label.contains('.')
-    val a11y = stringRes(R.string.rating_stars_out_of_five, label)
+    val a11y = stringRes(Res.string.rating_stars_out_of_five, label)
 
     Row(
         modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = a11y },
@@ -304,7 +306,7 @@ private fun RatedPublicationCard(
                 Box(CoverModifier) {
                     MyAsyncImage(
                         imageUrl = cover,
-                        contentDescription = stringRes(R.string.preview_card_image_for, cover),
+                        contentDescription = stringRes(Res.string.preview_card_image_for, cover),
                         contentScale = ContentScale.Crop,
                         mainImageModifier = Modifier.fillMaxSize(),
                         loadedImageModifier = CoverModifier,

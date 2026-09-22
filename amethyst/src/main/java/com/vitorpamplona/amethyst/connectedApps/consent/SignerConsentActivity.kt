@@ -69,7 +69,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -93,7 +92,10 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_signer_deny_op
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_allow
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_deny
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_remember
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_select_all
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_select_none
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_as
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -483,7 +485,7 @@ private fun BatchedConsentDialog(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            pluralStringResource(R.plurals.nip46_signer_batch_title, pending.size, pending.size),
+                            pluralStringResource(Res.plurals.nip46_signer_batch_title, pending.size, pending.size),
                             style = MaterialTheme.typography.titleLarge,
                         )
                         account.accountName?.let { name ->
@@ -505,7 +507,7 @@ private fun BatchedConsentDialog(
                 ) {
                     Text(
                         stringResource(
-                            if (selected.size == pending.size) R.string.nip46_signer_batch_select_none else R.string.nip46_signer_batch_select_all,
+                            if (selected.size == pending.size) Res.string.nip46_signer_batch_select_none else Res.string.nip46_signer_batch_select_all,
                         ),
                         style = MaterialTheme.typography.labelLarge,
                     )

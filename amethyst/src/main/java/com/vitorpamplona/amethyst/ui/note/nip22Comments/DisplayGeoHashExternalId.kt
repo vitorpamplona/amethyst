@@ -36,9 +36,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
@@ -68,7 +69,7 @@ fun DisplayGeohashExternalId(
         LoadCityName(geohash) { cityName ->
             Icon(
                 symbol = MaterialSymbols.LocationOn,
-                contentDescription = stringRes(id = R.string.geohash_exclusive),
+                contentDescription = stringRes(id = Res.string.geohash_exclusive),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

@@ -27,7 +27,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
@@ -36,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSession
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSessionManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SdpType
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_screen_sharing
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallAudioManager
 import com.vitorpamplona.amethyst.service.call.CallForegroundService
@@ -865,7 +866,7 @@ class CallSession(
                     putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                     if (isScreenSharing) {
-                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(R.string.call_screen_sharing))
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(Res.string.call_screen_sharing))
                     }
                 }
             context.startForegroundService(intent)
@@ -888,7 +889,7 @@ class CallSession(
                     putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
                     if (isScreenSharing) {
-                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(R.string.call_screen_sharing))
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(Res.string.call_screen_sharing))
                     }
                 }
             context.startService(intent)

@@ -55,7 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -66,11 +65,16 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.about_us
 import com.vitorpamplona.amethyst.commons.resources.community_no_descriptor
+import com.vitorpamplona.amethyst.commons.resources.edit_community
 import com.vitorpamplona.amethyst.commons.resources.guidelines
 import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.moderators
 import com.vitorpamplona.amethyst.commons.resources.owner
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
@@ -168,7 +172,7 @@ fun LongCommunityHeader(
                     imageUrl = it,
                     contentDescription =
                         stringRes(
-                            R.string.preview_card_image_for,
+                            Res.string.preview_card_image_for,
                             it,
                         ),
                     contentScale = ContentScale.FillWidth,
@@ -479,7 +483,7 @@ fun EditCommunityButton(
         Icon(
             symbol = MaterialSymbols.Edit,
             modifier = Size18Modifier,
-            contentDescription = stringRes(R.string.edit_community),
+            contentDescription = stringRes(Res.string.edit_community),
         )
     }
 }
@@ -524,7 +528,7 @@ fun LeaveCommunityButton(
         onClick = { accountViewModel.unfollow(note) },
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.leave))
+        Text(text = stringRes(Res.string.leave))
     }
 }
 
@@ -548,19 +552,19 @@ fun ShareCommunityButton(
                     )
                     putExtra(
                         Intent.EXTRA_TITLE,
-                        stringRes(actContext, R.string.quick_action_share_browser_link),
+                        stringRes(Res.string.quick_action_share_browser_link),
                     )
                 }
 
             val shareIntent =
-                Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+                Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
             actContext.startActivity(shareIntent)
         },
     ) {
         Icon(
             symbol = MaterialSymbols.Share,
             modifier = Size18Modifier,
-            contentDescription = stringRes(R.string.quick_action_share),
+            contentDescription = stringRes(Res.string.quick_action_share),
         )
     }
 }

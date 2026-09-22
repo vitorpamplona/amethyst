@@ -42,17 +42,46 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blocked_section
+import com.vitorpamplona.amethyst.commons.resources.blocked_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.broadcast_section
+import com.vitorpamplona.amethyst.commons.resources.broadcast_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.connected_section
+import com.vitorpamplona.amethyst.commons.resources.connected_section_description
 import com.vitorpamplona.amethyst.commons.resources.default_relays
 import com.vitorpamplona.amethyst.commons.resources.export_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.export_as_text
 import com.vitorpamplona.amethyst.commons.resources.export_as_zip
+import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
+import com.vitorpamplona.amethyst.commons.resources.favorite_section
+import com.vitorpamplona.amethyst.commons.resources.favorite_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.indexer_section
+import com.vitorpamplona.amethyst.commons.resources.indexer_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.keypackage_section
+import com.vitorpamplona.amethyst.commons.resources.keypackage_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.local_section
+import com.vitorpamplona.amethyst.commons.resources.local_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.private_outbox_section
+import com.vitorpamplona.amethyst.commons.resources.private_outbox_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.proxy_section
+import com.vitorpamplona.amethyst.commons.resources.proxy_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_home_section
+import com.vitorpamplona.amethyst.commons.resources.public_home_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.resources.search_section
+import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.trusted_section
+import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -98,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun AllRelayListScreen(
@@ -279,7 +309,7 @@ fun MappedAllRelayListView(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.relay_settings,
+                titleRes = Res.string.relay_settings,
                 additionalActions = {
                     ExportDropdownMenu {
                         RelayListCollection(
@@ -354,8 +384,8 @@ fun MappedAllRelayListView(
         ) {
             item {
                 SettingsCategory(
-                    R.string.public_home_section,
-                    R.string.public_home_section_explainer,
+                    Res.string.public_home_section,
+                    Res.string.public_home_section_explainer,
                     SettingsCategoryFirstWithHorzBorderModifier,
                 )
             }
@@ -363,8 +393,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.public_notif_section,
-                    R.string.public_notif_section_explainer,
+                    Res.string.public_notif_section,
+                    Res.string.public_notif_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -372,8 +402,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    R.string.private_inbox_section,
-                    R.string.private_inbox_section_explainer,
+                    Res.string.private_inbox_section,
+                    Res.string.private_inbox_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
@@ -384,8 +414,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.keypackage_section,
-                    R.string.keypackage_section_explainer,
+                    Res.string.keypackage_section,
+                    Res.string.keypackage_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -393,8 +423,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.private_outbox_section,
-                    R.string.private_outbox_section_explainer,
+                    Res.string.private_outbox_section,
+                    Res.string.private_outbox_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -402,8 +432,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.proxy_section,
-                    R.string.proxy_section_explainer,
+                    Res.string.proxy_section,
+                    Res.string.proxy_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -411,8 +441,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.broadcast_section,
-                    R.string.broadcast_section_explainer,
+                    Res.string.broadcast_section,
+                    Res.string.broadcast_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -420,8 +450,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    R.string.indexer_section,
-                    R.string.indexer_section_explainer,
+                    Res.string.indexer_section,
+                    Res.string.indexer_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetIndexerRelays(indexerViewModel)
@@ -431,8 +461,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    R.string.search_section,
-                    R.string.search_section_explainer,
+                    Res.string.search_section,
+                    Res.string.search_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetSearchRelays(searchViewModel)
@@ -442,8 +472,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.local_section,
-                    R.string.local_section_explainer,
+                    Res.string.local_section,
+                    Res.string.local_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -451,8 +481,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.trusted_section,
-                    R.string.trusted_section_explainer,
+                    Res.string.trusted_section,
+                    Res.string.trusted_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -460,8 +490,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.favorite_section,
-                    R.string.favorite_section_explainer,
+                    Res.string.favorite_section,
+                    Res.string.favorite_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -469,8 +499,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.blocked_section,
-                    R.string.blocked_section_explainer,
+                    Res.string.blocked_section,
+                    Res.string.blocked_section_explainer,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -478,8 +508,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    R.string.connected_section,
-                    R.string.connected_section_description,
+                    Res.string.connected_section,
+                    Res.string.connected_section_description,
                     SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
@@ -539,8 +569,8 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
 
 @Composable
 fun SettingsCategory(
-    title: Int,
-    description: Int? = null,
+    title: StringResource,
+    description: StringResource? = null,
     modifier: Modifier,
 ) {
     Column(modifier) {
@@ -561,8 +591,8 @@ fun SettingsCategory(
 
 @Composable
 fun SettingsCategoryWithButton(
-    title: Int,
-    description: Int? = null,
+    title: StringResource,
+    description: StringResource? = null,
     modifier: Modifier,
     action: @Composable () -> Unit,
 ) {
@@ -594,7 +624,7 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     IconButton(onClick = { expanded = true }) {
         Icon(
             symbol = MaterialSymbols.Share,
-            contentDescription = stringRes(R.string.export_relay_settings),
+            contentDescription = stringRes(Res.string.export_relay_settings),
         )
     }
 

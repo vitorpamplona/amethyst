@@ -48,11 +48,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.dvm_looking_for_app
 import com.vitorpamplona.amethyst.commons.resources.dvm_pay_amount_to_dvm
 import com.vitorpamplona.amethyst.commons.resources.dvm_pay_invoice_from_dvm
@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_requesting_job
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -397,7 +398,7 @@ fun DvmPaymentActions(
                                 thankYou
                             } else {
                                 response?.error?.takeIf { it.isNotBlank() }
-                                    ?: stringRes(context, R.string.clink_debit_no_response)
+                                    ?: stringRes(Res.string.clink_debit_no_response)
                             },
                         )
                     }
@@ -414,7 +415,7 @@ fun DvmPaymentActions(
                         onResponse = { response ->
                             onStatusUpdate(
                                 response.nwcFailureDetail(context)?.let { detail ->
-                                    stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail)
+                                    stringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
                                 } ?: thankYou,
                             )
                         },

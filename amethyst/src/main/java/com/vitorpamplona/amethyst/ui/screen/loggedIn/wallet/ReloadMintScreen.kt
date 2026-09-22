@@ -66,15 +66,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_available
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_awaiting_payment
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_confirm
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_funded
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_lightning_desc
@@ -86,9 +87,12 @@ import com.vitorpamplona.amethyst.commons.resources.reload_mint_retry
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_from
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_section_to
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_send_confirm
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_summary
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_summary_funded
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_topup_label
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -166,7 +170,7 @@ fun ReloadMintScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -237,7 +241,7 @@ fun ReloadMintScreen(
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    suffix = { Text(stringRes(R.string.sats)) },
+                    suffix = { Text(stringRes(Res.string.sats)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -313,7 +317,7 @@ fun ReloadMintScreen(
                 text =
                     if (ui.shortfallSats > 0) {
                         stringRes(
-                            R.string.reload_mint_summary,
+                            Res.string.reload_mint_summary,
                             sats(maxOf(ui.topUpSats, ui.shortfallSats)),
                             shortMint(ui.selectedTarget),
                             recipientName,
@@ -367,7 +371,7 @@ fun ReloadMintScreen(
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(if (ui.shortfallSats > 0) R.string.reload_mint_confirm else R.string.reload_mint_send_confirm))
+                        Text(stringRes(if (ui.shortfallSats > 0) Res.string.reload_mint_confirm else Res.string.reload_mint_send_confirm))
                     }
                 }
             }

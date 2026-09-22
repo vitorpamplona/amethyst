@@ -31,6 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_badge
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post.NewBadgeDialog
@@ -60,7 +62,7 @@ fun NewBadgeButton(accountViewModel: AccountViewModel) {
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose, 5),
-            contentDescription = stringRes(id = R.string.new_badge),
+            contentDescription = stringRes(id = Res.string.new_badge),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

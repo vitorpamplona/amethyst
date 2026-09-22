@@ -33,9 +33,15 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_calls_channel_name
+import com.vitorpamplona.amethyst.commons.resources.call_accept
+import com.vitorpamplona.amethyst.commons.resources.call_incoming
+import com.vitorpamplona.amethyst.commons.resources.call_reject
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.call.CallNotificationReceiver
 import com.vitorpamplona.amethyst.ui.call.CallActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
@@ -63,16 +69,16 @@ object CallNotifier {
     const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
     private const val CALL_NOTIFICATION_ID = 0x50000
 
-    fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {
+    suspend fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {
         callChannel?.let { return it }
 
         val channel =
             NotificationChannel(
                 CALL_CHANNEL_ID,
-                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
+                loadStringRes(Res.string.app_notification_calls_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
+                description = loadStringRes(Res.string.app_notification_calls_channel_description)
                 // Silence the notification sound — CallAudioManager plays the ringtone
                 setSound(null, null)
                 enableVibration(false)
@@ -91,7 +97,7 @@ object CallNotifier {
      * full-screen intent that opens [CallActivity] when the device is
      * unlocked, and provides Accept / Reject actions.
      */
-    fun send(
+    suspend fun send(
         callerName: String,
         callerBitmap: Bitmap?,
         applicationContext: Context,
@@ -148,7 +154,7 @@ object CallNotifier {
             NotificationCompat
                 .Builder(applicationContext, channel.id)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
+                .setContentTitle(loadStringRes(Res.string.call_incoming))
                 .setContentText(callerName)
                 .setLargeIcon(callerBitmap)
                 .setContentIntent(contentPendingIntent)
@@ -159,8 +165,8 @@ object CallNotifier {
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
+                .addAction(R.drawable.amethyst, loadStringRes(Res.string.call_reject), rejectPendingIntent)
+                .addAction(R.drawable.amethyst, loadStringRes(Res.string.call_accept), acceptPendingIntent)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }

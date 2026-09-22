@@ -68,7 +68,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -77,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.broadcast_results
 import com.vitorpamplona.amethyst.commons.resources.broadcasts_number
 import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.resources.retry_failed_number
 import com.vitorpamplona.amethyst.commons.resources.retrying
 import com.vitorpamplona.amethyst.commons.resources.share_of
@@ -258,7 +259,7 @@ private fun BroadcastSection(
 
                 Icon(
                     symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                    contentDescription = if (isExpanded) stringRes(Res.string.collapse) else stringRes(R.string.expand),
+                    contentDescription = if (isExpanded) stringRes(Res.string.collapse) else stringRes(Res.string.expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -443,7 +444,7 @@ private fun RelayResultRow(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Refresh,
-                    contentDescription = stringResource(R.string.retry),
+                    contentDescription = stringResource(Res.string.retry),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )

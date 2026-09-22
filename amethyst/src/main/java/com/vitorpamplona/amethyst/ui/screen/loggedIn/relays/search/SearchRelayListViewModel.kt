@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.searchable_events
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -40,7 +41,7 @@ class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = R.string.searchable_events,
+                label = Res.string.searchable_events,
                 filter = Filter(),
             ),
         )

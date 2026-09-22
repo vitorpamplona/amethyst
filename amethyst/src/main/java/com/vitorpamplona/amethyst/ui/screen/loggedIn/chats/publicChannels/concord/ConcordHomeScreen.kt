@@ -50,18 +50,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_count
+import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_home_title
+import com.vitorpamplona.amethyst.commons.resources.concord_member_count
 import com.vitorpamplona.amethyst.commons.resources.concord_show_all_channels
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -119,13 +122,13 @@ fun ConcordHomeScreen(
     Scaffold(
         topBar = {
             ShorterTopAppBar(
-                title = { Text(stringRes(R.string.concord_home_title)) },
+                title = { Text(stringRes(Res.string.concord_home_title)) },
                 navigationIcon = {
                     // Back arrow only when this is a pushed screen (from the drawer / a deep link);
                     // as a bottom-nav root there is nothing to pop and the bar takes its place.
                     if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
-                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                         }
                     }
                 },
@@ -143,7 +146,7 @@ fun ConcordHomeScreen(
                 FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
                     SymbolIcon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.concord_create_title),
+                        contentDescription = stringRes(Res.string.concord_create_title),
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -193,7 +196,7 @@ fun ConcordHomeScreen(
                 item(key = entry.id) {
                     CommunityHeader(
                         communityId = entry.id,
-                        name = state?.metadata?.name?.takeIf { it.isNotBlank() } ?: entry.name.ifBlank { stringRes(R.string.concord_home_title) },
+                        name = state?.metadata?.name?.takeIf { it.isNotBlank() } ?: entry.name.ifBlank { stringRes(Res.string.concord_home_title) },
                         iconPointer = state?.metadata?.icon,
                         channelKeys = channelKeys,
                         revision = revision,
@@ -332,8 +335,8 @@ private fun CommunityHeader(
                         ?.memberCount() ?: 0
                 }
             val parts = mutableListOf<String>()
-            if (channelKeys.isNotEmpty()) parts += pluralStringResource(R.plurals.concord_channel_count, channelKeys.size, channelKeys.size)
-            if (memberCount > 0) parts += pluralStringResource(R.plurals.concord_member_count, memberCount, memberCount)
+            if (channelKeys.isNotEmpty()) parts += pluralStringResource(Res.plurals.concord_channel_count, channelKeys.size, channelKeys.size)
+            if (memberCount > 0) parts += pluralStringResource(Res.plurals.concord_member_count, memberCount, memberCount)
             val subtitle = parts.joinToString(" · ")
             if (subtitle.isNotEmpty()) {
                 Text(
@@ -437,7 +440,7 @@ private fun ConcordChannelRow(
         }
         lastNote?.createdAt()?.let { ts ->
             Text(
-                timeAgo(ts, LocalContext.current, prefix = ""),
+                timeAgo(ts, prefix = ""),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )

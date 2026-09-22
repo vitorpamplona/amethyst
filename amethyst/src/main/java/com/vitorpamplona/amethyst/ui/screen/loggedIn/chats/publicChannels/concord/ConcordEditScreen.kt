@@ -47,11 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_save
+import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -114,10 +116,10 @@ fun ConcordEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.concord_edit_title), maxLines = 1) },
+                title = { Text(stringRes(Res.string.concord_edit_title), maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
             )
@@ -148,7 +150,7 @@ fun ConcordEditScreen(
             )
 
             ConcordSectionHeader(
-                title = stringRes(R.string.concord_create_relays),
+                title = stringRes(Res.string.concord_create_relays),
                 description = stringRes(Res.string.concord_edit_relays_desc),
             )
             ConcordRelayListEditor(

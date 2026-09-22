@@ -21,8 +21,24 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_issue
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_patch
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_pr
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_pr_update
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_reply
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_applied
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_applied_issue
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_applied_patch
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_applied_pr
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_closed
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_closed_issue
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_closed_patch
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_closed_pr
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_draft
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_open
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -30,7 +46,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -61,25 +76,25 @@ object CodeNotification {
         context: Context,
         account: Account,
         event: GitIssueEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_issue, event.subject() ?: event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_issue, event.subject() ?: event.content)
 
     suspend fun notify(
         context: Context,
         account: Account,
         event: GitPatchEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_patch, event.subject() ?: event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_patch, event.subject() ?: event.content)
 
     suspend fun notify(
         context: Context,
         account: Account,
         event: GitPullRequestEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_pr, event.subject() ?: event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr, event.subject() ?: event.content)
 
     suspend fun notify(
         context: Context,
         account: Account,
         event: GitPullRequestUpdateEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_pr_update, event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, event.content)
 
     // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
     // events already on relays still arrive and still have to be rendered.
@@ -88,13 +103,13 @@ object CodeNotification {
         context: Context,
         account: Account,
         event: GitReplyEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_reply, event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_reply, event.content)
 
     suspend fun notify(
         context: Context,
         account: Account,
         event: GitStatusOpenEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_status_open, event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_open, event.content)
 
     suspend fun notify(
         context: Context,
@@ -109,10 +124,10 @@ object CodeNotification {
         titleRes =
             titleForStatusOnTarget(
                 event.rootEventId(),
-                pr = R.string.app_notification_code_channel_message_status_applied_pr,
-                patch = R.string.app_notification_code_channel_message_status_applied_patch,
-                issue = R.string.app_notification_code_channel_message_status_applied_issue,
-                fallback = R.string.app_notification_code_channel_message_status_applied,
+                pr = Res.string.app_notification_code_channel_message_status_applied_pr,
+                patch = Res.string.app_notification_code_channel_message_status_applied_patch,
+                issue = Res.string.app_notification_code_channel_message_status_applied_issue,
+                fallback = Res.string.app_notification_code_channel_message_status_applied,
             ),
         subject = event.content,
     )
@@ -130,10 +145,10 @@ object CodeNotification {
         titleRes =
             titleForStatusOnTarget(
                 event.rootEventId(),
-                pr = R.string.app_notification_code_channel_message_status_closed_pr,
-                patch = R.string.app_notification_code_channel_message_status_closed_patch,
-                issue = R.string.app_notification_code_channel_message_status_closed_issue,
-                fallback = R.string.app_notification_code_channel_message_status_closed,
+                pr = Res.string.app_notification_code_channel_message_status_closed_pr,
+                patch = Res.string.app_notification_code_channel_message_status_closed_patch,
+                issue = Res.string.app_notification_code_channel_message_status_closed_issue,
+                fallback = Res.string.app_notification_code_channel_message_status_closed,
             ),
         subject = event.content,
     )
@@ -142,7 +157,7 @@ object CodeNotification {
         context: Context,
         account: Account,
         event: GitStatusDraftEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_status_draft, event.content)
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_draft, event.content)
 
     /**
      * Pick a title string for a status event based on the *target*'s kind, so
@@ -196,7 +211,7 @@ object CodeNotification {
             nm.postStandard(
                 category = NotificationCategory.CODE,
                 id = id,
-                messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
+                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
                 messageBody = body,
                 time = createdAt,
                 pictureUrl = author.profilePicture(),

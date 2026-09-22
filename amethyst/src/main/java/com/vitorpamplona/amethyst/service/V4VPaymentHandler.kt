@@ -21,14 +21,21 @@
 package com.vitorpamplona.amethyst.service
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
+import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
+import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -88,8 +95,8 @@ class V4VPaymentHandler(
         val shares = value.computeShares(totalMilliSats)
         if (shares.isEmpty()) {
             onError(
-                stringRes(context, R.string.podcast_value_error_title),
-                stringRes(context, R.string.podcast_value_no_recipients),
+                loadStringRes(Res.string.podcast_value_error_title),
+                loadStringRes(Res.string.podcast_value_no_recipients),
             )
             return@withContext
         }
@@ -105,8 +112,8 @@ class V4VPaymentHandler(
                 payNodeSharesViaKeysend(nodeShares, boostagram, context, onError)
             } else {
                 onError(
-                    stringRes(context, R.string.podcast_value_error_title),
-                    stringRes(context, R.string.podcast_value_keysend_requires_nwc),
+                    loadStringRes(Res.string.podcast_value_error_title),
+                    loadStringRes(Res.string.podcast_value_keysend_requires_nwc),
                 )
             }
         }
@@ -164,11 +171,11 @@ class V4VPaymentHandler(
                 request = request,
                 onResponse = { response: Response? ->
                     response.nwcFailureDetail(context)?.let { detail ->
-                        onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
+                        onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
                     }
                 },
                 onTimeout = {
-                    onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                    onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
                 },
             )
         }
@@ -231,8 +238,8 @@ class V4VPaymentHandler(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 onError(
-                    stringRes(context, R.string.error_unable_to_fetch_invoice),
-                    e.message ?: stringRes(context, R.string.error_parsing_error_message),
+                    loadStringRes(Res.string.error_unable_to_fetch_invoice),
+                    e.message ?: loadStringRes(Res.string.error_parsing_error_message),
                 )
                 null
             }
@@ -258,11 +265,11 @@ class V4VPaymentHandler(
                         zappedNote = zappedNote,
                         onResponse = { response ->
                             response.nwcFailureDetail(context)?.let { detail ->
-                                onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
+                                onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), detail)
                             }
                         },
                         onTimeout = {
-                            onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                            onError(loadStringRes(Res.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
                         },
                     )
                     done++
@@ -276,9 +283,9 @@ class V4VPaymentHandler(
                     val response = ClinkDebitPayer.payInvoice(account, source.wallet.pointer, payable.invoice)
                     if (response?.isOk() != true) {
                         onError(
-                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            loadStringRes(Res.string.error_dialog_pay_invoice_error),
                             response?.failureDetail()
-                                ?: stringRes(context, R.string.clink_debit_no_response),
+                                ?: loadStringRes(Res.string.clink_debit_no_response),
                         )
                     }
                     done++

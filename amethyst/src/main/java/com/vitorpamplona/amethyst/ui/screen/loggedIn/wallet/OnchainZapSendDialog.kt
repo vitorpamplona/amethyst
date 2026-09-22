@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,7 +67,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -83,13 +81,20 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount_split
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_change_recipient
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_close
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_comment_label
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_done
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_dont_split
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_failed_at
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_eta_fast
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_eta_normal
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_eta_slow
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_fast
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_normal
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_rate_eta
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_slow
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_loading_fees
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_min_warning
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_post_author
@@ -102,9 +107,13 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_result_transact
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_sats_suffix
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_sending
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_splits_label
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_splits_skipped
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_success
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
+import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -131,16 +140,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 import java.text.NumberFormat
 
 /** Shared with the profile Send Payment screen's on-chain rail. */
 internal enum class FeeTier(
-    @param:StringRes val labelRes: Int,
-    @param:StringRes val etaLabelRes: Int,
+    val labelRes: StringResource,
+    val etaLabelRes: StringResource,
 ) {
-    SLOW(R.string.onchain_send_fee_slow, R.string.onchain_send_fee_eta_slow),
-    NORMAL(R.string.onchain_send_fee_normal, R.string.onchain_send_fee_eta_normal),
-    FAST(R.string.onchain_send_fee_fast, R.string.onchain_send_fee_eta_fast),
+    SLOW(Res.string.onchain_send_fee_slow, Res.string.onchain_send_fee_eta_slow),
+    NORMAL(Res.string.onchain_send_fee_normal, Res.string.onchain_send_fee_eta_normal),
+    FAST(Res.string.onchain_send_fee_fast, Res.string.onchain_send_fee_eta_fast),
 }
 
 internal fun FeeEstimates.rateFor(tier: FeeTier): Double =
@@ -388,7 +398,7 @@ fun OnchainZapSendDialog(
                                     TextButton(
                                         onClick = { useSplits = true },
                                     ) {
-                                        Text(pluralStringResource(R.plurals.onchain_send_use_note_split, onchainSplits.size, onchainSplits.size))
+                                        Text(pluralStringResource(Res.plurals.onchain_send_use_note_split, onchainSplits.size, onchainSplits.size))
                                     }
                                 }
                             }
@@ -798,9 +808,9 @@ private fun SendButton(
             text =
                 when {
                     sats != null && splitWays > 1 ->
-                        pluralStringResource(R.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
+                        pluralStringResource(Res.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
                     sats != null -> stringRes(Res.string.onchain_send_button_amount, sats)
-                    else -> stringRes(R.string.send)
+                    else -> stringRes(Res.string.send)
                 },
             fontWeight = FontWeight.SemiBold,
         )
@@ -815,7 +825,7 @@ private fun SplitsRecipientSection(
     onDisable: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    SectionLabel(pluralStringResource(R.plurals.onchain_send_splits_label, splits.size, splits.size))
+    SectionLabel(pluralStringResource(Res.plurals.onchain_send_splits_label, splits.size, splits.size))
 
     val totalWeight = splits.sumOf { it.second }
     // Index the preview by pubkey once — the splits list scan would otherwise
@@ -873,7 +883,7 @@ private fun SplitsRecipientSection(
         Spacer(Modifier.height(6.dp))
         val skipped = skippedLnSplits.size
         Text(
-            text = pluralStringResource(R.plurals.onchain_send_splits_skipped, skipped, skipped),
+            text = pluralStringResource(Res.plurals.onchain_send_splits_skipped, skipped, skipped),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

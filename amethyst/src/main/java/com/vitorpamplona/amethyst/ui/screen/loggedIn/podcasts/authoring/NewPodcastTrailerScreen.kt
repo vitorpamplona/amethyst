@@ -56,15 +56,19 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_picked
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_audio_url_placeholder
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_season_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_title_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_new_trailer
+import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_cta
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -103,7 +107,7 @@ fun NewPodcastTrailerScreen(
     Scaffold(
         topBar = {
             SendingTopBar(
-                titleRes = R.string.podcast_new_trailer,
+                titleRes = Res.string.podcast_new_trailer,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
@@ -123,7 +127,7 @@ fun NewPodcastTrailerScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isBusy) UploadInProgressBanner(R.string.podcast_publishing_banner)
+            if (isBusy) UploadInProgressBanner(Res.string.podcast_publishing_banner)
 
             val pickedName = vm.pickedName.value
             if (pickedName != null) {
@@ -151,14 +155,14 @@ fun NewPodcastTrailerScreen(
                         )
                     }
                     if (!isBusy) {
-                        TextButton(onClick = { vm.clearPickedMedia() }) { Text(stringRes(R.string.cancel)) }
+                        TextButton(onClick = { vm.clearPickedMedia() }) { Text(stringRes(Res.string.cancel)) }
                     }
                 }
             } else {
                 UploadPlaceholder(
                     iconSymbol = MaterialSymbols.MusicNote,
-                    ctaRes = R.string.podcast_trailer_upload_cta,
-                    hintRes = R.string.podcast_trailer_upload_hint,
+                    ctaRes = Res.string.podcast_trailer_upload_cta,
+                    hintRes = Res.string.podcast_trailer_upload_hint,
                     onClick = { wantsToPick = true },
                     aspectRatio = null,
                     enabled = !isBusy,

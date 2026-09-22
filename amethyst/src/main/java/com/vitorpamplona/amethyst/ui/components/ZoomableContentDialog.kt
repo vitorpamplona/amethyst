@@ -66,7 +66,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_image
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_pdf
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
+import com.vitorpamplona.amethyst.commons.resources.image_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.resources.pdf_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -376,15 +382,15 @@ internal suspend fun saveMediaToGallery(
 
     val success =
         when {
-            isImage -> R.string.image_saved_to_the_gallery
-            isPdf -> R.string.pdf_saved_to_the_gallery
-            else -> R.string.video_saved_to_the_gallery
+            isImage -> Res.string.image_saved_to_the_gallery
+            isPdf -> Res.string.pdf_saved_to_the_gallery
+            else -> Res.string.video_saved_to_the_gallery
         }
     val failure =
         when {
-            isImage -> R.string.failed_to_save_the_image
-            isPdf -> R.string.failed_to_save_the_pdf
-            else -> R.string.failed_to_save_the_video
+            isImage -> Res.string.failed_to_save_the_image
+            isPdf -> Res.string.failed_to_save_the_pdf
+            else -> Res.string.failed_to_save_the_video
         }
 
     if (content is MediaUrlContent) {

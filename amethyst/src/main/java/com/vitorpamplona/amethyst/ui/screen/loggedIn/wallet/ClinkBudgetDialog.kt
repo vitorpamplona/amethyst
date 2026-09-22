@@ -41,11 +41,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_daily
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_monthly
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_one_time
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_request
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_title
+import com.vitorpamplona.amethyst.commons.resources.clink_budget_weekly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 
@@ -96,7 +100,7 @@ fun ClinkBudgetDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -123,10 +127,10 @@ private fun CadenceRow(
 private enum class BudgetCadence(
     val labelRes: Int,
 ) {
-    ONE_TIME(R.string.clink_budget_one_time),
-    DAILY(R.string.clink_budget_daily),
-    WEEKLY(R.string.clink_budget_weekly),
-    MONTHLY(R.string.clink_budget_monthly),
+    ONE_TIME(Res.string.clink_budget_one_time),
+    DAILY(Res.string.clink_budget_daily),
+    WEEKLY(Res.string.clink_budget_weekly),
+    MONTHLY(Res.string.clink_budget_monthly),
     ;
 
     fun toFrequency(): DebitFrequency? =

@@ -110,7 +110,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
                 Text(stringRes(Res.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
             } else {
                 Text(
-                    text = stringRes(Res.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
+                    text = stringRes(Res.string.poll_closing_in, timeAheadNoDot(model.closedAt)),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }

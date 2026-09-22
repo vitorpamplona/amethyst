@@ -27,14 +27,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui.EditNicknameDialog
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_hide_user
 import com.vitorpamplona.amethyst.commons.resources.copy_user_id
 import com.vitorpamplona.amethyst.commons.resources.edit_nickname
 import com.vitorpamplona.amethyst.commons.resources.profile_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.resources.report_hateful_speech
 import com.vitorpamplona.amethyst.commons.resources.report_illegal_behaviour
 import com.vitorpamplona.amethyst.commons.resources.report_impersonation
@@ -96,7 +98,7 @@ fun UserProfileDropDownMenu(
             }
             M3ActionRow(
                 icon = MaterialSymbols.Share,
-                text = stringRes(R.string.quick_action_share),
+                text = stringRes(Res.string.quick_action_share),
             ) {
                 val sendIntent =
                     Intent().apply {
@@ -105,10 +107,10 @@ fun UserProfileDropDownMenu(
                         putExtra(Intent.EXTRA_TEXT, externalLinkForUser(user))
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(context, R.string.quick_action_share_browser_link),
+                            stringRes(Res.string.quick_action_share_browser_link),
                         )
                     }
-                val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                val shareIntent = Intent.createChooser(sendIntent, stringRes(Res.string.quick_action_share))
                 context.startActivity(shareIntent)
                 onDismiss()
             }
@@ -138,7 +140,7 @@ fun UserProfileDropDownMenu(
                 } else {
                     M3ActionRow(
                         icon = MaterialSymbols.Block,
-                        text = stringRes(R.string.block_hide_user),
+                        text = stringRes(Res.string.block_hide_user),
                         isDestructive = true,
                     ) {
                         accountViewModel.hide(user)

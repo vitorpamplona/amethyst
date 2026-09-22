@@ -38,11 +38,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_max
 import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min
 import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min_max_explainer
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -79,7 +79,7 @@ fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.sats),
+                    text = stringRes(Res.string.sats),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -101,7 +101,7 @@ fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             },
             placeholder = {
                 Text(
-                    text = stringRes(R.string.sats),
+                    text = stringRes(Res.string.sats),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

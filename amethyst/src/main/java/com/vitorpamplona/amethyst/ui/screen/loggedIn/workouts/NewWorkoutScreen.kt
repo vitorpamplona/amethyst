@@ -56,11 +56,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_workout
 import com.vitorpamplona.amethyst.commons.resources.workout_calories
 import com.vitorpamplona.amethyst.commons.resources.workout_distance
 import com.vitorpamplona.amethyst.commons.resources.workout_duration
@@ -97,7 +97,7 @@ fun NewWorkoutScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.new_workout,
+                titleRes = Res.string.new_workout,
                 isActive = postViewModel::canPost,
                 onCancel = {
                     postViewModel.cancel()

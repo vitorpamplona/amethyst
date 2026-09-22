@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.core.graphics.ColorUtils
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -76,18 +75,30 @@ import com.vitorpamplona.amethyst.commons.resources.broadcast
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
+import com.vitorpamplona.amethyst.commons.resources.concord_make_admin
+import com.vitorpamplona.amethyst.commons.resources.concord_remove_admin
+import com.vitorpamplona.amethyst.commons.resources.copied_note_id_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copied_note_text_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copied_user_id_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.quick_action_block
 import com.vitorpamplona.amethyst.commons.resources.quick_action_block_dialog_btn
+import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_text
 import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_user_id
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
 import com.vitorpamplona.amethyst.commons.resources.quick_action_follow
+import com.vitorpamplona.amethyst.commons.resources.quick_action_mute_thread
 import com.vitorpamplona.amethyst.commons.resources.quick_action_report
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
+import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -282,7 +293,7 @@ fun CardBody(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, stringRes),
+                    stringRes(stringRes),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -328,7 +339,7 @@ fun CardBody(
         copyNoteTextAction(
             accountViewModel = accountViewModel,
             onCopied = {
-                showToast(R.string.copied_note_text_to_clipboard)
+                showToast(Res.string.copied_note_text_to_clipboard)
                 onDismiss()
             },
             onDismiss = onDismiss,
@@ -350,7 +361,7 @@ fun CardBody(
                 note.author?.let {
                     scope.launch {
                         clipboardManager.setText(it.toNostrUri())
-                        showToast(R.string.copied_user_id_to_clipboard)
+                        showToast(Res.string.copied_user_id_to_clipboard)
                         onDismiss()
                     }
                 }
@@ -358,11 +369,11 @@ fun CardBody(
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(
                 MaterialSymbols.FormatQuote,
-                stringRes(R.string.quick_action_copy_note_id),
+                stringRes(Res.string.quick_action_copy_note_id),
             ) {
                 scope.launch {
                     clipboardManager.setText(note.toNostrUri())
-                    showToast(R.string.copied_note_id_to_clipboard)
+                    showToast(Res.string.copied_note_id_to_clipboard)
                     onDismiss()
                 }
             }
@@ -395,9 +406,9 @@ fun CardBody(
                         MaterialSymbols.AutoMirrored.VolumeOff,
                         stringRes(
                             if (isMuted) {
-                                R.string.quick_action_unmute_thread
+                                Res.string.quick_action_unmute_thread
                             } else {
-                                R.string.quick_action_mute_thread
+                                Res.string.quick_action_mute_thread
                             },
                         ),
                     ) {
@@ -418,7 +429,7 @@ fun CardBody(
             if (isOwnNote) {
                 NoteQuickActionItem(
                     MaterialSymbols.Delete,
-                    stringRes(R.string.quick_action_delete),
+                    stringRes(Res.string.quick_action_delete),
                 ) {
                     if (accountViewModel.account.settings.hideDeleteRequestDialog) {
                         accountViewModel.delete(note)
@@ -473,7 +484,7 @@ fun CardBody(
             } else {
                 NoteQuickActionItem(
                     icon = MaterialSymbols.Share,
-                    label = stringRes(R.string.quick_action_share),
+                    label = stringRes(Res.string.quick_action_share),
                 ) {
                     val sendIntent =
                         Intent().apply {
@@ -485,14 +496,14 @@ fun CardBody(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                stringRes(context, R.string.quick_action_share_browser_link),
+                                stringRes(Res.string.quick_action_share_browser_link),
                             )
                         }
 
                     val shareIntent =
                         Intent.createChooser(
                             sendIntent,
-                            stringRes(context, R.string.quick_action_share),
+                            stringRes(Res.string.quick_action_share),
                         )
                     context.startActivity(shareIntent)
                     onDismiss()
@@ -516,7 +527,7 @@ fun CardBody(
                 val isAdmin = concordAdmin.third
                 NoteQuickActionItem(
                     MaterialSymbols.Shield,
-                    stringRes(if (isAdmin) R.string.concord_remove_admin else R.string.concord_make_admin),
+                    stringRes(if (isAdmin) Res.string.concord_remove_admin else Res.string.concord_make_admin),
                 ) {
                     accountViewModel.toggleConcordAdmin(note)
                     onDismiss()
@@ -594,7 +605,7 @@ private fun BlockAlertDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) = QuickActionAlertDialog(
-    title = stringRes(R.string.report_dialog_block_hide_user_btn),
+    title = stringRes(Res.string.report_dialog_block_hide_user_btn),
     textContent = stringRes(Res.string.report_dialog_blocking_a_user),
     buttonIcon = MaterialSymbols.Block,
     buttonText = stringRes(Res.string.quick_action_block_dialog_btn),

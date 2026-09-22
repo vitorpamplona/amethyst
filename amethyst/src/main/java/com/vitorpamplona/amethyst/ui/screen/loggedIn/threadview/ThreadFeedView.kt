@@ -80,9 +80,14 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.hi_seller_is_this_still_available
 import com.vitorpamplona.amethyst.commons.resources.hi_there_is_this_still_available
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
+import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -639,7 +644,7 @@ private fun CollapsedNoteCompose(
             // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
             // Always shown — even "+0 replies" — so every collapsed card looks the same.
             Text(
-                text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                text = pluralStringResource(Res.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
                 color = MaterialTheme.colorScheme.placeholderText,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelMedium,
@@ -647,7 +652,7 @@ private fun CollapsedNoteCompose(
 
             Spacer(modifier = StdHorzSpacer)
 
-            ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = R.string.expand)
+            ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = Res.string.expand)
         }
     }
 }
@@ -1416,7 +1421,7 @@ private fun RenderClassifiedsReaderForThread(
                 val msg =
                     if (sellerName != null) {
                         stringRes(
-                            id = R.string.hi_seller_is_this_still_available,
+                            id = Res.string.hi_seller_is_this_still_available,
                             sellerName,
                         )
                     } else {
@@ -1436,7 +1441,7 @@ private fun RenderClassifiedsReaderForThread(
                     modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
-                            text = stringRes(R.string.reply_here),
+                            text = stringRes(Res.string.reply_here),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -1480,7 +1485,7 @@ private fun RenderLongFormHeaderForThread(
                 imageUrl = it,
                 contentDescription =
                     stringRes(
-                        R.string.preview_card_image_for,
+                        Res.string.preview_card_image_for,
                         it,
                     ),
                 contentScale = ContentScale.FillWidth,
@@ -1591,7 +1596,7 @@ private fun RenderWikiHeaderForThread(
                     model = it,
                     contentDescription =
                         stringRes(
-                            R.string.preview_card_image_for,
+                            Res.string.preview_card_image_for,
                             it,
                         ),
                     contentScale = ContentScale.FillWidth,

@@ -26,8 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_geohash_follows
+import com.vitorpamplona.amethyst.commons.resources.kind_hashtag_follows
+import com.vitorpamplona.amethyst.commons.resources.kind_interest_set
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -54,7 +57,7 @@ fun RenderHashtagList(
     }
 
     ListCard(
-        title = stringRes(R.string.kind_hashtag_follows),
+        title = stringRes(Res.string.kind_hashtag_follows),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -78,7 +81,7 @@ fun RenderInterestSet(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateHashtags(it) }
 
     ListCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_interest_set),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_interest_set),
         description = noteEvent.description(),
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),
@@ -107,7 +110,7 @@ fun RenderGeohashList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.decryptPrivateGeohashes(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_geohash_follows),
+        title = stringRes(Res.string.kind_geohash_follows),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),

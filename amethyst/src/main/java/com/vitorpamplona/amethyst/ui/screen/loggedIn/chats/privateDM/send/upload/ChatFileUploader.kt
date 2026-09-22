@@ -21,12 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 class ChatFileUploader(
@@ -76,19 +80,19 @@ class ChatFileUploader(
                 onceUploaded(list)
                 viewState.reset()
             } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-                val allAvifMetadata = results.errors.all { it.errorResource == R.string.avif_metadata_strip_failed }
+                val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
+                val allAvifMetadata = results.errors.all { it.errorResource == Res.string.avif_metadata_strip_failed }
 
                 if (allAvifMetadata) {
                     // AVIF strip refusal is a pre-encryption check — "retry without encryption" wouldn't help.
                     onError(
-                        stringRes(context, R.string.failed_to_upload_media_no_details),
+                        loadStringRes(Res.string.failed_to_upload_media_no_details),
                         errorMessages.joinToString(".\n"),
                     )
                 } else {
                     onEncryptedUploadError(
-                        stringRes(context, R.string.failed_to_upload_encrypted_media_title),
-                        stringRes(context, R.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
+                        loadStringRes(Res.string.failed_to_upload_encrypted_media_title),
+                        loadStringRes(Res.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
                     )
                 }
             }
@@ -134,9 +138,9 @@ class ChatFileUploader(
             onceUploaded(list)
             viewState.reset()
         } else {
-            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+            val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
 
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
         viewState.mediaUploadTracker.finishUpload()
@@ -181,9 +185,9 @@ class ChatFileUploader(
             onceUploaded(list)
             viewState.reset()
         } else {
-            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+            val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
 
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
         viewState.mediaUploadTracker.finishUpload()

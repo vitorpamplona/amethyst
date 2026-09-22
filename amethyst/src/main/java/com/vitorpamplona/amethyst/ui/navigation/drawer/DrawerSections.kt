@@ -22,9 +22,14 @@ package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import android.os.Build
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_create
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_navigate
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 
@@ -160,11 +165,11 @@ private val DrawerFeedsItems: List<NavBarItem> =
 
 val DrawerSections: List<DrawerSection> =
     listOf(
-        DrawerSection(DrawerSectionId.YOU, R.string.drawer_section_you, MaterialSymbols.AccountCircle, DrawerYouItems),
-        DrawerSection(DrawerSectionId.NAVIGATE, R.string.drawer_section_navigate, MaterialSymbols.Home, DrawerNavigateItems),
-        DrawerSection(DrawerSectionId.FEEDS, R.string.drawer_section_feeds, MaterialSymbols.Subscriptions, DrawerFeedsItems),
-        DrawerSection(DrawerSectionId.CREATE, R.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
-        DrawerSection(DrawerSectionId.SYSTEM, R.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
+        DrawerSection(DrawerSectionId.YOU, Res.string.drawer_section_you, MaterialSymbols.AccountCircle, DrawerYouItems),
+        DrawerSection(DrawerSectionId.NAVIGATE, Res.string.drawer_section_navigate, MaterialSymbols.Home, DrawerNavigateItems),
+        DrawerSection(DrawerSectionId.FEEDS, Res.string.drawer_section_feeds, MaterialSymbols.Subscriptions, DrawerFeedsItems),
+        DrawerSection(DrawerSectionId.CREATE, Res.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
+        DrawerSection(DrawerSectionId.SYSTEM, Res.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
     )
 
 /**

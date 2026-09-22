@@ -66,11 +66,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bookmarks
+import com.vitorpamplona.amethyst.commons.resources.boost
 import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_failure
 import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_partial
 import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_success
@@ -78,14 +79,23 @@ import com.vitorpamplona.amethyst.commons.resources.broadcasting
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_name
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_number_events
 import com.vitorpamplona.amethyst.commons.resources.event_sent
+import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_discard
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_message
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_send_without_pow
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_job
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_progress
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_title
+import com.vitorpamplona.amethyst.commons.resources.pow_notification_cancel_all
+import com.vitorpamplona.amethyst.commons.resources.pow_queued_job
+import com.vitorpamplona.amethyst.commons.resources.reaction
 import com.vitorpamplona.amethyst.commons.resources.retry_failed
 import com.vitorpamplona.amethyst.commons.resources.sent_number_events
 import com.vitorpamplona.amethyst.commons.resources.share_of
 import com.vitorpamplona.amethyst.commons.resources.tap_to_view_details
+import com.vitorpamplona.amethyst.commons.resources.voice_post
+import com.vitorpamplona.amethyst.commons.resources.voice_reply
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
@@ -255,13 +265,13 @@ private fun MiningContent(
         ) {
             Icon(
                 symbol = MaterialSymbols.Manufacturing,
-                contentDescription = stringRes(R.string.pow_mining_title),
+                contentDescription = stringRes(Res.string.pow_mining_title),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = gearAlpha),
                 modifier = Modifier.size(18.dp),
             )
 
             Text(
-                text = pluralStringResource(R.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
+                text = pluralStringResource(Res.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -283,7 +293,7 @@ private fun MiningContent(
 
                 val base =
                     pluralStringResource(
-                        if (job.isMining) R.plurals.pow_mining_job else R.plurals.pow_queued_job,
+                        if (job.isMining) Res.plurals.pow_mining_job else Res.plurals.pow_queued_job,
                         job.difficulty,
                         kindToName(job.kind),
                         job.difficulty,
@@ -292,7 +302,7 @@ private fun MiningContent(
                     buildList {
                         elapsedSec?.let { add(DateUtils.formatElapsedTime(it)) }
                         if (elapsedSec != null && expectedSec != null) {
-                            add(formatTimeLeft(context, expectedSec, elapsedSec))
+                            add(formatTimeLeft(expectedSec, elapsedSec))
                         }
                     }.joinToString(" • ")
 
@@ -323,7 +333,7 @@ private fun MiningContent(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.pow_notification_cancel_all),
+                            contentDescription = stringRes(Res.string.pow_notification_cancel_all),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
                         )
@@ -710,14 +720,14 @@ fun MultipleCompletedBroadcastContent(
 @Composable
 fun Event.toKindName(): String =
     when (this) {
-        is ReactionEvent -> stringRes(R.string.reaction)
-        is RepostEvent -> stringRes(R.string.boost)
-        is GenericRepostEvent -> stringRes(R.string.boost)
-        is VoiceEvent -> stringRes(R.string.voice_post)
-        is VoiceReplyEvent -> stringRes(R.string.voice_reply)
-        is BookmarkListEvent -> stringRes(R.string.bookmarks)
-        is OldBookmarkListEvent -> stringRes(R.string.bookmarks)
-        else -> stringRes(R.string.post)
+        is ReactionEvent -> stringRes(Res.string.reaction)
+        is RepostEvent -> stringRes(Res.string.boost)
+        is GenericRepostEvent -> stringRes(Res.string.boost)
+        is VoiceEvent -> stringRes(Res.string.voice_post)
+        is VoiceReplyEvent -> stringRes(Res.string.voice_reply)
+        is BookmarkListEvent -> stringRes(Res.string.bookmarks)
+        is OldBookmarkListEvent -> stringRes(Res.string.bookmarks)
+        else -> stringRes(Res.string.post)
     }
 
 @Composable

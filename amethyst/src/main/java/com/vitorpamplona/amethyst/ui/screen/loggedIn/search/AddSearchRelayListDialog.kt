@@ -37,11 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
 import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_editing
+import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_examples
+import com.vitorpamplona.amethyst.commons.resources.search_relays_title
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -77,7 +78,7 @@ fun AddSearchRelayListDialog(
         Scaffold(
             topBar = {
                 SavingTopBar(
-                    titleRes = R.string.search_relays_title,
+                    titleRes = Res.string.search_relays_title,
                     onCancel = {
                         postViewModel.clear()
                         onClose()
@@ -120,7 +121,7 @@ private fun Explanation(postViewModel: SearchRelayListViewModel) {
             Text(
                 text =
                     stringRes(
-                        R.string.search_relays_not_found_examples,
+                        Res.string.search_relays_not_found_examples,
                         DefaultSearchRelayList.joinToString("\n") { " - ${it.displayUrl()}" },
                     ),
             )

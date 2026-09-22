@@ -20,69 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.content.Context
 import android.util.LruCache
 import androidx.annotation.DrawableRes
-import androidx.annotation.PluralsRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes as commonsPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes as commonsStringRes
 
-/**
- * Cache for stringResource because it seems to be > 1ms function in some phones
- */
-private val resourceCache = LruCache<Int, String>(300)
-private var resourceCacheLanguage: String? = null
+// Every user-facing string now lives in the commons Compose catalog
+// (com.vitorpamplona.amethyst.commons.resources.Res.string.*), so these are thin
+// aliases over the commons bridge. They exist only so the ~500 files that import
+// `com.vitorpamplona.amethyst.ui.stringRes` did not all have to change their import
+// in the same commit; a file moving to commons swaps this import for
+// `com.vitorpamplona.amethyst.commons.ui.stringRes` and nothing else.
+//
+// The Android `R.string` overloads that used to live here (and the LruCache behind
+// them, which existed because Resources.getString measured >1ms on some phones) are
+// gone with the last R.string reference. compose-resources parses each locale file
+// once into a process-wide cache, so repeat lookups are map hits.
 
-// Caches most common icons in the app to avoid using disk
-private val iconCache = LruCache<Int, LruCache<Int, Painter>>(30)
-
-fun resourceCacheInit() {
-    resourceCache
-    resourceCacheLanguage
-    iconCache
-}
-
-fun checkLanguage(currentLanguage: String) {
-    if (resourceCacheLanguage == null) {
-        resourceCacheLanguage = currentLanguage
-    } else {
-        if (resourceCacheLanguage != currentLanguage) {
-            resourceCacheLanguage = currentLanguage
-            resourceCache.evictAll()
-        }
-    }
-}
-
-@Composable
-fun StringResSetup() {
-    val config = LocalConfiguration.current
-    if (!config.locales.isEmpty) {
-        val language = config.locales.get(0).language
-        LifecycleResumeEffect(language) {
-            checkLanguage(language)
-
-            onPauseOrDispose { }
-        }
-    }
-}
-
-@Composable
-fun stringRes(id: Int): String = resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) }
-
-// Overloads for keys already migrated to commons Compose resources
-// (com.vitorpamplona.amethyst.commons.resources.Res.string.*). They let a file
-// mix migrated and unmigrated keys under this one import — overload resolution
-// picks by argument type — so migrating a key is just R.string.x -> Res.string.x.
-// When a whole file moves to commons, swap this import for
-// com.vitorpamplona.amethyst.commons.ui.stringRes.
 @Composable
 fun stringRes(id: StringResource): String = commonsStringRes(id)
 
@@ -99,73 +58,13 @@ fun pluralStringRes(
     vararg args: Any,
 ): String = if (args.isEmpty()) commonsPluralStringRes(id, count) else commonsPluralStringRes(id, count, *args)
 
-@Composable
-fun stringRes(
-    id: Int,
-    vararg args: String,
-): String =
-    String
-        .format(
-            LocalConfiguration.current.locales.get(0),
-            resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) },
-            *args,
-        )
+// Caches most common icons in the app to avoid using disk. Drawables are still
+// Android resources - only strings moved to the Compose catalog.
+private val iconCache = LruCache<Int, LruCache<Int, Painter>>(30)
 
-@Composable
-fun stringRes(
-    id: Int,
-    vararg args: Int?,
-): String =
-    String
-        .format(
-            LocalConfiguration.current.locales.get(0),
-            resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) },
-            *args,
-        )
-
-fun stringRes(
-    ctx: Context,
-    id: Int,
-): String = resourceCache.get(id) ?: ctx.getString(id).also { resourceCache.put(id, it) }
-
-fun stringRes(
-    ctx: Context,
-    id: Int,
-    vararg args: String?,
-): String {
-    val res = ctx.resources
-
-    return String
-        .format(
-            res.configuration.locales.get(0),
-            resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
-            *args,
-        )
+fun resourceCacheInit() {
+    iconCache
 }
-
-fun stringRes(
-    ctx: Context,
-    id: Int,
-    vararg args: Int?,
-): String {
-    val res = ctx.resources
-
-    return String
-        .format(
-            res.configuration.locales.get(0),
-            resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
-            *args,
-        )
-}
-
-// Plural resolver for non-composable scope (e.g. onClick callbacks). Not cached:
-// the resolved string varies by `count` quantity and the resourceCache is keyed by id.
-fun pluralStringRes(
-    ctx: Context,
-    @PluralsRes id: Int,
-    count: Int,
-    vararg formatArgs: Any?,
-): String = ctx.resources.getQuantityString(id, count, *formatArgs)
 
 /**
  * This cache can only be used if the painter is the only copy on the screen

@@ -59,18 +59,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audience_add_anyway
+import com.vitorpamplona.amethyst.commons.resources.audience_add_people
+import com.vitorpamplona.amethyst.commons.resources.audience_badge_already_added
+import com.vitorpamplona.amethyst.commons.resources.audience_badge_muted
+import com.vitorpamplona.amethyst.commons.resources.audience_badge_private_member
 import com.vitorpamplona.amethyst.commons.resources.audience_count_with_private
+import com.vitorpamplona.amethyst.commons.resources.audience_hard_cap
 import com.vitorpamplona.amethyst.commons.resources.audience_over_limit
 import com.vitorpamplona.amethyst.commons.resources.audience_recipients_are_visible
 import com.vitorpamplona.amethyst.commons.resources.audience_sheet_no_lists
 import com.vitorpamplona.amethyst.commons.resources.audience_sheet_search
 import com.vitorpamplona.amethyst.commons.resources.audience_sheet_title
+import com.vitorpamplona.amethyst.commons.resources.audience_soft_cap_private
+import com.vitorpamplona.amethyst.commons.resources.audience_soft_cap_public
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.num_selected
 import com.vitorpamplona.amethyst.commons.resources.select_all
@@ -90,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The one place the composer's audience is edited: search for a person, pick a
@@ -235,7 +245,7 @@ private fun AudienceCatalog(
             items(sets, key = { "set-" + it.id }) { AudienceListRow(it) { onPickList(it) } }
         }
         if (packs.isNotEmpty()) {
-            item { SectionHeader(stringRes(R.string.discover_follows)) }
+            item { SectionHeader(stringRes(Res.string.discover_follows)) }
             items(packs, key = { "pack-" + it.id }) { AudienceListRow(it) { onPickList(it) } }
         }
         if (sets.isEmpty() && packs.isEmpty()) {
@@ -349,7 +359,7 @@ private fun AudienceReview(
         ) {
             Icon(
                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                contentDescription = stringRes(R.string.back),
+                contentDescription = stringRes(Res.string.back),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
@@ -425,7 +435,7 @@ private fun AudienceReview(
     when (cap) {
         is AudienceCap.OverHard ->
             NoteLine(
-                text = pluralStringResource(R.plurals.audience_hard_cap, cap.total, cap.total, AudienceSelection.HARD_CAP),
+                text = pluralStringResource(Res.plurals.audience_hard_cap, cap.total, cap.total, AudienceSelection.HARD_CAP),
                 color = MaterialTheme.colorScheme.error,
                 symbol = MaterialSymbols.Warning,
             )
@@ -433,9 +443,9 @@ private fun AudienceReview(
             NoteLine(
                 text =
                     if (isPrivate) {
-                        pluralStringResource(R.plurals.audience_soft_cap_private, cap.total, cap.total)
+                        pluralStringResource(Res.plurals.audience_soft_cap_private, cap.total, cap.total)
                     } else {
-                        pluralStringResource(R.plurals.audience_soft_cap_public, cap.total, cap.total)
+                        pluralStringResource(Res.plurals.audience_soft_cap_public, cap.total, cap.total)
                     },
                 color = MaterialTheme.colorScheme.warningColor,
                 symbol = MaterialSymbols.Warning,
@@ -453,9 +463,9 @@ private fun AudienceReview(
         Text(
             text =
                 if (cap is AudienceCap.OverSoft) {
-                    pluralStringResource(R.plurals.audience_add_anyway, additions.size, additions.size)
+                    pluralStringResource(Res.plurals.audience_add_anyway, additions.size, additions.size)
                 } else {
-                    pluralStringResource(R.plurals.audience_add_people, additions.size, additions.size)
+                    pluralStringResource(Res.plurals.audience_add_people, additions.size, additions.size)
                 },
         )
     }
@@ -504,16 +514,16 @@ private fun AudienceMemberRow(
         }
 
         when {
-            member.isAlreadyInAudience -> MemberBadge(R.string.audience_badge_already_added, MaterialTheme.colorScheme.placeholderText)
-            member.isHidden -> MemberBadge(R.string.audience_badge_muted, MaterialTheme.colorScheme.placeholderText)
-            member.isPrivateMember -> MemberBadge(R.string.audience_badge_private_member, MaterialTheme.colorScheme.primary)
+            member.isAlreadyInAudience -> MemberBadge(Res.string.audience_badge_already_added, MaterialTheme.colorScheme.placeholderText)
+            member.isHidden -> MemberBadge(Res.string.audience_badge_muted, MaterialTheme.colorScheme.placeholderText)
+            member.isPrivateMember -> MemberBadge(Res.string.audience_badge_private_member, MaterialTheme.colorScheme.primary)
         }
     }
 }
 
 @Composable
 private fun MemberBadge(
-    textRes: Int,
+    textRes: StringResource,
     color: Color,
 ) {
     Text(

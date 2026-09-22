@@ -33,9 +33,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connection_success_rate_description
+import com.vitorpamplona.amethyst.commons.resources.errors
+import com.vitorpamplona.amethyst.commons.resources.read_from_relay
+import com.vitorpamplona.amethyst.commons.resources.read_from_relay_description
+import com.vitorpamplona.amethyst.commons.resources.spam
+import com.vitorpamplona.amethyst.commons.resources.spam_description
+import com.vitorpamplona.amethyst.commons.resources.uptime
+import com.vitorpamplona.amethyst.commons.resources.write_to_relay
+import com.vitorpamplona.amethyst.commons.resources.write_to_relay_description
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -99,8 +108,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.read_from_relay,
-                                R.string.read_from_relay_description,
+                                Res.string.read_from_relay,
+                                Res.string.read_from_relay_description,
                             )
                         },
                     )
@@ -108,7 +117,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 symbol = MaterialSymbols.Download,
-                contentDescription = stringRes(R.string.read_from_relay),
+                contentDescription = stringRes(Res.string.read_from_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
             )
@@ -131,8 +140,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.write_to_relay,
-                                R.string.write_to_relay_description,
+                                Res.string.write_to_relay,
+                                Res.string.write_to_relay_description,
                             )
                         },
                     )
@@ -140,7 +149,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 symbol = MaterialSymbols.Upload,
-                stringRes(R.string.write_to_relay),
+                stringRes(Res.string.write_to_relay),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.allGoodColor,
             )
@@ -163,8 +172,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.errors,
-                                R.string.connection_success_rate_description,
+                                Res.string.errors,
+                                Res.string.connection_success_rate_description,
                             )
                         },
                     )
@@ -174,7 +183,7 @@ fun RelayStatusRow(
 
             Icon(
                 symbol = MaterialSymbols.SyncProblem,
-                stringRes(R.string.errors),
+                stringRes(Res.string.errors),
                 modifier = Size15Modifier,
                 tint =
                     if (successRate < 0.1) {
@@ -187,7 +196,7 @@ fun RelayStatusRow(
             )
 
             Text(
-                text = stringResource(R.string.uptime, successRate),
+                text = stringResource(Res.string.uptime, successRate),
                 maxLines = 1,
                 fontSize = Font12SP,
                 modifier = HalfStartPadding,
@@ -204,8 +213,8 @@ fun RelayStatusRow(
                         },
                         onLongPress = {
                             accountViewModel.toastManager.toast(
-                                R.string.spam,
-                                R.string.spam_description,
+                                Res.string.spam,
+                                Res.string.spam_description,
                             )
                         },
                     )
@@ -214,7 +223,7 @@ fun RelayStatusRow(
         ) {
             Icon(
                 symbol = MaterialSymbols.DeleteSweep,
-                stringRes(R.string.spam),
+                stringRes(Res.string.spam),
                 modifier = Size15Modifier,
                 tint =
                     if (item.relayStat.spamCounter > 0) {

@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import android.content.Context
 import android.text.format.DateUtils
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmentView
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing
+import com.vitorpamplona.amethyst.commons.resources.calendar_relative_ongoing_with_end
 
 /**
  * Localised "starts in 2 hours" / "started 5 minutes ago" / "Happening now · ends in 2 hours"
@@ -48,7 +50,7 @@ fun relativeTimeLabel(
     val end = view.endSeconds
 
     if (end != null && start <= nowSeconds && nowSeconds <= end) {
-        val ongoing = context.getString(R.string.calendar_relative_ongoing)
+        val ongoing = context.getString(Res.string.calendar_relative_ongoing)
         val endsIn =
             DateUtils
                 .getRelativeTimeSpanString(
@@ -57,7 +59,7 @@ fun relativeTimeLabel(
                     if (view.isAllDay) DateUtils.DAY_IN_MILLIS else DateUtils.MINUTE_IN_MILLIS,
                     DateUtils.FORMAT_ABBREV_RELATIVE,
                 ).toString()
-        return context.getString(R.string.calendar_relative_ongoing_with_end, ongoing, endsIn)
+        return context.getString(Res.string.calendar_relative_ongoing_with_end, ongoing, endsIn)
     }
 
     val minResolution =

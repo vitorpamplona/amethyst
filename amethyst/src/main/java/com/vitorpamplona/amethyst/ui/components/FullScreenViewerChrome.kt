@@ -67,9 +67,13 @@ import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
+import com.vitorpamplona.amethyst.commons.resources.media_download_has_started_toast
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -244,7 +248,7 @@ fun ViewerBackButton(onDismiss: () -> Unit) {
     ) {
         Icon(
             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-            contentDescription = stringRes(R.string.back),
+            contentDescription = stringRes(Res.string.back),
         )
     }
 }
@@ -264,7 +268,7 @@ fun ViewerShareButton(
         Icon(
             symbol = MaterialSymbols.Share,
             modifier = Size20Modifier,
-            contentDescription = stringRes(R.string.quick_action_share),
+            contentDescription = stringRes(Res.string.quick_action_share),
         )
 
         ShareMediaAction(
@@ -303,7 +307,7 @@ fun ViewerSaveToGalleryButton(
                     Toast
                         .makeText(
                             localContext,
-                            stringRes(localContext, R.string.media_download_has_started_toast),
+                            stringRes(Res.string.media_download_has_started_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -323,7 +327,7 @@ fun ViewerSaveToGalleryButton(
                     Toast
                         .makeText(
                             localContext,
-                            stringRes(localContext, R.string.media_download_has_started_toast),
+                            stringRes(Res.string.media_download_has_started_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -337,7 +341,7 @@ fun ViewerSaveToGalleryButton(
         Icon(
             symbol = MaterialSymbols.Download,
             modifier = Size20Modifier,
-            contentDescription = stringRes(R.string.download_to_phone),
+            contentDescription = stringRes(Res.string.download_to_phone),
         )
     }
 }

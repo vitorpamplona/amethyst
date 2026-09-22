@@ -35,13 +35,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_author_denied
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_icon
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_kind_not_allowed
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_kind_size_exceeded
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_max_size_exceeded
+import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_quota_exceeded
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_stale_rules
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_wot_gate_failed
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -93,7 +95,7 @@ private fun describeViolation(violation: CommunityRulesValidator.Violation): Str
 
         is CommunityRulesValidator.Violation.KindSizeExceeded -> {
             stringRes(
-                R.string.community_rules_violation_kind_size_exceeded,
+                Res.string.community_rules_violation_kind_size_exceeded,
                 violation.sizeBytes,
                 violation.maxBytes,
             )
@@ -101,7 +103,7 @@ private fun describeViolation(violation: CommunityRulesValidator.Violation): Str
 
         is CommunityRulesValidator.Violation.MaxSizeExceeded -> {
             stringRes(
-                R.string.community_rules_violation_max_size_exceeded,
+                Res.string.community_rules_violation_max_size_exceeded,
                 violation.sizeBytes,
                 violation.maxBytes,
             )
@@ -109,7 +111,7 @@ private fun describeViolation(violation: CommunityRulesValidator.Violation): Str
 
         is CommunityRulesValidator.Violation.QuotaExceeded -> {
             stringRes(
-                R.string.community_rules_violation_quota_exceeded,
+                Res.string.community_rules_violation_quota_exceeded,
                 violation.postsToday,
                 violation.maxPerDay,
             )

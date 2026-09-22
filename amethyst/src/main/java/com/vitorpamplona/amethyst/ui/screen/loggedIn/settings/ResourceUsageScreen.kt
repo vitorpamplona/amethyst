@@ -60,19 +60,78 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.MemorySnapshot
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_activity_section
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_battery
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_bg_relay
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_section
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_settings_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_starts
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_alwayson_uptime
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_app_starts
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_battery_drain
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_by_subsystem
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_by_subsystem_cellular
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_calls
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_cell_of_total
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_copy_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_cpu
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_decrypts
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_empty
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_http_active
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_http_requests
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_location
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_media_play
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_addressables
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_chatrooms
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_device_class
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_heap
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_image_cache
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_image_disk
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_native
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_notes
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_section
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_memory_users
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_nests
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_pow
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_radio_bursts
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_reconnects
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_relay_time
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_relay_time_bg_mobile
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_remote_signs
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_screen_time_section
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_button
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_send_section
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_share_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_image
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_money
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_nip05
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_other
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_preview
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_push
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_relay
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_uploads
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_subsystem_video
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_avg_relays
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_battery_rate
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_cellular
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_data_rate
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_in_app
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_relay
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tile_wifi
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_title
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_explanation
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_section
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_tor_settings_button
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_trend_section
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_verifies
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_wakelock
+import com.vitorpamplona.amethyst.commons.resources.resource_usage_worker_runs
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
@@ -93,6 +152,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 import java.util.Locale
 
 /**
@@ -129,7 +189,7 @@ fun ResourceUsageScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(id = R.string.resource_usage_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(id = Res.string.resource_usage_title), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -157,7 +217,7 @@ fun ResourceUsageScreen(
                 TodayTiles(todaySummary)
                 WeekRatesTiles(weekSummary)
                 if (weekSummary.totalBytes > 0) {
-                    SettingsSection(R.string.resource_usage_trend_section) {
+                    SettingsSection(Res.string.resource_usage_trend_section) {
                         UsageTrendChart(loaded, today)
                     }
                 }
@@ -178,19 +238,19 @@ fun ResourceUsageScreen(
 private fun TodayTiles(s: UsageSummary) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatTile(R.string.resource_usage_tile_cellular, formatBytes(s.mobileBytes), Modifier.weight(1f))
-            StatTile(R.string.resource_usage_tile_wifi, formatBytes(s.wifiBytesBg + s.wifiBytesFg), Modifier.weight(1f))
+            StatTile(Res.string.resource_usage_tile_cellular, formatBytes(s.mobileBytes), Modifier.weight(1f))
+            StatTile(Res.string.resource_usage_tile_wifi, formatBytes(s.wifiBytesBg + s.wifiBytesFg), Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatTile(R.string.resource_usage_tile_relay, formatConnHours(s.relayConnMs), Modifier.weight(1f))
-            StatTile(R.string.resource_usage_tile_in_app, formatDurationMs(s.foregroundMs), Modifier.weight(1f))
+            StatTile(Res.string.resource_usage_tile_relay, formatConnHours(s.relayConnMs), Modifier.weight(1f))
+            StatTile(Res.string.resource_usage_tile_in_app, formatDurationMs(s.foregroundMs), Modifier.weight(1f))
         }
     }
 }
 
 @Composable
 private fun StatTile(
-    @StringRes label: Int,
+    label: StringResource,
     value: String,
     modifier: Modifier = Modifier,
 ) {
@@ -229,14 +289,14 @@ private fun WeekRatesTiles(s: UsageSummary) {
     val tiles =
         buildList {
             if (fgHours >= 0.5 && s.batteryDrainFg > 0) {
-                add(R.string.resource_usage_tile_battery_rate to String.format(Locale.US, "%.1f%%", s.batteryDrainFg / fgHours))
+                add(Res.string.resource_usage_tile_battery_rate to String.format(Locale.US, "%.1f%%", s.batteryDrainFg / fgHours))
             }
             if (fgHours >= 0.5) {
-                add(R.string.resource_usage_tile_data_rate to formatBytes(((s.mobileBytesFg + s.wifiBytesFg) / fgHours).toLong()))
+                add(Res.string.resource_usage_tile_data_rate to formatBytes(((s.mobileBytesFg + s.wifiBytesFg) / fgHours).toLong()))
             }
             val avgRelays = s.relayConnMs.toDouble() / (s.dayCount * ResourceUsageAccountant.DAY_MS)
             if (avgRelays >= 0.5) {
-                add(R.string.resource_usage_tile_avg_relays to String.format(Locale.US, "%.1f", avgRelays))
+                add(Res.string.resource_usage_tile_avg_relays to String.format(Locale.US, "%.1f", avgRelays))
             }
         }
     if (tiles.isEmpty()) return
@@ -257,7 +317,7 @@ private fun SubsystemSection(week: UsageSummary) {
     if (cellular.isNotEmpty()) {
         val rows = cellular.entries.sortedByDescending { it.value }
         val max = rows.first().value.coerceAtLeast(1L)
-        SettingsSection(R.string.resource_usage_by_subsystem_cellular) {
+        SettingsSection(Res.string.resource_usage_by_subsystem_cellular) {
             rows.forEach { (subsystem, bytes) ->
                 BarRow(
                     label = subsystemLabel(subsystem),
@@ -271,7 +331,7 @@ private fun SubsystemSection(week: UsageSummary) {
     if (week.bytesPerSubsystem.isEmpty()) return
     val rows = week.bytesPerSubsystem.entries.sortedByDescending { it.value }
     val max = rows.first().value.coerceAtLeast(1L)
-    SettingsSection(R.string.resource_usage_by_subsystem) {
+    SettingsSection(Res.string.resource_usage_by_subsystem) {
         rows.forEach { (subsystem, bytes) ->
             BarRow(
                 label = subsystemLabel(subsystem),
@@ -294,7 +354,7 @@ private fun ScreenTimeSection(week: UsageSummary) {
             .sortedByDescending { it.value }
             .take(6)
     val max = rows.first().value.coerceAtLeast(1L)
-    SettingsSection(R.string.resource_usage_screen_time_section) {
+    SettingsSection(Res.string.resource_usage_screen_time_section) {
         rows.forEach { (name, ms) ->
             BarRow(
                 label = name,
@@ -308,20 +368,20 @@ private fun ScreenTimeSection(week: UsageSummary) {
 @StringRes
 private fun subsystemLabel(subsystem: String): Int =
     when (subsystem) {
-        "relay" -> R.string.resource_usage_subsystem_relay
-        "image" -> R.string.resource_usage_subsystem_image
-        "video" -> R.string.resource_usage_subsystem_video
-        "uploads" -> R.string.resource_usage_subsystem_uploads
-        "money" -> R.string.resource_usage_subsystem_money
-        "nip05" -> R.string.resource_usage_subsystem_nip05
-        "preview" -> R.string.resource_usage_subsystem_preview
-        "push" -> R.string.resource_usage_subsystem_push
-        else -> R.string.resource_usage_subsystem_other
+        "relay" -> Res.string.resource_usage_subsystem_relay
+        "image" -> Res.string.resource_usage_subsystem_image
+        "video" -> Res.string.resource_usage_subsystem_video
+        "uploads" -> Res.string.resource_usage_subsystem_uploads
+        "money" -> Res.string.resource_usage_subsystem_money
+        "nip05" -> Res.string.resource_usage_subsystem_nip05
+        "preview" -> Res.string.resource_usage_subsystem_preview
+        "push" -> Res.string.resource_usage_subsystem_push
+        else -> Res.string.resource_usage_subsystem_other
     }
 
 @Composable
 private fun BarRow(
-    @StringRes label: Int,
+    label: StringResource,
     value: String,
     fraction: Float,
     color: Color = MaterialTheme.colorScheme.primary,
@@ -374,68 +434,68 @@ private fun BarRow(
 /** Background/CPU activity counters for the last 7 days. */
 @Composable
 private fun ActivitySection(s: UsageSummary) {
-    SettingsSection(R.string.resource_usage_activity_section) {
-        MetricRow(R.string.resource_usage_relay_time, formatConnHours(s.relayConnMs))
+    SettingsSection(Res.string.resource_usage_activity_section) {
+        MetricRow(Res.string.resource_usage_relay_time, formatConnHours(s.relayConnMs))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_relay_time_bg_mobile, formatConnHours(s.relayConnMsMobileBg))
+        MetricRow(Res.string.resource_usage_relay_time_bg_mobile, formatConnHours(s.relayConnMsMobileBg))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_reconnects, "${s.relayConnects} (${s.relayConnectFails})")
+        MetricRow(Res.string.resource_usage_reconnects, "${s.relayConnects} (${s.relayConnectFails})")
         SettingsDivider()
-        MetricRow(R.string.resource_usage_http_requests, s.httpRequests.toString())
+        MetricRow(Res.string.resource_usage_http_requests, s.httpRequests.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_radio_bursts, s.radioBursts.toString())
+        MetricRow(Res.string.resource_usage_radio_bursts, s.radioBursts.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_http_active, formatDurationMs(s.httpActiveMs))
+        MetricRow(Res.string.resource_usage_http_active, formatDurationMs(s.httpActiveMs))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_media_play, formatDurationMs(s.mediaPlayMs))
+        MetricRow(Res.string.resource_usage_media_play, formatDurationMs(s.mediaPlayMs))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_verifies, s.verifyCount.toString())
+        MetricRow(Res.string.resource_usage_verifies, s.verifyCount.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_cpu, formatDurationMs(s.cpuMs))
+        MetricRow(Res.string.resource_usage_cpu, formatDurationMs(s.cpuMs))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
+        MetricRow(Res.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
         SettingsDivider()
-        MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())
+        MetricRow(Res.string.resource_usage_worker_runs, s.workerRuns.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_app_starts, s.appStarts.toString())
+        MetricRow(Res.string.resource_usage_app_starts, s.appStarts.toString())
         if (s.decryptCount > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_decrypts, s.decryptCount.toString())
+            MetricRow(Res.string.resource_usage_decrypts, s.decryptCount.toString())
         }
         if (s.signNip46 + s.signNip55 > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_remote_signs, (s.signNip46 + s.signNip55).toString())
+            MetricRow(Res.string.resource_usage_remote_signs, (s.signNip46 + s.signNip55).toString())
         }
         if (s.powMs > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_pow, formatDurationMs(s.powMs))
+            MetricRow(Res.string.resource_usage_pow, formatDurationMs(s.powMs))
         }
         if (s.torMs > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_tor, formatDurationMs(s.torMs))
+            MetricRow(Res.string.resource_usage_tor, formatDurationMs(s.torMs))
         }
         if (s.callMs > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_calls, formatDurationMs(s.callMs))
+            MetricRow(Res.string.resource_usage_calls, formatDurationMs(s.callMs))
         }
         if (s.nestsMs > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_nests, formatDurationMs(s.nestsMs))
+            MetricRow(Res.string.resource_usage_nests, formatDurationMs(s.nestsMs))
         }
         if (s.locationMs > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_location, formatDurationMs(s.locationMs))
+            MetricRow(Res.string.resource_usage_location, formatDurationMs(s.locationMs))
         }
         if (s.batteryDrainFg + s.batteryDrainBg > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_battery_drain, "${s.batteryDrainFg}% / ${s.batteryDrainBg}%")
+            MetricRow(Res.string.resource_usage_battery_drain, "${s.batteryDrainFg}% / ${s.batteryDrainBg}%")
         }
     }
 }
 
 @Composable
 private fun MetricRow(
-    @StringRes label: Int,
+    label: StringResource,
     value: String,
 ) {
     Row(
@@ -468,35 +528,35 @@ private fun MemorySection(memory: MemorySnapshot?) {
             memory.heapFraction > 0.60f -> MaterialTheme.colorScheme.warningColor
             else -> MaterialTheme.colorScheme.allGoodColor
         }
-    SettingsSection(R.string.resource_usage_memory_section) {
+    SettingsSection(Res.string.resource_usage_memory_section) {
         BarRow(
-            label = R.string.resource_usage_memory_heap,
+            label = Res.string.resource_usage_memory_heap,
             value = "${memory.heapUsedMb} / ${memory.heapMaxMb} MB",
             fraction = memory.heapFraction,
             color = heapColor,
         )
         BarRow(
-            label = R.string.resource_usage_memory_image_cache,
+            label = Res.string.resource_usage_memory_image_cache,
             value = "${memory.imageCacheUsedMb} / ${memory.imageCacheMaxMb} MB",
             fraction = memory.imageCacheUsedMb.toFloat() / memory.imageCacheMaxMb.coerceAtLeast(1L).toFloat(),
         )
         BarRow(
-            label = R.string.resource_usage_memory_image_disk,
+            label = Res.string.resource_usage_memory_image_disk,
             value = "${memory.imageDiskUsedMb} / ${memory.imageDiskMaxMb} MB",
             fraction = memory.imageDiskUsedMb.toFloat() / memory.imageDiskMaxMb.coerceAtLeast(1L).toFloat(),
         )
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_native, "${memory.nativeHeapUsedMb} MB")
+        MetricRow(Res.string.resource_usage_memory_native, "${memory.nativeHeapUsedMb} MB")
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_notes, memory.noteCount.toString())
+        MetricRow(Res.string.resource_usage_memory_notes, memory.noteCount.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_users, memory.userCount.toString())
+        MetricRow(Res.string.resource_usage_memory_users, memory.userCount.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_addressables, memory.addressableCount.toString())
+        MetricRow(Res.string.resource_usage_memory_addressables, memory.addressableCount.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_chatrooms, memory.chatroomCount.toString())
+        MetricRow(Res.string.resource_usage_memory_chatrooms, memory.chatroomCount.toString())
         SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_device_class, "${memory.memoryClassMb} MB")
+        MetricRow(Res.string.resource_usage_memory_device_class, "${memory.memoryClassMb} MB")
     }
 }
 
@@ -514,7 +574,7 @@ private fun AlwaysOnServiceSection(
 ) {
     if (s.alwaysOnMs <= 0) return
     val starts = s.alwaysOnStarts.toInt()
-    SettingsSection(R.string.resource_usage_alwayson_section) {
+    SettingsSection(Res.string.resource_usage_alwayson_section) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -526,17 +586,17 @@ private fun AlwaysOnServiceSection(
             )
         }
         MetricRow(
-            R.string.resource_usage_alwayson_uptime,
-            "${formatDurationMs(s.alwaysOnMs)} · ${pluralStringResource(R.plurals.resource_usage_alwayson_starts, starts, starts)}",
+            Res.string.resource_usage_alwayson_uptime,
+            "${formatDurationMs(s.alwaysOnMs)} · ${pluralStringResource(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
         )
         SettingsDivider()
         MetricRow(
-            R.string.resource_usage_alwayson_bg_relay,
+            Res.string.resource_usage_alwayson_bg_relay,
             formatConnHours(s.relayConnMsMobileBg + s.relayConnMsWifiBg),
         )
         if (s.batteryDrainBg > 0) {
             SettingsDivider()
-            MetricRow(R.string.resource_usage_alwayson_battery, "${s.batteryDrainBg}%")
+            MetricRow(Res.string.resource_usage_alwayson_battery, "${s.batteryDrainBg}%")
         }
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             TextButton(
@@ -560,7 +620,7 @@ private fun TorServiceSection(
 ) {
     if (s.torMs <= 0) return
     val starts = s.torStarts.toInt()
-    SettingsSection(R.string.resource_usage_tor_section) {
+    SettingsSection(Res.string.resource_usage_tor_section) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -572,8 +632,8 @@ private fun TorServiceSection(
             )
         }
         MetricRow(
-            R.string.resource_usage_alwayson_uptime,
-            "${formatDurationMs(s.torMs)} · ${pluralStringResource(R.plurals.resource_usage_alwayson_starts, starts, starts)}",
+            Res.string.resource_usage_alwayson_uptime,
+            "${formatDurationMs(s.torMs)} · ${pluralStringResource(Res.plurals.resource_usage_alwayson_starts, starts, starts)}",
         )
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             TextButton(
@@ -606,7 +666,7 @@ private fun SendReportSection(
     // navigation) stays on Main.
     suspend fun buildReport(): String = withContext(Dispatchers.Default) { ResourceUsageReportAssembler().buildReport(days, today, memory) }
 
-    SettingsSection(R.string.resource_usage_send_section) {
+    SettingsSection(Res.string.resource_usage_send_section) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -640,15 +700,15 @@ private fun SendReportSection(
                                     action = Intent.ACTION_SEND
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, buildReport())
-                                    putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.resource_usage_send_section))
+                                    putExtra(Intent.EXTRA_TITLE, stringRes(Res.string.resource_usage_send_section))
                                 }
                             context.startActivity(
-                                Intent.createChooser(send, stringRes(context, R.string.resource_usage_share_button)),
+                                Intent.createChooser(send, stringRes(Res.string.resource_usage_share_button)),
                             )
                         }
                     },
                 ) {
-                    Text(stringRes(R.string.resource_usage_share_button))
+                    Text(stringRes(Res.string.resource_usage_share_button))
                 }
                 Button(
                     onClick = {

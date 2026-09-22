@@ -32,8 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_collaboration_accepted_on
+import com.vitorpamplona.amethyst.commons.resources.video_collaboration_declined_on
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -65,9 +67,9 @@ fun RenderVideoCollaboration(
     ) {
         val headline =
             if (noteEvent.isAccepted()) {
-                stringRes(R.string.video_collaboration_accepted_on)
+                stringRes(Res.string.video_collaboration_accepted_on)
             } else {
-                stringRes(R.string.video_collaboration_declined_on)
+                stringRes(Res.string.video_collaboration_declined_on)
             }
         val role = remember(noteEvent) { noteEvent.role() }
 

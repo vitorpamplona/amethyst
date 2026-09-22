@@ -70,7 +70,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -79,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.TallyResults
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_results_vote_count_link
 import com.vitorpamplona.amethyst.commons.resources.poll_submit
 import com.vitorpamplona.amethyst.commons.resources.poll_view_results
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -233,7 +233,7 @@ private fun PollResultsLink(
     val voters = tally.totalVoters()
 
     Text(
-        text = pluralStringResource(R.plurals.poll_results_vote_count_link, voters, voters),
+        text = pluralStringResource(Res.plurals.poll_results_vote_count_link, voters, voters),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.primary,
         modifier =

@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_connect_title
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -88,7 +89,7 @@ object SignerConnectCoordinator {
                 activityClass = SignerConnectActivity::class.java,
                 extraKey = EXTRA_TOKEN,
                 token = token,
-                titleRes = R.string.nip46_signer_notif_connect_title,
+                titleRes = Res.string.nip46_signer_notif_connect_title,
             )
 
         return try {

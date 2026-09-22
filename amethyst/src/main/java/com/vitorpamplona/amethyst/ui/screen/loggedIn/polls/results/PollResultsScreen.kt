@@ -64,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,18 +71,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.poll_multiple_choice
 import com.vitorpamplona.amethyst.commons.resources.poll_results_all_options
+import com.vitorpamplona.amethyst.commons.resources.poll_results_backdated_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_checking_completeness
 import com.vitorpamplona.amethyst.commons.resources.poll_results_closes_in
 import com.vitorpamplona.amethyst.commons.resources.poll_results_ended
+import com.vitorpamplona.amethyst.commons.resources.poll_results_hidden_voters
+import com.vitorpamplona.amethyst.commons.resources.poll_results_ignored_votes
+import com.vitorpamplona.amethyst.commons.resources.poll_results_late_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_loading
 import com.vitorpamplona.amethyst.commons.resources.poll_results_no_votes
 import com.vitorpamplona.amethyst.commons.resources.poll_results_open
+import com.vitorpamplona.amethyst.commons.resources.poll_results_option_count
+import com.vitorpamplona.amethyst.commons.resources.poll_results_partial
+import com.vitorpamplona.amethyst.commons.resources.poll_results_partial_approx
+import com.vitorpamplona.amethyst.commons.resources.poll_results_selections
 import com.vitorpamplona.amethyst.commons.resources.poll_results_title
 import com.vitorpamplona.amethyst.commons.resources.poll_results_your_pick
+import com.vitorpamplona.amethyst.commons.resources.poll_single_choice
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
@@ -339,10 +347,10 @@ private fun PollStatusChip(endsAt: Long?) {
                 if (endsAt == null) {
                     stringRes(Res.string.poll_results_open)
                 } else if (hasEnded) {
-                    stringRes(Res.string.poll_results_ended, timeAgoNoDot(endsAt, LocalContext.current))
+                    stringRes(Res.string.poll_results_ended, timeAgoNoDot(endsAt))
                 } else {
                     // Ahead, not ago: timeAgoNoDot on a future stamp collapses to "now".
-                    stringRes(Res.string.poll_results_closes_in, timeAheadNoDot(endsAt, LocalContext.current))
+                    stringRes(Res.string.poll_results_closes_in, timeAheadNoDot(endsAt))
                 },
             style = MaterialTheme.typography.labelMedium,
             color = tint,
@@ -357,9 +365,9 @@ private fun PollTypeChip(state: PollResultsUiState) {
         val type =
             stringRes(
                 if (state.type == PollType.MULTI_CHOICE) {
-                    R.string.poll_multiple_choice
+                    Res.string.poll_multiple_choice
                 } else {
-                    R.string.poll_single_choice
+                    Res.string.poll_single_choice
                 },
             )
 
@@ -368,7 +376,7 @@ private fun PollTypeChip(state: PollResultsUiState) {
             // chip is what explains why the bars below may sum past 100% — so it carries the count.
             text =
                 if (state.totalSelections != state.totalVoters) {
-                    type + " " + pluralStringResource(R.plurals.poll_results_selections, state.totalSelections, state.totalSelections)
+                    type + " " + pluralStringResource(Res.plurals.poll_results_selections, state.totalSelections, state.totalSelections)
                 } else {
                     type
                 },
@@ -482,7 +490,7 @@ private fun OptionBar(
                     }
                 }
                 Text(
-                    text = pluralStringResource(R.plurals.poll_results_option_count, option.voters, option.voters),
+                    text = pluralStringResource(Res.plurals.poll_results_option_count, option.voters, option.voters),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -624,10 +632,10 @@ private fun ResultsFooter(state: PollResultsUiState) {
     val notes =
         remember(state) {
             buildList {
-                if (state.lateVotes > 0) add(R.plurals.poll_results_late_votes to state.lateVotes)
-                if (state.backdatedVotes > 0) add(R.plurals.poll_results_backdated_votes to state.backdatedVotes)
-                if (state.ignoredVotes > 0) add(R.plurals.poll_results_ignored_votes to state.ignoredVotes)
-                if (state.hiddenVoters > 0) add(R.plurals.poll_results_hidden_voters to state.hiddenVoters)
+                if (state.lateVotes > 0) add(Res.plurals.poll_results_late_votes to state.lateVotes)
+                if (state.backdatedVotes > 0) add(Res.plurals.poll_results_backdated_votes to state.backdatedVotes)
+                if (state.ignoredVotes > 0) add(Res.plurals.poll_results_ignored_votes to state.ignoredVotes)
+                if (state.hiddenVoters > 0) add(Res.plurals.poll_results_hidden_voters to state.hiddenVoters)
             }
         }
 
@@ -688,9 +696,9 @@ private fun Completeness(state: PollResultsUiState) {
         text =
             stringRes(
                 if (state.reportIsApproximate) {
-                    R.string.poll_results_partial_approx
+                    Res.string.poll_results_partial_approx
                 } else {
-                    R.string.poll_results_partial
+                    Res.string.poll_results_partial
                 },
                 state.loadedResponses,
                 reported,

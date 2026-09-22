@@ -83,9 +83,19 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_media_to_gallery
 import com.vitorpamplona.amethyst.commons.resources.copy_the_note_id_to_the_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
+import com.vitorpamplona.amethyst.commons.resources.downloading_video_for_sharing
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_failed
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_info_title
+import com.vitorpamplona.amethyst.commons.resources.hash_verification_passed
 import com.vitorpamplona.amethyst.commons.resources.media_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.media_added
+import com.vitorpamplona.amethyst.commons.resources.media_added_to_profile_gallery
+import com.vitorpamplona.amethyst.commons.resources.media_download_has_started_toast
 import com.vitorpamplona.amethyst.commons.resources.share_image
 import com.vitorpamplona.amethyst.commons.resources.share_video
+import com.vitorpamplona.amethyst.commons.resources.unable_to_share_image
+import com.vitorpamplona.amethyst.commons.resources.unable_to_share_video
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -994,14 +1004,14 @@ fun ShareMediaAction(
                     }
                     if (content is MediaUrlPdf && videoUri != null && !videoUri.startsWith("file")) {
                         val appContext = LocalContext.current.applicationContext
-                        M3ActionRow(icon = MaterialSymbols.Download, text = stringRes(R.string.download_to_phone)) {
+                        M3ActionRow(icon = MaterialSymbols.Download, text = stringRes(Res.string.download_to_phone)) {
                             accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                                 saveMediaToGallery(content, appContext, accountViewModel)
                             }
                             Toast
                                 .makeText(
                                     appContext,
-                                    stringRes(appContext, R.string.media_download_has_started_toast),
+                                    stringRes(Res.string.media_download_has_started_toast),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             onDismiss()
@@ -1026,7 +1036,7 @@ fun ShareMediaAction(
                                         (content as? MediaUrlVideo)?.thumbhash
                                             ?: (content as? MediaUrlImage)?.thumbhash
                                     accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType, thumbhash = thumbhashFromContent, image = posterUrl)
-                                    accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
+                                    accountViewModel.toastManager.toast(Res.string.media_added, Res.string.media_added_to_profile_gallery)
                                 }
                             }
                             onDismiss()
@@ -1061,7 +1071,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        Toast.makeText(context, stringRes(context, R.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, stringRes(Res.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
                                         accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
@@ -1125,7 +1135,7 @@ private suspend fun shareImageFile(
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         Log.w("ZoomableContentView", "Failed to share image: $videoUri", e)
-        Toast.makeText(context, context.getString(R.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(Res.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -1216,7 +1226,7 @@ private suspend fun shareVideoFile(
             Toast
                 .makeText(
                     context,
-                    context.getString(R.string.unable_to_share_video),
+                    context.getString(Res.string.unable_to_share_video),
                     Toast.LENGTH_SHORT,
                 ).show()
             onError()
@@ -1255,7 +1265,7 @@ private suspend fun shareLocalVideoFile(
         Toast
             .makeText(
                 context,
-                context.getString(R.string.unable_to_share_video),
+                context.getString(Res.string.unable_to_share_video),
                 Toast.LENGTH_SHORT,
             ).show()
     }
@@ -1285,7 +1295,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
 
     openDialogMsg.value?.let {
         InformationDialog(
-            title = stringRes(localContext, R.string.hash_verification_info_title),
+            title = stringRes(Res.string.hash_verification_info_title),
             textContent = it,
         ) {
             openDialogMsg.value = null
@@ -1296,12 +1306,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
+                openDialogMsg.value = stringRes(Res.string.hash_verification_passed)
             },
         ) {
             Icon(
                 painter = painterRes(R.drawable.original, 1),
-                contentDescription = stringRes(id = R.string.hash_verification_passed),
+                contentDescription = stringRes(id = Res.string.hash_verification_passed),
                 modifier = Size30Modifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -1310,12 +1320,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
+                openDialogMsg.value = stringRes(Res.string.hash_verification_failed)
             },
         ) {
             Icon(
                 symbol = MaterialSymbols.Report,
-                contentDescription = stringRes(id = R.string.hash_verification_failed),
+                contentDescription = stringRes(id = Res.string.hash_verification_failed),
                 modifier = Size30Modifier,
                 tint = MaterialTheme.colorScheme.error,
             )

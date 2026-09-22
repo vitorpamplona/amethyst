@@ -36,8 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAgo
@@ -95,7 +96,7 @@ fun ToggleableTimeAgoText(
 ) {
     val context = LocalContext.current
     val nowState = LocalNowSeconds.current
-    val nowStr = stringRes(id = R.string.now)
+    val nowStr = stringRes(id = Res.string.now)
     val interactionSource = remember { MutableInteractionSource() }
     var showAbsolute by remember(timestamp) { mutableStateOf(false) }
 
@@ -113,8 +114,8 @@ fun ToggleableTimeAgoText(
                     // toggled to absolute doesn't recompose on every 30-second tick.
                     nowState.value
                     when (style) {
-                        TimeAgoStyle.Dotted -> timeAgo(timestamp, context)
-                        TimeAgoStyle.DottedTight -> timeAgo(timestamp, context).trimStart()
+                        TimeAgoStyle.Dotted -> timeAgo(timestamp)
+                        TimeAgoStyle.DottedTight -> timeAgo(timestamp).trimStart()
                         TimeAgoStyle.Short -> timeAgoShort(timestamp, nowStr)
                     }
                 }

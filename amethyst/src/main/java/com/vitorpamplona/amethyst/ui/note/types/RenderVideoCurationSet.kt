@@ -44,8 +44,10 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_curation_set_private_items
+import com.vitorpamplona.amethyst.commons.resources.video_curation_set_video_count
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -135,9 +137,9 @@ fun RenderVideoCurationSet(
         Text(
             text =
                 if (membersAreHidden) {
-                    stringRes(R.string.video_curation_set_private_items)
+                    stringRes(Res.string.video_curation_set_private_items)
                 } else {
-                    pluralStringResource(R.plurals.video_curation_set_video_count, items.size, items.size)
+                    pluralStringResource(Res.plurals.video_curation_set_video_count, items.size, items.size)
                 },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

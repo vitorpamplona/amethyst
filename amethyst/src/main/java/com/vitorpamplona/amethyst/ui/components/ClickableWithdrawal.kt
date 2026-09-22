@@ -30,7 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_error
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -72,7 +73,7 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringRes(context, R.string.error_dialog_pay_withdraw_error),
+            title = stringRes(Res.string.error_dialog_pay_withdraw_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )

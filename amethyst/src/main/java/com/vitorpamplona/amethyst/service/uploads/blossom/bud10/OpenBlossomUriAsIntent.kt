@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 import android.content.Context
 import android.content.Intent
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_description
+import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_title
 import kotlin.coroutines.cancellation.CancellationException
 
 fun openBlossomUriAsIntent(
@@ -38,6 +40,6 @@ fun openBlossomUriAsIntent(
         context.startActivity(intent)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        onError(R.string.no_blossom_apps_found_title, R.string.no_blossom_apps_found_description)
+        onError(Res.string.no_blossom_apps_found_title, Res.string.no_blossom_apps_found_description)
     }
 }

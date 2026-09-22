@@ -56,13 +56,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.git_repo_binary_file
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
 import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
@@ -214,7 +214,7 @@ private fun CodeBar(
             onClick = {
                 scope.launch {
                     clipboard.setText(code)
-                    Toast.makeText(context, stringRes(context, R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, stringRes(Res.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
                 }
             },
         ) {

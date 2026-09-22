@@ -38,9 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
@@ -99,7 +100,7 @@ fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> 
             Icon(
                 symbol = MaterialSymbols.Share,
                 modifier = Size20Modifier,
-                contentDescription = stringRes(R.string.share_or_save),
+                contentDescription = stringRes(Res.string.share_or_save),
             )
 
             innerAction(popupExpanded) { popupExpanded.value = false }

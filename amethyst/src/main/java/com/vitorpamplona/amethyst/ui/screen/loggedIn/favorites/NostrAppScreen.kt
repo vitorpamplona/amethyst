@@ -54,13 +54,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_static
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_title
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_open
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_tor
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
+import com.vitorpamplona.amethyst.commons.resources.favorite_apps
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
@@ -239,7 +244,7 @@ private fun UnavailableTab(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.favorite_apps)) }) },
+        topBar = { TopAppBar(title = { Text(stringResource(Res.string.favorite_apps)) }) },
         bottomBar = {
             AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
@@ -276,7 +281,7 @@ private fun AccessDialog(
         }
     val networkBody =
         if (showsNetwork) {
-            "\n\n" + stringResource(if (useTor) R.string.favorite_app_network_tor else R.string.favorite_app_network_open)
+            "\n\n" + stringResource(if (useTor) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open)
         } else {
             ""
         }
@@ -292,8 +297,8 @@ private fun AccessDialog(
 
 private fun noticeResId(notice: String): Int? =
     when (notice) {
-        NappletEmbedContract.NOTICE_PUBLISHED -> R.string.favorite_notice_published
-        NappletEmbedContract.NOTICE_UPLOADED -> R.string.favorite_notice_uploaded
-        NappletEmbedContract.NOTICE_PAID -> R.string.favorite_notice_paid
+        NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
+        NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded
+        NappletEmbedContract.NOTICE_PAID -> Res.string.favorite_notice_paid
         else -> null
     }

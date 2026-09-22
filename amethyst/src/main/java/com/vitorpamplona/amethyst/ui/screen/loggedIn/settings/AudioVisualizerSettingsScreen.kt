@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_bars
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_classic
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_off
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_radial
+import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings_description
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_static
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_waves
@@ -78,7 +78,7 @@ fun AudioVisualizerSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.audio_visualizer_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.audio_visualizer_settings), nav)
         },
     ) { padding ->
         AudioVisualizerSettingsContent(accountViewModel, Modifier.padding(padding))

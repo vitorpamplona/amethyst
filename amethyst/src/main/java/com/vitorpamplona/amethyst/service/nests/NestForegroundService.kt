@@ -41,6 +41,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_broadcasting
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_channel
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_channel_description
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_listening
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_stop
+import com.vitorpamplona.amethyst.commons.resources.nest_notification_text
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
@@ -389,19 +396,19 @@ class NestForegroundService : Service() {
 
         val title =
             if (promoted) {
-                getString(R.string.nest_notification_broadcasting)
+                getString(Res.string.nest_notification_broadcasting)
             } else {
-                getString(R.string.nest_notification_listening)
+                getString(Res.string.nest_notification_listening)
             }
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText(getString(R.string.nest_notification_text))
+            .setContentText(getString(Res.string.nest_notification_text))
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .setContentIntent(openIntent)
-            .addAction(0, getString(R.string.nest_notification_stop), stopIntent)
+            .addAction(0, getString(Res.string.nest_notification_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .build()
     }
@@ -412,10 +419,10 @@ class NestForegroundService : Service() {
             mgr.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    getString(R.string.nest_notification_channel),
+                    getString(Res.string.nest_notification_channel),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = getString(R.string.nest_notification_channel_description)
+                    description = getString(Res.string.nest_notification_channel_description)
                     setShowBadge(false)
                 },
             )

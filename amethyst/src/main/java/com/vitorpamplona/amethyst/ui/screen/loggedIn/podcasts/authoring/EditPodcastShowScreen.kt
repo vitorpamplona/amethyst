@@ -49,15 +49,30 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_edit_show
+import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_author_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_categories_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_categories_placeholder
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_complete
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_copyright_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_cover_cta
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_cover_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_description_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_email_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_explicit
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_funding_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_funding_placeholder
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_language_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_language_placeholder
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_locked
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_title_label
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_episodic
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_serial
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_website_label
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -68,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.persistentListOf
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Editor for the creator's Podcasting-2.0 show metadata (`kind:30078`, `d="podcast-metadata"`).
@@ -103,7 +119,7 @@ fun EditPodcastShowScreen(
     Scaffold(
         topBar = {
             SendingTopBar(
-                titleRes = R.string.podcast_edit_show,
+                titleRes = Res.string.podcast_edit_show,
                 onCancel = { nav.popBack() },
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
@@ -123,7 +139,7 @@ fun EditPodcastShowScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isBusy) UploadInProgressBanner(R.string.podcast_publishing_banner)
+            if (isBusy) UploadInProgressBanner(Res.string.podcast_publishing_banner)
 
             CoverImagePicker(
                 cover = vm.coverMedia.value,
@@ -132,11 +148,11 @@ fun EditPodcastShowScreen(
                 onDelete = { vm.clearPickedCover() },
                 accountViewModel = accountViewModel,
                 enabled = !isBusy,
-                ctaRes = R.string.podcast_show_cover_cta,
-                hintRes = R.string.podcast_show_cover_hint,
+                ctaRes = Res.string.podcast_show_cover_cta,
+                hintRes = Res.string.podcast_show_cover_hint,
             )
 
-            Field(vm.title, R.string.podcast_show_title_label, R.string.podcast_show_title_placeholder, isError = vm.title.value.isBlank())
+            Field(vm.title, Res.string.podcast_show_title_label, Res.string.podcast_show_title_placeholder, isError = vm.title.value.isBlank())
 
             OutlinedTextField(
                 value = vm.description.value,
@@ -147,13 +163,13 @@ fun EditPodcastShowScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
 
-            Field(vm.author, R.string.podcast_show_author_label, null, capitalization = KeyboardCapitalization.Words)
-            Field(vm.email, R.string.podcast_show_email_label, null, keyboardType = KeyboardType.Email)
-            Field(vm.website, R.string.podcast_show_website_label, null, keyboardType = KeyboardType.Uri)
-            Field(vm.categories, R.string.podcast_show_categories_label, R.string.podcast_show_categories_placeholder)
-            Field(vm.funding, R.string.podcast_show_funding_label, R.string.podcast_show_funding_placeholder, keyboardType = KeyboardType.Uri)
-            Field(vm.language, R.string.podcast_show_language_label, R.string.podcast_show_language_placeholder)
-            Field(vm.copyright, R.string.podcast_show_copyright_label, null)
+            Field(vm.author, Res.string.podcast_show_author_label, null, capitalization = KeyboardCapitalization.Words)
+            Field(vm.email, Res.string.podcast_show_email_label, null, keyboardType = KeyboardType.Email)
+            Field(vm.website, Res.string.podcast_show_website_label, null, keyboardType = KeyboardType.Uri)
+            Field(vm.categories, Res.string.podcast_show_categories_label, Res.string.podcast_show_categories_placeholder)
+            Field(vm.funding, Res.string.podcast_show_funding_label, Res.string.podcast_show_funding_placeholder, keyboardType = KeyboardType.Uri)
+            Field(vm.language, Res.string.podcast_show_language_label, Res.string.podcast_show_language_placeholder)
+            Field(vm.copyright, Res.string.podcast_show_copyright_label, null)
 
             // Episodic vs serial.
             Text(
@@ -186,7 +202,7 @@ fun EditPodcastShowScreen(
 @Composable
 private fun Field(
     state: androidx.compose.runtime.MutableState<String>,
-    labelRes: Int,
+    labelRes: StringResource,
     placeholderRes: Int?,
     isError: Boolean = false,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,

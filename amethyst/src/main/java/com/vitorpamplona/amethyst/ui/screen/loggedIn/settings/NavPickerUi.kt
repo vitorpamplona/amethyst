@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size6dp
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The shared visual language of the navigation-configuration screens — the Bottom Navigation Bar
@@ -148,7 +149,7 @@ fun LeadingGlyph(icon: MaterialSymbol) {
 
 @Composable
 fun EmptyChildHint(
-    textRes: Int,
+    textRes: StringResource,
     indentLevel: Int = 1,
 ) {
     Text(

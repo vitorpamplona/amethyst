@@ -37,7 +37,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
 
 /** Counts above this render as "N+" so a very busy channel doesn't blow out the row. */
 private const val CONCORD_UNREAD_CAP = 99
@@ -54,7 +55,7 @@ fun ConcordUnreadBadge(
 ) {
     if (count <= 0) return
     val label = if (count > CONCORD_UNREAD_CAP) "$CONCORD_UNREAD_CAP+" else count.toString()
-    val description = pluralStringResource(R.plurals.concord_unread_messages, count, count)
+    val description = pluralStringResource(Res.plurals.concord_unread_messages, count, count)
     Box(
         modifier =
             modifier

@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.OtsSettings
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_api_label
 import com.vitorpamplona.amethyst.commons.resources.ots_reset_to_auto_select
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -318,7 +318,7 @@ private fun CustomExplorerInput(
                 onClick = { trySave() },
                 modifier = Modifier.padding(top = 6.dp),
             ) {
-                Text(stringRes(R.string.save))
+                Text(stringRes(Res.string.save))
             }
         }
     }

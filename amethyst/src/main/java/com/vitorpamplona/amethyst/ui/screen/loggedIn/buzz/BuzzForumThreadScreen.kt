@@ -45,13 +45,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_no_replies
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_thread_title
+import com.vitorpamplona.amethyst.commons.resources.chat_minichat_reply_count
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -191,7 +191,7 @@ private fun RepliesCountHeader(count: Int) {
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
+            text = pluralStringResource(Res.plurals.chat_minichat_reply_count, count, count),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

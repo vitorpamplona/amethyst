@@ -63,7 +63,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_capabilities
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_forget
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_op_overrides
@@ -89,6 +89,9 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_deny_always
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_allow
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_ask
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_deny
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind
 import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_ask_each_time
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
@@ -102,6 +105,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_inbox
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_own_hint
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_title
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_reconnecting
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
@@ -186,7 +191,7 @@ fun ConnectedAppDetailScreen(
     val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
         .collectAsStateWithLifecycle()
     val nip46Activity = remember(allActivity, nip46Client) { allActivity.filter { nip46Client != null && it.clientPubKey == nip46Client } }
-    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
+    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringResource(Res.string.nip46_signer_remote_app)
 
     Scaffold(
         topBar = {
@@ -382,7 +387,7 @@ private fun Nip46RelaysSection(
         if (anyOffline) {
             Nip46ReconnectPill {
                 onReconnect()
-                Toast.makeText(context, R.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, Res.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -458,7 +463,7 @@ private fun Nip46AppHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    stringResource(R.string.nip46_signer_remote_app),
+                    stringResource(Res.string.nip46_signer_remote_app),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -722,7 +727,7 @@ private fun CapabilityPermissionDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(Res.string.cancel))
             }
         },
     )
@@ -747,9 +752,9 @@ private fun GrantOption(
 private fun NostrSignerOp.opLabel(): String =
     when (this) {
         is NostrSignerOp.SignKind -> stringRes(Res.string.napplet_op_sign_kind, kind)
-        NostrSignerOp.Encrypt -> stringResource(R.string.napplet_op_encrypt)
-        NostrSignerOp.Decrypt -> stringResource(R.string.napplet_op_decrypt)
-        is NostrSignerOp.DecryptFrom -> stringResource(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
+        NostrSignerOp.Encrypt -> stringResource(Res.string.napplet_op_encrypt)
+        NostrSignerOp.Decrypt -> stringResource(Res.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> stringResource(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
 
 @Composable

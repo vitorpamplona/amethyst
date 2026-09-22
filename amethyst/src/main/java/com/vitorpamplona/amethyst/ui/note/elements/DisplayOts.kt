@@ -25,10 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ots_info_description
+import com.vitorpamplona.amethyst.commons.resources.ots_info_pending_description
+import com.vitorpamplona.amethyst.commons.resources.ots_info_title
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.ui.note.LoadOts
@@ -65,11 +67,11 @@ fun DisplayOts(
             HeaderPill(
                 symbol = MaterialSymbols.OpenTimestamps,
                 text = timeStr,
-                contentDescription = stringRes(R.string.ots_info_title),
+                contentDescription = stringRes(Res.string.ots_info_title),
                 onClick = {
                     accountViewModel.toastManager.toast(
-                        R.string.ots_info_title,
-                        R.string.ots_info_description,
+                        Res.string.ots_info_title,
+                        Res.string.ots_info_description,
                         SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
                     )
                 },
@@ -85,8 +87,8 @@ fun DisplayOts(
                 contentDescription = stringRes(Res.string.timestamp_pending_short),
                 onClick = {
                     accountViewModel.toastManager.toast(
-                        R.string.ots_info_title,
-                        R.string.ots_info_pending_description,
+                        Res.string.ots_info_title,
+                        Res.string.ots_info_pending_description,
                     )
                 },
             )

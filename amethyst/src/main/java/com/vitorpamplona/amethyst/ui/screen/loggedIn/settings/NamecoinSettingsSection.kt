@@ -69,7 +69,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_accept
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_body
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_reject
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_title
+import com.vitorpamplona.amethyst.commons.resources.namecoin_response_time
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_connection
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_results
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_success
@@ -451,7 +451,7 @@ private fun ServerTestResultRow(result: ServerTestResult) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = stringResource(R.string.namecoin_response_time, result.responseTimeMs),
+                    text = stringResource(Res.string.namecoin_response_time, result.responseTimeMs),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

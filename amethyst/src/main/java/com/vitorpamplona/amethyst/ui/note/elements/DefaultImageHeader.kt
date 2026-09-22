@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -121,7 +122,7 @@ fun BannerImage(
     if (!banner.isNullOrBlank()) {
         MyAsyncImage(
             imageUrl = banner,
-            contentDescription = stringRes(R.string.preview_card_image_for, banner),
+            contentDescription = stringRes(Res.string.preview_card_image_for, banner),
             contentScale = ContentScale.Crop,
             mainImageModifier = Modifier,
             loadedImageModifier = modifier,

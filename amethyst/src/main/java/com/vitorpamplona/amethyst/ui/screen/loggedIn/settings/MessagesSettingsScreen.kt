@@ -52,12 +52,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_type_concord_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_concord_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_ephemeral_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_ephemeral_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_geohash_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_geohash_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_marmot_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_marmot_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip04_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip04_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip17_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip17_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip28_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip28_title
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip29_desc
+import com.vitorpamplona.amethyst.commons.resources.chat_type_nip29_title
 import com.vitorpamplona.amethyst.commons.resources.concord_view_grouped
 import com.vitorpamplona.amethyst.commons.resources.concord_view_grouped_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_view_inline
@@ -65,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_view_inline_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_view_mode_title
 import com.vitorpamplona.amethyst.commons.resources.messages_load_types_desc
 import com.vitorpamplona.amethyst.commons.resources.messages_load_types_title
+import com.vitorpamplona.amethyst.commons.resources.messages_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_grouped
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_grouped_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_inline
@@ -101,14 +117,14 @@ private data class ChatFeedTypeUi(
 // Ordered by how central each type is to the inbox (private first, exotic last).
 private val CHAT_FEED_TYPES =
     listOf(
-        ChatFeedTypeUi(ChatFeedType.NIP17, R.string.chat_type_nip17_title, R.string.chat_type_nip17_desc, Color(0xFF2EBD85)),
-        ChatFeedTypeUi(ChatFeedType.NIP04, R.string.chat_type_nip04_title, R.string.chat_type_nip04_desc, Color(0xFFF6A609)),
-        ChatFeedTypeUi(ChatFeedType.NIP28, R.string.chat_type_nip28_title, R.string.chat_type_nip28_desc, Color(0xFF2E90FA)),
-        ChatFeedTypeUi(ChatFeedType.NIP29, R.string.chat_type_nip29_title, R.string.chat_type_nip29_desc, Color(0xFF9E77ED)),
-        ChatFeedTypeUi(ChatFeedType.MARMOT, R.string.chat_type_marmot_title, R.string.chat_type_marmot_desc, Color(0xFF5B6AD0)),
-        ChatFeedTypeUi(ChatFeedType.CONCORD, R.string.chat_type_concord_title, R.string.chat_type_concord_desc, Color(0xFFEC4899)),
-        ChatFeedTypeUi(ChatFeedType.GEOHASH, R.string.chat_type_geohash_title, R.string.chat_type_geohash_desc, Color(0xFFEF4444)),
-        ChatFeedTypeUi(ChatFeedType.EPHEMERAL, R.string.chat_type_ephemeral_title, R.string.chat_type_ephemeral_desc, Color(0xFF06B6D4)),
+        ChatFeedTypeUi(ChatFeedType.NIP17, Res.string.chat_type_nip17_title, Res.string.chat_type_nip17_desc, Color(0xFF2EBD85)),
+        ChatFeedTypeUi(ChatFeedType.NIP04, Res.string.chat_type_nip04_title, Res.string.chat_type_nip04_desc, Color(0xFFF6A609)),
+        ChatFeedTypeUi(ChatFeedType.NIP28, Res.string.chat_type_nip28_title, Res.string.chat_type_nip28_desc, Color(0xFF2E90FA)),
+        ChatFeedTypeUi(ChatFeedType.NIP29, Res.string.chat_type_nip29_title, Res.string.chat_type_nip29_desc, Color(0xFF9E77ED)),
+        ChatFeedTypeUi(ChatFeedType.MARMOT, Res.string.chat_type_marmot_title, Res.string.chat_type_marmot_desc, Color(0xFF5B6AD0)),
+        ChatFeedTypeUi(ChatFeedType.CONCORD, Res.string.chat_type_concord_title, Res.string.chat_type_concord_desc, Color(0xFFEC4899)),
+        ChatFeedTypeUi(ChatFeedType.GEOHASH, Res.string.chat_type_geohash_title, Res.string.chat_type_geohash_desc, Color(0xFFEF4444)),
+        ChatFeedTypeUi(ChatFeedType.EPHEMERAL, Res.string.chat_type_ephemeral_title, Res.string.chat_type_ephemeral_desc, Color(0xFF06B6D4)),
     )
 
 /**
@@ -131,7 +147,7 @@ fun MessagesSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.messages_settings), nav)
+            TopBarWithBackButton(stringRes(Res.string.messages_settings), nav)
         },
     ) { padding ->
         LazyColumn(

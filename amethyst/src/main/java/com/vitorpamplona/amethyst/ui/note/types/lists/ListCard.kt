@@ -45,7 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip51_list_has_private_members
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
+import org.jetbrains.compose.resources.StringResource
 
 /** How many members a list card shows before it asks to be expanded. Matches DisplayPeopleList. */
 private const val COLLAPSED_MEMBERS = 3
@@ -104,7 +106,7 @@ fun <T> ListCard(
     // which is what divine.video publishes — so that it reads as closed rather than as broken.
     if (hasUnreadablePrivateItems && items.isEmpty()) {
         Text(
-            text = stringRes(R.string.nip51_list_has_private_members),
+            text = stringRes(Res.string.nip51_list_has_private_members),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 2.dp),
             textAlign = TextAlign.Center,
@@ -171,7 +173,7 @@ fun Event.hidesPrivateMembers(privateItems: List<*>?): Boolean = content.isNotEm
 fun listTitle(
     explicitTitle: String?,
     dTag: String?,
-    fallback: Int,
+    fallback: StringResource,
 ): String =
     explicitTitle?.takeIf { it.isNotBlank() }
         ?: dTag?.takeIf { it.isNotBlank() }

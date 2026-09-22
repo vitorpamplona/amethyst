@@ -62,11 +62,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip82_assets_count
 import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
 import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
@@ -564,7 +564,7 @@ fun RenderSoftwareReleaseBody(
             Spacer(StdVertSpacer)
             val n = assets.size
             Text(
-                text = pluralStringResource(R.plurals.nip82_assets_count, n, n),
+                text = pluralStringResource(Res.plurals.nip82_assets_count, n, n),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

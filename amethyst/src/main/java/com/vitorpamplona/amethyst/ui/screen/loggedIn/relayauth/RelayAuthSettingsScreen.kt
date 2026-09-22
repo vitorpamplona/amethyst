@@ -68,7 +68,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
@@ -78,8 +77,14 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_ago
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_login_when
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_message_follows
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_message_strangers
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_my_relays_and_venues
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_auto_read_follows
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_blocked_row_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_blocked_section
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_exception_always
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_exception_never
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_exception_removed_undo
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_exceptions
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_forget_session
@@ -87,6 +92,12 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_global_policy
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_blocked
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_exceptions
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_no_recent
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_always
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_always_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_custom
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_custom_desc
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_never
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_policy_never_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_recent_section
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_remove_exception
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_segment_always
@@ -95,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_forgotten
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_row_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_section
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_undo_blocked
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_settings_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_undo
 import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -227,7 +239,7 @@ fun RelayAuthSettingsScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringResource(R.string.relay_auth_settings_title),
+                caption = stringResource(Res.string.relay_auth_settings_title),
                 nav = nav,
                 actions = { AccountChip(accountViewModel) },
             )
@@ -254,11 +266,11 @@ fun RelayAuthSettingsScreen(
                                 val (titleRes, descRes) =
                                     when (policy) {
                                         RelayAuthPolicy.ALWAYS ->
-                                            R.string.relay_auth_policy_always to R.string.relay_auth_policy_always_desc
+                                            Res.string.relay_auth_policy_always to Res.string.relay_auth_policy_always_desc
                                         RelayAuthPolicy.NEVER ->
-                                            R.string.relay_auth_policy_never to R.string.relay_auth_policy_never_desc
+                                            Res.string.relay_auth_policy_never to Res.string.relay_auth_policy_never_desc
                                         RelayAuthPolicy.CUSTOM ->
-                                            R.string.relay_auth_policy_custom to R.string.relay_auth_policy_custom_desc
+                                            Res.string.relay_auth_policy_custom to Res.string.relay_auth_policy_custom_desc
                                     }
                                 PolicyRow(
                                     selected = globalPolicy == policy,
@@ -290,28 +302,28 @@ fun RelayAuthSettingsScreen(
                             ) {
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Dns,
-                                    title = R.string.relay_auth_auto_my_relays_and_venues,
+                                    title = Res.string.relay_auth_auto_my_relays_and_venues,
                                     checked = myRelays,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
                                 )
                                 SettingsDivider()
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Download,
-                                    title = R.string.relay_auth_auto_read_follows,
+                                    title = Res.string.relay_auth_auto_read_follows,
                                     checked = readFollows,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
                                 )
                                 SettingsDivider()
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Mail,
-                                    title = R.string.relay_auth_auto_message_follows,
+                                    title = Res.string.relay_auth_auto_message_follows,
                                     checked = messageFollows,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
                                 )
                                 SettingsDivider()
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Public,
-                                    title = R.string.relay_auth_auto_message_strangers,
+                                    title = Res.string.relay_auth_auto_message_strangers,
                                     checked = messageStrangers,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
                                 )
@@ -543,7 +555,7 @@ private fun ExceptionRow(
             Text(
                 text =
                     stringResource(
-                        if (decision == RelayAuthDecision.ALLOW) R.string.relay_auth_exception_always else R.string.relay_auth_exception_never,
+                        if (decision == RelayAuthDecision.ALLOW) Res.string.relay_auth_exception_always else Res.string.relay_auth_exception_never,
                     ),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -654,7 +666,7 @@ private fun RecentLoginRow(
             }
             if (lastUsedSecs != null && lastUsedSecs > 0L) {
                 Text(
-                    text = stringRes(Res.string.relay_auth_ago, timeAgo(lastUsedSecs, context, prefix = "")),
+                    text = stringRes(Res.string.relay_auth_ago, timeAgo(lastUsedSecs, prefix = "")),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),

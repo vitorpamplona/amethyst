@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 @Stable
 class ToastManager {
@@ -50,14 +51,14 @@ class ToastManager {
     }
 
     fun toast(
-        titleResId: Int,
-        resourceId: Int,
+        titleResId: StringResource,
+        resourceId: StringResource,
     ) {
         toasts.tryEmit(ResourceToastMsg(titleResId, resourceId))
     }
 
     fun toast(
-        titleResId: Int,
+        titleResId: StringResource,
         message: String?,
         throwable: Throwable,
     ) {
@@ -65,23 +66,23 @@ class ToastManager {
     }
 
     fun toast(
-        titleResId: Int,
-        description: Int,
+        titleResId: StringResource,
+        description: StringResource,
         throwable: Throwable,
     ) {
         toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
     }
 
     fun toast(
-        titleResId: Int,
-        resourceId: Int,
+        titleResId: StringResource,
+        resourceId: StringResource,
         vararg params: String,
     ) {
         toasts.tryEmit(ResourceToastMsg(titleResId, resourceId, params))
     }
 
     fun toast(
-        titleResId: Int,
+        titleResId: StringResource,
         message: String,
         user: User?,
     ) {
@@ -94,7 +95,7 @@ class ToastManager {
     }
 
     fun toast(
-        titleResId: Int,
+        titleResId: StringResource,
         data: UserBasedErrorMessage,
     ) {
         val current = toasts.value

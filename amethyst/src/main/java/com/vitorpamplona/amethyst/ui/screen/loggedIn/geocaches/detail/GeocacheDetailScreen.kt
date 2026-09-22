@@ -68,11 +68,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_to_hunt
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived_notice
@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_navigate
 import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
+import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpoilerHint
@@ -153,12 +154,12 @@ fun GeocacheDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.route_geocache_detail)) },
+                title = { Text(stringRes(Res.string.route_geocache_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )

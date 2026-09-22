@@ -80,7 +80,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -89,15 +88,26 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_background_hint
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_cancel
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_button
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_declined
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_hint
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_invalid
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_label
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_no_relays
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_count
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_named
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_ok
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_copied
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_copy
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_explainer
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_hero_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_live
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_manage_apps
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_paste_link
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_readonly
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_regenerate
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_regenerated
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_relays_all_live
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_relays_some_down
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_button
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_message
@@ -105,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_rotate_confirm_
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_caption
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_connect
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_status_no_relays
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_turn_on
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
@@ -178,7 +189,7 @@ fun Nip46SignerScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(R.string.nip46_signer_title), nav) },
+        topBar = { TopBarWithBackButton(stringResource(Res.string.nip46_signer_title), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -211,7 +222,7 @@ fun Nip46SignerScreen(
                         uri = uri,
                         onCopy = {
                             scope.launch { clipboard.setText(uri) }
-                            Toast.makeText(context, R.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, Res.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
                         },
                         onRegenerate = { confirmRotate = true },
                     )
@@ -253,7 +264,7 @@ fun Nip46SignerScreen(
             onConfirm = {
                 confirmRotate = false
                 signer.rotateAddress()
-                Toast.makeText(context, R.string.nip46_signer_regenerated, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, Res.string.nip46_signer_regenerated, Toast.LENGTH_SHORT).show()
             },
             onDismiss = { confirmRotate = false },
         )
@@ -366,11 +377,11 @@ private fun LiveStatusCard(
                     if (liveRelayCount < relayCount) {
                         stringRes(Res.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
                     } else {
-                        pluralStringResource(R.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
+                        pluralStringResource(Res.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
                     }
                 Text(
                     buildString {
-                        append(pluralStringResource(R.plurals.nip46_signer_connected_count, connectedCount, connectedCount))
+                        append(pluralStringResource(Res.plurals.nip46_signer_connected_count, connectedCount, connectedCount))
                         append(" · ")
                         append(relayStatus)
                     },
@@ -540,7 +551,7 @@ private fun ConnectedAppsRow(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    pluralStringResource(R.plurals.nip46_signer_connected_count, count, count),
+                    pluralStringResource(Res.plurals.nip46_signer_connected_count, count, count),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -597,7 +608,7 @@ private fun ReadOnlyNotice() {
         ) {
             Icon(MaterialSymbols.Key, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
             Text(
-                stringResource(R.string.nip46_signer_readonly),
+                stringResource(Res.string.nip46_signer_readonly),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -611,11 +622,11 @@ private fun describe(
 ): String =
     when (result) {
         is Nip46SignerState.ConnectResult.Connected ->
-            result.name?.let { context.getString(R.string.nip46_signer_connected_named, it) }
-                ?: context.getString(R.string.nip46_signer_connected_ok)
-        Nip46SignerState.ConnectResult.InvalidUri -> context.getString(R.string.nip46_signer_connect_invalid)
-        Nip46SignerState.ConnectResult.NoRelays -> context.getString(R.string.nip46_signer_connect_no_relays)
-        Nip46SignerState.ConnectResult.NotWriteable -> context.getString(R.string.nip46_signer_readonly)
-        Nip46SignerState.ConnectResult.Declined -> context.getString(R.string.nip46_signer_connect_declined)
-        is Nip46SignerState.ConnectResult.Failed -> context.getString(R.string.nip46_signer_connect_failed, result.reason)
+            result.name?.let { context.getString(Res.string.nip46_signer_connected_named, it) }
+                ?: context.getString(Res.string.nip46_signer_connected_ok)
+        Nip46SignerState.ConnectResult.InvalidUri -> context.getString(Res.string.nip46_signer_connect_invalid)
+        Nip46SignerState.ConnectResult.NoRelays -> context.getString(Res.string.nip46_signer_connect_no_relays)
+        Nip46SignerState.ConnectResult.NotWriteable -> context.getString(Res.string.nip46_signer_readonly)
+        Nip46SignerState.ConnectResult.Declined -> context.getString(Res.string.nip46_signer_connect_declined)
+        is Nip46SignerState.ConnectResult.Failed -> context.getString(Res.string.nip46_signer_connect_failed, result.reason)
     }

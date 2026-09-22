@@ -26,8 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_article_curation_set
+import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_list
+import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_set
+import com.vitorpamplona.amethyst.commons.resources.kind_picture_curation_set
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
@@ -52,7 +56,7 @@ fun RenderBookmarkList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
 
     BookmarkCard(
-        title = listTitle(noteEvent.title(), null, R.string.kind_bookmark_list),
+        title = listTitle(noteEvent.title(), null, Res.string.kind_bookmark_list),
         description = null,
         public = public,
         private = private,
@@ -83,7 +87,7 @@ fun RenderOldBookmarkList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
 
     BookmarkCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_bookmark_list),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_bookmark_list),
         description = null,
         public = public,
         private = private,
@@ -110,7 +114,7 @@ fun RenderLabeledBookmarkList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }
 
     BookmarkCard(
-        title = listTitle(noteEvent.titleOrName(), noteEvent.dTag(), R.string.kind_bookmark_set),
+        title = listTitle(noteEvent.titleOrName(), noteEvent.dTag(), Res.string.kind_bookmark_set),
         description = noteEvent.description(),
         public = public,
         private = private,
@@ -137,7 +141,7 @@ fun RenderArticleCurationSet(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateItems(it) }
 
     BookmarkCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_article_curation_set),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_article_curation_set),
         description = noteEvent.description(),
         public = public,
         private = private,
@@ -164,7 +168,7 @@ fun RenderPictureCurationSet(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateItems(it) }
 
     BookmarkCard(
-        title = listTitle(noteEvent.title(), noteEvent.dTag(), R.string.kind_picture_curation_set),
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_picture_curation_set),
         description = noteEvent.description(),
         public = public,
         private = private,

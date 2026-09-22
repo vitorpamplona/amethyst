@@ -75,7 +75,7 @@ fun PodcastTrailerListItem(
         }
 
     val context = LocalContext.current
-    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, context, prefix = "") }
+    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, prefix = "") }
 
     Column(
         modifier =

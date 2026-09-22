@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.model.Account
@@ -179,14 +181,14 @@ class AccountNappletGateways(
         val channel =
             NotificationChannelCompat
                 .Builder(NOTIFY_CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName(context.getString(R.string.napplet_cap_notify))
+                .setName(context.getString(Res.string.napplet_cap_notify))
                 .build()
         manager.createNotificationChannel(channel)
         val notification =
             NotificationCompat
                 .Builder(context, NOTIFY_CHANNEL_ID)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(title.ifBlank { context.getString(R.string.napplet_cap_notify) })
+                .setContentTitle(title.ifBlank { context.getString(Res.string.napplet_cap_notify) })
                 .setContentText(body)
                 .setAutoCancel(true)
                 .build()

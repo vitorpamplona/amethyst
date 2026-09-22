@@ -59,6 +59,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -81,13 +82,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.app_name
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer
+import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer_with_error
 import com.vitorpamplona.amethyst.commons.resources.new_amount_in_sats
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts_explainer
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.zap_payto_section
+import com.vitorpamplona.amethyst.commons.resources.zap_payto_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.zap_payto_toggle
 import com.vitorpamplona.amethyst.commons.resources.zap_privacy_section
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
@@ -300,7 +309,7 @@ fun UpdateZapAmountContent(
                     ) {
                         Icon(
                             symbol = MaterialSymbols.AddCircle,
-                            contentDescription = stringRes(R.string.add),
+                            contentDescription = stringRes(Res.string.add),
                             modifier = Size20Modifier,
                         )
                     }
@@ -346,13 +355,13 @@ fun UpdateZapAmountContent(
         // ── Section 3: Pay-to hand-off ───────────────────────────────────────
 
         Text(
-            text = stringRes(R.string.zap_payto_section),
+            text = stringRes(Res.string.zap_payto_section),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
             modifier = SettingsCategorySpacingModifier,
         )
         Text(
-            text = stringRes(R.string.zap_payto_section_explainer),
+            text = stringRes(Res.string.zap_payto_section_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -366,7 +375,7 @@ fun UpdateZapAmountContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringRes(R.string.zap_payto_toggle),
+                text = stringRes(Res.string.zap_payto_toggle),
                 modifier = Modifier.weight(1f),
             )
             Switch(
@@ -431,7 +440,7 @@ private fun ZapAmountPresetChip(
             IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.remove),
+                    contentDescription = stringRes(Res.string.remove),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -440,9 +449,33 @@ private fun ZapAmountPresetChip(
     }
 }
 
+/**
+ * Labels the device-credential and biometric prompts need. Resolved in
+ * composition and passed down because [authenticate] runs from an onClick
+ * lambda and from Android's own biometric callbacks, neither of which can
+ * reach a Compose resource.
+ */
+@Immutable
+data class AuthPromptLabels(
+    val appName: String,
+    val failedTitle: String,
+    val failedExplainer: String,
+    val failedExplainerWithError: String,
+)
+
+@Composable
+fun rememberAuthPromptLabels(): AuthPromptLabels =
+    AuthPromptLabels(
+        appName = stringRes(Res.string.app_name),
+        failedTitle = stringRes(Res.string.biometric_authentication_failed),
+        failedExplainer = stringRes(Res.string.biometric_authentication_failed_explainer),
+        failedExplainerWithError = stringRes(Res.string.biometric_authentication_failed_explainer_with_error),
+    )
+
 fun authenticate(
     title: String,
     context: Context,
+    labels: AuthPromptLabels,
     keyguardLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
     onApproved: () -> Unit,
     onError: (String, String) -> Unit,
@@ -460,7 +493,7 @@ fun authenticate(
     fun keyguardPrompt() {
         val intent =
             keyguardManager.createConfirmDeviceCredentialIntent(
-                stringRes(context, R.string.app_name),
+                labels.appName,
                 title,
             )
 
@@ -480,7 +513,7 @@ fun authenticate(
     val promptInfo =
         BiometricPrompt.PromptInfo
             .Builder()
-            .setTitle(stringRes(context, R.string.app_name))
+            .setTitle(labels.appName)
             .setSubtitle(title)
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -506,12 +539,8 @@ fun authenticate(
 
                         else -> {
                             onError(
-                                stringRes(context, R.string.biometric_authentication_failed),
-                                stringRes(
-                                    context,
-                                    R.string.biometric_authentication_failed_explainer_with_error,
-                                    errString.toString(),
-                                ),
+                                labels.failedTitle,
+                                labels.failedExplainerWithError.format(errString.toString()),
                             )
                         }
                     }
@@ -519,10 +548,7 @@ fun authenticate(
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    onError(
-                        stringRes(context, R.string.biometric_authentication_failed),
-                        stringRes(context, R.string.biometric_authentication_failed_explainer),
-                    )
+                    onError(labels.failedTitle, labels.failedExplainer)
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {

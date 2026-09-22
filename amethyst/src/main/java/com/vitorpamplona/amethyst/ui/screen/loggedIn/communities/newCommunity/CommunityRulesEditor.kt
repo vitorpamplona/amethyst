@@ -47,28 +47,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_add
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_hint
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_placeholder
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_banned_section
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_hint
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_add
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_comment
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_custom_label
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_long_form
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_picture
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_short_text
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_short_video
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kind_video
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kinds_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_kinds_section
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_max_bytes
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_max_per_day
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_save
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_title
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_limits_unlimited
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_max_event_size_hint
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_max_event_size_section
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_add
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_depth
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_hint
 import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_root
+import com.vitorpamplona.amethyst.commons.resources.new_community_rules_wot_section
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -119,18 +130,18 @@ private data class KnownKind(
 
 private val KNOWN_KINDS =
     listOf(
-        KnownKind(1, R.string.new_community_rules_kind_short_text),
-        KnownKind(20, R.string.new_community_rules_kind_picture),
-        KnownKind(21, R.string.new_community_rules_kind_video),
-        KnownKind(22, R.string.new_community_rules_kind_short_video),
-        KnownKind(1111, R.string.new_community_rules_kind_comment),
-        KnownKind(30023, R.string.new_community_rules_kind_long_form),
+        KnownKind(1, Res.string.new_community_rules_kind_short_text),
+        KnownKind(20, Res.string.new_community_rules_kind_picture),
+        KnownKind(21, Res.string.new_community_rules_kind_video),
+        KnownKind(22, Res.string.new_community_rules_kind_short_video),
+        KnownKind(1111, Res.string.new_community_rules_kind_comment),
+        KnownKind(30023, Res.string.new_community_rules_kind_long_form),
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AllowedKindsBlock(model: NewCommunityModel) {
-    SectionLabel(R.string.new_community_rules_kinds_section)
+    SectionLabel(Res.string.new_community_rules_kinds_section)
 
     Text(
         text = stringRes(Res.string.new_community_rules_kinds_hint),
@@ -191,7 +202,7 @@ private fun AllowedKindsBlock(model: NewCommunityModel) {
                         IconButton(onClick = { model.removeKindRule(rule.kind) }) {
                             Icon(
                                 symbol = MaterialSymbols.Close,
-                                contentDescription = stringRes(R.string.remove),
+                                contentDescription = stringRes(Res.string.remove),
                             )
                         }
                     },
@@ -303,7 +314,7 @@ private fun KindRuleLimitsDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -317,7 +328,7 @@ private fun BannedUsersBlock(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    SectionLabel(R.string.new_community_rules_banned_section)
+    SectionLabel(Res.string.new_community_rules_banned_section)
 
     Text(
         text = stringRes(Res.string.new_community_rules_banned_hint),
@@ -410,7 +421,7 @@ private fun BannedPubkeyRow(
             if (user != null) Nip05OrPubkeyLine(user)
         }
         IconButton(onClick = onRemove) {
-            Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.remove))
+            Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove))
         }
     }
 }
@@ -421,7 +432,7 @@ private fun shortenHex(hex: String): String = if (hex.length <= 16) hex else hex
 
 @Composable
 private fun WotGateBlock(model: NewCommunityModel) {
-    SectionLabel(R.string.new_community_rules_wot_section)
+    SectionLabel(Res.string.new_community_rules_wot_section)
 
     Text(
         text = stringRes(Res.string.new_community_rules_wot_hint),
@@ -441,7 +452,7 @@ private fun WotGateBlock(model: NewCommunityModel) {
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { model.removeWotGate(gate) }) {
-                    Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.remove))
+                    Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.remove))
                 }
             }
         }
@@ -506,7 +517,7 @@ internal fun parsePubkeyToHex(input: String): HexKey? {
 
 @Composable
 private fun MaxEventSizeField(model: NewCommunityModel) {
-    SectionLabel(R.string.new_community_rules_max_event_size_section)
+    SectionLabel(Res.string.new_community_rules_max_event_size_section)
 
     Text(
         text = stringRes(Res.string.new_community_rules_max_event_size_hint),

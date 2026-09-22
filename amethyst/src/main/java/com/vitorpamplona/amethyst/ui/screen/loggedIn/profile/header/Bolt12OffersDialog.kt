@@ -51,12 +51,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.bolt12_pay_with_wallet
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -85,7 +87,7 @@ fun Bolt12OffersDialog(
     var nwcPayOffer by remember { mutableStateOf<String?>(null) }
 
     M3ActionDialog(
-        title = stringRes(R.string.bolt12_offers),
+        title = stringRes(Res.string.bolt12_offers),
         onDismiss = onDismiss,
     ) {
         M3ActionSection {
@@ -99,7 +101,7 @@ fun Bolt12OffersDialog(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.copied_to_clipboard),
+                                    stringRes(Res.string.copied_to_clipboard),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }
@@ -160,7 +162,7 @@ private fun Bolt12OfferRow(
         IconButton(onClick = onCopy) {
             Icon(
                 symbol = MaterialSymbols.ContentCopy,
-                contentDescription = stringRes(R.string.copy_to_clipboard),
+                contentDescription = stringRes(Res.string.copy_to_clipboard),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -178,7 +180,7 @@ private fun Bolt12OfferRow(
         IconButton(onClick = onPayViaIntent) {
             Icon(
                 symbol = MaterialSymbols.Bolt,
-                contentDescription = stringRes(R.string.bolt12_offers),
+                contentDescription = stringRes(Res.string.bolt12_offers),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

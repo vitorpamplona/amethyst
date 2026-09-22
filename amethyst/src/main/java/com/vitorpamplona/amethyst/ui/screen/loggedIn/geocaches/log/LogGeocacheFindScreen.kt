@@ -67,10 +67,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_add_photo
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_cache_label
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_mission_answer
@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_scan_again
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_scan_code
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_your_log
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.resources.route_log_geocache_find
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -144,12 +145,12 @@ fun LogGeocacheFindScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.route_log_geocache_find)) },
+                title = { Text(stringRes(Res.string.route_log_geocache_find)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )

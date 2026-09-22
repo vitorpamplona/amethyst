@@ -74,7 +74,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -117,6 +116,11 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_descr
 import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_icon_url
 import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_name
 import com.vitorpamplona.amethyst.commons.resources.relay_management_remove
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_events
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_ips
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
@@ -378,11 +382,11 @@ private fun RelayManagementContent(
 private enum class ManagementTab(
     val titleRes: Int,
 ) {
-    PUBKEYS(R.string.relay_management_tab_pubkeys),
-    EVENTS(R.string.relay_management_tab_events),
-    KINDS(R.string.relay_management_tab_kinds),
-    IPS(R.string.relay_management_tab_ips),
-    SETTINGS(R.string.relay_management_tab_settings),
+    PUBKEYS(Res.string.relay_management_tab_pubkeys),
+    EVENTS(Res.string.relay_management_tab_events),
+    KINDS(Res.string.relay_management_tab_kinds),
+    IPS(Res.string.relay_management_tab_ips),
+    SETTINGS(Res.string.relay_management_tab_settings),
 }
 
 // Pubkeys Tab

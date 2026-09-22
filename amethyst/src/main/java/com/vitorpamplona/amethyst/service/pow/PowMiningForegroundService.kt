@@ -23,12 +23,19 @@ package com.vitorpamplona.amethyst.service.pow
 import android.content.Context
 import android.content.pm.ServiceInfo
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_job
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_progress
+import com.vitorpamplona.amethyst.commons.resources.pow_mining_title
+import com.vitorpamplona.amethyst.commons.resources.pow_notification_cancel_all
+import com.vitorpamplona.amethyst.commons.resources.pow_notification_channel_description
+import com.vitorpamplona.amethyst.commons.resources.pow_notification_channel_name
+import com.vitorpamplona.amethyst.commons.resources.pow_notification_send_without_pow
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
@@ -51,13 +58,13 @@ import kotlinx.coroutines.launch
 class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<PoWJobState>>() {
     override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
     override val channelId = CHANNEL_ID
-    override val channelNameRes = R.string.pow_notification_channel_name
-    override val channelDescRes = R.string.pow_notification_channel_description
+    override val channelNameRes = Res.string.pow_notification_channel_name
+    override val channelDescRes = Res.string.pow_notification_channel_description
     override val notificationId = NOTIFICATION_ID
     override val cancelAction = ACTION_CANCEL_ALL
-    override val cancelLabelRes = R.string.pow_notification_cancel_all
+    override val cancelLabelRes = Res.string.pow_notification_cancel_all
     override val secondaryAction = ACTION_SEND_ALL_NOW
-    override val secondaryLabelRes = R.string.pow_notification_send_without_pow
+    override val secondaryLabelRes = Res.string.pow_notification_send_without_pow
 
     // clock-driven refresh for the time-left text and bar; the shortService budget (~3 min)
     // caps this at a handful of updates.
@@ -101,7 +108,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         lastQueueSize = value.size
     }
 
-    override fun render(value: ImmutableList<PoWJobState>): Content {
+    override suspend fun render(value: ImmutableList<PoWJobState>): Content {
         val done = (sessionTotal - value.size).coerceAtLeast(0)
         val total = (done + value.size).coerceAtLeast(1)
 
@@ -116,11 +123,11 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
 
         val base =
             current?.let {
-                pluralStringRes(this, R.plurals.pow_mining_job, it.difficulty, stringRes(this, powKindLabelRes(it.kind)), it.difficulty)
-            } ?: stringRes(this, R.string.pow_mining_title)
+                loadPluralStringRes(Res.plurals.pow_mining_job, it.difficulty, loadStringRes(powKindLabelRes(it.kind)), it.difficulty)
+            } ?: loadStringRes(Res.string.pow_mining_title)
         val text =
             if (expectedSec != null && elapsedSec != null) {
-                "$base • ${formatTimeLeft(this, expectedSec, elapsedSec)}"
+                "$base • ${loadTimeLeft(expectedSec, elapsedSec)}"
             } else {
                 base
             }
@@ -129,9 +136,9 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
 
         val title =
             if (value.size > 1) {
-                pluralStringRes(this, R.plurals.pow_mining_progress, value.size, value.size)
+                loadPluralStringRes(Res.plurals.pow_mining_progress, value.size, value.size)
             } else {
-                stringRes(this, R.string.pow_mining_title)
+                loadStringRes(Res.string.pow_mining_title)
             }
 
         val bar =

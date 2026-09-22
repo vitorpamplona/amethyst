@@ -28,7 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
@@ -62,7 +63,7 @@ fun UpdateZapAmountScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.zaps,
+                titleRes = Res.string.zaps,
                 isActive = postViewModel::hasChanged,
                 onCancel = {
                     postViewModel.cancel()

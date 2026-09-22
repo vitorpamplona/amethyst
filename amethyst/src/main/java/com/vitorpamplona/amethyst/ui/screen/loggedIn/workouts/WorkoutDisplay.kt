@@ -45,13 +45,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.exercise_amrap
+import com.vitorpamplona.amethyst.commons.resources.exercise_circuit
+import com.vitorpamplona.amethyst.commons.resources.exercise_cycling
+import com.vitorpamplona.amethyst.commons.resources.exercise_diet
+import com.vitorpamplona.amethyst.commons.resources.exercise_emom
+import com.vitorpamplona.amethyst.commons.resources.exercise_fasting
+import com.vitorpamplona.amethyst.commons.resources.exercise_hiking
+import com.vitorpamplona.amethyst.commons.resources.exercise_meditation
+import com.vitorpamplona.amethyst.commons.resources.exercise_rowing
+import com.vitorpamplona.amethyst.commons.resources.exercise_running
+import com.vitorpamplona.amethyst.commons.resources.exercise_strength
+import com.vitorpamplona.amethyst.commons.resources.exercise_swimming
+import com.vitorpamplona.amethyst.commons.resources.exercise_walking
+import com.vitorpamplona.amethyst.commons.resources.exercise_yoga
 import com.vitorpamplona.amethyst.commons.resources.workout
 import com.vitorpamplona.amethyst.commons.resources.workout_calories
 import com.vitorpamplona.amethyst.commons.resources.workout_distance
@@ -109,20 +122,20 @@ fun ExerciseType?.symbol(): MaterialSymbol =
 
 fun ExerciseType.labelRes(): Int =
     when (this) {
-        ExerciseType.RUNNING -> R.string.exercise_running
-        ExerciseType.WALKING -> R.string.exercise_walking
-        ExerciseType.CYCLING -> R.string.exercise_cycling
-        ExerciseType.HIKING -> R.string.exercise_hiking
-        ExerciseType.SWIMMING -> R.string.exercise_swimming
-        ExerciseType.ROWING -> R.string.exercise_rowing
-        ExerciseType.STRENGTH -> R.string.exercise_strength
-        ExerciseType.YOGA -> R.string.exercise_yoga
-        ExerciseType.MEDITATION -> R.string.exercise_meditation
-        ExerciseType.DIET -> R.string.exercise_diet
-        ExerciseType.FASTING -> R.string.exercise_fasting
-        ExerciseType.CIRCUIT -> R.string.exercise_circuit
-        ExerciseType.EMOM -> R.string.exercise_emom
-        ExerciseType.AMRAP -> R.string.exercise_amrap
+        ExerciseType.RUNNING -> Res.string.exercise_running
+        ExerciseType.WALKING -> Res.string.exercise_walking
+        ExerciseType.CYCLING -> Res.string.exercise_cycling
+        ExerciseType.HIKING -> Res.string.exercise_hiking
+        ExerciseType.SWIMMING -> Res.string.exercise_swimming
+        ExerciseType.ROWING -> Res.string.exercise_rowing
+        ExerciseType.STRENGTH -> Res.string.exercise_strength
+        ExerciseType.YOGA -> Res.string.exercise_yoga
+        ExerciseType.MEDITATION -> Res.string.exercise_meditation
+        ExerciseType.DIET -> Res.string.exercise_diet
+        ExerciseType.FASTING -> Res.string.exercise_fasting
+        ExerciseType.CIRCUIT -> Res.string.exercise_circuit
+        ExerciseType.EMOM -> Res.string.exercise_emom
+        ExerciseType.AMRAP -> Res.string.exercise_amrap
     }
 
 private fun Double.trimmed(): String = if (this % 1.0 == 0.0 && abs(this) < 1e15) toLong().toString() else toString()

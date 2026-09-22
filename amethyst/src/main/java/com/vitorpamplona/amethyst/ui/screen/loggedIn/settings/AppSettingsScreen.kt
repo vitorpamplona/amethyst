@@ -78,8 +78,41 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accent_color
 import com.vitorpamplona.amethyst.commons.resources.accent_color_description
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
+import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars_description
+import com.vitorpamplona.amethyst.commons.resources.automatically_load_images_gifs
+import com.vitorpamplona.amethyst.commons.resources.automatically_load_images_gifs_description
+import com.vitorpamplona.amethyst.commons.resources.automatically_play_videos
+import com.vitorpamplona.amethyst.commons.resources.automatically_play_videos_description
+import com.vitorpamplona.amethyst.commons.resources.automatically_show_profile_picture
+import com.vitorpamplona.amethyst.commons.resources.automatically_show_profile_picture_description
+import com.vitorpamplona.amethyst.commons.resources.automatically_show_url_preview
+import com.vitorpamplona.amethyst.commons.resources.automatically_show_url_preview_description
+import com.vitorpamplona.amethyst.commons.resources.autoplay_videos
+import com.vitorpamplona.amethyst.commons.resources.autoplay_videos_description
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only_short
+import com.vitorpamplona.amethyst.commons.resources.font_family
+import com.vitorpamplona.amethyst.commons.resources.font_family_description
+import com.vitorpamplona.amethyst.commons.resources.font_family_monospace_short
+import com.vitorpamplona.amethyst.commons.resources.font_family_sans_serif_short
+import com.vitorpamplona.amethyst.commons.resources.font_family_serif_short
+import com.vitorpamplona.amethyst.commons.resources.font_family_system_short
+import com.vitorpamplona.amethyst.commons.resources.font_size
+import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
+import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
+import com.vitorpamplona.amethyst.commons.resources.settings_section_general
+import com.vitorpamplona.amethyst.commons.resources.settings_section_media
+import com.vitorpamplona.amethyst.commons.resources.theme
+import com.vitorpamplona.amethyst.commons.resources.theme_description
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_complete_short
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performance_short
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified_short
+import com.vitorpamplona.amethyst.commons.resources.ui_style
+import com.vitorpamplona.amethyst.commons.resources.ui_style_description
 import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -106,6 +139,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
@@ -153,7 +187,7 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        SettingsSection(R.string.settings_section_appearance) {
+        SettingsSection(Res.string.settings_section_appearance) {
             ThemeTile(sharedPrefs)
             SettingsDivider()
             AccentColorTile(sharedPrefs)
@@ -163,7 +197,7 @@ fun SettingsScreen(
             FontSizeTile(sharedPrefs)
         }
 
-        SettingsSection(R.string.settings_section_media) {
+        SettingsSection(Res.string.settings_section_media) {
             ImagePreviewTile(sharedPrefs)
             SettingsDivider()
             VideoPlaybackTile(sharedPrefs)
@@ -175,7 +209,7 @@ fun SettingsScreen(
             ProfilePictureTile(sharedPrefs)
         }
 
-        SettingsSection(R.string.settings_section_general) {
+        SettingsSection(Res.string.settings_section_general) {
             LanguageTile(sharedPrefs)
             SettingsDivider()
             UiModeTile(sharedPrefs)
@@ -197,8 +231,8 @@ fun SettingsScreen(
 @Composable
 internal fun <T> SegmentedChoiceTile(
     icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: StringResource,
+    description: StringResource,
     options: List<T>,
     labelRes: (T) -> Int,
     selected: T,
@@ -237,8 +271,8 @@ internal fun <T> SegmentedChoiceTile(
 private fun BooleanSwitchTile(
     flow: MutableStateFlow<BooleanType>,
     icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
+    title: StringResource,
+    description: StringResource,
 ) {
     val value by flow.collectAsState()
     val checked = value == BooleanType.ALWAYS
@@ -261,8 +295,8 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
     val theme by sharedPrefs.theme.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.BrightnessMedium,
-        title = R.string.theme,
-        description = R.string.theme_description,
+        title = Res.string.theme,
+        description = Res.string.theme_description,
         options = ThemeType.entries,
         labelRes = { it.resourceId },
         selected = theme,
@@ -275,26 +309,26 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
 @StringRes
 private fun ConnectivityType.shortLabelRes(): Int =
     when (this) {
-        ConnectivityType.ALWAYS -> R.string.connectivity_type_always
-        ConnectivityType.WIFI_ONLY -> R.string.connectivity_type_unmetered_wifi_only_short
-        ConnectivityType.NEVER -> R.string.connectivity_type_never
+        ConnectivityType.ALWAYS -> Res.string.connectivity_type_always
+        ConnectivityType.WIFI_ONLY -> Res.string.connectivity_type_unmetered_wifi_only_short
+        ConnectivityType.NEVER -> Res.string.connectivity_type_never
     }
 
 @StringRes
 private fun FontFamilyType.shortLabelRes(): Int =
     when (this) {
-        FontFamilyType.SYSTEM -> R.string.font_family_system_short
-        FontFamilyType.SANS_SERIF -> R.string.font_family_sans_serif_short
-        FontFamilyType.SERIF -> R.string.font_family_serif_short
-        FontFamilyType.MONOSPACE -> R.string.font_family_monospace_short
+        FontFamilyType.SYSTEM -> Res.string.font_family_system_short
+        FontFamilyType.SANS_SERIF -> Res.string.font_family_sans_serif_short
+        FontFamilyType.SERIF -> Res.string.font_family_serif_short
+        FontFamilyType.MONOSPACE -> Res.string.font_family_monospace_short
     }
 
 @StringRes
 private fun FeatureSetType.shortLabelRes(): Int =
     when (this) {
-        FeatureSetType.COMPLETE -> R.string.ui_feature_set_type_complete_short
-        FeatureSetType.SIMPLIFIED -> R.string.ui_feature_set_type_simplified_short
-        FeatureSetType.PERFORMANCE -> R.string.ui_feature_set_type_performance_short
+        FeatureSetType.COMPLETE -> Res.string.ui_feature_set_type_complete_short
+        FeatureSetType.SIMPLIFIED -> Res.string.ui_feature_set_type_simplified_short
+        FeatureSetType.PERFORMANCE -> Res.string.ui_feature_set_type_performance_short
     }
 
 @Composable
@@ -302,8 +336,8 @@ private fun FontFamilyTile(sharedPrefs: UiSettingsFlow) {
     val fontFamily by sharedPrefs.fontFamily.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Description,
-        title = R.string.font_family,
-        description = R.string.font_family_description,
+        title = Res.string.font_family,
+        description = Res.string.font_family_description,
         options = FontFamilyType.entries,
         labelRes = { it.shortLabelRes() },
         selected = fontFamily,
@@ -318,8 +352,8 @@ private fun FontSizeTile(sharedPrefs: UiSettingsFlow) {
     val fontSize by sharedPrefs.fontSize.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.ZoomOutMap,
-        title = R.string.font_size,
-        description = R.string.font_size_description,
+        title = Res.string.font_size,
+        description = Res.string.font_size_description,
         options = FontSizeType.entries,
         labelRes = { it.resourceId },
         selected = fontSize,
@@ -335,8 +369,8 @@ private fun UiModeTile(sharedPrefs: UiSettingsFlow) {
     val featureSet by sharedPrefs.featureSet.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Tune,
-        title = R.string.ui_style,
-        description = R.string.ui_style_description,
+        title = Res.string.ui_style,
+        description = Res.string.ui_style_description,
         options = FeatureSetType.entries,
         labelRes = { it.shortLabelRes() },
         selected = featureSet,
@@ -349,8 +383,8 @@ private fun ImagePreviewTile(sharedPrefs: UiSettingsFlow) {
     val value by sharedPrefs.automaticallyShowImages.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Image,
-        title = R.string.automatically_load_images_gifs,
-        description = R.string.automatically_load_images_gifs_description,
+        title = Res.string.automatically_load_images_gifs,
+        description = Res.string.automatically_load_images_gifs_description,
         options = ConnectivityType.entries,
         labelRes = { it.shortLabelRes() },
         selected = value,
@@ -363,8 +397,8 @@ private fun VideoPlaybackTile(sharedPrefs: UiSettingsFlow) {
     val value by sharedPrefs.automaticallyStartPlayback.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Videocam,
-        title = R.string.automatically_play_videos,
-        description = R.string.automatically_play_videos_description,
+        title = Res.string.automatically_play_videos,
+        description = Res.string.automatically_play_videos_description,
         options = ConnectivityType.entries,
         labelRes = { it.shortLabelRes() },
         selected = value,
@@ -377,8 +411,8 @@ private fun UrlPreviewTile(sharedPrefs: UiSettingsFlow) {
     val value by sharedPrefs.automaticallyShowUrlPreview.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.Link,
-        title = R.string.automatically_show_url_preview,
-        description = R.string.automatically_show_url_preview_description,
+        title = Res.string.automatically_show_url_preview,
+        description = Res.string.automatically_show_url_preview_description,
         options = ConnectivityType.entries,
         labelRes = { it.shortLabelRes() },
         selected = value,
@@ -391,8 +425,8 @@ private fun ProfilePictureTile(sharedPrefs: UiSettingsFlow) {
     val value by sharedPrefs.automaticallyShowProfilePictures.collectAsState()
     SegmentedChoiceTile(
         icon = MaterialSymbols.AccountCircle,
-        title = R.string.automatically_show_profile_picture,
-        description = R.string.automatically_show_profile_picture_description,
+        title = Res.string.automatically_show_profile_picture,
+        description = Res.string.automatically_show_profile_picture_description,
         options = ConnectivityType.entries,
         labelRes = { it.shortLabelRes() },
         selected = value,
@@ -405,8 +439,8 @@ private fun AutoplayVideosTile(sharedPrefs: UiSettingsFlow) {
     BooleanSwitchTile(
         flow = sharedPrefs.automaticallyPlayVideos,
         icon = MaterialSymbols.PlayCircle,
-        title = R.string.autoplay_videos,
-        description = R.string.autoplay_videos_description,
+        title = Res.string.autoplay_videos,
+        description = Res.string.autoplay_videos_description,
     )
 }
 
@@ -415,8 +449,8 @@ private fun ImmersiveScrollingTile(sharedPrefs: UiSettingsFlow) {
     BooleanSwitchTile(
         flow = sharedPrefs.automaticallyHideNavigationBars,
         icon = MaterialSymbols.Fullscreen,
-        title = R.string.automatically_hide_nav_bars,
-        description = R.string.automatically_hide_nav_bars_description,
+        title = Res.string.automatically_hide_nav_bars,
+        description = Res.string.automatically_hide_nav_bars_description,
     )
 }
 
@@ -589,8 +623,8 @@ private fun AccentColorSwatch(
 
 @Composable
 fun SettingsRow(
-    name: Int,
-    description: Int,
+    name: StringResource,
+    description: StringResource,
     selectedItems: ImmutableList<TitleExplainer>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
@@ -608,8 +642,8 @@ fun SettingsRow(
 
 @Composable
 fun SettingsRow(
-    name: Int,
-    description: Int,
+    name: StringResource,
+    description: StringResource,
     modifier: Modifier = Modifier.fillMaxWidth(),
     content: @Composable () -> Unit,
 ) {
@@ -647,8 +681,8 @@ fun SettingsRow(
 
 @Composable
 fun SettingsRow(
-    name: Int,
-    description: Int,
+    name: StringResource,
+    description: StringResource,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

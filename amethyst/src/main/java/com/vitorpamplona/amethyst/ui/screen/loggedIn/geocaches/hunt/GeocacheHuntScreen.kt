@@ -51,15 +51,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_progress
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_start
 import com.vitorpamplona.amethyst.commons.resources.geocache_loading
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.resources.route_geocache_hunt_detail
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
@@ -114,12 +115,12 @@ fun GeocacheHuntScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.route_geocache_hunt_detail)) },
+                title = { Text(stringRes(Res.string.route_geocache_hunt_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )

@@ -57,7 +57,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.napplet_connect_block
 import com.vitorpamplona.amethyst.commons.resources.napplet_connect_button
 import com.vitorpamplona.amethyst.commons.resources.napplet_connect_how_handle
@@ -272,7 +272,7 @@ private fun SignerConnectScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.cancel))
+                        Text(stringResource(Res.string.cancel))
                     }
                     Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
                         Text(stringRes(Res.string.napplet_connect_button))

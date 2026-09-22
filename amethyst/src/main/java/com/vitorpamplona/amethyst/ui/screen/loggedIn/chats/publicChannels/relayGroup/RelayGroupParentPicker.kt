@@ -61,12 +61,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_empty
 import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_label
@@ -408,7 +408,7 @@ private fun GroupPickRow(
             val subtitle =
                 channel.summary()?.takeIf { it.isNotBlank() }
                     ?: if (memberCount > 0) {
-                        pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+                        pluralStringResource(Res.plurals.relay_group_member_count, memberCount, memberCount)
                     } else {
                         null
                     }

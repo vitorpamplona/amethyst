@@ -1,169 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">Amethyst</string>
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">This post has more than %1$d hashtag</item>
-        <item quantity="other">This post has more than %1$d hashtags</item>
-    </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d asset bundled</item>
-        <item quantity="other">%1$d assets bundled</item>
-    </plurals>
-    <plurals name="thread_collapsed_reply_count">
-        <item quantity="one">+%1$d\nreply</item>
-        <item quantity="other">+%1$d\nreplies</item>
-    </plurals>
-    <plurals name="dm_sender_reported">
-        <item quantity="one">Reported by %1$d person you follow</item>
-        <item quantity="other">Reported by %1$d people you follow</item>
-    </plurals>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="spam">Spam</string>
-    <string name="spam_description">The number of spamming events coming from this relay</string>
-    <string name="impersonation">Impersonation</string>
-    <string name="illegal_behavior">Illegal Behavior</string>
-    <string name="request_deletion">Request Deletion</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
 
 
-    <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
-    <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
-    <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">You are using a public key and public keys are read-only. Login with a Private key to be able to send zaps</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">You are using a public key and public keys are read-only. Login with a Private key to be able to follow</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">You are using a public key and public keys are read-only. Login with a Private key to be able to hide a word or sentence</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">You are using a public key and public keys are read-only. Login with a Private key to be able to show a word or sentence</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">You are using a public key and public keys are read-only. Login with a Private key to be able to upload</string>
 
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">You are using a public key and public keys are read-only. Login with a Private key to be able to sign for events</string>
 
-    <string name="unauthorized_exception">Unauthorized Decryption</string>
-    <string name="unauthorized_exception_description">The signer did not authorize a decryption that is required to make this operation. Activate NIP-44 decryptions in your signer app and try again</string>
 
-    <string name="signer_not_found_exception">Signer not found</string>
-    <string name="signer_not_found_exception_description">Was the Signer app uninstalled? Check if the signer is installed and has this account. Log off and Log in again of the signer app has changed.</string>
-    <string name="signer_illegal_state_exception_description">External signer returned a payload that is strange for the request. There might be a bug on either Amethyst or the Signer.</string>
 
-    <string name="zaps">Zaps</string>
-    <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="edited_number">edit #%1$s</string>
-    <string name="propose_an_edit">Propose an Edit</string>
-    <string name="add">Add</string>
-    <string name="error_parsing_error_message">Error parsing error message</string>
-
-    <string name="profile">Profile</string>
-    <string name="security_filters">Security Filters</string>
-    <string name="show_less">Show Less</string>
-    <string name="clink_requesting_invoice">Requesting invoice…</string>
-    <string name="clink_debit_no_response">The debit service did not complete the payment.</string>
-    <string name="clink_confirm_pay_amount_via_source">Pay %1$s via %2$s?</string>
-    <string name="clink_confirm_pay_via_source">Pay this invoice via %1$s?</string>
-    <string name="clink_offer_invalid_amount">Enter a valid amount for this offer.</string>
-    <string name="clink_budget_one_time">One-time</string>
-    <string name="clink_budget_daily">Daily</string>
-    <string name="clink_budget_weekly">Weekly</string>
-    <string name="clink_budget_monthly">Monthly</string>
-    <string name="pay">Pay</string>
-
-    <string name="send_payment_paying_via">Paying via %1$s…</string>
-    <string name="send_payment_failed">Payment failed</string>
-    <string name="send_payment_cashu_balance">Spendable for this recipient: %1$s sats</string>
-    <string name="send_payment_onchain_txid">Transaction: %1$s</string>
 
 
 
-    <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
-    <string name="description">Description</string>
-    <string name="what_s_on_your_mind">What\'s on your mind?</string>
-    <string name="write_a_message">Write a message…</string>
-    <string name="post">Post</string>
+
+
     <string name="save">Save</string>
-    <string name="send">Send</string>
-    <string name="create">Create</string>
     <string name="rename">Rename</string>
-    <string name="cancel">Cancel</string>
-    <string name="error">Error</string>
-    <string name="errors">Errors</string>
-    <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
-    <string name="download_to_phone">Save to Phone</string>
-    <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
-    <string name="video_download_has_started_toast">Video download has started…</string>
-    <string name="media_download_has_started_toast">Media download has started…</string>
-    <string name="pin_conversation">Pin to top</string>
-    <string name="unpin_conversation">Unpin</string>
-    <string name="failed_to_save_the_image">Failed to save the image</string>
-    <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
-    <string name="failed_to_save_the_video">Failed to save the video</string>
-    <string name="pdf_saved_to_the_gallery">PDF saved to Downloads/Amethyst</string>
-    <string name="failed_to_save_the_pdf">Failed to save the PDF</string>
-    <string name="no_camera_app_found">No camera app found on this device</string>
-    <string name="record_a_message_description">Click and hold to record a message</string>
-    <string name="upload_error_title">Upload Error</string>
-    <string name="upload_error_voice_message_failed">Failed to upload voice message</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 is not supported for voice messages yet</string>
-    <string name="upload_error_voice_message_exception">Voice upload failed: %1$s</string>
-    <string name="voice_preset_none">None</string>
-    <string name="voice_preset_deep">Deep</string>
-    <string name="voice_preset_high">High</string>
-    <string name="voice_preset_neutral">Neutral</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
-    <string name="reply_here">"reply here… "</string>
-    <string name="known">Known</string>
-    <string name="new_requests">New Requests</string>
-    <string name="blocked_users">Blocked Users</string>
-    <string name="new_threads">New Threads</string>
-    <string name="conversations">Conversations</string>
-    <string name="more_options">More Options</string>
-    <string name="show_private_key_qr_code">Show private key QR code</string>
-    <string name="show_encrypted_private_key_qr_code">Show encrypted private key QR code</string>
-    <string name="follow">Follow</string>
-    <string name="follow_back">Follow back</string>
-    <string name="hide_password">Hide Password</string>
-    <string name="invalid_key">Invalid key</string>
-    <string name="login_bunker_not_supported">Amethyst for Android can\'t sign in with a bunker:// address. It hands these out so other apps can ask it to sign, but it cannot sign in with one. Use an external signer app, or Amethyst Desktop.</string>
-    <string name="login_nostrconnect_not_supported">That\'s an app asking to connect to your signer, not a way to sign in. Sign in first, then open it from the NIP-46 signer screen.</string>
-    <string name="invalid_key_with_message">Invalid key: %1$s</string>
-    <string name="password_is_required">Password is required</string>
-    <string name="key_is_required">Key is required</string>
-    <string name="name_is_required">A name is required</string>
-    <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
-    <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
-    <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
-    <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
-    <string name="concord_invite_failed_banned">This community has removed you. The link still works, but its member list does not admit you.</string>
-    <string name="concord_invite_links_title">Invite links</string>
-    <string name="concord_invite_links_action">Invite links…</string>
-    <string name="concord_invite_revoked_ok">Invite link revoked.</string>
-    <string name="concord_invite_revoked_failed">The link couldn\'t be revoked. Check your connection and try again.</string>
-    <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
-    <string name="concord_home_title">Concord Channels</string>
-    <string name="concord_channels_empty">No channels yet.</string>
-    <string name="concord_send_image_title">Send image</string>
-    <string name="concord_channel_create">New channel</string>
-    <string name="concord_channel_rename">Rename channel</string>
-    <string name="concord_channel_rename_save">Rename</string>
-    <string name="concord_channel_name_label">Channel name</string>
-    <string name="concord_channel_delete">Delete channel</string>
-    <string name="concord_channel_delete_title">Delete channel?</string>
-    <string name="concord_channel_delete_message">Delete #%1$s? This can\'t be undone and the channel can\'t be recreated with the same id.</string>
-    <string name="concord_channel_delete_confirm">Delete</string>
-    <string name="concord_leave_community">Leave community</string>
-    <string name="concord_leave_title">Leave community?</string>
-    <string name="concord_leave_message">Leave %1$s? It is removed from this account\'s list and stops syncing on your devices. The community is not notified and you are not removed from its member roster. Messages you can no longer decrypt may be unrecoverable, and you can only return with a new invite.</string>
-    <string name="concord_leave_owner_warning">You created this community. Leaving does not delete it or hand it to anyone else, but it discards the owner key stored on your list — you would not be able to manage it again.</string>
-    <string name="concord_typing_one">%1$s is typing…</string>
-    <string name="concord_typing_two">%1$s and %2$s are typing…</string>
-    <string name="concord_typing_many">Several people are typing…</string>
-    <string name="concord_create_title">New Concord Channel</string>
-    <string name="concord_create_relays">Relays</string>
     <string name="concord_create_icon">Icon URL (optional)</string>
-    <plurals name="concord_channel_count">
-        <item quantity="one">%1$d channel</item>
-        <item quantity="other">%1$d channels</item>
-    </plurals>
     <plurals name="buzz_workspaces_count">
         <item quantity="one">%1$d workspace</item>
         <item quantity="other">%1$d workspaces</item>
@@ -172,333 +27,47 @@
         <item quantity="one">%1$d channel</item>
         <item quantity="other">%1$d channels</item>
     </plurals>
-    <plurals name="concord_member_count">
-        <item quantity="one">%1$d member</item>
-        <item quantity="other">%1$d members</item>
-    </plurals>
-    <plurals name="concord_unread_messages">
-        <item quantity="one">%1$d new message</item>
-        <item quantity="other">%1$d new messages</item>
-    </plurals>
-    <string name="concord_channel_no_messages">No messages yet</string>
-    <string name="concord_create_action">Create</string>
-    <string name="concord_invite_action">Invite people</string>
-    <string name="concord_invite_title">Invite link</string>
-    <string name="concord_make_admin">Make admin</string>
-    <string name="concord_remove_admin">Remove admin</string>
-    <string name="concord_create_relays_desc">Relays that store this community\'s encrypted messages. Leave empty to use your own.</string>
-    <string name="concord_edit_title">Edit community</string>
-    <string name="concord_members_title">Members</string>
-    <string name="concord_members_make_admin">Make admin</string>
-    <string name="concord_members_remove_admin">Remove admin</string>
-    <string name="concord_members_ban">Ban</string>
-    <string name="concord_members_unban">Unban</string>
-    <string name="concord_members_roles_title">Assign roles</string>
-    <string name="concord_members_roles_failed">Could not update this member\'s roles.</string>
-    <string name="concord_server_label">Concord</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
-    <string name="chat_reply_in_chat">In chat</string>
-    <string name="chat_reply_in_thread">In thread</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
-    <plurals name="chat_minichat_reply_count">
-        <item quantity="one">%1$d reply</item>
-        <item quantity="other">%1$d replies</item>
-    </plurals>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="changed_chat_profile_to">New chat profile:</string>
-    <string name="leave">Leave</string>
-    <string name="remove_from_messages">Remove from Messages</string>
-    <string name="add_to_messages">Add to Messages</string>
-    <string name="unfollow">Unfollow</string>
-
-    <string name="ephemeral_relay_chat">Disappearing Chat</string>
-    <string name="relay_chat">Relay Chat</string>
-    <string name="relay_chat_title">Relay Chats</string>
-    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay.
-        They are visible to everyone on Nostr and anyone can participate on them.
-        They are great for open communities around specific topics. Some of these groups are ephemeral
-    and thus chat messages disappear over time</string>
-
-    <string name="public_chat">Public Chat</string>
-    <string name="marmot_group">Marmot Group</string>
-    <string name="public_chat_title">Public Chat Metadata</string>
-    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
-        can participate on them. They are great for open communities around specific topics.
-        Moderation can be controlled by deleting posts on its relays</string>
-
-    <string name="public_chat_relays_title">Relays</string>
-    <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group.
-        Nostr clients use this setting to know where to download messages from and send your messages to.</string>
 
 
-    <string name="remove">Remove</string>
-    <string name="sats" translatable="false">sats</string>
-    <string name="never">never</string>
-    <string name="now">now</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
-    <string name="nudity">Nudity</string>
-    <string name="profanity_hateful_speech">Profanity / Hateful speech</string>
-    <string name="backup_keys">Backup Keys</string>
 
 
-    <string name="failed_to_encrypt_key">Failed to encrypt your private key</string>
-    <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
-    <string name="copy_my_secret_key">Copy my secret key</string>
-    <string name="biometric_authentication_failed">Authentication failed</string>
-    <string name="biometric_authentication_failed_explainer">Biometrics failed to authenticate the owner of this phone</string>
-    <string name="biometric_authentication_failed_explainer_with_error">Biometrics failed to authenticate the owner of this phone. Error: %1$s</string>
-    <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
-    <string name="github" translatable="false">Github Gist w/ Proof</string>
-    <string name="telegram" translatable="false">Telegram</string>
-    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
-    <string name="twitter" translatable="false">X Status w/ Proof</string>
-    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
-    <string name="drawer_accounts">Accounts</string>
-    <string name="drawer_section_navigate">Navigate</string>
-    <string name="drawer_section_you">You</string>
-    <string name="drawer_section_feeds">Feeds</string>
-    <string name="drawer_section_create">Create</string>
-    <string name="drawer_section_system">System</string>
-    <string name="back">Back</string>
-    <string name="quick_action_share_browser_link">Share Browser Link</string>
-    <string name="quick_action_share">Share</string>
-    <string name="share_as_image">Share as Image</string>
-    <string name="share_as_image_url">Share as Image Url</string>
-    <string name="quick_action_copy_note_id">Note ID</string>
-    <string name="quick_action_delete">Delete</string>
-    <string name="quick_action_mute_thread">Mute thread</string>
-    <string name="quick_action_unmute_thread">Unmute thread</string>
-    <string name="mute_notifications">Mute notifications</string>
-    <string name="unmute_notifications">Unmute notifications</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
-    <string name="block_only">Block</string>
 
-    <string name="bookmarks">Bookmarks</string>
-    <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
-    <string name="drafts">Drafts</string>
-    <string name="scheduled_posts">Scheduled posts</string>
-    <string name="schedule_post_button_add">Schedule post</string>
-    <string name="schedule_post_button_remove">Cancel scheduling</string>
-    <string name="schedule_post_warning_single">Scheduled posts may not publish until you next reopen the app. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
-    <string name="schedule_post_warning_multi">Scheduled posts may not publish until you reopen the app. Other accounts\' scheduled posts won\'t fire while this account is active. Enable always-on in Settings → UI Preferences for reliable background scheduling.</string>
-    <string name="scheduled_posts_at_time">%1$s · in %2$s</string>
-    <string name="scheduled_posts_at_time_past">%1$s · %2$s ago</string>
-    <string name="scheduled_posts_day_tomorrow">Tomorrow</string>
-    <string name="scheduled_posts_logout_toast_zero">Logged out</string>
-    <plurals name="scheduled_posts_logout_toast">
-        <item quantity="one">Logged out · %d scheduled post deleted</item>
-        <item quantity="other">Logged out · %d scheduled posts deleted</item>
-    </plurals>
-    <string name="scheduled_posts_notification_sent_title">Scheduled post published</string>
-    <string name="scheduled_posts_notification_failed_title">Scheduled post failed</string>
-    <string name="app_notification_scheduled_posts_channel_id" translatable="false">ScheduledPostsID</string>
-    <string name="app_notification_scheduled_posts_channel_name">Scheduled posts</string>
-    <string name="app_notification_scheduled_posts_channel_description">Notifications when a scheduled post is published or fails to publish.</string>
-    <string name="scheduled_posts_action_send_now">Send now</string>
-    <string name="scheduled_posts_error_prefix">Error: %1$s</string>
-    <string name="scheduled_posts_status_pending">Scheduled</string>
-    <string name="scheduled_posts_status_publishing">Sending…</string>
-    <string name="scheduled_posts_status_failed">Failed</string>
-    <string name="scheduled_posts_status_sent">Sent</string>
-    <string name="scheduled_posts_status_cancelled">Cancelled</string>
-    <plurals name="scheduled_posts_logout_warning">
-        <item quantity="one">You have %d scheduled post that hasn\'t been published yet. Logging out will permanently delete it.</item>
-        <item quantity="other">You have %d scheduled posts that haven\'t been published yet. Logging out will permanently delete them.</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_queued">
-        <item quantity="one">%d queued</item>
-        <item quantity="other">%d queued</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="one"> · %d due in 1h</item>
-        <item quantity="other"> · %d due in 1h</item>
-    </plurals>
-    <plurals name="scheduled_posts_relay_count">
-        <item quantity="one">to %d relay</item>
-        <item quantity="other">to %d relays</item>
-    </plurals>
-    <string name="scheduled_posts_event_id_copied">Note ID copied</string>
-    <string name="polls">Polls</string>
-    <string name="open_polls">Open</string>
-    <string name="closed_polls">Closed</string>
-    <string name="badges">Badges</string>
-    <string name="communities">Communities</string>
-    <string name="new_community">New Community</string>
-    <string name="edit_community">Edit Community</string>
-    <string name="new_community_moderators_section">Moderators</string>
-    <string name="new_community_relays_section">Relays</string>
-    <string name="new_community_rules_section">Verifiable rules (optional)</string>
-    <string name="new_community_rules_kinds_section">Allowed event kinds</string>
-    <string name="new_community_rules_kind_short_text">Short text (1)</string>
-    <string name="new_community_rules_kind_long_form">Long-form article (30023)</string>
-    <string name="new_community_rules_kind_picture">Picture post (20)</string>
-    <string name="new_community_rules_kind_video">Video post (21)</string>
-    <string name="new_community_rules_kind_short_video">Short video (22)</string>
-    <string name="new_community_rules_kind_comment">Community comment (1111)</string>
-    <string name="new_community_rules_banned_section">Banned users</string>
-    <string name="new_community_rules_wot_section">Web-of-trust gate (optional)</string>
-    <string name="new_community_rules_max_event_size_section">Global max event size (optional)</string>
-    <string name="new_badge">New Badge</string>
-    <string name="award_badge">Award Badge</string>
-    <string name="profile_badges_title">Profile badges</string>
-    <string name="pictures">Pictures</string>
-    <string name="workouts">Workouts</string>
-    <string name="new_workout">New Workout</string>
-    <plurals name="workout_suggestion_combined_sessions">
-        <item quantity="one">%1$d activity</item>
-        <item quantity="other">%1$d activities</item>
-    </plurals>
-    <string name="exercise_running">Running</string>
-    <string name="exercise_walking">Walking</string>
-    <string name="exercise_cycling">Cycling</string>
-    <string name="exercise_hiking">Hiking</string>
-    <string name="exercise_swimming">Swimming</string>
-    <string name="exercise_rowing">Rowing</string>
-    <string name="exercise_strength">Strength</string>
-    <string name="exercise_yoga">Yoga</string>
-    <string name="exercise_meditation">Meditation</string>
-    <string name="exercise_diet">Diet</string>
-    <string name="exercise_fasting">Fasting</string>
-    <string name="exercise_circuit">Circuit</string>
-    <string name="exercise_emom">EMOM</string>
-    <string name="exercise_amrap">AMRAP</string>
-    <string name="software_apps">App Store</string>
+
+
+
     <string name="route_software_apps">App Store</string>
-    <string name="napplets">nApplets</string>
-    <string name="nsites">nSites</string>
-    <string name="browser">Browser</string>
-    <string name="browser_tor_on">Loading over Tor. Tap to use the open web.</string>
-    <string name="browser_tor_off">Loading over the open web. Tap to use Tor.</string>
-    <string name="browser_favorites">Favorites</string>
-    <string name="browser_suggested">Discover web apps</string>
-    <string name="favorite_apps">Web apps</string>
-    <string name="favorite_app_add">Add to favorites</string>
-    <string name="favorite_app_remove">Remove from favorites</string>
-    <string name="favorite_app_network_tor">Loads over Tor.</string>
-    <string name="favorite_app_network_open">Loads over the open web.</string>
-    <string name="favorite_notice_published">Published to relays</string>
-    <string name="favorite_notice_uploaded">Uploaded a file</string>
-    <string name="favorite_notice_paid">Made a payment</string>
-    <string name="favorite_app_still_loading">That app isn\'t loaded yet. Try again in a moment.</string>
-    <string name="favorite_app_recent">Recent</string>
     <string name="napplet_permissions">nApplet permissions</string>
     <string name="napplet_permissions_empty">No nApplet permissions yet</string>
     <string name="napplet_permissions_empty_subtitle">Permissions you grant to nApplets will appear here.</string>
     <string name="napplet_permissions_forget">Forget this nApplet</string>
     <string name="napplet_permissions_blocked">Requires per-use approval</string>
     <string name="napplet_permissions_revoke">Revoke</string>
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
 
     <!-- Napplet capability names -->
     <string name="napplet_cap_shell">Shell</string>
-    <string name="napplet_cap_identity">Identity</string>
-    <string name="napplet_cap_keys">Keyboard actions</string>
-    <string name="napplet_cap_relay">Relays</string>
-    <string name="napplet_cap_signer">Encryption</string>
-    <string name="napplet_cap_storage">Storage</string>
-    <string name="napplet_cap_value">Payments</string>
-    <string name="napplet_cap_resource">Network</string>
-    <string name="napplet_cap_upload">Uploads</string>
     <string name="napplet_cap_shell_desc">Ask which capabilities are available</string>
-    <string name="napplet_cap_identity_desc">Read your public key</string>
-    <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
-    <string name="napplet_cap_relay_desc">Read, and sign &amp; publish your events</string>
-    <string name="napplet_cap_signer_desc">Encrypt and decrypt private messages with your key</string>
-    <string name="napplet_cap_storage_desc">Its own private storage</string>
-    <string name="napplet_cap_value_desc">Pay Lightning invoices</string>
-    <string name="napplet_cap_resource_desc">Fetch web and Blossom resources</string>
-    <string name="napplet_cap_upload_desc">Upload files to your media server</string>
-    <string name="napplet_cap_theme">Theme</string>
-    <string name="napplet_cap_notify">Notifications</string>
-    <string name="napplet_cap_inc">Messaging</string>
-    <string name="napplet_cap_theme_desc">Match your app\'s colors</string>
-    <string name="napplet_cap_notify_desc">Show you notifications</string>
-    <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">Capability: %1$s</string>
-    <string name="napplet_consent_get_pubkey">This nApplet wants to read your public key.</string>
-    <string name="napplet_consent_identity_read">This nApplet wants to read your profile and account data.</string>
-    <string name="napplet_consent_publish">This nApplet wants to sign and publish a kind %1$d event as you.</string>
-    <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
-    <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
-    <string name="napplet_consent_nip44_encrypt">This site wants to encrypt a message to %1$s with your Nostr key.</string>
-    <string name="napplet_consent_nip44_decrypt">This site wants to decrypt a message from %1$s with your Nostr key.</string>
-    <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
-    <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
     <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
-    <string name="napplet_consent_pay_no_amount">⚠ This nApplet wants to pay a Lightning invoice that specifies NO amount — the payee decides how much is taken. Only allow this if you trust it.</string>
-    <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
-    <string name="napplet_consent_upload">This nApplet wants to upload a file to your media server.</string>
-    <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>
-    <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
-    <plurals name="napplet_consent_pay_amount">
-        <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
-        <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
-    </plurals>
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
-    <plurals name="napplet_consent_diff_follow_added">
-        <item quantity="one">follows %1$d new account</item>
-        <item quantity="other">follows %1$d new accounts</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_follow_removed">
-        <item quantity="one">UNFOLLOWS %1$d account</item>
-        <item quantity="other">UNFOLLOWS %1$d accounts</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_added">
-        <item quantity="one">adds %1$d relay</item>
-        <item quantity="other">adds %1$d relays</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_removed">
-        <item quantity="one">REMOVES %1$d relay</item>
-        <item quantity="other">REMOVES %1$d relays</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_added">
-        <item quantity="one">mutes %1$d more person</item>
-        <item quantity="other">mutes %1$d more people</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_removed">
-        <item quantity="one">UNMUTES %1$d person</item>
-        <item quantity="other">UNMUTES %1$d people</item>
-    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
-    <string name="napplet_consent_diff_follow_one">⚠ This follows %1$s.</string>
-    <string name="napplet_consent_diff_unfollow_one">⚠ This UNFOLLOWS %1$s.</string>
-    <string name="napplet_consent_diff_mute_one">⚠ This mutes %1$s.</string>
-    <string name="napplet_consent_diff_unmute_one">⚠ This UNMUTES %1$s.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
-    <string name="napplet_consent_diff_follows">⚠ This rewrites your follow list: %1$s.</string>
-    <string name="napplet_consent_diff_relays">⚠ This rewrites your relay list: %1$s. Your posts and reads move with it.</string>
-    <string name="napplet_consent_diff_mutes">⚠ This rewrites your mute list: %1$s. Muted words and hashtags are not shown here — tap “Show Event” for the full list.</string>
-    <string name="napplet_consent_diff_joiner">%1$s and %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
-    <string name="napplet_consent_diff_none">This republishes your existing list unchanged.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
-    <plurals name="napplet_consent_diff_no_baseline">
-        <item quantity="one">⚠ This writes a list of %1$d entry. Amethyst has no cached copy to compare against.</item>
-        <item quantity="other">⚠ This writes a list of %1$d entries. Amethyst has no cached copy to compare against.</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_deletes">
-        <item quantity="one">⚠ This requests deletion of %1$d of your events.</item>
-        <item quantity="other">⚠ This requests deletion of %1$d of your events.</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Carries %1$d tag. Tap “Show Event” to see exactly what would be signed.</item>
-        <item quantity="other">Carries %1$d tags. Tap “Show Event” to see exactly what would be signed.</item>
-    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Connect to Nostr</string>
 
@@ -510,318 +79,59 @@
     <string name="napplet_signer_expires">Expires</string>
 
     <!-- Signer op labels -->
-    <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
-    <string name="napplet_op_encrypt">encrypt a message</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
-    <string name="napplet_op_decrypt">read your private messages</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
-    <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
-    <string name="nip46_signer_allow_always_for">Always allow for %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
-    <string name="nip46_signer_decrypt_failed">Amethyst could not decrypt this message. It may not be addressed to this account.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
 
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_title">Connected Apps</string>
     <string name="napplet_permissions_revoke_all">Revoke all permissions</string>
     <string name="napplet_permissions_overrides">Operation overrides</string>
     <string name="napplet_signer_permissions_empty">No apps have connected yet.</string>
-    <string name="napplet_connected_apps_search_keywords">apps permissions signer napplet nsite webapp trust connected</string>
 
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_title">Remote Signer</string>
     <string name="nip46_signer_search_keywords">signer bunker nip46 nostr connect remote sign</string>
     <string name="nip46_signer_enable">Act as a remote signer</string>
     <plurals name="nip46_signer_status_listening">
         <item quantity="one">Listening on %1$d relay</item>
         <item quantity="other">Listening on %1$d relays</item>
     </plurals>
-    <plurals name="nip46_signer_relays_all_live">
-        <item quantity="one">Listening on %1$d relay</item>
-        <item quantity="other">Listening on %1$d relays, all connected</item>
-    </plurals>
     <string name="nip46_signer_bunker_uri_label">Your bunker address</string>
     <string name="nip46_signer_bunker_uri_hint">Paste this into another app to connect it to your key.</string>
-    <string name="nip46_signer_copied">Bunker address copied</string>
-    <string name="nip46_signer_regenerated">Generated a new bunker address</string>
-    <string name="nip46_signer_app_online">Connected</string>
-    <string name="nip46_signer_app_offline">Offline</string>
-    <string name="nip46_signer_reconnecting">Reconnecting to relays…</string>
-    <plurals name="nip46_signer_app_relay_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
-    </plurals>
-    <string name="nip46_signer_connected_ok">App connected. Amethyst now signs for it in the background.</string>
-    <string name="nip46_signer_connected_named">Connected %1$s. Amethyst now signs for it in the background.</string>
-    <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
-    <string name="nip46_signer_connect_no_relays">That link carries no relay to connect on</string>
-    <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>
-    <string name="nip46_signer_connect_declined">Connection declined</string>
-    <string name="nip46_signer_readonly">This is a read-only account and cannot sign.</string>
-    <string name="nip46_signer_remote_app">Remote signer app</string>
-    <plurals name="nip46_signer_batch_title">
-        <item quantity="one">%1$d signing request</item>
-        <item quantity="other">%1$d signing requests</item>
-    </plurals>
-    <string name="nip46_signer_batch_select_all">Select all</string>
-    <string name="nip46_signer_batch_select_none">Select none</string>
     <string name="nip46_signer_activity_empty">No requests serviced yet.</string>
-    <string name="nip46_signer_notif_channel_name">Signing requests</string>
-    <string name="nip46_signer_notif_channel_desc">Full-screen prompts asking you to approve an app that wants Amethyst to sign, encrypt, or decrypt with your key.</string>
-    <string name="nip46_signer_notif_sign_title">Approve a signing request?</string>
-    <string name="nip46_signer_notif_connect_title">An app wants to connect</string>
-    <string name="nip46_signer_notif_tap">Tap to review</string>
-    <plurals name="nip46_signer_connected_count">
-        <item quantity="one">%1$d connected app</item>
-        <item quantity="other">%1$d connected apps</item>
-    </plurals>
 
     <!-- Relay Authentication (NIP-42) settings -->
-    <string name="relay_auth_settings_title">Relay login</string>
-    <string name="relay_auth_search_keywords">auth authentication login relay sign verify nip-42 identity</string>
-    <string name="relay_auth_policy_always">Always log in</string>
-    <string name="relay_auth_policy_always_desc">Every relay that asks.</string>
-    <string name="relay_auth_policy_never">Never log in</string>
-    <string name="relay_auth_policy_never_desc">Some relays will refuse to serve you.</string>
-    <string name="relay_auth_policy_custom">Decide per relay</string>
-    <string name="relay_auth_policy_custom_desc">Allow the cases below, ask about the rest.</string>
 
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
-    <string name="relay_auth_auto_my_relays_and_venues">\u2026it\'s my relay, or a room I joined or follow</string>
-    <string name="relay_auth_auto_read_follows">\u2026I\'m reading someone I follow</string>
-    <string name="relay_auth_auto_message_follows">\u2026I\'m messaging someone I follow</string>
-    <string name="relay_auth_auto_message_strangers">\u2026I\'m messaging anyone else</string>
 
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
-    <plurals name="relay_auth_name_and_n_others">
-        <item quantity="one">%1$s and %2$d other</item>
-        <item quantity="other">%1$s and %2$d others</item>
-    </plurals>
-    <plurals name="relay_auth_also_holding_back">
-        <item quantity="one">It\'s also holding back %1$d other thing.</item>
-        <item quantity="other">It\'s also holding back %1$d other things.</item>
-    </plurals>
     <!-- What the same two buttons say once "Remember for this relay" is on. -->
-    <string name="relay_auth_always_log_in">Always log in</string>
-    <string name="relay_auth_never">Never</string>
-    <string name="relay_auth_always_allow_everywhere">Always, all relays</string>
-    <string name="relay_auth_never_allow_everywhere">Never, all relays</string>
-    <string name="relay_auth_always_everywhere_title">Log in to every relay?</string>
-    <string name="relay_auth_always_everywhere_body">Amethyst will log in as %1$s to every relay that asks, and stop asking. Relays you blocked, and the ones you set to never log in, stay that way. You can change this under Relay login.</string>
-    <string name="relay_auth_never_everywhere_title">Never log in to any relay?</string>
-    <string name="relay_auth_never_everywhere_body">Amethyst will stop telling relays that you are %1$s, and stop asking. Some relays will refuse to serve you: messages, replies and notifications may not go through. Relays you set to always log in stay that way. You can change this under Relay login.</string>
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
 
     <!-- Settings: three lists that each hold what their header says. -->
-    <string name="relay_auth_exception_always">Always, set by you</string>
-    <string name="relay_auth_exception_never">Never, set by you</string>
 
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="relay_auth_purpose_send_dm">your messages</string>
-    <string name="relay_auth_purpose_notify_inbox">your replies</string>
-    <string name="relay_auth_purpose_read_outbox">people you read</string>
-    <string name="relay_auth_purpose_post_venue">a room you post in</string>
-    <string name="relay_auth_purpose_read_venue">a room you read</string>
-    <string name="relay_auth_purpose_my_inbox">your inbox</string>
-    <string name="relay_auth_purpose_thread">a conversation</string>
-    <string name="relay_auth_purpose_my_own_relay">your own relay</string>
-    <string name="relay_auth_purpose_other">this relay</string>
 
-    <string name="shorts">Shorts</string>
-    <string name="public_chats">Public Chats</string>
-    <string name="location_channels">Location Channels</string>
-    <string name="follow_packs">Follow Packs</string>
-    <string name="live_streams">Live Streams</string>
-    <string name="nests">Nests</string>
-    <string name="nest_raise_hand">Raise hand</string>
-    <string name="nest_lower_hand">Lower hand</string>
-    <string name="nest_mute">Mute</string>
-    <string name="nest_unmute">Unmute</string>
-    <string name="nest_chat_send_failed_title">Couldn\'t send message</string>
-    <string name="nest_mic_mute">Mute mic</string>
-    <string name="nest_mic_unmute">Unmute mic</string>
-    <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Keeps audio playing while a room is open.</string>
-    <string name="nest_notification_listening">Nest connected</string>
-    <string name="nest_notification_broadcasting">Nest — Live</string>
-    <string name="nest_notification_text">Tap to return.</string>
-    <string name="nest_notification_stop">Stop</string>
-    <string name="nest_presence_raised_hand">raised their hand</string>
-    <string name="nest_presence_on_stage">stepped on stage</string>
-    <string name="nest_presence_speaking">is speaking</string>
-    <string name="nest_presence_listening">joined as audience</string>
-    <string name="nest_presence_left">left the nest</string>
-    <string name="nest_leave">Leave</string>
-    <string name="nest_leave_host_close_failed">Couldn\'t mark room as closed. Leaving anyway — room will auto-close.</string>
-    <plurals name="nest_listener_count">
-        <item quantity="one">%1$d listener</item>
-        <item quantity="other">%1$d listeners</item>
-    </plurals>
-    <string name="nest_hush_local">Hush this speaker</string>
-    <string name="nest_hush_local_restore">Restore this speaker</string>
-    <string name="nest_participant_follow">Follow</string>
-    <string name="nest_participant_unfollow">Unfollow</string>
-    <string name="nest_participant_mute">Mute</string>
-    <string name="nest_participant_unmute">Unmute</string>
-    <string name="nest_no_server_save_failed">Couldn\'t save your nest server list. Try again.</string>
     <string name="agent_console_title">Agent console</string>
-    <string name="nests_servers_title">Nest servers</string>
-    <string name="nests_servers_my_section">Your servers</string>
-    <string name="nests_servers_my_explainer">Saved as a kind-10112 replaceable event so other clients can read your preference.</string>
-    <string name="nests_servers_recommended_section">Recommended servers</string>
-    <string name="nests_servers_recommended_explainer">Built-in suggestions you can add to your list with one tap.</string>
-    <string name="longs">Videos</string>
-    <string name="route_music_tracks">Music</string>
-    <string name="route_music_playlists">Playlists</string>
-    <string name="route_podcast_episodes">Episodes</string>
-    <string name="route_podcasts">Podcasts</string>
     <string name="podcast_premium">Premium</string>
-    <plurals name="podcast_chapters_count">
-        <item quantity="one">%1$d chapter</item>
-        <item quantity="other">%1$d chapters</item>
-    </plurals>
-    <string name="podcast_value_error_title">Value-for-Value error</string>
-    <string name="podcast_value_no_recipients">This podcast has no payable value recipients.</string>
-    <string name="podcast_value_keysend_requires_nwc">Connect a Nostr Wallet Connect wallet to send to keysend (node) recipients.</string>
-    <string name="podcast_value_stream_requires_wallet">Connect a Nostr Wallet Connect or debit wallet to stream sats while listening.</string>
-    <string name="podcast_new_episode">New episode</string>
-    <string name="podcast_edit_episode">Edit episode</string>
-    <string name="podcast_publishing_banner">Publishing…</string>
-    <string name="podcast_cover_upload_cta">Add cover art</string>
-    <string name="podcast_cover_upload_hint">Square image shown for the episode</string>
-    <string name="podcast_episode_video_label">Video URL</string>
-    <string name="podcast_episode_transcript_label">Transcript URL</string>
-    <string name="podcast_episode_chapters_label">Chapters URL</string>
-    <string name="podcast_episode_audio_upload_cta">Add audio file</string>
-    <string name="podcast_episode_audio_upload_hint">MP3, M4A, or other audio</string>
-    <string name="podcast_edit_show">Your podcast</string>
-    <string name="podcast_show_cover_cta">Add cover art</string>
-    <string name="podcast_show_cover_hint">Square artwork for your show</string>
-    <string name="podcast_show_title_label">Show title</string>
-    <string name="podcast_show_title_placeholder">My Podcast</string>
-    <string name="podcast_show_author_label">Author</string>
-    <string name="podcast_show_email_label">Contact email</string>
-    <string name="podcast_show_website_label">Website</string>
-    <string name="podcast_show_categories_label">Categories</string>
-    <string name="podcast_show_categories_placeholder">Technology, News</string>
-    <string name="podcast_show_funding_label">Funding links</string>
-    <string name="podcast_show_funding_placeholder">https://…</string>
-    <string name="podcast_show_language_label">Language</string>
-    <string name="podcast_show_language_placeholder">en</string>
-    <string name="podcast_show_copyright_label">Copyright</string>
-    <string name="podcast_new_trailer">New trailer</string>
-    <string name="podcast_trailer_upload_cta">Add trailer clip</string>
-    <string name="podcast_trailer_upload_hint">Short audio or video preview</string>
-    <plurals name="podcast_trailer_count">
-        <item quantity="one">%1$d trailer</item>
-        <item quantity="other">%1$d trailers</item>
-    </plurals>
     <string name="podcast_value_add_recipient">Add recipient</string>
-    <string name="podcast_value_user_no_lnaddress">This user has no Lightning address</string>
-    <plurals name="podcast_episode_count">
-        <item quantity="one">%1$d episode</item>
-        <item quantity="other">%1$d episodes</item>
-    </plurals>
-    <string name="new_music_track">New music track</string>
-    <string name="new_music_playlist">New playlist</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="one">%1$d track</item>
-        <item quantity="other">%1$d tracks</item>
-    </plurals>
-    <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
-    <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
 
-    <string name="pin_to_profile">Pin to Profile</string>
-    <string name="unpin_from_profile">Unpin from Profile</string>
 
 
-    <string name="bookmark_list_creation_screen_title">New Bookmark List</string>
-    <string name="bookmark_list_edit_sub_title">Bookmark List Metadata</string>
 
-    <string name="interest_sets_title">Hashtag Sets</string>
-    <string name="interest_set_creation_screen_title">New Interest Set</string>
-    <string name="interest_set_rename">Rename</string>
-    <string name="private_rumor_info_title">Private Note</string>
-    <string name="private_rumor_info_description">This note was delivered privately and is not signed. Only the tagged participants can see it, and nobody can prove to outsiders who wrote it.</string>
-    <string name="private_note">Make private: gift-wrap the note to the notified users only</string>
-    <string name="disable_private_note">Make public</string>
-    <string name="private_note_locked">Replies to a private note always stay private</string>
-    <string name="private_note_visible_to">Visible to</string>
     <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
 
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="audience_empty_private">Only you \u2014 choose who else can see this</string>
-    <string name="audience_empty_public">Add people to notify</string>
-    <string name="audience_send_privately">Send privately</string>
-    <string name="audience_badge_already_added">Already added</string>
-    <string name="audience_badge_muted">Muted</string>
-    <string name="audience_badge_private_member">Private member</string>
-    <plurals name="audience_summary_others">
-        <item quantity="one">%1$s, %2$s and %3$d other</item>
-        <item quantity="other">%1$s, %2$s and %3$d others</item>
-    </plurals>
-    <plurals name="audience_soft_cap_private">
-        <item quantity="one">This note will be encrypted and delivered %1$d separate time, once per person. With an external signer that is one approval each.</item>
-        <item quantity="other">This note will be encrypted and delivered %1$d separate times, once per person. With an external signer that is one approval each.</item>
-    </plurals>
-    <plurals name="audience_soft_cap_public">
-        <item quantity="one">%1$d person will get a notification for this post.</item>
-        <item quantity="other">%1$d people will get a notification for this post.</item>
-    </plurals>
-    <plurals name="audience_hard_cap">
-        <item quantity="one">That would be %1$d person. Amethyst adds at most %2$d at a time \u2014 deselect a few.</item>
-        <item quantity="other">That would be %1$d people. Amethyst adds at most %2$d at a time \u2014 deselect a few.</item>
-    </plurals>
-    <plurals name="audience_add_people">
-        <item quantity="one">Add %1$d person</item>
-        <item quantity="other">Add %1$d people</item>
-    </plurals>
-    <plurals name="audience_add_anyway">
-        <item quantity="one">Add %1$d person anyway</item>
-        <item quantity="other">Add %1$d people anyway</item>
-    </plurals>
     <string name="notify_add_user">Add</string>
     <string name="notify_remove_user">Remove user from notifications</string>
-    <string name="notify_mute_user">Notifying. Tap to mute the notification for this user</string>
-    <string name="notify_unmute_user">Muted. Tap to notify this user again</string>
     <string name="notify_search_and_add_user">Search and add a user to notify</string>
-    <string name="bookmark_list_explainer">Bookmark lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
-    <string name="move_bookmark_to_public_label">Move to Public</string>
-    <string name="move_bookmark_to_private_label">Move to Private</string>
-
-    <string name="reload_mint_confirm">Top up &amp; send zap</string>
-    <string name="reload_mint_send_confirm">Send zap</string>
-    <string name="reload_mint_summary">Top up %1$s sats to %2$s and zap %3$s %4$s sats · fee ≈ %5$s sats</string>
-
-
-    <string name="poll_option_index">Option %s</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
-    <string name="poll_single_choice">Single choice</string>
-    <string name="poll_multiple_choice">Multiple choice</string>
-    <string name="poll_unable_to_vote">Unable to vote</string>
-    <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
-    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
-
-
-
-
-    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
-
-    <string name="hash_verification_info_title">What does this mean?</string>
-    <string name="hash_verification_passed">This content is the same since the post</string>
-    <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
-
-    <string name="content_description_add_media">Add Media</string>
-    <string name="content_description_add_image">Add Image</string>
-    <string name="content_description_add_video">Add Video</string>
-    <string name="content_description_add_document">Add Document</string>
 
 
 
@@ -833,668 +143,152 @@
 
 
 
-    <string name="file_server">File Server</string>
-    <string name="file_server_description">Choose a server to upload this file to</string>
 
 
 
-    <string name="media_servers">Media Servers</string>
+
+
+
+
+
+
+
+
+
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
 
 
     <string name="manage_stored_files">Manage stored files</string>
-    <string name="my_blossom_data">My Blossom Files</string>
-    <string name="blossom_syncing">Copying your files across servers…</string>
-    <string name="blossom_sync_cancel">Cancel</string>
-    <string name="blossom_sync_channel_name">Blossom sync</string>
-    <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
-    <string name="blossom_on_all_servers">On all servers</string>
-    <string name="blossom_not_on_all_servers">Not on all servers</string>
     <string name="blossom_delete_from">Delete from…</string>
-    <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
-    <plurals name="blossom_pay_sats">
-        <item quantity="one">Pay %1$d sat</item>
-        <item quantity="other">Pay %1$d sats</item>
-    </plurals>
-    <string name="blossom_import_enable_all">Enable all</string>
-    <string name="blossom_import_disable_all">Disable all</string>
-    <string name="blossom_import_busy">A file sync is already running. Try importing again once it finishes.</string>
-    <plurals name="blossom_import_files_found">
-        <item quantity="one">%1$d file</item>
-        <item quantity="other">%1$d files</item>
-    </plurals>
-    <plurals name="blossom_import_found_files">
-        <item quantity="one">Found %1$d file to import into your servers.</item>
-        <item quantity="other">Found %1$d files to import into your servers.</item>
-    </plurals>
-    <plurals name="blossom_import_start_button">
-        <item quantity="one">Import %1$d file</item>
-        <item quantity="other">Import %1$d files</item>
-    </plurals>
 
     <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
-    <string name="media_server_status_online">Online</string>
-    <string name="media_server_status_slow">Slow</string>
-    <string name="media_server_status_offline">Offline</string>
     <string name="media_server_status_checking">Checking…</string>
-    <string name="payment_targets">Payment Targets</string>
-    <string name="payment_targets_section_explainer">Add payment addresses for different networks (e.g. bitcoin, lightning, ethereum).</string>
-    <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
-    <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
-    <string name="payto_amount_set_in_app">Pay in %1$s — you choose the amount there</string>
-    <string name="zap_payto_section">Pay-to hand-off</string>
-    <string name="zap_payto_section_explainer">When the author publishes a payment method an app on this phone can open (Venmo, Monero, an IBAN…), the zap picker can offer it. Tapping opens that app, which asks for the amount — nothing is published to relays, so the note\'s zap count does not change.</string>
-    <string name="zap_payto_toggle">Offer the author\'s payment methods</string>
-    <string name="error_dialog_payment_error">Unable to open payment</string>
-
-    <string name="bolt12_offers">BOLT12 Offers</string>
-    <string name="bolt12_offers_section_explainer">Add one or more BOLT12 offers (lno1…). They are shared publicly so anyone can pay you.</string>
-    <string name="bolt12_payment_sent">BOLT12 payment sent</string>
-    <string name="bolt12_payment_failed">BOLT12 payment failed: %1$s</string>
-    <string name="bolt12_zap_error">BOLT12 zap error</string>
-    <string name="bolt12_zap_paid_no_receipt">Paid over BOLT12, but the wallet returned no proof, so no zap receipt was published.</string>
-    <string name="bolt12_zap_invalid_receipt">Paid over BOLT12, but the payment proof did not validate, so no zap receipt was published.</string>
-
-
-
-    <string name="privacy_options">Privacy Options</string>
 
 
 
 
-    <string name="follow_list_kind3follows">All Follows</string>
-    <string name="follow_list_kind3follows_users_only">All User Follows</string>
-    <string name="follow_list_kind3_follows_users_only">Default Follow List</string>
-    <string name="follow_list_aroundme">Around Me</string>
-    <string name="follow_list_teleport">Teleport to a place…</string>
-    <string name="follow_geohash">Follow this location</string>
-    <string name="unfollow_geohash">Unfollow this location</string>
-    <string name="follow_list_global">Global</string>
-    <string name="follow_list_curated">Curated</string>
-    <string name="follow_list_mine">Mine</string>
-    <string name="follow_list_mute_list">Mute List</string>
-
-    <string name="follow_set_creation_dialog_title">New Follow List</string>
-    <string name="follow_pack_creation_dialog_title">New Follow Pack</string>
-    <string name="follow_set_edit_list_metadata">Edit List</string>
 
 
-    <string name="connect_through_your_orbot_setup_short">Default port is 9050</string>
-    <string name="orbot_socks_port">Orbot Socks Port</string>
 
-    <string name="use_internal_tor">Active Tor Engine</string>
-    <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>
 
-    <string name="tor_preset">Tor/Privacy Presets</string>
-    <string name="tor_preset_explainer">Quickly modify all settings below</string>
 
-    <string name="tor_use_onion_address">Onion Url/Relays</string>
-    <string name="tor_use_onion_address_explainer">Use Tor for any .onion url</string>
 
-    <string name="tor_use_dm_relays">DM Relays</string>
-    <string name="tor_use_dm_relays_explainer">Force Tor to send and receive DMs</string>
 
-    <string name="tor_use_new_relays">Untrusted Relays</string>
-    <string name="tor_use_new_relays_explainer">Force Tor on outbox/inbox relays</string>
 
-    <string name="tor_use_trusted_relays">Trusted Relays</string>
-    <string name="tor_use_trusted_relays_explainer">Force Tor on all relays in your lists</string>
 
-    <string name="tor_use_profile_pictures">Profile Pictures</string>
-    <string name="tor_use_profile_pictures_explainer">Force Tor when loading profile pictures</string>
 
-    <string name="tor_use_url_previews">URL Previews</string>
-    <string name="tor_use_url_previews_explainer">Force Tor when loading url previews</string>
 
-    <string name="tor_use_images">Images</string>
-    <string name="tor_use_images_explainer">Force Tor when loading images</string>
 
-    <string name="tor_use_videos">Videos</string>
-    <string name="tor_use_videos_explainer">Force Tor when loading videos</string>
 
-    <string name="tor_use_money_operations">Money Operations</string>
-    <string name="tor_use_money_operations_explainer">Force Tor on zaps, lightning and cashu transfers</string>
 
-    <string name="tor_use_nip05_verification">Nostr Address Verification</string>
-    <string name="tor_use_nip05_verification_explainer">Force Tor when verifying NIP-05 addresses</string>
 
-    <string name="tor_use_media_uploads">Media Uploads</string>
-    <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
 
-    <string name="tor_internal">Internal</string>
-    <string name="tor_external">Orbot</string>
-    <string name="tor_off">Off</string>
 
-    <string name="tor_when_needed">Basic</string>
-    <string name="tor_default">Default</string>
-    <string name="tor_small_payloads">All but Media</string>
-    <string name="tor_full_privacy">Full Privacy</string>
-    <string name="tor_custom">Custom</string>
 
-    <string name="tor_when_needed_explainer">Use Tor when it\'s required by the server</string>
-    <string name="tor_default_explainer">Hide your IP from random relays</string>
-    <string name="tor_small_payloads_explainer">Hide your IP from everything, but images and videos</string>
-    <string name="tor_full_privacy_explainer">Hide your IP in all connections</string>
-    <string name="tor_custom_explainer">Make your own</string>
+
+
+
+
+
 
 
     <string name="app_notification_channel_id" translatable="false">DefaultChannelID</string>
-    <string name="app_notification_private_message" translatable="false">New notification arrived</string>
 
-    <string name="app_notification_dms_channel_id" translatable="false">PrivateMessagesID</string>
-    <string name="app_notification_dms_channel_name">Private Messages</string>
-    <string name="app_notification_dms_channel_description">Notifies you when a private message arrives</string>
 
-    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
-    <string name="app_notification_zaps_channel_name">Zaps Received</string>
-    <string name="app_notification_zaps_channel_description">Notifies you when somebody zaps you</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
-    <string name="app_notification_zaps_channel_message_from">From %1$s</string>
-    <string name="app_notification_zaps_channel_message_for">for %1$s</string>
 
-    <string name="app_notification_payments_channel_id" translatable="false">PaymentsReceivedID</string>
-    <string name="app_notification_payments_channel_name">Payments Received</string>
-    <string name="app_notification_payments_channel_description">Notifies you when your connected wallet receives a payment that is not a Nostr zap</string>
-    <string name="app_notification_payments_channel_message">Received %1$s sats</string>
-    <string name="app_notification_payments_summary">New payments</string>
 
-    <string name="app_notification_reply_label">Reply</string>
-    <string name="app_notification_mark_read_label">Mark Read</string>
-    <string name="app_notification_reply_sending">Sending…</string>
-    <string name="app_notification_reply_unconfirmed">Still sending…</string>
-    <string name="app_notification_reply_failed">Not sent</string>
-    <string name="app_notification_reply_retry">Retry</string>
-    <string name="app_notification_shortcut_account_removed">This account was removed from Amethyst.</string>
-    <string name="app_notification_me">Me</string>
-    <string name="app_notification_new_message">New message</string>
-    <string name="app_notification_added_to_group">You\'ve been added to %1$s</string>
-    <string name="app_notification_dms_summary">New messages</string>
-    <string name="app_notification_zaps_summary">New zaps</string>
 
-    <string name="app_notification_reactions_channel_id" translatable="false">ReactionsID</string>
-    <string name="app_notification_reactions_channel_name">Reactions</string>
-    <string name="app_notification_reactions_channel_description">Notifies you when somebody reacts to your post</string>
-    <string name="app_notification_reactions_channel_message">%1$s reacted to your post</string>
-    <string name="app_notification_reactions_channel_message_for">for %1$s</string>
-    <string name="app_notification_reactions_summary">New reactions</string>
-    <string name="app_notification_chess_channel_id" translatable="false">ChessID</string>
-    <string name="app_notification_chess_channel_name">Chess</string>
-    <string name="app_notification_chess_channel_description">Notifies you about chess game events</string>
-    <string name="app_notification_chess_challenge_accepted">%1$s accepted your chess challenge</string>
-    <string name="app_notification_chess_your_turn">%1$s moved — your turn</string>
-    <string name="app_notification_chess_summary">Chess updates</string>
-    <string name="app_notification_replies_channel_id" translatable="false">RepliesID</string>
-    <string name="app_notification_replies_channel_name">Replies</string>
-    <string name="app_notification_replies_channel_description">Notifies you when somebody replies to your post</string>
     <string name="app_notification_replies_channel_message">%1$s replied</string>
     <string name="app_notification_replies_channel_message_for">on: %1$s</string>
-    <string name="app_notification_replies_summary">New replies</string>
-    <string name="app_notification_mentions_channel_id" translatable="false">MentionsID</string>
-    <string name="app_notification_mentions_channel_name">Mentions</string>
-    <string name="app_notification_mentions_channel_description">Notifies you when somebody mentions or cites you in a post</string>
-    <string name="app_notification_mentions_channel_message">%1$s mentioned you</string>
-    <string name="app_notification_mentions_summary">New mentions</string>
 
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
-    <string name="app_notification_group_messages">Messages</string>
-    <string name="app_notification_group_social">Social</string>
-    <string name="app_notification_group_payments">Payments</string>
-    <string name="app_notification_group_content">Content</string>
-    <string name="app_notification_group_developer">Developer</string>
-    <string name="app_notification_group_games">Games</string>
 
     <!-- Reposts -->
-    <string name="app_notification_reposts_channel_id" translatable="false">RepostsID</string>
-    <string name="app_notification_reposts_channel_name">Reposts</string>
-    <string name="app_notification_reposts_channel_description">Notifies you when somebody reposts your post</string>
-    <string name="app_notification_reposts_channel_message">%1$s reposted your post</string>
-    <string name="app_notification_reposts_summary">New reposts</string>
 
     <!-- Media (picture &amp; video posts that mention you) -->
-    <string name="app_notification_media_channel_id" translatable="false">MediaID</string>
-    <string name="app_notification_media_channel_name">Media</string>
-    <string name="app_notification_media_channel_description">Notifies you when somebody mentions you in a photo or video</string>
-    <string name="app_notification_media_channel_message_photo">%1$s shared a photo</string>
-    <string name="app_notification_media_channel_message_video">%1$s shared a video</string>
-    <string name="app_notification_media_summary">New media</string>
 
     <!-- Articles &amp; highlights -->
-    <string name="app_notification_articles_channel_id" translatable="false">ArticlesID</string>
-    <string name="app_notification_articles_channel_name">Articles &amp; Highlights</string>
-    <string name="app_notification_articles_channel_description">Notifies you when somebody mentions or highlights you in an article</string>
-    <string name="app_notification_articles_channel_message">%1$s mentioned you in an article</string>
-    <string name="app_notification_articles_channel_message_highlight">%1$s highlighted your article</string>
-    <string name="app_notification_articles_summary">New articles</string>
 
     <!-- Code &amp; git -->
-    <string name="app_notification_code_channel_id" translatable="false">CodeID</string>
-    <string name="app_notification_code_channel_name">Code &amp; Git</string>
-    <string name="app_notification_code_channel_description">Notifies you about issues, patches, pull requests, comments, merges, and closes</string>
-    <string name="app_notification_code_channel_message_issue">%1$s opened an issue</string>
-    <string name="app_notification_code_channel_message_patch">%1$s sent a patch</string>
-    <string name="app_notification_code_channel_message_pr">%1$s opened a pull request</string>
-    <string name="app_notification_code_channel_message_pr_update">%1$s updated a pull request</string>
-    <string name="app_notification_code_channel_message_reply">%1$s commented</string>
-    <string name="app_notification_code_channel_message_status_open">%1$s reopened a thread</string>
-    <string name="app_notification_code_channel_message_status_applied_pr">%1$s merged a pull request</string>
-    <string name="app_notification_code_channel_message_status_applied_patch">%1$s applied a patch</string>
-    <string name="app_notification_code_channel_message_status_applied_issue">%1$s resolved an issue</string>
-    <string name="app_notification_code_channel_message_status_applied">%1$s merged/resolved a thread</string>
-    <string name="app_notification_code_channel_message_status_closed_pr">%1$s closed a pull request</string>
-    <string name="app_notification_code_channel_message_status_closed_patch">%1$s closed a patch</string>
-    <string name="app_notification_code_channel_message_status_closed_issue">%1$s closed an issue</string>
-    <string name="app_notification_code_channel_message_status_closed">%1$s closed a thread</string>
-    <string name="app_notification_code_channel_message_status_draft">%1$s marked a thread as draft</string>
-    <string name="app_notification_code_summary">New code activity</string>
 
     <!-- Badges -->
-    <string name="app_notification_badges_channel_id" translatable="false">BadgesID</string>
-    <string name="app_notification_badges_channel_name">Badges</string>
-    <string name="app_notification_badges_channel_description">Notifies you when you earn a badge</string>
-    <string name="app_notification_badges_channel_message">You earned a badge</string>
-    <string name="app_notification_badges_channel_message_from">Awarded by %1$s</string>
-    <string name="app_notification_badges_summary">New badges</string>
 
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
-    <string name="app_notification_nutzap_channel_message_from">Nutzap from %1$s</string>
-    <string name="app_notification_onchain_channel_message_from">Onchain zap from %1$s</string>
 
     <!-- Poll mentions (rendered on the Mentions channel) -->
-    <string name="app_notification_poll_channel_message">%1$s asked a question</string>
 
     <!-- Call notifications and UI -->
-    <string name="app_notification_calls_channel_name">Incoming calls</string>
-    <string name="app_notification_calls_channel_description">Notifications for incoming voice and video calls</string>
-    <string name="call_incoming">Incoming call</string>
-    <string name="call_incoming_voice">Incoming voice call\u2026</string>
-    <string name="call_incoming_video">Incoming video call\u2026</string>
-    <string name="call_with">Call with %1$s</string>
-    <string name="call_ongoing">Calls</string>
-    <string name="call_ongoing_description">Ongoing call notification</string>
-    <string name="call_hangup">Hang up</string>
-    <string name="call_accept">Accept</string>
-    <string name="call_reject">Reject</string>
-    <string name="call_mute">Mute</string>
-    <string name="call_unmute">Unmute</string>
-    <string name="call_camera_on">Camera on</string>
-    <string name="call_camera_off">Camera off</string>
-    <string name="call_screen_share_start">Share screen</string>
-    <string name="call_screen_share_stop">Stop sharing screen</string>
-    <string name="call_screen_sharing">Sharing screen</string>
-    <string name="call_speaker">Speaker</string>
-    <string name="call_earpiece">Earpiece</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="call_permission_denied_voice">Amethyst needs microphone access to start a voice call. Please enable it in the app settings.</string>
-    <string name="call_permission_denied_video">Amethyst needs camera and microphone access to start a video call. Please enable them in the app settings.</string>
-    <string name="call_settings">Call Settings</string>
 
-    <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
-    <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
-    <string name="always_on_notif_title">Amethyst Notifications Active</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Connected to %1$d inbox relay</item>
-        <item quantity="other">Connected to %1$d inbox relays</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Connected to %1$d relay</item>
-        <item quantity="other">Connected to %1$d relays</item>
-    </plurals>
-    <string name="always_on_notif_show_details">Show details</string>
-    <string name="always_on_notif_hide_details">Hide details</string>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
-    <plurals name="relay_purpose_line">
-        <item quantity="one">%1$s \u00b7 %2$d relay</item>
-        <item quantity="other">%1$s \u00b7 %2$d relays</item>
-    </plurals>
-    <string name="relay_purpose_browsing">Browsing</string>
-    <string name="relay_purpose_media">Media</string>
-    <string name="relay_purpose_tags">Hashtags</string>
-    <string name="relay_purpose_topics">Topics</string>
-    <string name="relay_purpose_thread">Conversation</string>
-    <string name="relay_purpose_search">Search</string>
-    <string name="relay_purpose_referenced">Finding Missing Events</string>
-    <string name="relay_purpose_engagement">Observing Events</string>
-    <string name="relay_explain_referenced">Fetches events by id that something on your screen refers to but you don\'t have yet — a quote, a reply\'s parent, a thread root.</string>
-    <string name="relay_explain_engagement">Watches the events currently rendered for new replies, reactions, reposts, zaps and reports, so counts update while you read.</string>
-    <string name="relay_purpose_add_ons">Add-ons</string>
-    <string name="relay_purpose_relay_info">Relay info</string>
-    <string name="relay_purpose_other">Other</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
-    <string name="relay_purpose_relay_list_finder">Relay List Finder</string>
-    <string name="relay_purpose_observing_profiles">Observing Profiles</string>
-    <string name="relay_purpose_your_account">Account\'s data</string>
-    <string name="relay_purpose_home_feed">Home Feed</string>
-    <string name="relay_purpose_relay_groups">Relay Groups</string>
-    <plurals name="active_subs_groups">
-        <item quantity="one">%1$d group</item>
-        <item quantity="other">%1$d groups</item>
-    </plurals>
-    <string name="relay_purpose_ephemeral_chats">Ephemeral Chats</string>
-    <string name="relay_purpose_geohash_chats">Location Chats</string>
-    <string name="relay_purpose_live_chat">Live Stream Chat</string>
-    <string name="relay_explain_relay_groups">NIP-29 groups you joined. Each group lives on one host relay, so the app connects to every relay that hosts a group of yours.</string>
-    <string name="relay_explain_ephemeral_chats">Chat rooms that keep no history — messages exist only while you are connected, so these stay subscribed to receive anything at all.</string>
-    <string name="relay_explain_geohash_chats">Location-based rooms for the areas you follow, asked of the relays that carry them.</string>
-    <string name="relay_explain_live_chat">Chat and zap goals attached to live streams you have open or follow.</string>
-    <string name="relay_purpose_dm_inbox">DM Inbox</string>
-    <string name="relay_purpose_your_wallet">Wallet</string>
-    <string name="relay_purpose_nutzap_inbox">Nutzap Inbox</string>
-    <string name="relay_purpose_mint_directory">Mint Directory</string>
-    <string name="relay_purpose_nwc">Wallet Connect</string>
-    <string name="relay_purpose_community_chats">Community Chats</string>
-    <string name="relay_purpose_community_feeds">Community Feeds</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
-    <string name="relay_explain_notifications">Your inbox relays, plus a small rotating sample of the relays your follows post to, in case a mention was delivered somewhere else.</string>
-    <string name="relay_explain_direct_messages">Your DM inbox relays, where gift-wrapped messages are delivered.</string>
-    <string name="relay_explain_public_chats">The home relay of each chat you have open or joined.</string>
-    <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>
-    <string name="relay_explain_encrypted_groups">Group messages and key packages, on each group\'s relays.</string>
-    <string name="relay_explain_live_rooms">The room\'s relays, while it is open.</string>
-    <string name="relay_explain_account_data">Your own profile, settings and drafts, on your home relays.</string>
-    <string name="relay_explain_profiles">Profiles of the people currently on screen.</string>
-    <string name="relay_explain_relay_lists">Finds which relays each person publishes to, so their posts can be fetched from the right place.</string>
-    <string name="relay_explain_follows">Follow lists, used to build your feed and your web of trust.</string>
-    <string name="relay_explain_moderation">Reports your follows wrote about the profiles currently on your screen, asked of each relay those follows post to.</string>
-    <string name="relay_purpose_reports_from_follows">Reports from Follows</string>
-    <string name="relay_explain_wallet">Your own wallet events, read back from the relays you published them to.</string>
-    <string name="relay_explain_nutzap_inbox">Listens on your nutzap relays plus your inbox and DM relays, so a payment cannot slip past.</string>
-    <string name="relay_explain_mint_directory">Looks across relays for which mints exist and which ones people recommend.</string>
-    <string name="relay_explain_nwc">Notifications from your connected wallet.</string>
-    <string name="active_subs_title">Active Relay Subscriptions</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <plurals name="active_subs_filters">
-        <item quantity="one">%1$d filter</item>
-        <item quantity="other">%1$d filters</item>
-    </plurals>
-    <plurals name="active_subs_relays">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
-    </plurals>
-    <plurals name="active_subs_untagged">
-        <item quantity="one">%1$d filter is not attributed yet</item>
-        <item quantity="other">%1$d filters are not attributed yet</item>
-    </plurals>
     <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="active_subs_share">%1$d%% of all</string>
-    <string name="active_subs_search_keywords">subscriptions filters relays requests reqs connections why diagnostics</string>
-    <string name="relay_explain_home">Posts by people you follow, read from the relays each of them publishes to.</string>
-    <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 
     <string name="always_on_notif_tile_label">Notification service</string>
-    <string name="always_on_notif_tile_subtitle_on">On</string>
-    <string name="always_on_notif_tile_subtitle_off">Off</string>
 
-    <string name="notification_service_master_title">Background notification service</string>
-    <string name="notification_service_master_description">Master switch for real-time background notifications. Turn off to save battery — like an airplane mode. When off, no account stays connected in the background, and it stays off (across restarts) until you turn it back on.</string>
-    <string name="notification_service_accounts_title">Accounts active in the background</string>
     <string name="notification_service_participation_title">Keep this account active in the background</string>
 
-    <string name="split_notifications_setting_title">Split notifications by Follows</string>
-    <string name="split_notifications_setting_description">Show two notification tabs — Following (people you follow) and Everyone. The unread indicator glows only for activity from people you follow.</string>
-    <string name="show_messages_in_notifications_setting_title">Show Messages</string>
-    <string name="show_messages_in_notifications_setting_description">Include direct and group messages on the Notification tab. Turn off to keep messages only in the Messages tab.</string>
-
-
-    <string name="reply_notify">Notify: </string>
-
-
-    <string name="today">Today</string>
-
-
-    <string name="content_warning_hide_all_sensitive_content_option">Hide</string>
-    <string name="content_warning_show_all_sensitive_content_option">Show</string>
-    <string name="content_warning_see_warnings_option">Warn</string>
-
-
-    <string name="filter_spam_from_strangers_title">Filter spam</string>
-    <string name="filter_spam_from_strangers_explainer">Hides posts from strangers that were exactly the same for 5 or more times</string>
-    <string name="add_client_tag_title">Add client tag to my events</string>
-    <string name="add_client_tag_explainer">When enabled, Amethyst appends a NIP-89 client tag to events you publish.</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts or profiles have reports from your follows</string>
-    <string name="hide_community_rules_violations_title">Hide posts that violate community rules</string>
-    <string name="hide_community_rules_violations_explainer">Drops posts from community feeds when the community publishes a NIP-9B rules document and an event would fail it. No effect when a community has no structured rules.</string>
-
-    <string name="security_section_filtering_preferences">Filtering preferences</string>
-    <string name="security_section_blocked_content">Blocked content</string>
-    <string name="security_blocked_users_empty">You haven\'t blocked any users yet.</string>
-    <string name="security_spamming_users_empty">No accounts have been flagged as spam in this session.</string>
-    <string name="security_hidden_words_empty">No hidden words. Add a word below to hide posts containing it.</string>
-
-    <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
-
-
-    <string name="read_from_relay">Read from Relay</string>
-    <string name="write_to_relay">Write to Relay</string>
-    <string name="write_to_relay_description">The amount in bytes that was sent to this relay, including filters and events</string>
-    <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
-    <string name="privacy_policy">Privacy Policy</string>
-    <string name="child_safety_standards">Child Safety Standards</string>
-    <string name="about_legal">About &amp; Legal</string>
-    <string name="cashu">Cashu Token</string>
-
-
-    <string name="no_lightning_address_set">No Lightning Address set</string>
 
 
 
-    <string name="relay_setup">Relays</string>
-
-    <string name="discover_follows">Follow Packs</string>
-    <string name="discover_reads">Reads</string>
-    <string name="discover_content_v2">Feed Algorithms</string>
-    <string name="discover_marketplace">Marketplace</string>
-    <string name="discover_live_v2">Live Streams</string>
-    <string name="discover_community_v2">Communities</string>
-    <string name="discover_chat">Chats</string>
 
 
-    <string name="add_sensitive_content_label">Sensitive Content</string>
-    <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
 
-    <string name="ui_preferences">UI Preferences</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <string name="preferences">App Preferences</string>
-    <string name="translations">Translations</string>
-    <string name="reactions">Reactions</string>
 
-    <string name="settings">Settings</string>
-    <string name="account_settings">Account Settings</string>
-    <string name="app_settings">App Settings</string>
 
     <!-- Settings search -->
 
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
-    <string name="relay_setup_search_keywords" translatable="false">relays, inbox, outbox, connections, servers</string>
-    <string name="privacy_options_search_keywords" translatable="false">tor, orbot, proxy, privacy, anonymous</string>
-    <string name="ui_preferences_search_keywords" translatable="false">dark mode, light mode, theme, font size, language, appearance</string>
-    <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
-    <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
-    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount, payto, pay-to, venmo, paypal, cash app, monero, iban, hand-off</string>
-    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
-    <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
-    <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
-    <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>
     <string name="agent_console_search_keywords" translatable="false">buzz, agents, personas, cost, tokens, fleet, ai, turn metrics</string>
-    <string name="profile_badges_search_keywords" translatable="false">badges, awards</string>
-    <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
-    <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
-    <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
-    <string name="audio_visualizer_search_keywords" translatable="false">audio, visualizer, spectrum, bars, waves, radial, aurora, animation</string>
-    <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
-    <string name="bolt12_offers_search_keywords" translatable="false">bolt12, bolt 12, offer, lno, lightning, zap, reusable invoice</string>
-    <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
-    <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
-    <string name="ots_explorer_search_keywords" translatable="false">opentimestamps, timestamp, ots, proof</string>
-    <string name="namecoin_search_keywords" translatable="false">namecoin, dns, identity, name</string>
-    <string name="calendar_reminder_search_keywords" translatable="false">calendar, events, reminders, rsvp</string>
-    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13</string>
-    <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>
-    <string name="bottom_bar_search_keywords" translatable="false">navigation, tabs, nav bar</string>
-    <string name="drawer_search_keywords" translatable="false">side menu, drawer, hamburger, sections, hide, show</string>
-    <string name="home_tabs_search_keywords" translatable="false">tabs, feeds, threads, conversations</string>
-    <string name="profile_ui_search_keywords" translatable="false">profile, layout</string>
-    <string name="backup_keys_search_keywords" translatable="false">nsec, private key, seed, mnemonic, export</string>
-    <string name="request_to_vanish_search_keywords" translatable="false">delete account, vanish, gdpr</string>
-    <string name="vanish_history_search_keywords" translatable="false">deletion, delete events</string>
-    <string name="reset_marmot_search_keywords" translatable="false">mls, group chat, messaging, reset</string>
-    <string name="privacy_policy_search_keywords" translatable="false">legal, terms, tos, policy, gdpr</string>
-    <string name="child_safety_search_keywords" translatable="false">legal, safety, abuse, csae, child protection</string>
 
-    <string name="danger_zone">Danger Zone</string>
-    <string name="reset_marmot_state">Reset Marmot State</string>
-    <string name="reset_marmot_success">Marmot state reset.</string>
-    <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>
-    <string name="connectivity_type_always">Always</string>
-    <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
-    <string name="connectivity_type_never">Never</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
-    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
 
-    <string name="ui_feature_set_type_complete">Complete</string>
-    <string name="ui_feature_set_type_simplified">Simplified</string>
-    <string name="ui_feature_set_type_performance">Performance</string>
     <!-- Compact labels for the segmented control. -->
-    <string name="ui_feature_set_type_complete_short">Full</string>
-    <string name="ui_feature_set_type_simplified_short">Simple</string>
-    <string name="ui_feature_set_type_performance_short">Fast</string>
 
-    <string name="gallery_type_classic">Classic</string>
-    <string name="gallery_type_modern">Modern</string>
 
-    <string name="system">System</string>
-    <string name="light">Light</string>
-    <string name="dark">Dark</string>
-    <string name="settings_section_appearance">Appearance</string>
-    <string name="settings_section_media">Media &amp; Data</string>
-    <string name="settings_section_general">General</string>
-    <string name="settings_section_tor_engine">Connection</string>
-    <string name="settings_section_tor_routing">Route through Tor</string>
-    <string name="settings_section_profile_sections">Sections &amp; feeds</string>
-    <string name="settings_section_home_tabs">Visible tabs</string>
-    <string name="settings_section_home_content_types">Content in the feed</string>
-    <string name="home_content_type_text_notes">Text notes</string>
-    <string name="home_content_type_reposts">Reposts</string>
-    <string name="home_content_type_comments">Comments &amp; replies</string>
-    <string name="home_content_type_pictures">Pictures</string>
-    <string name="home_content_type_videos">Videos</string>
-    <string name="home_content_type_shorts">Shorts</string>
-    <string name="home_content_type_articles">Articles</string>
-    <string name="home_content_type_wiki">Wiki pages</string>
-    <string name="home_content_type_highlights">Highlights</string>
-    <string name="home_content_type_polls">Polls</string>
-    <string name="home_content_type_classifieds">Classifieds</string>
-    <string name="home_content_type_torrents">Torrents</string>
-    <string name="home_content_type_voice">Voice messages</string>
-    <string name="home_content_type_live_activities">Live activities</string>
-    <string name="home_content_type_ephemeral_chat">Ephemeral chats</string>
-    <string name="home_content_type_interactive_stories">Interactive stories</string>
-    <string name="home_content_type_chess">Chess games</string>
-    <string name="home_content_type_birds">Bird sightings</string>
-    <string name="home_content_type_attestations">Attestations</string>
-    <string name="home_content_type_nips">NIP drafts</string>
-    <string name="home_content_type_music">Music &amp; audio</string>
-    <string name="home_content_type_podcasts">Podcasts</string>
-    <string name="home_content_type_fundraisers">Fundraisers</string>
-    <string name="home_content_type_ratings">Ratings and reviews</string>
-    <string name="rating_stars_out_of_five">Rated %1$s out of 5</string>
-    <string name="library_learning_resource">Learning resource</string>
-    <string name="library_directory">Directory</string>
-    <string name="library_blossom_piece">File record</string>
-    <plurals name="library_directory_items">
-        <item quantity="one">%1$d item</item>
-        <item quantity="other">%1$d items</item>
-    </plurals>
-    <plurals name="library_directory_more_items">
-        <item quantity="one">%1$d more item</item>
-        <item quantity="other">%1$d more items</item>
-    </plurals>
-    <string name="settings_section_reminders">Reminders</string>
-    <string name="wallet_connect">Wallet Connect</string>
-    <string name="theme">Theme</string>
-    <string name="accent_color_purple">Purple</string>
-    <string name="accent_color_blue">Blue</string>
-    <string name="accent_color_green">Green</string>
-    <string name="accent_color_orange">Orange</string>
-    <string name="accent_color_red">Red</string>
-    <string name="accent_color_pink">Pink</string>
-    <string name="font_family">Font</string>
-    <string name="font_family_description">Typeface used throughout the app</string>
-    <string name="font_family_system">System Default</string>
-    <string name="font_family_sans_serif">Sans Serif</string>
-    <string name="font_family_serif">Serif</string>
-    <string name="font_family_monospace">Monospace</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="font_family_system_short">System</string>
-    <string name="font_family_sans_serif_short">Sans</string>
-    <string name="font_family_serif_short">Serif</string>
-    <string name="font_family_monospace_short">Mono</string>
-    <string name="font_size">Font Size</string>
-    <string name="font_size_description">Scale the text size across the app</string>
-    <string name="font_size_small">Small</string>
-    <string name="font_size_normal">Normal</string>
-    <string name="font_size_large">Large</string>
-    <string name="font_size_huge">Huge</string>
-    <string name="automatically_load_images_gifs">Image Preview</string>
-    <string name="automatically_play_videos">Video Playback</string>
-    <string name="autoplay_videos">Autoplay Videos</string>
-    <string name="automatically_show_url_preview">URL Preview</string>
-    <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
-    <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
-
-    <string name="ui_style">UI Mode</string>
-    <string name="ui_style_description">Choose the post style</string>
-
-    <string name="gallery_style">Profile Gallery Style</string>
-    <string name="gallery_style_description">Choose the gallery style</string>
-
-
-    <string name="spamming_users">Spammers</string>
-
-    <string name="muted_button">Muted. Click to unmute</string>
-    <string name="mute_button">Sound on. Click to mute</string>
-    <string name="skip_back">Skip back %d seconds</string>
-    <string name="skip_forward">Skip forward %d seconds</string>
-
-
-
-    <string name="location_pick_on_map">Pick a place on the map</string>
-    <string name="location_change_place">Change place on the map</string>
-
-    <string name="geohash_exclusive">Location-exclusive Post</string>
-    <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>
 
 
 
 
-    <plurals name="music_playlist_track_count">
-        <item quantity="one">%1$d track</item>
-        <item quantity="other">%1$d tracks</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="one">+%1$d more track</item>
-        <item quantity="other">+%1$d more tracks</item>
-    </plurals>
-    <string name="music_track_cover_upload_cta">Upload a cover image</string>
-    <string name="music_track_cover_upload_hint">Pick a square image to be the artwork for this track.</string>
-    <string name="music_track_audio_upload_cta">Upload an audio file</string>
-    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
-    <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
-    <string name="edit_music_playlist">Edit playlist</string>
-    <string name="music_playlist_cover_upload_cta">Upload a cover image</string>
-    <string name="music_playlist_cover_upload_hint">Pick a square image to be the artwork for this playlist.</string>
-    <string name="music_playlist_uploading_banner">Uploading cover and publishing. This will keep going even if you leave the screen.</string>
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1505,91 +299,13 @@
 
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
-    <string name="new_conversation_section_direct">Private</string>
-    <string name="new_conversation_section_encrypted">Encrypted groups</string>
-    <string name="new_conversation_section_relay">Relay-aware</string>
 
-    <string name="new_conversation_dm_title">Private Message</string>
-    <string name="new_conversation_dm_tagline">Direct messages, end-to-end encrypted</string>
-    <string name="new_conversation_dm_chip">1:1–5 rooms</string>
-    <string name="new_conversation_dm_best">One-on-one and small group chats with people you know.</string>
-    <string name="new_conversation_dm_cta">New message</string>
-    <string name="new_conversation_dm_pro_1">1-on-1 &amp; small groups</string>
-    <string name="new_conversation_dm_pro_2">End-to-end encrypted</string>
-    <string name="new_conversation_dm_con_1">Can\'t add users later</string>
 
-    <string name="new_conversation_marmot_title">Marmot Group</string>
-    <string name="new_conversation_marmot_tagline">Bigger private groups</string>
-    <string name="new_conversation_marmot_chip">Device-bound</string>
-    <string name="new_conversation_marmot_best">Larger private groups that outgrow small-group DMs.</string>
-    <string name="new_conversation_marmot_cta">Create group</string>
-    <string name="new_conversation_marmot_pro_1">Scales past small DMs</string>
-    <string name="new_conversation_marmot_pro_2">Encrypted group chat</string>
-    <string name="new_conversation_marmot_con_1">Device-bound — won\'t appear if you sign in elsewhere</string>
 
-    <string name="new_conversation_concord_title">Concord Community</string>
-    <string name="new_conversation_concord_tagline">Communities split by channel</string>
-    <string name="new_conversation_concord_chip">Workspaces</string>
-    <string name="new_conversation_concord_best">Massive communities, organized by channels or workstreams.</string>
-    <string name="new_conversation_concord_cta">Create community</string>
-    <string name="new_conversation_concord_pro_1">Scales to huge communities</string>
-    <string name="new_conversation_concord_pro_2">Split by channel / workstream</string>
-    <string name="new_conversation_concord_con_1">More to set up</string>
 
-    <string name="new_conversation_public_chat_title">Public Chat</string>
-    <string name="new_conversation_public_chat_tagline">Public messages on a relay</string>
-    <string name="new_conversation_public_chat_chip">Unmoderated</string>
-    <string name="new_conversation_public_chat_best">Open public rooms where anyone can post.</string>
-    <string name="new_conversation_public_chat_cta">Create public chat</string>
-    <string name="new_conversation_public_chat_pro_1">Anyone can join</string>
-    <string name="new_conversation_public_chat_pro_2">Simple &amp; discoverable</string>
-    <string name="new_conversation_public_chat_con_1">Public only</string>
-    <string name="new_conversation_public_chat_con_2">No moderation</string>
 
-    <string name="new_conversation_relay_group_title">Relay Group</string>
-    <string name="new_conversation_relay_group_tagline">Relay-run, public or private</string>
-    <string name="new_conversation_relay_group_chip">Moderated</string>
-    <string name="new_conversation_relay_group_best">Groups moderated by the relay that hosts them.</string>
-    <string name="new_conversation_relay_group_cta">Browse relay groups</string>
-    <string name="new_conversation_relay_group_pro_1">Moderated by the relay</string>
-    <string name="new_conversation_relay_group_pro_2">Public or private</string>
-    <string name="new_conversation_relay_group_con_1">Tied to that one relay</string>
 
-    <string name="new_conversation_ephemeral_title">Disappearing Chat</string>
-    <string name="new_conversation_ephemeral_tagline">Whoever\'s online, right now</string>
-    <string name="new_conversation_ephemeral_chip">Live now</string>
-    <string name="new_conversation_ephemeral_best">In-the-moment chat with whoever is online right now.</string>
-    <string name="new_conversation_ephemeral_cta">Start chat</string>
-    <string name="new_conversation_ephemeral_pro_1">Talk to who\'s online now</string>
-    <string name="new_conversation_ephemeral_pro_2">Nothing is saved</string>
-    <string name="new_conversation_ephemeral_con_1">No history</string>
-    <string name="new_conversation_ephemeral_con_2">Relay-scoped</string>
-    <string name="relay_groups_title">Relay Groups</string>
-    <string name="relay_group_server_label">Relay groups</string>
-    <string name="messages_settings">Messages</string>
-    <string name="messages_settings_search_keywords" translatable="false">messages, chats, groups, nip-29, relay, inline, dm, nip-04, nip-17, nip-28, concord, marmot, geohash, ephemeral, load</string>
-    <string name="chat_type_nip17_title">Private messages</string>
-    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17).</string>
-    <string name="chat_type_nip04_title">Legacy DMs</string>
-    <string name="chat_type_nip04_desc">Older, less-private encrypted direct messages (NIP-04).</string>
-    <string name="chat_type_nip28_title">Public channels</string>
-    <string name="chat_type_nip28_desc">Open, public chat rooms anyone can read and join (NIP-28).</string>
-    <string name="chat_type_nip29_title">Relay groups</string>
-    <string name="chat_type_nip29_desc">Relay-managed group chats with rosters and moderation (NIP-29).</string>
-    <string name="chat_type_marmot_title">Encrypted groups</string>
-    <string name="chat_type_marmot_desc">MLS end-to-end encrypted group chats (Marmot).</string>
-    <string name="chat_type_concord_title">Concord communities</string>
-    <string name="chat_type_concord_desc">Encrypted communities with multiple channels (Concord).</string>
-    <string name="chat_type_geohash_title">Location chats</string>
-    <string name="chat_type_geohash_desc">Public geohash-scoped chat for a place (Geolocation).</string>
-    <string name="chat_type_ephemeral_title">Ephemeral chats</string>
-    <string name="chat_type_ephemeral_desc">Lightweight, relay-scoped rooms that don\'t persist history.</string>
-    <string name="relay_group_create_title">Create a group</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_create_title">New channel</string>
-    <string name="buzz_forum_create_title">New forum</string>
-    <string name="buzz_channel_flag_private">Private channel</string>
-    <string name="buzz_channel_flag_private_desc">Hidden from the channel list and invite-only. Off means anyone on this relay can find and join it.</string>
     <string name="buzz_channel_flag_forum">Forum channel</string>
     <string name="buzz_channel_flag_forum_desc">Threaded posts instead of a chat timeline. This cannot be changed later.</string>
     <string name="relay_group_create_name">Group name</string>
@@ -1599,33 +315,19 @@
     <string name="relay_group_create_confirm">Create</string>
     <string name="relay_group_invite_generating">Creating an invite…</string>
     <string name="relay_group_invite_copied">Invite code copied</string>
-    <string name="relay_group_edit_title">Edit group</string>
     <string name="relay_group_edit_name">Group name</string>
     <string name="relay_group_edit_topic">Topic (optional)</string>
     <string name="relay_group_edit_private">Private (members-only read)</string>
     <string name="relay_group_edit_invite_only">Invite only</string>
     <string name="relay_group_edit_confirm">Save</string>
-    <string name="relay_group_delete">Delete group</string>
-    <string name="relay_group_delete_confirm">Delete \"%1$s\"? This removes the group and its history for everyone, and cannot be undone.</string>
-    <string name="buzz_channel_delete">Delete channel</string>
-    <string name="buzz_channel_delete_confirm">Delete \"%1$s\"? This removes the channel and its messages for everyone, and cannot be undone.</string>
-    <string name="buzz_channel_archive">Archive channel</string>
-    <string name="buzz_channel_unarchive">Unarchive channel</string>
     <string name="relay_group_location_edit">Change location</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_flag_private">Private</string>
-    <string name="relay_group_flag_private_desc">Only members can read messages.</string>
     <string name="relay_group_discovery_empty">Looking for groups across your relays…</string>
     <string name="relay_group_discovery_empty_filtered">No groups found for this filter yet.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_title_label">Title</string>
     <string name="relay_group_thread_body_label">Write something…</string>
     <string name="relay_group_thread_post">Post</string>
     <string name="channel_invite_title">Added to %1$s</string>
-    <plurals name="relay_group_member_count">
-        <item quantity="one">%1$d member</item>
-        <item quantity="other">%1$d members</item>
-    </plurals>
     <plurals name="relay_group_message_count">
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
@@ -1638,40 +340,15 @@
         <item quantity="one">%1$d person you follow</item>
         <item quantity="other">%1$d people you follow</item>
     </plurals>
-    <plurals name="relay_group_relay_group_count">
-        <item quantity="one">%1$d group</item>
-        <item quantity="other">%1$d groups</item>
-    </plurals>
     <string name="messages_new_message">Private</string>
-    <string name="messages_new_message_subject">Subject</string>
-
-    <string name="messages_cant_upload_title">Can\'t Upload</string>
-    <string name="messages_cant_upload_explainer">Insert the destination of the message first</string>
 
 
 
 
-    <string name="couldnt_find_nwc_wallets">Wallet not found</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn\'t find any wallet apps that support Nostr Wallet Connect (NWC).
-\n\nWhat you can do:
-\n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect.
-\n\t2. Create Connection: Go to your wallet app and create a new NWC connection.
-\n\t3. Link to Amethyst: Your wallet will usually give you three options:
-\n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen.
-\n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it.
-\n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.
-    </string>
-
-    <string name="theme_description">Dark, Light or System theme</string>
-    <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
-    <string name="automatically_play_videos_description">Automatically load videos and GIFs</string>
-    <string name="autoplay_videos_description">Automatically play videos when visible on screen</string>
-    <string name="automatically_show_url_preview_description">Show URL previews</string>
 
 
-    <string name="copy_to_clipboard">Copy to clipboard</string>
-    <string name="copied_to_clipboard">Copied to clipboard</string>
-    <string name="share_or_save">Share or Save</string>
+
+
     <string name="share_target_as_dm">Send as DM</string>
     <string name="share_target_as_highlight">New Highlight</string>
     <string name="share_target_as_picture">New Picture</string>
@@ -1680,91 +357,7 @@
     <string name="share_target_scan_qr">Scan QR code</string>
     <string name="shortcut_scan_qr_short">Scan QR</string>
     <string name="shortcut_scan_qr_long">Scan a QR code</string>
-    <string name="new_highlight_title">New Highlight</string>
     <string name="new_highlight_passage_label">Highlighted text</string>
-    <string name="new_highlight_note_placeholder">Add your thoughts…</string>
-    <string name="media_added">Media added</string>
-    <string name="media_added_to_profile_gallery">Media added to your Profile Gallery</string>
-
-
-
-
-
-
-    <string name="error_dialog_zap_error">Unable to send zap</string>
-
-
-
-
-
-    <string name="missing_lud16">Missing lightning setup</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">User %1$s does not have a lightning address set up to receive sats</string>
-
-    <string name="error_opening_external_signer">Error opening signer app</string>
-    <string name="error_opening_external_signer_description">The signer app could not be found. Check if the app hasn\'t been uninstalled</string>
-
-    <string name="error_video_playback_failed">Can\'t play this video</string>
-    <string name="error_video_playback_failed_description">The codec or format isn\'t supported on this device (%1$s). Try opening it in your browser.</string>
-    <string name="error_video_open_in_browser">Open in browser</string>
-    <string name="sign_request_rejected2">Sign request rejected</string>
-    <string name="sign_request_rejected_description">Make sure the signer application has authorized this transaction</string>
-
-    <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
-    <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
-
-    <string name="no_blossom_apps_found_title">Can\'t open Blossom links</string>
-    <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
-
-    <string name="hidden_words">Hidden Words</string>
-    <string name="settings_muted_threads_title">Muted threads</string>
-    <string name="settings_muted_threads_empty">No muted threads</string>
-    <string name="automatically_show_profile_picture">Profile Picture</string>
-    <string name="automatically_show_profile_picture_description">Show Profile pictures</string>
-
-
-    <string name="error_dialog_pay_invoice_error">Could not pay invoice</string>
-    <string name="error_dialog_pay_withdraw_error">Could not withdraw</string>
-
-
-    <string name="cashu_failed_redemption">Could not redeem Cashu</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">Mint provided the following error message: %1$s</string>
-    <string name="cashu_unsafe_mint_url">Unsafe Cashu mint address</string>
-    <string name="cashu_unsafe_mint_url_explainer">Amethyst did not contact this token\'s mint. %1$s</string>
-
-    <string name="cashu_successful_redemption">Cashu Received</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
-    <string name="cashu_no_wallet_found">No compatible Cashu wallet found on system</string>
-
-    <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
-
-    <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
-    <string name="wallet_connect_unreadable_response_error">Your wallet connect provider sent a reply Amethyst could not read.</string>
-
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
-    <string name="could_not_fetch_invoice_from_details">Could not fetch invoice from %1$s: %2$s</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Error Parsing JSON from %1$s. Check the user\'s lightning setup</string>
-
-    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL not found from %1$s\'s response</string>
-
-
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Incorrect invoice amount (%1$s sats) from %2$s. It should have been %3$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver\'s lightning wallet sent the following error: %1$s</string>
-
-
-
-    <string name="read_only_user">Read-only user</string>
-    <string name="no_reactions_setup">No reactions setup</string>
-
-    <string name="notification_settings">Notifications</string>
-    <string name="notification_settings_section_delivery">Delivery</string>
-    <string name="notification_settings_section_display">In-app display</string>
-    <string name="notification_settings_section_categories">Categories</string>
-
-
-
-    <string name="payment_required_title">Message from %1$s</string>
-    <string name="notify_block_relay">Block Relay</string>
-    <string name="hi_seller_is_this_still_available">Hi %1$s, is this still available?</string>
 
 
 
@@ -1772,237 +365,74 @@
 
 
 
-    <string name="classifieds_category_clothing">Clothing</string>
-    <string name="classifieds_category_accessories">Accessories</string>
-    <string name="classifieds_category_electronics">Electronics</string>
-    <string name="classifieds_category_furniture">Furniture</string>
-    <string name="classifieds_category_collectibles">Collectibles</string>
-    <string name="classifieds_category_books">Books</string>
-    <string name="classifieds_category_pets">Pets</string>
-    <string name="classifieds_category_sports">Sports</string>
-    <string name="classifieds_category_fitness">Fitness</string>
-    <string name="classifieds_category_art">Art</string>
-    <string name="classifieds_category_crafts">Crafts</string>
-    <string name="classifieds_category_home">Home</string>
-    <string name="classifieds_category_office">Office</string>
-    <string name="classifieds_category_food">Food</string>
-    <string name="classifieds_category_misc">Miscellaneous</string>
-    <string name="classifieds_category_other">Other</string>
-
-    <string name="failed_to_upload_media_no_details">Failed to upload media</string>
-    <string name="could_not_open_the_compressed_file">Could not open the compressed file</string>
-    <string name="failed_to_upload_media">Uploading error: %1$s</string>
-    <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
-    <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
-    <string name="could_not_check_downloaded_file">Could not check downloaded file after upload: %1$s</string>
-    <string name="failed_to_upload_to_server_with_message">Failed to upload to %1$s: %2$s</string>
-    <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
-    <string name="media_too_big_for_nip95">Media is too big for NIP-95</string>
 
 
-    <string name="encrypt_files_label">Encrypt files</string>
-    <string name="encrypt_files_description">Encrypt files before uploading for privacy. Some servers may not accept encrypted files on free accounts.</string>
-    <string name="failed_to_upload_encrypted_media_title">Encrypted upload failed</string>
-    <string name="failed_to_upload_encrypted_media_message">Many servers do not accept encrypted files on free accounts. You can retry without encryption.</string>
-
-    <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
-    <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
-    <string name="convert_gif_to_mp4_label">Convert GIF to MP4</string>
-    <string name="convert_gif_to_mp4_description">Converts animated GIF to MP4 video for smaller file size and better playback compatibility.</string>
-    <string name="strip_metadata_label">Remove private metadata</string>
-    <string name="strip_metadata_description">Attempts to strip private metadata from supported media files before uploading</string>
-
-    <string name="metadata_strip_failed_title">Metadata could not be removed</string>
-    <string name="metadata_strip_failed_upload_cancelled">Failed to strip private metadata from media. Upload cancelled.</string>
-    <string name="upload_cancelled">Upload cancelled</string>
-    <string name="avif_metadata_strip_failed">Cannot strip metadata from AVIF: %1$s</string>
 
 
-    <string name="route_home">Home</string>
-    <string name="route_discover">Discover</string>
-    <string name="route_messages">Messages</string>
-    <string name="route_notifications">Notifications</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="route_media">Media</string>
-    <string name="route_calendars">Calendars</string>
-    <string name="route_geocaches">Geocaches</string>
-    <string name="route_geocache_hunts">Cache hunts</string>
-    <string name="route_geocache_detail">Cache</string>
-    <string name="route_geocache_hunt_detail">Hunt</string>
-    <string name="route_log_geocache_find">Log a find</string>
-    <string name="route_new_geocache">Hide a cache</string>
-    <string name="route_edit_geocache">Edit cache</string>
-    <string name="route_new_geocache_hunt">New hunt</string>
-    <string name="route_edit_geocache_hunt">Edit hunt</string>
-    <string name="route_calendar_collections">Calendar lists</string>
-    <string name="route_chess">Chess</string>
-    <string name="wallet">Wallet</string>
-    <string name="wallet_transactions_load_failed">Could not load transactions</string>
-    <string name="wallet_transactions_load_more_failed">Could not load more transactions</string>
-    <string name="wallet_balance_request_failed">Could not load your balance</string>
-    <string name="wallet_invoice_creation_failed">Could not create the invoice</string>
-    <string name="wallet_no_invoice_returned">Your wallet did not return an invoice</string>
-    <string name="wallet_request_timed_out">Wallet request timed out</string>
-    <string name="wallet_request_failed">Could not reach your wallet: %1$s</string>
-    <string name="wallet_connect_unrecognized_reply">Your wallet replied with something Amethyst does not recognise (%1$s)</string>
-    <string name="wallet_connect_decrypt_failed">Amethyst could not decrypt your wallet\'s reply — the wallet may be using a different key</string>
-    <string name="wallet_add_cashu_title">Cashu wallet (NIP-60)</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
     <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
     <string name="cashu_p2pk_autogen">Generate a new key</string>
     <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
-    <string name="wallet_edit_cashu_title">Edit mints</string>
     <string name="wallet_save_changes">Save changes</string>
-    <plurals name="cashu_mint_plus_others">
-        <item quantity="one">+%1$d more</item>
-        <item quantity="other">+%1$d more</item>
-    </plurals>
-    <plurals name="cashu_mint_recommended_by_others">
-        <item quantity="one">Recommended by %1$d other</item>
-        <item quantity="other">Recommended by %1$d others</item>
-    </plurals>
-    <string name="cashu_mint_popular_header">Popular mints</string>
-    <string name="cashu_mint_matches_header">Matching mints</string>
-    <string name="cashu_history_incoming">Received</string>
-    <string name="cashu_history_outgoing">Sent</string>
-    <string name="cashu_settings_delete_confirm_body">Publish a delete request for your kind:38000 recommendation of %1$s. Relays that honor NIP-09 will drop it.</string>
-    <string name="cashu_settings_restore_result">Recovered %1$s sats across %2$s proofs.</string>
-    <string name="cashu_quote_confirm">Pay %1$s sat + up to %2$s sat in fees?</string>
-    <string name="nutzap_failed_title">Nutzap failed</string>
-    <string name="nutzap_failed_no_recipient">No recipient pubkey on the note</string>
-    <string name="nutzap_failed_private_note">Nutzaps are public and would reveal this private note. Use a Lightning zap instead.</string>
-    <string name="nutzap_failed_no_event">Cannot build event reference</string>
-    <string name="cashu_waiting_for_payment">Waiting for the invoice to be paid…</string>
-    <string name="cashu_checking_mint">Checking the mint…</string>
 
     <!-- Onchain zap send dialog -->
-    <string name="onchain_send_fee_slow">Slow</string>
-    <string name="onchain_send_fee_normal">Normal</string>
-    <string name="onchain_send_fee_fast">Fast</string>
-    <string name="onchain_send_fee_eta_slow">~1 hr</string>
-    <string name="onchain_send_fee_eta_normal">~30 min</string>
-    <string name="onchain_send_fee_eta_fast">~10 min</string>
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
-    <plurals name="onchain_send_button_amount_split">
-        <item quantity="one">Send %1$s sats, %2$d way</item>
-        <item quantity="other">Send %1$s sats, %2$d ways</item>
-    </plurals>
-    <plurals name="onchain_send_use_note_split">
-        <item quantity="one">Use this note\'s %1$d-way zap split</item>
-        <item quantity="other">Use this note\'s %1$d-way zap split</item>
-    </plurals>
-    <plurals name="onchain_send_splits_label">
-        <item quantity="one">Splits among %1$d recipient</item>
-        <item quantity="other">Splits among %1$d recipients</item>
-    </plurals>
-    <plurals name="onchain_send_splits_skipped">
-        <item quantity="one">Skipping %1$d Lightning-address-only recipient — on-chain needs a Nostr pubkey to derive the address.</item>
-        <item quantity="other">Skipping %1$d Lightning-address-only recipients — on-chain needs a Nostr pubkey to derive the address.</item>
-    </plurals>
-    <string name="onchain_stage_loading_utxos">loading balance</string>
-    <string name="onchain_stage_building">building the transaction</string>
-    <string name="onchain_stage_signing">signing</string>
-    <string name="onchain_stage_broadcasting">broadcasting</string>
-    <string name="onchain_stage_publishing">publishing the receipt</string>
-    <string name="onchain_send_error_backend_not_configured">Bitcoin chain backend is not configured</string>
-    <string name="onchain_send_error_load_utxos">Could not load your Bitcoin balance</string>
-    <string name="onchain_send_error_build">Could not build the transaction</string>
-    <string name="onchain_send_error_recipient_dust">A recipient share is below dust</string>
-    <string name="onchain_send_error_sign">Could not sign the transaction</string>
-    <string name="onchain_send_error_broadcast">Could not broadcast the transaction</string>
-    <string name="onchain_send_error_publish_receipt">Payment sent, but the zap receipt could not be published</string>
-    <plurals name="onchain_send_error_publish_receipt_partial">
-        <item quantity="one">Payment sent (%1$d of %2$d receipt published), but the next receipt could not be published</item>
-        <item quantity="other">Payment sent (%1$d of %2$d receipts published), but the next receipt could not be published</item>
-    </plurals>
-
-    <string name="route_import_follows">Import Follows</string>
-
-    <string name="new_product">New Product</string>
-    <string name="new_long_form_post">New Article</string>
-    <string name="new_calendar_event">New Calendar Event</string>
-    <string name="edit_calendar_event">Edit Calendar Event</string>
-    <string name="new_calendar_collection">New Calendar</string>
-    <string name="edit_calendar_collection">Edit Calendar</string>
-
-    <string name="calendar_view_feed">Feed</string>
-    <string name="calendar_view_month">Month</string>
-    <string name="calendar_view_week">Week</string>
-    <string name="calendar_view_day">Day</string>
 
 
-    <plurals name="calendar_day_a11y_events">
-        <item quantity="one">%1$s, %2$d event</item>
-        <item quantity="other">%1$s, %2$d events</item>
-    </plurals>
 
 
-    <string name="calendar_relative_ongoing">Happening now</string>
-    <string name="calendar_relative_ongoing_with_end">%1$s · ends %2$s</string>
-    <string name="calendar_export_share_title">Share calendar event</string>
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
-    <string name="calendar_reminder_channel_name">Calendar reminders</string>
-    <string name="calendar_reminder_channel_description">Heads-up when an event you\'re attending is about to start.</string>
-    <string name="calendar_reminder_default_title">Calendar event</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="one">Starts in %1$d minute</item>
-        <item quantity="other">Starts in %1$d minutes</item>
-    </plurals>
-    <string name="calendar_event_image_upload_failed">Image upload failed</string>
-    <string name="calendar_event_image_upload_failed_body">The picked image couldn\'t be uploaded. Try again or paste a URL.</string>
-    <string name="calendar_reminder_settings_title">Calendar reminders</string>
-    <string name="calendar_reminder_settings_enabled_title">Send reminders</string>
-    <string name="calendar_reminder_settings_enabled_subtitle">A notification fires when an event you\'re attending is about to start.</string>
-    <plurals name="calendar_reminder_settings_lead_choice">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
-    <string name="calendar_open_in_maps">Open in maps</string>
-    <string name="calendar_open_link">Open link</string>
 
 
-    <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
-    <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
-
-    <string name="zap_description">Zap</string>
 
 
-    <string name="bottom_bar_settings">Bottom Navigation Bar</string>
+
+
+
+
     <string name="bottom_bar_settings_description">Drag the pinned items to reorder. Open a category below and toggle an item to add or remove it. Open Browser or a chat type to pin a favorite or a specific group. With zero items the bottom bar is hidden.</string>
     <string name="bottom_bar_settings_reorder">Reorder</string>
-    <string name="bottom_bar_settings_no_favorites">No favorites yet. Star an app in the Browser to add it here.</string>
-    <string name="bottom_bar_settings_no_groups">No joined groups yet.</string>
-    <string name="bottom_bar_settings_add">Add</string>
-    <string name="bottom_bar_settings_added">Added</string>
-    <string name="bottom_bar_category_main">Main</string>
-    <string name="bottom_bar_category_chats">Chats &amp; Groups</string>
-    <string name="bottom_bar_category_you">You</string>
-    <string name="bottom_bar_category_feeds">Feeds</string>
-    <string name="bottom_bar_category_apps">Apps &amp; Web</string>
-    <string name="bottom_bar_category_other">Other</string>
-    <string name="drawer_settings">Side Menu</string>
-    <plurals name="drawer_settings_hidden_count">
-        <item quantity="one">%1$d hidden</item>
-        <item quantity="other">%1$d hidden</item>
-    </plurals>
-    <string name="drawer_settings_visible">Visible</string>
-    <string name="drawer_settings_hidden">Hidden</string>
-    <string name="drawer_settings_always_on">Always on</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
-    <string name="home_tab_everything">Everything</string>
-    <string name="profile_ui_settings">Profile UI</string>
     <string name="profile_ui_settings_description">Pick which sections and feeds appear on user profile screens. All options are enabled by default.</string>
-    <string name="profile_ui_setting_badges">Profile Badges</string>
-    <string name="profile_ui_setting_app_recommendations">App Recommendations</string>
-    <string name="profile_ui_setting_zap_received_feed">Zap Received Feed</string>
-    <string name="profile_ui_setting_followers_feed">Followers Feed</string>
-    <string name="profile_ui_setting_onchain_wallet">Bitcoin (on-chain) Wallet</string>
-    <string name="reactions_settings">Reaction Row</string>
 
-    <string name="video_player_settings">Video Player Buttons</string>
 
-    <string name="audio_visualizer_settings">Audio Visualizer</string>
 
 
 
@@ -2019,10 +449,6 @@
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
 
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_edit_message">Edit</string>
-    <string name="edit_message">Edit</string>
-    <string name="concord_editing_banner">Editing message</string>
-    <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_workspaces_title">Buzz Workspaces</string>
     <string name="buzz_workspaces_hero_tagline">Where humans and agents build together</string>
     <string name="buzz_workspaces_leave">Leave workspace</string>
@@ -2039,84 +465,25 @@
     <string name="buzz_import_empty_title">No channels found</string>
     <string name="buzz_import_empty_body">You don\'t seem to be a member of any channels on this relay yet. Accept the workspace invite in the browser first, then try again.</string>
 
-    <string name="buzz_pin">Pin channel</string>
-    <string name="buzz_unpin">Unpin channel</string>
-    <plurals name="buzz_dm_hidden_count">
-        <item quantity="one">%1$d hidden conversation</item>
-        <item quantity="other">%1$d hidden conversations</item>
-    </plurals>
-    <plurals name="buzz_dm_see_all_count">
-        <item quantity="one">See %1$d more conversation</item>
-        <item quantity="other">See all %1$d conversations</item>
-    </plurals>
 
 
-    <string name="chat_delivery_pending">Waiting for a relay to accept this message</string>
-    <string name="chat_delivery_no_relay_info">No relay information for this message</string>
-    <string name="chat_delivery_accepted">Accepted by at least one relay</string>
-    <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>
-
-    <string name="expiration_date_label">Expiration Date</string>
-    <string name="expiration_info_description">The author asked relays to delete this note after %1$s. It will disappear from feeds once it expires.</string>
-
-    <string name="invalid_nip19_uri">Invalid address</string>
-    <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
-
-    <string name="dm_relays_title">DM Inbox Relays</string>
-
-    <string name="search_relays_title">Search Relays</string>
-    <string name="search_relays_not_found_examples">Good options are:\n%1$s</string>
-
-    <string name="outbox_relays_title">Outbox Relays</string>
-
-    <string name="inbox_relays_title">Inbox Relays</string>
-
-    <string name="relay_settings">Relay Settings</string>
-    <string name="public_home_section">Public Outbox/Home Relays</string>
-    <string name="public_home_section_explainer_profile">User is posting his content to these relays</string>
-    <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>
-    <string name="public_notif_section">Public Inbox Relays</string>
-    <string name="public_notif_section_explainer_profile">User is receiving notifications on these relays</string>
-    <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. They can be paid or free relays. Limits set by the relay operator can limit the notifications you receive for the good and for the bad. For example, if you are being attacked by comment spam, paid relays can filter the spam out. Insert between 1–3 relays.</string>
-    <string name="private_inbox_section">DM Inbox Relays</string>
-    <string name="private_inbox_section_explainer_profile">User receives DMs on these relays</string>
-    <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
-    <string name="keypackages">KeyPackages</string>
-    <string name="keypackage_section">KeyPackage Relays</string>
-    <string name="keypackage_section_explainer">Relays where your MLS KeyPackages are published (MIP-00). Other users fetch these KeyPackages to invite you into Marmot group chats. Insert between 1–3 relays that accept KeyPackage events from you and allow public reads.</string>
-    <string name="private_outbox_section">Private Home Relays</string>
-    <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
 
 
-    <string name="connected_section">Connected Relays</string>
-    <string name="connected_section_description">Current list of relays being used</string>
 
-    <string name="search_section">Search Relays</string>
-    <string name="search_section_explainer">List of relays to use when searching content or users. Tagging and search will not work if no options are available. Make sure they implement NIP-50.</string>
-    <string name="local_section">Local Relays</string>
-    <string name="local_section_explainer">List of relays that are running in this device.</string>
-    <string name="send_kind0_to_local_relay_title">Forward profiles to local relay</string>
-    <string name="send_kind0_to_local_relay_description">Send all received profile (kind 0) events to your local relay</string>
 
-    <string name="trusted_section">Trusted Relays</string>
-    <string name="trusted_section_explainer">Relays you trust to not need a Tor connection for</string>
 
-    <string name="favorite_section">Favorite Relay Feeds</string>
-    <string name="favorite_section_explainer">Relays you frequently go to see their Global feed</string>
 
-    <string name="proxy_section">Proxy Relays</string>
-    <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
 
-    <string name="broadcast_section">Broadcast Relays</string>
-    <string name="broadcast_section_explainer">Relays that specialize in pushing your notes to all of the other relays, like sendit.nosflare.com. Amethyst will add this relay to all new events made by you</string>
 
-    <string name="indexer_section">Indexer Relays</string>
-    <string name="indexer_section_explainer">Relays that specialize in hosting everyone\'s metadata and relay lists, like purplepag.es. Amethyst will use these relays to find users that are not in your lists.</string>
 
-    <string name="blocked_section">Blocked Relays</string>
-    <string name="blocked_section_explainer">Amethyst will never connect to these relays</string>
 
-    <string name="export_relay_settings">Export relay settings</string>
+
+
+
+
+
+
+
 
     <string name="git_web_address">Web:</string>
     <string name="git_repo_tab_overview">Overview</string>
@@ -2126,448 +493,56 @@
     <string name="git_repo_section_maintainers">Maintainers</string>
     <string name="git_repo_section_topics">Topics</string>
     <string name="git_repo_tab_readme">Readme</string>
-    <plurals name="git_repo_item_count">
-        <item quantity="one">%1$d item</item>
-        <item quantity="other">%1$d items</item>
-    </plurals>
     <string name="git_issue_close">Close issue</string>
     <string name="git_issue_reopen">Reopen</string>
-    <string name="git_repositories">Git Repositories</string>
-    <string name="highlights">Highlights</string>
-    <string name="git_repositories_search_open">Filter repositories</string>
-    <string name="git_repositories_search_close">Close filter</string>
-
-    <string name="ots_info_title">Timestamp Proof</string>
-    <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
-    <string name="ots_info_pending_description">A timestamp proof for this post has been requested and is waiting to be stamped in the Bitcoin blockchain. It usually completes within a few hours.</string>
-
-    <string name="edit_post">Edit Post</string>
 
 
 
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">It\'s not possible to quote a draft note</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
-    <string name="draft_note">Draft Note</string>
 
 
 
-    <string name="http_status_400">Bad Request - The server can’t or won’t process the request.</string>
-    <string name="http_status_401">Unauthorized - The user doesn’t have valid authentication credentials</string>
-    <string name="http_status_402">Payment Required - The server requires payment to complete the request</string>
-    <string name="http_status_403">Forbidden - The user doesn’t have access rights to make the request</string>
-    <string name="http_status_404">Not Found - The server can’t find the requested address</string>
-    <string name="http_status_405">Method Not Allowed - The server supports the request method, but not the target resource</string>
-    <string name="http_status_406">Not Acceptable - The server doesn’t find any content that satisfies the request.</string>
-    <string name="http_status_407">Proxy Authentication Required - The user doesn’t have valid authentication credentials</string>
-    <string name="http_status_408">Request Timeout - The server timed out waiting for somebody else</string>
-    <string name="http_status_409">Conflict - The server can’t fulfill the request because there’s a conflict with the resource</string>
-    <string name="http_status_410">Gone - The content requested has been permanently deleted from the server and will not be reinstated</string>
-    <string name="http_status_411">Length Required - The server rejects the request because it requires a defined</string>
-    <string name="http_status_412">Precondition Failed - The request\'s preconditions in the header fields that the server fails to meet</string>
-    <string name="http_status_413">Payload Too Large - The request is larger than the server’s defined limits, and the server refuses to process it</string>
-    <string name="http_status_414">URI Too Long - The url requested by the client is too long for the server to process. </string>
-    <string name="http_status_415">Unsupported Media Type - The request uses a media format the server does not support</string>
-    <string name="http_status_416">Range Not Satisfiable - The server can’t fulfill the value indicated in the request’s Range header field. </string>
-    <string name="http_status_417">Expectation Failed - The server can’t meet the requirements indicated by the Expect request header field</string>
-    <string name="http_status_426">Upgrade Required -  The server refuses to process the request using the current protocol unless the client upgrades to a different protocol.</string>
 
-    <string name="http_status_500">Internal Server Error - The server has encountered an unexpected error and cannot complete the request</string>
-    <string name="http_status_501">Not Implemented - The server can’t fulfill the request or doesn’t recognize the request method</string>
-    <string name="http_status_502">Bad Gateway - The server acts as a gateway and got an invalid response from the host</string>
-    <string name="http_status_503">Service Unavailable - This often occurs when a server is overloaded or down for maintenance</string>
-    <string name="http_status_504">Gateway Timeout - The server was acting as a gateway or proxy and timed out, waiting for a response</string>
-    <string name="http_status_505">HTTP Version Not Supported - The server doesn’t support the HTTP version in the request</string>
-    <string name="http_status_506">Variant Also Negotiates - The server has an internal configuration error</string>
-    <string name="http_status_507">Insufficient Storage - The server doesn’t have enough storage to process the request successfully</string>
-    <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
-    <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
+
+
 
 
     <string name="media_servers_blossom_section">Blossom Servers</string>
     <string name="media_servers_blossom_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
 
-    <string name="add_a_nip96_server">Add a NIP-96 Server</string>
-    <string name="add_a_blossom_server">Add a Blossom Server</string>
 
     <string name="torrent_download">Download</string>
-    <string name="torrent_failure">Failed to open file</string>
-    <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
-    <string name="torrent_no_info">Event doesn\'t have enough information to build a magnet link</string>
 
-    <string name="my_lists">My Lists</string>
-    <string name="feed_group_feeds">Feeds</string>
-    <string name="feed_group_hashtags">Hashtags</string>
-    <string name="feed_group_interest_sets">Interest Sets</string>
-    <string name="feed_group_locations">Locations</string>
-    <string name="feed_group_communities">Communities</string>
-    <string name="feed_group_lists">Lists</string>
-    <string name="feed_group_dvms">Feed Algorithms</string>
-    <string name="follow_list_all_favorite_dvms">All favorite feed algorithms</string>
-    <string name="feed_group_relays">Relays</string>
 
-    <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
 
-    <string name="private_message">Private Message</string>
-    <string name="public_message">Public Message</string>
-
-    <string name="unable_to_share_image">Unable to share image, please try again later…</string>
-    <string name="unable_to_share_video">Unable to share video, please try again later…</string>
-    <string name="downloading_video_for_sharing">Downloading video…</string>
 
 
 
-    <string name="dont_translate_from">Don\'t Translate From</string>
-    <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
-    <string name="translate_to">Translate To</string>
-    <string name="translate_to_description">Choose the language to translate content into.</string>
-    <string name="language_preferences">Language Display Preferences</string>
-    <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
-    <string name="pause">Pause</string>
-    <string name="play">Play</string>
 
 
-    <string name="resource_usage_title">App resource usage</string>
-    <string name="resource_usage_search_keywords">battery data usage consumption power network diagnostics ledger</string>
+
     <string name="resource_usage_today">Today</string>
     <string name="resource_usage_week">Last 7 days</string>
-    <string name="resource_usage_tile_cellular">Cellular today</string>
-    <string name="resource_usage_tile_wifi">Wi-Fi today</string>
-    <string name="resource_usage_tile_relay">Relay time today</string>
-    <string name="resource_usage_tile_in_app">In app today</string>
-    <string name="resource_usage_trend_section">Data per day</string>
-    <string name="resource_usage_legend_cellular">Cellular (MB)</string>
-    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
-    <string name="resource_usage_activity_section">Activity (7 days)</string>
     <string name="resource_usage_cellular_bg">Cellular data (background)</string>
     <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
     <string name="resource_usage_wifi">Wi-Fi data</string>
-    <string name="resource_usage_relay_time">Relay connection time</string>
-    <string name="resource_usage_relay_time_bg_mobile">\u2026 backgrounded on cellular</string>
-    <string name="resource_usage_wakelock">Notification processing (CPU awake)</string>
-    <string name="resource_usage_worker_runs">Background jobs run</string>
-    <string name="resource_usage_reconnects">Relay reconnections (failed)</string>
-    <string name="resource_usage_http_requests">Web requests</string>
-    <string name="resource_usage_radio_bursts">Radio wake-ups for downloads (est.)</string>
-    <string name="resource_usage_http_active">Active transfer time</string>
-    <string name="resource_usage_media_play">Media playback time</string>
-    <string name="resource_usage_verifies">Signatures verified</string>
-    <string name="resource_usage_cpu">Processor time used</string>
     <string name="resource_usage_fg_time">Time in app</string>
-    <string name="resource_usage_app_starts">App process starts</string>
-    <string name="resource_usage_decrypts">Messages decrypted</string>
-    <string name="resource_usage_remote_signs">Remote signatures</string>
-    <string name="resource_usage_pow">Proof-of-work mining</string>
-    <string name="resource_usage_tor">Tor uptime</string>
-    <string name="resource_usage_calls">Time in calls</string>
-    <string name="resource_usage_nests">Time in audio rooms</string>
-    <string name="resource_usage_location">Location listening</string>
-    <string name="resource_usage_battery_drain">Battery used (in app / background)</string>
-    <string name="resource_usage_alwayson_section">Background notification service</string>
-    <string name="resource_usage_alwayson_uptime">Running time</string>
-    <plurals name="resource_usage_alwayson_starts">
-        <item quantity="one">%1$d start</item>
-        <item quantity="other">%1$d starts</item>
-    </plurals>
-    <string name="resource_usage_alwayson_bg_relay">Relay connections held while closed</string>
-    <string name="resource_usage_alwayson_battery">Battery drained meanwhile (whole device)</string>
-    <string name="resource_usage_tile_battery_rate">Battery / hour in app</string>
-    <string name="resource_usage_tile_data_rate">Data / hour in app</string>
-    <string name="resource_usage_tile_avg_relays">Avg. relay connections</string>
-    <string name="resource_usage_by_subsystem_cellular">Cellular data by feature (7 days)</string>
-    <string name="resource_usage_screen_time_section">Time by screen (7 days)</string>
-    <string name="resource_usage_tor_section">Built-in Tor</string>
-    <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
-    <string name="resource_usage_subsystem_relay">Relay sync</string>
-    <string name="resource_usage_subsystem_image">Images</string>
-    <string name="resource_usage_subsystem_video">Video &amp; audio</string>
-    <string name="resource_usage_subsystem_uploads">Uploads</string>
-    <string name="resource_usage_subsystem_money">Wallet &amp; zaps</string>
-    <string name="resource_usage_subsystem_nip05">Address verification</string>
-    <string name="resource_usage_subsystem_preview">Link previews</string>
-    <string name="resource_usage_subsystem_push">Push registration</string>
-    <string name="resource_usage_subsystem_other">Other</string>
-    <string name="resource_usage_memory_section">Memory right now</string>
-    <string name="resource_usage_memory_heap">App memory (heap)</string>
-    <string name="resource_usage_memory_native">Native memory</string>
-    <string name="resource_usage_memory_image_cache">Image cache (RAM)</string>
-    <string name="resource_usage_memory_image_disk">Image cache (disk)</string>
-    <string name="resource_usage_memory_notes">Notes in memory</string>
-    <string name="resource_usage_memory_users">Profiles in memory</string>
-    <string name="resource_usage_memory_addressables">Addressable events in memory</string>
-    <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
-    <string name="resource_usage_memory_device_class">Device memory class</string>
-    <string name="resource_usage_send_section">Share with the developers</string>
-    <string name="resource_usage_share_button">Share</string>
-    <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
-    <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
-    <string name="resource_usage_reason_conn_time">%1$s of relay connections while backgrounded on cellular in one day</string>
-    <string name="resource_usage_reason_wakelock">the CPU was held awake for %1$s processing notifications in one day</string>
-    <plurals name="resource_usage_reason_churn">
-        <item quantity="one">the app process restarted %1$d time in one day</item>
-        <item quantity="other">the app process restarted %1$d times in one day</item>
-    </plurals>
-    <plurals name="resource_usage_reason_reconnects">
-        <item quantity="one">the app reconnected to relays %1$d time in one day</item>
-        <item quantity="other">the app reconnected to relays %1$d times in one day</item>
-    </plurals>
-    <string name="this_message_will_disappear_in">This message will disappear in %1$s</string>
 
 
-    <string name="people_list_title">Follow List Metadata</string>
-    <string name="people_list_explainer">Follow lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
-
-    <string name="follow_pack_title">Follow Pack Metadata</string>
-    <string name="follow_pack_explainer">Follow pack metadata can be seen by anyone on Nostr and is frequently published in many websites as startup kits for new users.</string>
-
-    <string name="follow_pack_edit_list_metadata">Edit Follow Pack</string>
 
 
-    <string name="expand">Expand</string>
-    <string name="retry">Retry</string>
 
 
-    <string name="reaction">Reaction</string>
-    <string name="voice_post">Voice Post</string>
-    <string name="voice_reply">Voice Reply</string>
 
-    <plurals name="poll_results_selections">
-        <item quantity="one">· %1$d selection</item>
-        <item quantity="other">· %1$d selections</item>
-    </plurals>
-    <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>
-    <string name="poll_results_partial_approx">%1$d of about %2$d responses loaded from %3$d relays.</string>
-    <plurals name="poll_results_vote_count_link">
-        <item quantity="one">%1$d vote ›</item>
-        <item quantity="other">%1$d votes ›</item>
-    </plurals>
-    <plurals name="poll_results_option_count">
-        <item quantity="one">%1$d voter</item>
-        <item quantity="other">%1$d voters</item>
-    </plurals>
-    <plurals name="poll_results_late_votes">
-        <item quantity="one">%1$d vote arrived after the poll closed and is excluded.</item>
-        <item quantity="other">%1$d votes arrived after the poll closed and are excluded.</item>
-    </plurals>
-    <plurals name="poll_results_backdated_votes">
-        <item quantity="one">%1$d vote is dated before the poll was published and is excluded.</item>
-        <item quantity="other">%1$d votes are dated before the poll was published and are excluded.</item>
-    </plurals>
-    <plurals name="poll_results_ignored_votes">
-        <item quantity="one">%1$d response did not pick a valid option and is excluded.</item>
-        <item quantity="other">%1$d responses did not pick a valid option and are excluded.</item>
-    </plurals>
-    <plurals name="poll_results_hidden_voters">
-        <item quantity="one">%1$d voter is hidden by your mute list.</item>
-        <item quantity="other">%1$d voters are hidden by your mute list.</item>
-    </plurals>
+
+
 
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="kind_outbox_relays">Outbox Relays</string>
-    <string name="kind_apps">Apps</string>
-    <string name="kind_app_recommendations">App Recommendations</string>
-    <string name="kind_user_settings">User Settings</string>
-    <string name="kind_audio_header">Audio Header</string>
-    <string name="kind_audio_track">Audio Track</string>
-    <string name="kind_music_track">Music Track</string>
-    <string name="kind_music_playlist">Music Playlist</string>
-    <string name="kind_podcast_episode">Podcast Episode</string>
-    <string name="kind_podcast_metadata">Podcast Show</string>
-    <string name="kind_authored_podcasts">Authored Podcasts</string>
-    <string name="kind_favorite_podcasts">Favorite Podcasts</string>
-    <string name="kind_badge_awards">Badge Awards</string>
-    <string name="kind_badge_definitions">Badge Definitions</string>
-    <string name="kind_accepted_badge_set">Accepted Badge Set</string>
-    <string name="kind_profile_badges">Profile Badges</string>
-    <string name="kind_blocked_relays">Blocked Relays</string>
-    <string name="kind_blossom_servers">Blossom Servers</string>
-    <string name="kind_nests_servers">Nests Servers</string>
-    <string name="kind_blossom_auth">Blossom Auth</string>
-    <string name="kind_broadcast_relays">Broadcast Relays</string>
-    <string name="kind_bookmark_list">Bookmark List</string>
-    <string name="kind_old_bookmark_list">Old Bookmark List</string>
-    <string name="kind_day_appointment">Day Appointment</string>
-    <string name="kind_calendar">Calendar</string>
-    <string name="kind_appointment">Appointment</string>
-    <string name="kind_appt_rsvp">Appt RSVP</string>
-    <string name="kind_chess_games">Chess Games</string>
-    <string name="kind_chess_auth">Chess Auth</string>
-    <string name="kind_favorite_relays">Favorite Relays</string>
-    <string name="kind_chess_challenges">Chess Challenges</string>
-    <string name="kind_chess_game_accept">Chess Game Accept</string>
-    <string name="kind_chess_move">Chess Move</string>
-    <string name="kind_chess_game_end">Chess Game End</string>
-    <string name="kind_chess_draw_offer">Chess Draw Offer</string>
-    <string name="kind_channel_definition">Channel Definition</string>
-    <string name="kind_channel_hide_msg">Channel Hide Msg</string>
-    <string name="kind_channel_list">Channel List</string>
-    <string name="kind_channel_message">Channel Message</string>
-    <string name="kind_channel_metadata">Channel Metadata</string>
-    <string name="kind_channel_mute_user">Channel Mute User</string>
-    <string name="kind_dm_file">DM File</string>
-    <string name="kind_dm_message">DM Message</string>
-    <string name="kind_dm_relays">DM Relays</string>
-    <string name="kind_classifieds">Classifieds</string>
-    <string name="kind_comments">Comments</string>
-    <string name="kind_community_def">Community Def</string>
-    <string name="kind_community_list">Community List</string>
-    <string name="kind_community_post">Community Post</string>
-    <string name="kind_follow_list">Follow List</string>
-    <string name="kind_deletions">Deletions</string>
-    <string name="kind_drafts">Drafts</string>
-    <string name="kind_emoji_packs">Emoji Packs</string>
-    <string name="kind_emoji_pack_list">Emoji Pack List</string>
-    <string name="kind_ephemeral_chat">Ephemeral Chat</string>
-    <string name="kind_ephemeral_chatrooms">Ephemeral Chatrooms</string>
-    <string name="kind_file_headers">File Headers</string>
-    <string name="kind_profile_gallery">Profile Gallery</string>
-    <string name="kind_file_servers">File Servers</string>
-    <string name="kind_blob_data">Blob Data</string>
-    <string name="kind_blob_headers">Blob Headers</string>
-    <string name="kind_medical_data">Medical Data</string>
-    <string name="kind_follow_packs">Follow Packs</string>
-    <string name="kind_reposts_16">Reposts (16)</string>
-    <string name="kind_geohash_follows">Geohash Follows</string>
-    <string name="kind_gift_wraps">GiftWraps</string>
-    <string name="kind_git_issue">Git Issue</string>
-    <string name="kind_git_patch">Git Patch</string>
-    <string name="kind_git_repo">Git Repo</string>
-    <string name="kind_git_reply">Git Reply</string>
-    <string name="kind_git_pr">Pull Request</string>
-    <string name="kind_git_pr_update">PR Update</string>
-    <string name="kind_git_status_open">Git Status: Open</string>
-    <string name="kind_git_status_applied">Git Status: Applied</string>
-    <string name="kind_git_status_closed">Git Status: Closed</string>
-    <string name="kind_git_status_draft">Git Status: Draft</string>
-    <string name="kind_zap_goals">Zap Goals</string>
-    <string name="kind_hashtag_follows">Hashtag Follows</string>
-    <string name="kind_highlights">Highlights</string>
-    <string name="kind_http_auth">Http Auth</string>
-    <string name="kind_index_relay_list">Index Relay List</string>
-    <string name="kind_adventure_prologue">Adventure Prologue</string>
-    <string name="kind_adventure_scene">Adventure Scene</string>
-    <string name="kind_adventure_reading">Adventure Reading</string>
-    <string name="kind_named_bookmarks">Named Bookmarks</string>
-    <string name="kind_live_chats">Live Chats</string>
-    <string name="kind_live_streams">Live Streams</string>
-    <string name="kind_zaps">Zaps</string>
-    <string name="kind_nwc_request">NWC Request</string>
-    <string name="kind_nwc_response">NWC Response</string>
-    <string name="kind_private_zaps">Private Zaps</string>
-    <string name="kind_zap_req">Zap Req</string>
-    <string name="kind_blogs">Blogs</string>
-    <string name="kind_meeting_room">Meeting Room</string>
-    <string name="kind_room_presence">Room Presence</string>
-    <string name="kind_meeting_space">Meeting Space</string>
-    <string name="kind_profile">Profile</string>
-    <string name="kind_mute_list">Mute List</string>
-    <string name="kind_nns">NNS</string>
-    <string name="kind_nip">NIP</string>
-    <string name="kind_nostr_connect">Nostr Connect</string>
-    <string name="kind_dvm_status">DVM Status</string>
-    <string name="kind_dvm_content_req">DVM Content Req</string>
-    <string name="kind_dvm_content_resp">DVM Content Resp</string>
-    <string name="kind_dvm_user_req">DVM User Req</string>
-    <string name="kind_dvm_user_resp">DVM User Resp</string>
-    <string name="kind_ots">OTS</string>
-    <string name="kind_pay_to">PayTo</string>
-    <string name="kind_people_lists">People Lists</string>
-    <string name="kind_pictures">Pictures</string>
-    <string name="kind_workouts">Workouts</string>
-    <string name="kind_pins">Pins</string>
-    <string name="kind_zap_poll">Zap Poll</string>
-    <string name="kind_poll">Poll</string>
-    <string name="kind_poll_response">Poll Response</string>
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
-    <string name="kind_private_relays">Private Relays</string>
-    <string name="kind_proxy_relays">Proxy Relays</string>
-    <string name="kind_public_message">Public Message</string>
-    <string name="kind_reactions">Reactions</string>
-    <string name="kind_contact_card">Contact Card</string>
-    <string name="kind_relay_auth">Relay Auth</string>
-    <string name="kind_relay_discovery">Relay Discovery</string>
-    <string name="kind_relay_monitor">Relay Monitor Announcement</string>
-    <string name="kind_relay_set">Relay Set</string>
-    <string name="kind_reports">Reports</string>
-    <string name="kind_reposts">Reposts</string>
-    <string name="kind_user_delete">User Delete</string>
-    <string name="kind_seals">Seals</string>
-    <string name="kind_search_relays">Search Relays</string>
-    <string name="kind_user_status">User Status</string>
-    <string name="kind_notes">Notes</string>
-    <string name="kind_edits">Edits</string>
-    <string name="kind_torrents">Torrents</string>
-    <string name="kind_torrent_comments">Torrent Comments</string>
-    <string name="kind_trusted_relays">Trusted Relays</string>
-    <string name="kind_trusted_providers">Trusted Providers</string>
-    <string name="kind_video_repl">Video (Repl)</string>
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
-    <string name="kind_video">Video</string>
-    <string name="kind_shorts">Shorts</string>
-    <string name="kind_voice_msg">Voice Msg</string>
-    <string name="kind_voice_reply">Voice Reply</string>
-    <string name="kind_wake">WakeUp</string>
-    <string name="kind_web_bookmark">Web Bookmark</string>
-    <string name="kind_wiki">Wiki</string>
-    <string name="uptime">%1$d%% uptime</string>
-    <string name="namecoin_settings">Namecoin Settings</string>
-    <string name="namecoin_response_time">%dms</string>
-    <string name="event_sync_title">Relay Sync</string>
-    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
-    <string name="events_from_you">events from you</string>
-    <string name="events_to_you">events to you</string>
-    <string name="searchable_events">searchable events</string>
-    <string name="dms">DMs</string>
-    <string name="profiles">profiles</string>
-    <string name="relay_settings_lower2">outbox lists</string>
-    <string name="last_seen">Last seen %1$s ago</string>
-    <string name="last_seen_on_date">Last seen on %1$s (%2$s ago)</string>
-    <string name="last_seen_just_now">Last seen just now</string>
-    <string name="last_seen_never">Never seen</string>
 
-    <plurals name="duration_minutes">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="one">%1$d hour</item>
-        <item quantity="other">%1$d hours</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="one">%1$d week</item>
-        <item quantity="other">%1$d weeks</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="one">%1$d month</item>
-        <item quantity="other">%1$d months</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="one">%1$d year</item>
-        <item quantity="other">%1$d years</item>
-    </plurals>
 
-    <plurals name="cashu_wallet_subtitle_mints">
-        <item quantity="one">%1$d mint</item>
-        <item quantity="other">%1$d mints</item>
-    </plurals>
 
-    <plurals name="cashu_pending_quotes_title">
-        <item quantity="one">%1$d pending invoice</item>
-        <item quantity="other">%1$d pending invoices</item>
-    </plurals>
 
-    <plurals name="cashu_untrusted_mint_title">
-        <item quantity="one">Funds held at %1$d mint you don\'t use</item>
-        <item quantity="other">Funds held at %1$d mints you don\'t use</item>
-    </plurals>
 
-    <string name="cashu_move_coins_done">Moved %1$s sat to %2$s.</string>
 
 
     <!-- M3 Action Dialog titles -->
@@ -2575,182 +550,23 @@
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
 
     <!-- LAN cast (Chromecast) feature -->
-    <string name="cast_to_device">Cast to device</string>
-    <string name="cast_stop_casting">Stop casting</string>
 
     <!-- HLS multi-resolution video sharing -->
-    <string name="share_hls_video">HLS Upload</string>
-    <string name="hls_state_uploading_with_label_format">Uploading %1$s (%2$d of %3$d)</string>
 
-    <string name="attestation">Attestation</string>
-    <string name="attestation_request">Attestation Request</string>
-    <string name="attestor_recommendation">Attestor Recommendation</string>
-    <string name="attestor_proficiency">Attestor Proficiency</string>
 
-    <string name="web_bookmarks">Web Bookmarks</string>
-    <string name="web_bookmark_add_title">Add Web Bookmark</string>
-    <string name="web_bookmark_edit_title">Edit Web Bookmark</string>
 
     <!-- NIP-75 Zap Goals -->
-    <string name="goal_progress">%1$s funded of %2$s sats goal</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="new_goal">New Goal</string>
-    <string name="request_to_vanish">Request to Vanish</string>
-    <string name="vanish_request_sent">Vanish request sent</string>
-    <string name="vanish_history">Vanish History</string>
     <!-- NIP-86 Relay Management -->
-    <string name="relay_management_tab_pubkeys">Users</string>
-    <string name="relay_management_tab_events">Events</string>
-    <string name="relay_management_tab_kinds">Kinds</string>
-    <string name="relay_management_tab_ips">IPs</string>
-    <string name="relay_management_tab_settings">Settings</string>
 
-    <string name="ai_writing_setting_title">Propose text improvements</string>
-    <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
-    <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
-    <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
-    <string name="suggest_workouts_setting_title">Suggest workouts to share</string>
-    <string name="suggest_workouts_setting_description">Reads finished workouts from Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) and suggests sharing them as a post. Permission is requested only when you connect.</string>
-    <string name="compose_settings">Compose Settings</string>
-    <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
-    <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>
-    <string name="pow_settings_title">Proof of Work</string>
-    <string name="pow_info_description">The author spent computing power to mine this note to difficulty %1$s — a proof-of-work stamp that makes spamming expensive.</string>
-    <string name="pow_category_short_notes">Short notes &amp; replies</string>
-    <string name="pow_category_short_notes_explainer">The primary public spam surface</string>
-    <string name="pow_category_comments">Comments</string>
-    <string name="pow_category_comments_explainer">Replies to articles, files and other content</string>
-    <string name="pow_category_reports">Reports</string>
-    <string name="pow_category_reports_explainer">Relays weigh reports by their cost</string>
-    <string name="pow_category_long_form">Long-form &amp; highlights</string>
-    <string name="pow_category_long_form_explainer">Articles and highlights; infrequent, cost is negligible</string>
-    <string name="pow_category_voice">Voice messages</string>
-    <string name="pow_category_voice_explainer">Public voice posts and replies</string>
-    <string name="pow_category_reposts">Reposts</string>
-    <string name="pow_category_reposts_explainer">High volume for active users</string>
-    <string name="pow_category_reactions">Reactions</string>
-    <string name="pow_category_reactions_explainer">Highest-volume kind; mining every like costs battery</string>
-    <string name="pow_category_public_chat">Public &amp; live chat</string>
-    <string name="pow_category_public_chat_explainer">Mining delays hurt conversation flow</string>
-    <string name="pow_category_gift_wraps">Private message wraps</string>
-    <string name="pow_category_gift_wraps_explainer">Lets DM relays filter inbox spam; only the outer wrap is mined, never your message</string>
-    <string name="pow_category_other_public">Other public content</string>
-    <string name="pow_category_other_public_explainer">Polls, live statuses, classifieds and everything else public</string>
-    <string name="pow_mining_title">Mining proof of work</string>
-    <plurals name="pow_mining_progress">
-        <item quantity="one">Mining proof of work… (%1$d post in queue)</item>
-        <item quantity="other">Mining proof of work… (%1$d posts in queue)</item>
-    </plurals>
-    <plurals name="pow_mining_job">
-        <item quantity="one">%1$s • mining at %2$d bit</item>
-        <item quantity="other">%1$s • mining at %2$d bits</item>
-    </plurals>
-    <plurals name="pow_queued_job">
-        <item quantity="one">%1$s • waiting to mine at %2$d bit</item>
-        <item quantity="other">%1$s • waiting to mine at %2$d bits</item>
-    </plurals>
-    <plurals name="pow_option_default_on">
-        <item quantity="one">Default (%1$d bit)</item>
-        <item quantity="other">Default (%1$d bits)</item>
-    </plurals>
-    <plurals name="pow_option_bits">
-        <item quantity="one">%1$d bit</item>
-        <item quantity="other">%1$d bits</item>
-    </plurals>
-    <string name="pow_notification_channel_name">Proof of work mining</string>
-    <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
-    <string name="pow_notification_cancel_all">Cancel</string>
-    <string name="pow_notification_send_without_pow">Send now</string>
-    <string name="pow_estimate_instant">&lt;1 s</string>
-    <plurals name="pow_estimate_seconds">
-        <item quantity="one">%1$d second</item>
-        <item quantity="other">%1$d seconds</item>
-    </plurals>
-    <plurals name="pow_estimate_minutes">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="pow_estimate_hours">
-        <item quantity="one">%1$d hour</item>
-        <item quantity="other">%1$d hours</item>
-    </plurals>
-    <plurals name="pow_estimate_days">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
-    </plurals>
-    <string name="pow_time_left">≈ %1$s left</string>
-    <string name="pow_time_left_soon">any moment now</string>
-    <string name="pow_publish_failed">Your %1$s finished mining but could not be published: %2$s</string>
-    <string name="pow_publish_failed_retry">Your %1$s finished mining but could not be published. It will be retried the next time the app starts.</string>
-    <string name="pow_kind_chat_message">Chat message</string>
-    <string name="pow_kind_report">Report</string>
 
     <!-- Emoji packs -->
-    <string name="new_emoji_pack">New emoji pack</string>
-    <string name="edit_emoji_pack">Edit emoji pack</string>
-    <string name="manage_emoji_packs">My Emoji Packs</string>
-    <string name="emoji_sets">Emojis</string>
-    <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
-    <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
     <!-- NIP-9B community rules composer-side validation. -->
-    <string name="community_rules_violation_kind_size_exceeded">Draft is %1$d bytes; this community caps this kind at %2$d bytes.</string>
-    <string name="community_rules_violation_max_size_exceeded">Draft is %1$d bytes; this community caps events at %2$d bytes.</string>
-    <string name="community_rules_violation_quota_exceeded">You have already posted %1$d events of this kind today (limit %2$d).</string>
 
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="nowhere_link_card_generic">Nowhere site</string>
-    <string name="nowhere_link_card_event">Nowhere Event</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Fundraiser</string>
-    <string name="nowhere_link_card_store">Nowhere Store</string>
-    <string name="nowhere_link_card_petition">Nowhere Petition</string>
-    <string name="nowhere_link_card_message">Nowhere Message</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_art">Nowhere Art</string>
-    <string name="nowhere_link_card_forum">Nowhere Forum</string>
 
     <!-- Marmot (MLS) group chats -->
-    <plurals name="marmot_message_count">
-        <item quantity="one">%1$d msg</item>
-        <item quantity="other">%1$d msgs</item>
-    </plurals>
-    <plurals name="marmot_member_count">
-        <item quantity="one">%1$d member</item>
-        <item quantity="other">%1$d members</item>
-    </plurals>
-    <plurals name="wallet_connect_no_response_error">
-        <item quantity="one">Your wallet did not respond within %1$d second. The payment may or may not have gone through — check your wallet before retrying.</item>
-        <item quantity="other">Your wallet did not respond within %1$d seconds. The payment may or may not have gone through — check your wallet before retrying.</item>
-    </plurals>
-    <plurals name="wallet_request_timed_out_spoofed">
-        <item quantity="one">Wallet request timed out — %1$d reply was rejected because it was signed by an unexpected key. Your relay may be untrusted.</item>
-        <item quantity="other">Wallet request timed out — %1$d replies were rejected because they were signed by an unexpected key. Your relay may be untrusted.</item>
-    </plurals>
-    <string name="marmot_add_photo">Add photo</string>
-    <string name="marmot_change_photo">Change photo</string>
-    <string name="marmot_group_info_updated">Group info updated</string>
-    <string name="marmot_failed_to_update">Failed to update: %1$s</string>
-    <string name="marmot_failed_to_create_group">Failed to create group: %1$s</string>
-    <string name="marmot_failed_to_leave_group">Failed to leave group: %1$s</string>
-    <string name="marmot_enable_encrypted_media_needs_server">Add a Blossom media server in Settings first — the group needs somewhere to upload attachments to.</string>
-    <string name="marmot_encrypted_media_enabled_toast">This group now uses encrypted attachments</string>
-    <string name="marmot_failed_to_enable_encrypted_media">Could not switch this group to encrypted attachments: %1$s</string>
-    <string name="marmot_group_disbanded_toast">Group disbanded</string>
-    <string name="marmot_group_disbanding_toast">Ending the group. It finishes once the group agrees.</string>
-    <string name="marmot_group_composer_disbanding">This group is being ended. You can still read it.</string>
-    <string name="marmot_group_composer_leaving">You are leaving this group.</string>
-    <string name="marmot_group_composer_removed">You are no longer a member of this group.</string>
-    <string name="marmot_failed_to_disband">Could not disband the group: %1$s</string>
-    <string name="marmot_adding_user">Adding %1$s…</string>
-    <string name="marmot_failed_to_add_user">Failed to add %1$s: %2$s</string>
-    <string name="marmot_unknown_error">unknown error</string>
-    <string name="marmot_member_removed">Member removed</string>
-    <string name="marmot_failed_to_remove_member">Failed to remove member: %1$s</string>
-    <string name="marmot_admin_granted">Admin privileges granted</string>
-    <string name="marmot_failed_to_grant_admin">Failed to grant admin: %1$s</string>
-    <string name="marmot_admin_revoked">Admin privileges revoked</string>
-    <string name="marmot_failed_to_revoke_admin">Failed to revoke admin: %1$s</string>
-    <string name="marmot_not_a_member">Not a member of this group</string>
 
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
@@ -2759,32 +575,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Unable to create a lightning invoice from %1$s: Element pr not found in the resulting JSON.</string>
     <string name="app_name_debug" translatable="false">Amy Debug</string>
     <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
-    <string name="geohash_chat">Location chat</string>
-    <string name="new_conversation_location_title">Location channel</string>
-    <string name="new_conversation_location_tagline">Chat with whoever\'s near a place, by geohash.</string>
-    <string name="new_conversation_location_chip">Local</string>
-    <string name="new_conversation_location_best">Best for talking to people physically around a location — your block, city, or region.</string>
-    <string name="new_conversation_location_cta">Pick a location</string>
-    <string name="new_conversation_location_pro_1">Anonymous — a throwaway identity per area, never your npub.</string>
-    <string name="new_conversation_location_pro_2">Bitchat-compatible; reaches nearby users on the same relays.</string>
-    <string name="new_conversation_location_con_1">Public and ephemeral — no history, anyone in the cell can read it.</string>
 
     <!-- Buzz workflow run board -->
-    <string name="buzz_workflow_pill_queued">Queued</string>
-    <string name="buzz_workflow_pill_working">Working</string>
-    <string name="buzz_workflow_pill_needs_approval">Needs approval</string>
-    <string name="buzz_workflow_pill_approved">Approved</string>
-    <string name="buzz_workflow_pill_shipped">Shipped</string>
-    <string name="buzz_workflow_pill_failed">Failed</string>
-    <string name="buzz_workflow_pill_cancelled">Cancelled</string>
-    <string name="buzz_workflow_pill_denied">Denied</string>
 
     <!-- Buzz agent attestation -->
 
     <!-- Buzz agent persona editor -->
 
     <!-- Profile card (kind-0 rendered in the feed) -->
-    <string name="podcast_value_for_value">Value-for-Value</string>
 
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
@@ -2793,40 +591,5 @@
 
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
-    <string name="my_fitness">My Fitness</string>
-    <string name="captions_off">Off</string>
-    <string name="captions_unnamed_track">Captions</string>
-    <string name="captions_turn_on">Turn on captions</string>
-    <string name="captions_turn_off">Turn off captions</string>
-    <string name="kind_video_list">Video List</string>
-    <string name="kind_video_collaboration">Video Collaboration</string>
-    <string name="kind_video_subtitles">Video Subtitles</string>
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
-    <string name="video_credit_inspired_by">Inspired by</string>
-    <string name="video_credit_featuring">Featuring</string>
-    <string name="video_credit_references">References</string>
-    <string name="video_credit_audio_from">Audio from</string>
-    <string name="video_credit_accepted">Credit accepted</string>
-    <string name="video_collaboration_accepted_on">Accepted a collaboration credit</string>
-    <string name="video_collaboration_declined_on">Declined a collaboration credit</string>
-    <string name="video_curation_set_private_items">Private list</string>
-    <string name="nip51_list_has_private_members">This list has private members only its author can see</string>
-    <string name="kind_git_authors">Git authors</string>
-    <string name="kind_media_follows">Media follows</string>
-    <string name="kind_good_wiki_authors">Trusted wiki authors</string>
-    <string name="kind_good_wiki_relays">Trusted wiki relays</string>
-    <string name="kind_mute_set_for_kind">Muted for kind %1$s</string>
-    <string name="kind_media_starter_pack">Media starter pack</string>
-    <string name="kind_bookmark_set">Bookmark set</string>
-    <string name="kind_article_curation_set">Article list</string>
-    <string name="kind_picture_curation_set">Picture list</string>
-    <string name="kind_app_curation_set">App list</string>
-    <string name="kind_git_repositories">Git repositories</string>
-    <string name="kind_favorite_algo_feeds">Favorite feeds</string>
-    <string name="kind_interest_set">Interests</string>
-    <string name="kind_simple_groups">Groups</string>
-    <plurals name="video_curation_set_video_count">
-        <item quantity="one">%1$d video</item>
-        <item quantity="other">%1$d videos</item>
-    </plurals>
 </resources>

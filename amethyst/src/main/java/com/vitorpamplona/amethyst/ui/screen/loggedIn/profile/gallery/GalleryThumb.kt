@@ -40,10 +40,11 @@ import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -303,7 +304,7 @@ fun UrlImageView(
                         if (isVideo) {
                             Icon(
                                 symbol = MaterialSymbols.PlayCircleOutline,
-                                contentDescription = stringRes(id = R.string.play),
+                                contentDescription = stringRes(id = Res.string.play),
                                 modifier = Size50Modifier,
                                 tint = Color.White,
                             )
@@ -326,14 +327,14 @@ fun UrlImageView(
                 )
                 Icon(
                     symbol = MaterialSymbols.PlayCircleOutline,
-                    contentDescription = stringRes(id = R.string.play),
+                    contentDescription = stringRes(id = Res.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )
             } else {
                 Icon(
                     symbol = MaterialSymbols.PlayCircleOutline,
-                    contentDescription = stringRes(id = R.string.play),
+                    contentDescription = stringRes(id = Res.string.play),
                     modifier = Size50Modifier,
                     tint = Color.White,
                 )
@@ -359,7 +360,7 @@ private fun VideoPlaceholder(
     Box(defaultModifier, contentAlignment = Alignment.Center) {
         Icon(
             symbol = MaterialSymbols.PlayCircleOutline,
-            contentDescription = stringRes(id = R.string.play),
+            contentDescription = stringRes(id = Res.string.play),
             modifier = Size50Modifier,
             tint = if (content.blurhash != null || content.thumbhash != null) Color.White else MaterialTheme.colorScheme.onBackground,
         )

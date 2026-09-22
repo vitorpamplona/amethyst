@@ -26,9 +26,10 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
@@ -146,7 +147,7 @@ object FavoriteAppLauncher {
                 )
             else -> {
                 Log.w("FavoriteAppLauncher") { "Favorited app not resolvable yet: $coordinate" }
-                Toast.makeText(context, R.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, Res.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
             }
         }
     }

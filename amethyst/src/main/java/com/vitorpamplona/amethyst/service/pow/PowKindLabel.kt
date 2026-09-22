@@ -21,7 +21,15 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.boost
+import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.pow_kind_chat_message
+import com.vitorpamplona.amethyst.commons.resources.pow_kind_report
+import com.vitorpamplona.amethyst.commons.resources.private_message
+import com.vitorpamplona.amethyst.commons.resources.reaction
+import com.vitorpamplona.amethyst.commons.resources.voice_post
+import com.vitorpamplona.amethyst.commons.resources.voice_reply
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -40,12 +48,12 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 @StringRes
 fun powKindLabelRes(kind: Int): Int =
     when (kind) {
-        ReactionEvent.KIND -> R.string.reaction
-        RepostEvent.KIND, GenericRepostEvent.KIND -> R.string.boost
-        VoiceEvent.KIND -> R.string.voice_post
-        VoiceReplyEvent.KIND -> R.string.voice_reply
-        ReportEvent.KIND -> R.string.pow_kind_report
-        GiftWrapEvent.KIND -> R.string.private_message
-        ChannelMessageEvent.KIND, LiveActivitiesChatMessageEvent.KIND -> R.string.pow_kind_chat_message
-        else -> R.string.post
+        ReactionEvent.KIND -> Res.string.reaction
+        RepostEvent.KIND, GenericRepostEvent.KIND -> Res.string.boost
+        VoiceEvent.KIND -> Res.string.voice_post
+        VoiceReplyEvent.KIND -> Res.string.voice_reply
+        ReportEvent.KIND -> Res.string.pow_kind_report
+        GiftWrapEvent.KIND -> Res.string.private_message
+        ChannelMessageEvent.KIND, LiveActivitiesChatMessageEvent.KIND -> Res.string.pow_kind_chat_message
+        else -> Res.string.post
     }

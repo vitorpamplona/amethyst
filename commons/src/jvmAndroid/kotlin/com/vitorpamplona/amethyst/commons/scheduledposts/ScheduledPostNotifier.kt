@@ -30,9 +30,9 @@ package com.vitorpamplona.amethyst.commons.scheduledposts
  * The `commons` module ships a log-only JVM/desktop implementation for now.
  */
 interface ScheduledPostNotifier {
-    fun notifySent(post: ScheduledPost)
+    suspend fun notifySent(post: ScheduledPost)
 
-    fun notifyFailed(
+    suspend fun notifyFailed(
         post: ScheduledPost,
         error: String?,
     )

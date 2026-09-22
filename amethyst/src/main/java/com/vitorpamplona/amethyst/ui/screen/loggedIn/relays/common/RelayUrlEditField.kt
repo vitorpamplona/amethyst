@@ -45,8 +45,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
 import com.vitorpamplona.amethyst.commons.resources.add_a_relay
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
@@ -250,7 +250,7 @@ fun RelayUrlEditField(
                         ),
                     modifier = StdEndPadding,
                 ) {
-                    Text(text = stringRes(id = R.string.add), color = Color.White)
+                    Text(text = stringRes(id = Res.string.add), color = Color.White)
                 }
             },
         )

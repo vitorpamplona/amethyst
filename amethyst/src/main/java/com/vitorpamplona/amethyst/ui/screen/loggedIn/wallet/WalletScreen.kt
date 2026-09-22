@@ -74,16 +74,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_subtitle_mints
 import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_title
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_approved
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_set
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_pay_only
+import com.vitorpamplona.amethyst.commons.resources.wallet
 import com.vitorpamplona.amethyst.commons.resources.wallet_add
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_connection
 import com.vitorpamplona.amethyst.commons.resources.wallet_default
@@ -136,13 +140,13 @@ fun WalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet)) },
+                title = { Text(stringRes(Res.string.wallet)) },
                 navigationIcon = {
                     if (nav.canPop()) {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                                contentDescription = stringRes(R.string.back),
+                                contentDescription = stringRes(Res.string.back),
                             )
                         }
                     }
@@ -242,7 +246,7 @@ private fun MultiWalletHomeContent(
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
     val context = LocalContext.current
     val budgetApprovedMsg = stringRes(Res.string.clink_budget_approved)
-    val debitNoResponseMsg = stringRes(R.string.clink_debit_no_response)
+    val debitNoResponseMsg = stringRes(Res.string.clink_debit_no_response)
 
     LaunchedEffect(Unit) {
         walletViewModel.fetchAllBalances()
@@ -366,7 +370,7 @@ private fun WalletCard(
             },
             dismissButton = {
                 TextButton(onClick = { showRemoveDialog = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -593,7 +597,7 @@ private fun CashuWalletRow(
                 Text(
                     text =
                         pluralStringResource(
-                            R.plurals.cashu_wallet_subtitle_mints,
+                            Res.plurals.cashu_wallet_subtitle_mints,
                             mintCount,
                             mintCount,
                         ),
@@ -647,7 +651,7 @@ private fun RenameWalletDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

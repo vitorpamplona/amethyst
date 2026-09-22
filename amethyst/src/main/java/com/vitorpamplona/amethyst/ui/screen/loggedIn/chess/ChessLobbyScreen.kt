@@ -59,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
@@ -73,7 +72,10 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.PublicGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -163,12 +165,12 @@ fun ChessLobbyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.route_chess)) },
+                title = { Text(stringResource(Res.string.route_chess)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -176,7 +178,7 @@ fun ChessLobbyScreen(
                     IconButton(onClick = { showRelaySettings = true }) {
                         Icon(
                             symbol = MaterialSymbols.Settings,
-                            contentDescription = stringRes(R.string.relay_settings),
+                            contentDescription = stringRes(Res.string.relay_settings),
                         )
                     }
                 },

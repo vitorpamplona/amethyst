@@ -72,10 +72,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_add_photo
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_description
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_difficulty
@@ -98,6 +98,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_section_where
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_terrain
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_photo_remove
+import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache
+import com.vitorpamplona.amethyst.commons.resources.route_new_geocache
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -163,13 +165,13 @@ fun NewGeocacheScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringRes(if (model.isEditing) R.string.route_edit_geocache else R.string.route_new_geocache))
+                    Text(stringRes(if (model.isEditing) Res.string.route_edit_geocache else Res.string.route_new_geocache))
                 },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )

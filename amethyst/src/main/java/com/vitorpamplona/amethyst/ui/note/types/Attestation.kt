@@ -49,7 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -58,13 +57,17 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.attestation
 import com.vitorpamplona.amethyst.commons.resources.attestation_invalid
+import com.vitorpamplona.amethyst.commons.resources.attestation_request
 import com.vitorpamplona.amethyst.commons.resources.attestation_requests_attestation_to
 import com.vitorpamplona.amethyst.commons.resources.attestation_status_revoked
 import com.vitorpamplona.amethyst.commons.resources.attestation_status_verifying
 import com.vitorpamplona.amethyst.commons.resources.attestation_valid
 import com.vitorpamplona.amethyst.commons.resources.attestation_valid_from
 import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
+import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
+import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -183,7 +186,7 @@ fun RenderAttestation(
         ) {
             Icon(
                 symbol = statusIcon,
-                contentDescription = stringRes(R.string.attestation),
+                contentDescription = stringRes(Res.string.attestation),
                 tint = statusColor,
                 modifier = Modifier.size(24.dp),
             )
@@ -310,12 +313,12 @@ fun RenderAttestationRequest(
         ) {
             Icon(
                 symbol = MaterialSymbols.AutoMirrored.Send,
-                contentDescription = stringRes(R.string.attestation_request),
+                contentDescription = stringRes(Res.string.attestation_request),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestation_request),
+                text = stringRes(Res.string.attestation_request),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -443,12 +446,12 @@ fun RenderAttestorRecommendation(
         ) {
             Icon(
                 symbol = MaterialSymbols.Recommend,
-                contentDescription = stringRes(R.string.attestor_recommendation),
+                contentDescription = stringRes(Res.string.attestor_recommendation),
                 tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestor_recommendation),
+                text = stringRes(Res.string.attestor_recommendation),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.tertiary,
@@ -535,12 +538,12 @@ fun RenderAttestorProficiency(
         ) {
             Icon(
                 symbol = MaterialSymbols.Star,
-                contentDescription = stringRes(R.string.attestor_proficiency),
+                contentDescription = stringRes(Res.string.attestor_proficiency),
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
-                text = stringRes(R.string.attestor_proficiency),
+                text = stringRes(Res.string.attestor_proficiency),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary,
@@ -608,5 +611,5 @@ private fun attestationStatusLabel(status: AttestationStatus?): String =
         status == AttestationStatus.VALID -> stringRes(Res.string.attestation_valid)
         status == AttestationStatus.REVOKED -> stringRes(Res.string.attestation_status_revoked)
         status == AttestationStatus.VERIFYING -> stringRes(Res.string.attestation_status_verifying)
-        else -> stringRes(R.string.attestation)
+        else -> stringRes(Res.string.attestation)
     }

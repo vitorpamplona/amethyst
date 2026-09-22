@@ -42,16 +42,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_create_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_message
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -137,7 +139,7 @@ fun CreateGroupScreen(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.marmot_failed_to_create_group, e.message),
+                            loadStringRes(Res.string.marmot_failed_to_create_group, e.message),
                             Toast.LENGTH_LONG,
                         ).show()
                 }
@@ -201,7 +203,7 @@ fun CreateGroupScreen(
             OutlinedTextField(
                 value = groupDescription,
                 onValueChange = { groupDescription = it },
-                label = { Text(stringRes(R.string.description)) },
+                label = { Text(stringRes(Res.string.description)) },
                 placeholder = { Text(stringRes(Res.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,

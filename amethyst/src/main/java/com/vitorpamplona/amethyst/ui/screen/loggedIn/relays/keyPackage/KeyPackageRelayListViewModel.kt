@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.keypackages
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -39,7 +40,7 @@ class KeyPackageRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = R.string.keypackages,
+                label = Res.string.keypackages,
                 filter =
                     Filter(
                         kinds = listOf(KeyPackageEvent.KIND),

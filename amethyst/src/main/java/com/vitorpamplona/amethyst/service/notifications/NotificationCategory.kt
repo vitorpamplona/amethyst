@@ -25,11 +25,66 @@ import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.content.Context
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_code_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_dms_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_content
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_developer
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_games
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_messages
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_payments
+import com.vitorpamplona.amethyst.commons.resources.app_notification_group_social
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_media_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_payments_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_replies_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_replies_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_replies_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_replies_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reposts_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reposts_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reposts_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reposts_summary
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_description
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_id
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_name
+import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_summary
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Logical grouping of notification channels, shown as a section header in the
@@ -39,14 +94,14 @@ import com.vitorpamplona.amethyst.ui.stringRes
  */
 enum class NotifChannelGroup(
     val id: String,
-    @param:StringRes val nameRes: Int,
+    val nameRes: StringResource,
 ) {
-    MESSAGES("com.vitorpamplona.amethyst.group.messages", R.string.app_notification_group_messages),
-    SOCIAL("com.vitorpamplona.amethyst.group.social", R.string.app_notification_group_social),
-    PAYMENTS("com.vitorpamplona.amethyst.group.payments", R.string.app_notification_group_payments),
-    CONTENT("com.vitorpamplona.amethyst.group.content", R.string.app_notification_group_content),
-    DEVELOPER("com.vitorpamplona.amethyst.group.developer", R.string.app_notification_group_developer),
-    GAMES("com.vitorpamplona.amethyst.group.games", R.string.app_notification_group_games),
+    MESSAGES("com.vitorpamplona.amethyst.group.messages", Res.string.app_notification_group_messages),
+    SOCIAL("com.vitorpamplona.amethyst.group.social", Res.string.app_notification_group_social),
+    PAYMENTS("com.vitorpamplona.amethyst.group.payments", Res.string.app_notification_group_payments),
+    CONTENT("com.vitorpamplona.amethyst.group.content", Res.string.app_notification_group_content),
+    DEVELOPER("com.vitorpamplona.amethyst.group.developer", Res.string.app_notification_group_developer),
+    GAMES("com.vitorpamplona.amethyst.group.games", Res.string.app_notification_group_games),
 }
 
 /**
@@ -66,10 +121,10 @@ enum class NotifChannelGroup(
  * table-driven definition every renderer reads from.
  */
 enum class NotificationCategory(
-    @param:StringRes val channelIdRes: Int,
-    @param:StringRes val channelNameRes: Int,
-    @param:StringRes val channelDescriptionRes: Int,
-    @param:StringRes val summaryTextRes: Int,
+    val channelIdRes: StringResource,
+    val channelNameRes: StringResource,
+    val channelDescriptionRes: StringResource,
+    val summaryTextRes: StringResource,
     val importance: Int,
     val color: Int,
     @param:DrawableRes val smallIcon: Int,
@@ -81,10 +136,10 @@ enum class NotificationCategory(
     val colorized: Boolean = false,
 ) {
     DIRECT_MESSAGE(
-        channelIdRes = R.string.app_notification_dms_channel_id,
-        channelNameRes = R.string.app_notification_dms_channel_name,
-        channelDescriptionRes = R.string.app_notification_dms_channel_description,
-        summaryTextRes = R.string.app_notification_dms_summary,
+        channelIdRes = Res.string.app_notification_dms_channel_id,
+        channelNameRes = Res.string.app_notification_dms_channel_name,
+        channelDescriptionRes = Res.string.app_notification_dms_channel_description,
+        summaryTextRes = Res.string.app_notification_dms_summary,
         importance = NotificationManager.IMPORTANCE_HIGH,
         color = 0xFF2196F3.toInt(), // blue
         smallIcon = R.drawable.ic_notif_message,
@@ -94,10 +149,10 @@ enum class NotificationCategory(
         summaryId = 0x10000,
     ),
     REPLY(
-        channelIdRes = R.string.app_notification_replies_channel_id,
-        channelNameRes = R.string.app_notification_replies_channel_name,
-        channelDescriptionRes = R.string.app_notification_replies_channel_description,
-        summaryTextRes = R.string.app_notification_replies_summary,
+        channelIdRes = Res.string.app_notification_replies_channel_id,
+        channelNameRes = Res.string.app_notification_replies_channel_name,
+        channelDescriptionRes = Res.string.app_notification_replies_channel_description,
+        summaryTextRes = Res.string.app_notification_replies_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF7C4DFF.toInt(), // deep purple
         smallIcon = R.drawable.ic_notif_reply,
@@ -109,10 +164,10 @@ enum class NotificationCategory(
         summaryId = 0x50000,
     ),
     MENTION(
-        channelIdRes = R.string.app_notification_mentions_channel_id,
-        channelNameRes = R.string.app_notification_mentions_channel_name,
-        channelDescriptionRes = R.string.app_notification_mentions_channel_description,
-        summaryTextRes = R.string.app_notification_mentions_summary,
+        channelIdRes = Res.string.app_notification_mentions_channel_id,
+        channelNameRes = Res.string.app_notification_mentions_channel_name,
+        channelDescriptionRes = Res.string.app_notification_mentions_channel_description,
+        summaryTextRes = Res.string.app_notification_mentions_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF9C27B0.toInt(), // purple
         smallIcon = R.drawable.ic_notif_mention,
@@ -122,10 +177,10 @@ enum class NotificationCategory(
         summaryId = 0x60000,
     ),
     REACTION(
-        channelIdRes = R.string.app_notification_reactions_channel_id,
-        channelNameRes = R.string.app_notification_reactions_channel_name,
-        channelDescriptionRes = R.string.app_notification_reactions_channel_description,
-        summaryTextRes = R.string.app_notification_reactions_summary,
+        channelIdRes = Res.string.app_notification_reactions_channel_id,
+        channelNameRes = Res.string.app_notification_reactions_channel_name,
+        channelDescriptionRes = Res.string.app_notification_reactions_channel_description,
+        summaryTextRes = Res.string.app_notification_reactions_summary,
         importance = NotificationManager.IMPORTANCE_LOW,
         color = 0xFFE91E63.toInt(), // pink / heart
         smallIcon = R.drawable.ic_notif_reaction,
@@ -135,10 +190,10 @@ enum class NotificationCategory(
         summaryId = 0x40000,
     ),
     REPOST(
-        channelIdRes = R.string.app_notification_reposts_channel_id,
-        channelNameRes = R.string.app_notification_reposts_channel_name,
-        channelDescriptionRes = R.string.app_notification_reposts_channel_description,
-        summaryTextRes = R.string.app_notification_reposts_summary,
+        channelIdRes = Res.string.app_notification_reposts_channel_id,
+        channelNameRes = Res.string.app_notification_reposts_channel_name,
+        channelDescriptionRes = Res.string.app_notification_reposts_channel_description,
+        summaryTextRes = Res.string.app_notification_reposts_summary,
         importance = NotificationManager.IMPORTANCE_LOW,
         color = 0xFF4CAF50.toInt(), // green
         smallIcon = R.drawable.ic_notif_repost,
@@ -148,10 +203,10 @@ enum class NotificationCategory(
         summaryId = 0x70000,
     ),
     ZAP(
-        channelIdRes = R.string.app_notification_zaps_channel_id,
-        channelNameRes = R.string.app_notification_zaps_channel_name,
-        channelDescriptionRes = R.string.app_notification_zaps_channel_description,
-        summaryTextRes = R.string.app_notification_zaps_summary,
+        channelIdRes = Res.string.app_notification_zaps_channel_id,
+        channelNameRes = Res.string.app_notification_zaps_channel_name,
+        channelDescriptionRes = Res.string.app_notification_zaps_channel_description,
+        summaryTextRes = Res.string.app_notification_zaps_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFFF7931A.toInt(), // bitcoin orange
         smallIcon = R.drawable.ic_notif_zap,
@@ -162,10 +217,10 @@ enum class NotificationCategory(
         colorized = true,
     ),
     MEDIA(
-        channelIdRes = R.string.app_notification_media_channel_id,
-        channelNameRes = R.string.app_notification_media_channel_name,
-        channelDescriptionRes = R.string.app_notification_media_channel_description,
-        summaryTextRes = R.string.app_notification_media_summary,
+        channelIdRes = Res.string.app_notification_media_channel_id,
+        channelNameRes = Res.string.app_notification_media_channel_name,
+        channelDescriptionRes = Res.string.app_notification_media_channel_description,
+        summaryTextRes = Res.string.app_notification_media_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF00BCD4.toInt(), // cyan
         smallIcon = R.drawable.ic_notif_media,
@@ -175,10 +230,10 @@ enum class NotificationCategory(
         summaryId = 0x80000,
     ),
     ARTICLE(
-        channelIdRes = R.string.app_notification_articles_channel_id,
-        channelNameRes = R.string.app_notification_articles_channel_name,
-        channelDescriptionRes = R.string.app_notification_articles_channel_description,
-        summaryTextRes = R.string.app_notification_articles_summary,
+        channelIdRes = Res.string.app_notification_articles_channel_id,
+        channelNameRes = Res.string.app_notification_articles_channel_name,
+        channelDescriptionRes = Res.string.app_notification_articles_channel_description,
+        summaryTextRes = Res.string.app_notification_articles_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF3F51B5.toInt(), // indigo
         smallIcon = R.drawable.ic_notif_article,
@@ -188,10 +243,10 @@ enum class NotificationCategory(
         summaryId = 0x90000,
     ),
     CODE(
-        channelIdRes = R.string.app_notification_code_channel_id,
-        channelNameRes = R.string.app_notification_code_channel_name,
-        channelDescriptionRes = R.string.app_notification_code_channel_description,
-        summaryTextRes = R.string.app_notification_code_summary,
+        channelIdRes = Res.string.app_notification_code_channel_id,
+        channelNameRes = Res.string.app_notification_code_channel_name,
+        channelDescriptionRes = Res.string.app_notification_code_channel_description,
+        summaryTextRes = Res.string.app_notification_code_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF607D8B.toInt(), // slate
         smallIcon = R.drawable.ic_notif_code,
@@ -201,10 +256,10 @@ enum class NotificationCategory(
         summaryId = 0xA0000,
     ),
     BADGE(
-        channelIdRes = R.string.app_notification_badges_channel_id,
-        channelNameRes = R.string.app_notification_badges_channel_name,
-        channelDescriptionRes = R.string.app_notification_badges_channel_description,
-        summaryTextRes = R.string.app_notification_badges_summary,
+        channelIdRes = Res.string.app_notification_badges_channel_id,
+        channelNameRes = Res.string.app_notification_badges_channel_name,
+        channelDescriptionRes = Res.string.app_notification_badges_channel_description,
+        summaryTextRes = Res.string.app_notification_badges_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFFFFC107.toInt(), // amber / gold
         smallIcon = R.drawable.ic_notif_badge,
@@ -214,10 +269,10 @@ enum class NotificationCategory(
         summaryId = 0xB0000,
     ),
     CHESS(
-        channelIdRes = R.string.app_notification_chess_channel_id,
-        channelNameRes = R.string.app_notification_chess_channel_name,
-        channelDescriptionRes = R.string.app_notification_chess_channel_description,
-        summaryTextRes = R.string.app_notification_chess_summary,
+        channelIdRes = Res.string.app_notification_chess_channel_id,
+        channelNameRes = Res.string.app_notification_chess_channel_name,
+        channelDescriptionRes = Res.string.app_notification_chess_channel_description,
+        summaryTextRes = Res.string.app_notification_chess_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF795548.toInt(), // brown
         smallIcon = R.drawable.ic_notif_chess,
@@ -227,10 +282,10 @@ enum class NotificationCategory(
         summaryId = 0x30000,
     ),
     PAYMENT_RECEIVED(
-        channelIdRes = R.string.app_notification_payments_channel_id,
-        channelNameRes = R.string.app_notification_payments_channel_name,
-        channelDescriptionRes = R.string.app_notification_payments_channel_description,
-        summaryTextRes = R.string.app_notification_payments_summary,
+        channelIdRes = Res.string.app_notification_payments_channel_id,
+        channelNameRes = Res.string.app_notification_payments_channel_name,
+        channelDescriptionRes = Res.string.app_notification_payments_channel_description,
+        summaryTextRes = Res.string.app_notification_payments_summary,
         importance = NotificationManager.IMPORTANCE_DEFAULT,
         color = 0xFF16B979.toInt(), // lightning green — distinct from the gold zap channel
         smallIcon = R.drawable.ic_notif_zap,
@@ -241,7 +296,7 @@ enum class NotificationCategory(
     ),
     ;
 
-    fun channelId(context: Context): String = stringRes(context, channelIdRes)
+    suspend fun channelId(context: Context): String = loadStringRes(channelIdRes)
 
     @Volatile private var channelEnsured = false
 
@@ -252,18 +307,18 @@ enum class NotificationCategory(
      * successful creation instead of paying two IPCs on every post and re-render.
      * Returns the channel id to post on.
      */
-    fun ensureChannel(context: Context): String {
+    suspend fun ensureChannel(context: Context): String {
         val id = channelId(context)
         if (channelEnsured) return id
         synchronized(this) {
             if (!channelEnsured) {
                 val nm = context.getSystemService(NotificationManager::class.java)
                 nm.createNotificationChannelGroup(
-                    NotificationChannelGroup(channelGroup.id, stringRes(context, channelGroup.nameRes)),
+                    NotificationChannelGroup(channelGroup.id, loadStringRes(channelGroup.nameRes)),
                 )
                 val channel =
-                    NotificationChannel(id, stringRes(context, channelNameRes), importance).apply {
-                        description = stringRes(context, channelDescriptionRes)
+                    NotificationChannel(id, loadStringRes(channelNameRes), importance).apply {
+                        description = loadStringRes(channelDescriptionRes)
                         group = channelGroup.id
                     }
                 nm.createNotificationChannel(channel)

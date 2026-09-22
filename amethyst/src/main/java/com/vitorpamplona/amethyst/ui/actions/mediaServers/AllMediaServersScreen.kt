@@ -47,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_detected
 import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_not_detected
 import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_profile_pics_only
 import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_profile_pics_only_caption
+import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache
 import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache_caption
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -91,7 +91,7 @@ fun MediaServersScaffold(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(id = R.string.media_servers),
+                caption = stringRes(id = Res.string.media_servers),
                 nav = nav,
             )
         },

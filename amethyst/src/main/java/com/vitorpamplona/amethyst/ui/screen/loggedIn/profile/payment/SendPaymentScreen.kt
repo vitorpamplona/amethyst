@@ -44,24 +44,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_invalid_amount
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_nonzap
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_private
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
+import com.vitorpamplona.amethyst.commons.resources.onchain_send_fee_tier_label_rate_eta
 import com.vitorpamplona.amethyst.commons.resources.send_payment_building_tx
+import com.vitorpamplona.amethyst.commons.resources.send_payment_cashu_balance
 import com.vitorpamplona.amethyst.commons.resources.send_payment_cashu_insufficient
 import com.vitorpamplona.amethyst.commons.resources.send_payment_min_onchain
 import com.vitorpamplona.amethyst.commons.resources.send_payment_onchain_fee
+import com.vitorpamplona.amethyst.commons.resources.send_payment_onchain_txid
 import com.vitorpamplona.amethyst.commons.resources.send_payment_pay_button
 import com.vitorpamplona.amethyst.commons.resources.send_payment_pay_button_empty
+import com.vitorpamplona.amethyst.commons.resources.send_payment_paying_via
 import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_cashu
 import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_clink
 import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_onchain
@@ -83,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private
 import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
@@ -359,7 +366,7 @@ private fun SendPaymentLoaded(
             cashuInsufficient -> stringRes(Res.string.send_payment_cashu_insufficient)
             selectedMethod == ProfilePaymentMethod.CASHU ->
                 stringRes(
-                    R.string.send_payment_cashu_balance,
+                    Res.string.send_payment_cashu_balance,
                     showAmount((cashuFunding?.bestSingleMintSats ?: 0L).toBigDecimal()),
                 )
             selectedMethod == ProfilePaymentMethod.CLINK && clinkRange?.min != null && clinkRange?.max != null ->
@@ -385,8 +392,8 @@ private fun SendPaymentLoaded(
     val buildingTxLabel = stringRes(Res.string.send_payment_building_tx)
     val successTitle = stringRes(Res.string.send_payment_success)
     val sentToWalletLabel = stringRes(Res.string.send_payment_sent_to_wallet)
-    val clinkNoResponseLabel = stringRes(R.string.clink_debit_no_response)
-    val invoiceErrorLabel = stringRes(R.string.error_dialog_pay_invoice_error)
+    val clinkNoResponseLabel = stringRes(Res.string.clink_debit_no_response)
+    val invoiceErrorLabel = stringRes(Res.string.error_dialog_pay_invoice_error)
 
     // Payment callbacks arrive on IO/relay threads. Snapshot state writes are
     // thread-safe, but every other payment flow in the app marshals UI state
@@ -413,7 +420,7 @@ private fun SendPaymentLoaded(
             }
         when (val source = pickedSource) {
             is PaymentSource.Nwc -> {
-                postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
+                postStage(PaymentFlowStage.InProgress(loadStringRes(Res.string.send_payment_paying_via, source.name)))
                 accountViewModel.sendZapPaymentRequestFor(
                     bolt11 = invoice,
                     zappedNote = null,
@@ -428,7 +435,7 @@ private fun SendPaymentLoaded(
             }
 
             is PaymentSource.ClinkDebit -> {
-                postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
+                postStage(PaymentFlowStage.InProgress(loadStringRes(Res.string.send_payment_paying_via, source.name)))
                 accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
                     postStage(
                         if (response?.isOk() == true) {
@@ -497,7 +504,7 @@ private fun SendPaymentLoaded(
                 stage =
                     PaymentFlowStage.Failure(
                         response.error?.takeIf { it.isNotBlank() }
-                            ?: stringRes(context, R.string.clink_offer_invalid_amount),
+                            ?: loadStringRes(Res.string.clink_offer_invalid_amount),
                     )
             }
             else ->
@@ -558,7 +565,7 @@ private fun SendPaymentLoaded(
                     is OnchainZapSendResult.Success ->
                         PaymentFlowStage.Success(
                             successTitle,
-                            stringRes(context, R.string.send_payment_onchain_txid, result.txid.shortenMiddle()),
+                            loadStringRes(Res.string.send_payment_onchain_txid, result.txid.shortenMiddle()),
                         )
                     is OnchainZapSendResult.Failure ->
                         PaymentFlowStage.Failure(
@@ -783,7 +790,7 @@ private fun OnchainFeeSection(
                         Text(
                             if (rate != null) {
                                 stringRes(
-                                    R.string.onchain_send_fee_tier_label_rate_eta,
+                                    Res.string.onchain_send_fee_tier_label_rate_eta,
                                     stringRes(tier.labelRes),
                                     "%.1f".format(rate),
                                     stringRes(tier.etaLabelRes),

@@ -59,7 +59,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilter
@@ -73,14 +72,20 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.Mute
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.active_subs_filters
+import com.vitorpamplona.amethyst.commons.resources.active_subs_groups
 import com.vitorpamplona.amethyst.commons.resources.active_subs_no_entity
+import com.vitorpamplona.amethyst.commons.resources.active_subs_relays
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_algo
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_all_communities
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_authors
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_follows
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_global
 import com.vitorpamplona.amethyst.commons.resources.active_subs_scope_muted
+import com.vitorpamplona.amethyst.commons.resources.active_subs_share
+import com.vitorpamplona.amethyst.commons.resources.active_subs_title
 import com.vitorpamplona.amethyst.commons.resources.active_subs_unattributed
+import com.vitorpamplona.amethyst.commons.resources.active_subs_untagged
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -125,7 +130,7 @@ fun ActiveSubscriptionsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.active_subs_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.active_subs_title), nav) },
     ) { pad ->
         LazyColumn(
             modifier = Modifier.padding(pad).fillMaxWidth(),
@@ -153,13 +158,13 @@ private fun TotalsHeader(state: ActiveSubscriptionsState) {
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = pluralStringResource(R.plurals.active_subs_filters, state.totalFilters, state.totalFilters),
+                text = pluralStringResource(Res.plurals.active_subs_filters, state.totalFilters, state.totalFilters),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = pluralStringResource(R.plurals.active_subs_relays, state.totalRelays, state.totalRelays),
+                text = pluralStringResource(Res.plurals.active_subs_relays, state.totalRelays, state.totalRelays),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -168,7 +173,7 @@ private fun TotalsHeader(state: ActiveSubscriptionsState) {
                 // explain, and a total that claims to be fully attributed would defeat the point.
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = pluralStringResource(R.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
+                    text = pluralStringResource(Res.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -194,7 +199,7 @@ private fun AccountHeader(account: SubscriptionAccountRow) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = pluralStringResource(R.plurals.active_subs_relays, account.relays.size, account.relays.size),
+            text = pluralStringResource(Res.plurals.active_subs_relays, account.relays.size, account.relays.size),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.placeholderText,
         )
@@ -236,7 +241,7 @@ private fun PurposeCard(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = pluralStringResource(R.plurals.active_subs_filters, row.filterCount, row.filterCount),
+                    text = pluralStringResource(Res.plurals.active_subs_filters, row.filterCount, row.filterCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -254,13 +259,13 @@ private fun PurposeCard(
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = pluralStringResource(R.plurals.active_subs_relays, row.relays.size, row.relays.size),
+                    text = pluralStringResource(Res.plurals.active_subs_relays, row.relays.size, row.relays.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = stringRes(R.string.active_subs_share, (share * 100).roundToInt()),
+                    text = stringRes(Res.string.active_subs_share, (share * 100).roundToInt()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -379,7 +384,7 @@ private fun RelayGroupedEntities(
         ) {
             RelayLine(relay, accountViewModel, modifier = Modifier.weight(1f))
             Text(
-                text = pluralStringResource(R.plurals.active_subs_groups, hosted.size, hosted.size),
+                text = pluralStringResource(Res.plurals.active_subs_groups, hosted.size, hosted.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

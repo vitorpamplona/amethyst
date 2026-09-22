@@ -1,286 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="spam">สแปม</string>
-    <string name="spam_description">สแปมอีเว้นถูกรับมาจาก relay นี้</string>
-    <string name="impersonation">เลียนแบบ</string>
-    <string name="illegal_behavior">พฤติกรรมที่ผิดกฎหมาย</string>
-    <string name="request_deletion">ส่งคำขอให้ลบ</string>
     <string name="block_hide_user"><![CDATA[บล๊อก & ซ่อนผู้ใช้นี้]]></string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">เข้าสู่ระบบด้วย private key เพื่อตอบกลับ</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">เข้าสู่ระบบด้วย private key เพื่อบูสโพสต์</string>
-    <string name="login_with_a_private_key_to_like_posts">เข้าสู่ระบบด้วย private key เพื่อถูกใจโพสต์</string>
-    <string name="no_zap_amount_setup_long_press_to_change">ไม่มีการตั้งค่าจำนวนเพื่อ zap กดค้างเพื่อตั้งค่า</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">เข้าสู่ระบบด้วย private key เพื่อส่ง zaps</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">เข้าสู่ระบบด้วย private key เพื่อติดตาม</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">เข้าสู่ระบบด้วย private key เพื่อเลิกติดตาม</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">เข้าสู่ระบบด้วย private key เพื่อเพิ่มการซ่อนข้อความ</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">เข้าสู่ระบบด้วย private key เพื่อแก้ไขการซ่อนข้อความ</string>
-    <string name="zaps">Zaps</string>
-    <string name="boost">แชร์</string>
     <string name="boosted">แชร์</string>
     <string name="edited_number">แก้ไข #%1$s</string>
-    <string name="propose_an_edit">เสนอการแก้ไข</string>
-    <string name="add">เพิ่ม</string>
-    <string name="error_parsing_error_message">เกิดข้อผิดพลาดในการวิเคราะห์ข้อความแสดงข้อผิดพลาด</string>
-    <string name="profile">โปรไฟล์</string>
-    <string name="security_filters">ตัวกรองความปลอดภัย</string>
-    <string name="pay">จ่าย</string>
-    <string name="preview_card_image_for">"รูปตัวอย่างสำหรับ %1$s"</string>
-    <string name="description">รายละเอียด</string>
-    <string name="what_s_on_your_mind">คุณคิดอะไรอยู่ ?</string>
-    <string name="post">โพสต์</string>
     <string name="save">บันทึก</string>
-    <string name="create">สร้าง</string>
-    <string name="cancel">ยกเลิก</string>
-    <string name="errors">ข้อผิดพลาด</string>
-    <string name="image_saved_to_the_gallery">บันทึกรูปภาพลงแกลเลอรี</string>
-    <string name="failed_to_save_the_image">เกิดข้อผิดพลาดในการบันทึกรูปภาพ</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">ผู้ใช้นี้ไม่ได้ตั้งค่า lightning address เพื่อรับ sats</string>
-    <string name="reply_here">"ตอบกลับที่นี่.. "</string>
-    <string name="known">รู้</string>
-    <string name="new_requests">ส่งคำขอใหม่</string>
-    <string name="blocked_users">ผู้ใช้ที่ถูกบล็อก</string>
-    <string name="new_threads">เธรดใหม่</string>
-    <string name="conversations">การสนทนา</string>
-    <string name="more_options">ตัวเลือกเพิ่มเติม</string>
-    <string name="follow">ติดตาม</string>
-    <string name="follow_back">ติดตามกลับ</string>
-    <string name="hide_password">ซ่อนรหัสผ่าน</string>
-    <string name="invalid_key">key ไม่ถูกต้อง</string>
-    <string name="invalid_key_with_message">รหัสลับไม่ถูกต้อง: %1$s</string>
-    <string name="password_is_required">ต้องป้อนรหัสผ่าน</string>
-    <string name="key_is_required">ต้องใช้ key</string>
-    <string name="name_is_required">ต้องระบุชื่อ</string>
-    <string name="leave">ออก</string>
-    <string name="unfollow">เลิกติดตาม</string>
-    <string name="public_chat">แชทสาธรณะ</string>
-    <string name="remove">ลบ</string>
-    <string name="never">ไม่เคย</string>
-    <string name="now">ตอนนี้</string>
-    <string name="h">ชม.</string>
-    <string name="m">เดือน</string>
-    <string name="d">วัน</string>
-    <string name="nudity">ภาพเปลือย/สื่อลามก</string>
-    <string name="profanity_hateful_speech">คําหยาบคาย / คําพูดที่แสดงความเกลียดชัง</string>
-    <string name="backup_keys">สำรองข้อมูลรหัสลับ</string>
-    <string name="failed_to_encrypt_key">การเข้ารหัสคีย์ส่วนตัวของคุณล้มเหลว</string>
-    <string name="secret_key_copied_to_clipboard">คัดลอก Secret key (nsec) ลงคลิปบอร์ด</string>
-    <string name="copy_my_secret_key">คัดลอก secret key ของฉัน</string>
-    <string name="biometric_authentication_failed"> เกิดข้อผิดพลาดในการตรวจสอบ</string>
-    <string name="biometric_authentication_failed_explainer">เกิดข้อผิดพลาดจากการยืนยันตนด้วยชีวภาพ</string>
-    <string name="biometric_authentication_failed_explainer_with_error">เกิดข้อผิดพลาดจากการยืนยันตนด้วยชีวภาพ: Error: %1$s</string>
-    <string name="copied_note_text_to_clipboard">คัดลอกข่้อความในโน้ตลงคลิปบอร์ด</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">คัดลอก @npub ของผู้เขียนลงคลิปบอร์ด</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">คัดลอกโน้ต ID (@note1)ลงคลิปบอร์ด</string>
-    <string name="private_conversation_notification">"&lt;ไม่สามารถถอดรหัสข้อความส่วนตัวได้&gt;\n\nคุณถูกอ้างถึงในการสนทนาส่วนตัว/เข้ารหัสระหว่าง %1$s และ %2$s."</string>
-    <string name="drawer_accounts">บัญชี</string>
-    <string name="back">ย้อนกลับ</string>
-    <string name="quick_action_share_browser_link">แชร์ Browser Link</string>
-    <string name="quick_action_share">แชร์</string>
-    <string name="quick_action_copy_note_id">ID โน้ต</string>
-    <string name="quick_action_delete">ลบ</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[บล๊อก & ซ่อนผู้ใช้]]></string>
-    <string name="block_only">บล๊อก</string>
-    <string name="bookmarks">บุ๊คมาร์ค</string>
-    <string name="drafts">ฉบับร่าง</string>
-    <string name="add_to_public_bookmarks">เพิ่มไปยังบุ๊คมาร์คสาธรณะ</string>
-    <string name="remove_from_public_bookmarks">ลบออกจากบุ๊คมาร์คสาธรณะ</string>
-    <string name="poll_option_index">ตัวเลือก %s</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
-    <string name="poll_unable_to_vote">ไม่สามารถโหวต</string>
-    <string name="poll_is_closed_explainer">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
-    <string name="one_vote_per_user_on_atomic_votes">อนุญาตให้โหวตได้เพียงครั้งเดียวต่อผู้ใช้หนึ่งคนสำหรับการสำรวจประเภทนี้</string>
-    <string name="poll_author_no_vote">ผู้เขียนโพลล์ไม่สามารถลงคะแนนในโพล์ของตนเองได้</string>
-    <string name="hash_verification_info_title">หมายถึงอะไร?</string>
-    <string name="hash_verification_passed">เนื้อหานี้เหมือนเดิมตั้งแต่โพสต์</string>
-    <string name="hash_verification_failed">เนื้อหามีการเปลี่ยนแปลง ผู้เขียนอาจไม่เห็นหรืออนุมัติการเปลี่ยนแปลง</string>
-    <string name="content_description_add_image">เพิ่มรูปภาพ</string>
-    <string name="content_description_add_video">เพิ่มวีดีโอ</string>
-    <string name="content_description_add_document">เพิ่มเอกสาร</string>
-    <string name="file_server">เซิร์ฟเวอร์เก็บข้อมูล</string>
-    <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">ตั้งค่า media server ที่คุณต้องการ</string>
     <string name="built_in_servers_description">รายการค่าเริ่มต้นของ Amethyst คุณสามารถเพิ่มทีละรายการหรือเพิ่มทั้งรายการก็ได้</string>
-    <string name="follow_list_kind3follows">ติดตามทั้งหมด</string>
-    <string name="follow_list_global">ทั่วโลก</string>
-    <string name="follow_list_mute_list">รายการผู้ถูกปิดกั้น</string>
-    <string name="connect_through_your_orbot_setup_short">Port เริ่มต้นคือ 9050</string>
-    <string name="orbot_socks_port">พอร์ต Orbot Socks</string>
-    <string name="tor_use_dm_relays">DM Relays</string>
-    <string name="tor_off">ปิด</string>
-    <string name="tor_default">ค่าเริ่มต้น</string>
-    <string name="tor_custom">ปรับแต่ง</string>
-    <string name="tor_small_payloads_explainer">ซ่อน IP ของคุณจากทุกอย่าง ยกเว้นรูปภาพและวิดีโอ</string>
-    <string name="tor_full_privacy_explainer">ซ่อน IP ของคุณจากทุกการเชื่อมต่อ</string>
-    <string name="app_notification_dms_channel_name">ข้อความส่วนตัว</string>
-    <string name="app_notification_dms_channel_description">แจ้งเตือนฉันเมื่อข้อความส่วนตัวมาถึง</string>
-    <string name="app_notification_zaps_channel_name">ได้รับ Zaps</string>
-    <string name="app_notification_zaps_channel_description">แจ้งเตือนเมื่อมีคน zaps</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
-    <string name="app_notification_zaps_channel_message_from">จาก %1$s</string>
-    <string name="app_notification_zaps_channel_message_for">ถึง %1$s</string>
-    <string name="reply_notify">การแจ้งเตือน: </string>
-    <string name="today">วันนี้</string>
-    <string name="no_reaction_type_setup_long_press_to_change">ไม่มีการเลือกประเภทของ reaction กดค้างเพื่อเปลี่ยน</string>
-    <string name="read_from_relay">อ่านจาก Relay</string>
-    <string name="write_to_relay">เขียนบน Relay</string>
-    <string name="write_to_relay_description">จำนวนข้อมูลในหน่วยไบต์ที่ถูกส่งไปยังรีเลย์นี้ รวมถึงฟิลเตอร์และอีเว้นต่างๆ</string>
-    <string name="read_from_relay_description">จำนวนข้อมูลในหน่วยไบต์ที่ถูกรับมาจากรีเลย์นี้ รวมถึงฟิลเตอร์และอีเว้นต่างๆ</string>
-    <string name="cashu">โทเคน Cashu</string>
-    <string name="no_lightning_address_set">ไม่ได้ตั้งค่า Lightning Address</string>
-    <string name="relay_setup">รีเลย์</string>
-    <string name="discover_marketplace">ตลาด</string>
-    <string name="discover_chat">ช่องสนทนา</string>
-    <string name="add_sensitive_content_label">เนื้อหาที่ละเอียดอ่อน</string>
-    <string name="add_sensitive_content_description">เพิ่มการแจ้งเตือนเนื้อหาที่ละเอียดอ่อนก่อนโชว์เนื้อหานี้</string>
-    <string name="settings">การตั้งค่า</string>
-    <string name="connectivity_type_always">ตลอดเวลา</string>
-    <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
-    <string name="connectivity_type_never">ไม่ต้องแสดง</string>
-    <string name="ui_feature_set_type_complete">เสร็จสมบูรณ์</string>
-    <string name="ui_feature_set_type_simplified">Simplified</string>
-    <string name="ui_feature_set_type_performance">Performance</string>
-    <string name="system">ระบบ(ค่าพื้นฐาน)</string>
-    <string name="light">สว่าง</string>
-    <string name="dark">มืด</string>
-    <string name="theme">ธีม</string>
-    <string name="automatically_load_images_gifs">ภาพตัวอย่าง</string>
-    <string name="automatically_play_videos">การเล่นวิดีโอ</string>
-    <string name="automatically_show_url_preview">การแสดงตัวอย่าง URL</string>
-    <string name="automatically_hide_nav_bars">การไถฟีดแบบลื่นไหล</string>
-    <string name="automatically_hide_nav_bars_description">ซ่อนแถบเมนูขณะเลื่อนฟีด</string>
-    <string name="ui_style">UI Mode</string>
-    <string name="ui_style_description">เลือกรูปแบบการโพสต์</string>
-    <string name="spamming_users">แสปม</string>
-    <string name="muted_button">ปิดการมองเห็น คลิกเพื่อปลดออก</string>
-    <string name="mute_button">เปิดการมองเห็นอยู่ คลิกเพื่อปิด</string>
     <string name="messages_create_public_chat">สาธรณะ</string>
     <string name="messages_new_message">ส่วนตัว</string>
-    <string name="messages_new_message_subject">ชื่อเรื่อง</string>
-    <string name="theme_description">ธีม: มืด, สว่าง หรือระบบ</string>
-    <string name="automatically_load_images_gifs_description">โหลดรูปภาพและ GIFs โดยอัตโนมัติ</string>
-    <string name="automatically_play_videos_description">เล่นวีดีโอและ GIFs โดยอัตโนมัติ</string>
-    <string name="automatically_show_url_preview_description">แสดงจัวอย่าง URL</string>
-    <string name="copy_to_clipboard">คัดลอก</string>
-    <string name="share_or_save">แชร์ หรือเก็บไว้</string>
-    <string name="error_dialog_zap_error">แย่จัง ส่ง Zaps ไม่ได้</string>
-    <string name="missing_lud16">ไม่พบการตั้งค่า Lightning</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">ผู้ใช้ %1$s ไม่ได้ตั้งค่า lightning address เพื่อรับ sats</string>
-    <string name="error_opening_external_signer">เกิดข้อผิดพลาดในการเปิดแอพเข้ารหัส</string>
-    <string name="error_opening_external_signer_description">ไม่พบแอพที่สามารถช่วยเข้ารหัส หรือ signer โปรดตรวจดูอีกครั้งว่าได้ติดตั้งแอพแล้ว</string>
-    <string name="sign_request_rejected_description">โปรดตรวจสอบให้แน่ใจว่าแอพเข้ารหัส หรือ Signer ได้อนุญาติทำรายการนี้</string>
-    <string name="no_wallet_found_with_error">ไม่พบกระเป๋า Lightning (Error: %1$s) โปรดติดตั้งแอพกระเป๋า Lightning ก่อน</string>
-    <string name="no_wallet_found">ไม่พบกระเป๋า Lightning โปรดติดตั้งแอพกระเป๋า Lightning ก่อน</string>
-    <string name="hidden_words">คำต้องห้าม</string>
-    <string name="automatically_show_profile_picture">รูปโปรไฟล์</string>
-    <string name="automatically_show_profile_picture_description">แสดงรูปโปรไฟล์</string>
-    <string name="error_dialog_pay_invoice_error">ไม่สามารถชำระได้</string>
-    <string name="error_dialog_pay_withdraw_error">ไม่สามารถถอนได้</string>
-    <string name="cashu_failed_redemption">ไม่สามารถใช้งาน Cashu</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">ผู้ให้บริการ Mint เกิดข้อผิดพลาด : %1$s </string>
-    <string name="cashu_successful_redemption">ได้รับ Cashu</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats ถูกส่งไปยังกระเป๋าของคุณ. (ค่าธรรมเนียม: %2$s sats)</string>
-    <string name="cashu_no_wallet_found">ไม่พบกระเป๋า Cashu ที่รองรับ</string>
-    <string name="error_unable_to_fetch_invoice">ไม่สามารถสร้างบิลจากเซอเวอร์ของผู้รับเงินได้</string>
-    <string name="wallet_connect_pay_invoice_error_error">เกิดข้อผิดพลาดจากบริการกระเป๋า Lightning : %1$s</string>
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">ไม่สามารถสร้าง LNUrl จากที่อยู่ Lightning ได้ \"%1$s\" โปรดตรวจสอบการตั้งค่า</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">เกิดข้อผิดพลาดในการอ่าน JSON จาก %1$s. โปรดตรวจสอบการตั้งค่า Lightning</string>
-    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">ไม่พบที่อยู่ URL จาก %1$s</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">จำนวนที่ต้องชำระไม่ถูกต้อง (%1$s sats) จาก %2$s. มันควรจะเป็น %3$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">ไม่สามารถสร้างบิลชำระในการส่ง zap ได้ โดยเกิดข้อผิดพลาด %1$s จากกระเป๋าของผู้รับ</string>
-    <string name="read_only_user">ดูอย่างเดียว</string>
-    <string name="no_reactions_setup">ไม่มีรายการ reaction</string>
-    <string name="payment_required_title">ข้อความจาก %1$s</string>
-    <string name="hi_seller_is_this_still_available">สวัสดี! ยังมี %1$s อยู่ไหม?</string>
-    <string name="classifieds_category_clothing">เสื้อผ้า</string>
-    <string name="classifieds_category_accessories">อุปกรณ์เสริม</string>
-    <string name="classifieds_category_electronics">เครื่องใช้ไฟฟ้า</string>
-    <string name="classifieds_category_furniture">เฟอร์นิเจอร์</string>
-    <string name="classifieds_category_collectibles">ของสะสม</string>
-    <string name="classifieds_category_books">หนังสือ</string>
-    <string name="classifieds_category_pets">สัตว์เลี้ยง</string>
-    <string name="classifieds_category_sports">กีฬา</string>
-    <string name="classifieds_category_fitness">ฟิตเนส</string>
-    <string name="classifieds_category_art">ศิลปะ</string>
-    <string name="classifieds_category_crafts">งานฝีมือ</string>
-    <string name="classifieds_category_home">บ้าน</string>
-    <string name="classifieds_category_office">สำนักงาน</string>
-    <string name="classifieds_category_food">อาหาร</string>
-    <string name="classifieds_category_misc">เบ็ดเตล็ด</string>
-    <string name="classifieds_category_other">อื่นๆ</string>
-    <string name="failed_to_upload_media_no_details">ไม่สามารถโหลดสื่อได้</string>
-    <string name="could_not_open_the_compressed_file">ไม่สามารถเปิดดูข้อมูลที่ถูกบีบอัดได้</string>
-    <string name="failed_to_upload_media">เกิดข้อผิดพลาดขณะอัพโหลด: %1$s</string>
-    <string name="server_did_not_provide_a_url_after_uploading">เซอเวอร์ไม่ตอบสนองหลังจากอัพโหลดแล้ว</string>
-    <string name="could_not_download_from_the_server">ไม่สามารถโหลดข้อมูลสื่อได้</string>
-    <string name="failed_to_delete_with_message">การลบล้มเหลว: %1$s</string>
-    <string name="media_too_big_for_nip95">สื่อชิ้นนี้ใหญ่เกินไปสำหรับ NIP-95</string>
-    <string name="route_home">หน้าแรก</string>
-    <string name="route_discover">สำรวจ</string>
-    <string name="route_messages">ข้อความ</string>
-    <string name="route_notifications">การแจ้งเตือน</string>
-    <string name="open_all_reactions_to_this_post">แสดง Reactions ทั้งหมด</string>
-    <string name="close_all_reactions_to_this_post">ปิดการสดง Reactions</string>
-    <string name="zap_description">Zap</string>
-    <string name="invalid_nip19_uri">ที่อยู่ไม่ถูกต้อง</string>
-    <string name="invalid_nip19_uri_description">Amethyst ได้รับ URI แต่ URI นั้นไม่ถูกต้อง: %1$s</string>
-    <string name="dm_relays_title">รีเลย์ขาเข้าของ DM</string>
-    <string name="search_relays_title">ค้นหารีเลย์</string>
-    <string name="search_relays_not_found_examples">ตัวเลือกที่ดี ได้แก่:\n%1$s</string>
-    <string name="relay_settings">ตั้งค่ารีเลย์</string>
-    <string name="public_home_section">รีเลย์สาธารณะสำหรับหน้า Home</string>
-    <string name="public_home_section_explainer">รีเลย์ประเภทนี้จะเก็บเนื้อหาทั้งหมดของคุณ Amethyst จะส่งโพสต์ของคุณไปยังรีเลย์เหล่านี้ และคนอื่น ๆ จะใช้รีเลย์เหล่านี้เพื่อค้นหาเนื้อหาของคุณ ใส่รีเลย์ 1–3 ตัว ซึ่งสามารถเป็นรีเลย์ส่วนตัว รีเลย์ที่ต้องเสียค่าบริการ หรือรีเลย์สาธารณะก็ได้</string>
-    <string name="public_notif_section">รีเลย์ขาเข้าสาธารณะ</string>
-    <string name="public_notif_section_explainer">รีเลย์ประเภทนี้จะรับการตอบกลับ ความคิดเห็น การถูกใจ และการส่ง \"zap\" ทั้งหมดไปยังโพสต์ของคุณ ใส่รีเลย์ 1–3 ตัว และตรวจสอบให้แน่ใจว่ารีเลย์เหล่านี้ยอมรับโพสต์จากทุกคน</string>
-    <string name="private_inbox_section">รีเลย์ขาเข้าของ DM</string>
-    <string name="private_inbox_section_explainer">ใส่รีเลย์ 1–3 ตัวเพื่อทำหน้าที่เป็นกล่องขาเข้าส่วนตัวของคุณ คนอื่นจะใช้รีเลย์เหล่านี้ในการส่งข้อความ DM ถึงคุณ รีเลย์กล่องขาเข้า DM ควรยอมรับข้อความจากทุกคน แต่อนุญาตให้คุณดาวน์โหลดได้เท่านั้น ตัวเลือกที่ดี ได้แก่:\n - inbox.nostr.wine (เสียค่าบริการ)\n - you.nostr1.com (รีเลย์ส่วนตัว - เสียค่าบริการ)</string>
-    <string name="private_outbox_section">รีเลย์ส่วนตัว</string>
-    <string name="private_outbox_section_explainer">ใส่รีเลย์ 1–3 ตัวเพื่อเก็บเหตุการณ์ที่ไม่มีใครสามารถเห็นได้ เช่น ร่างโพสต์ และการตั้งค่าแอปของคุณ รีเลย์เหล่านี้ควรเป็นรีเลย์ภายในเครื่องหรือรีเลย์ที่ต้องมีการยืนยันตัวตนก่อนที่จะดาวน์โหลดเนื้อหาของผู้ใช้แต่ละคน</string>
-    <string name="search_section">ค้นหารีเลย์</string>
-    <string name="search_section_explainer">รายการรีเลย์ที่จะใช้เมื่อค้นหาข้อมูลหรือผู้ใช้ การแท็กและการค้นหาจะไม่ทำงานหากไม่มีตัวเลือก ตรวจสอบให้แน่ใจว่ารีเลย์เหล่านี้รองรับ NIP-50</string>
-    <string name="local_section">รีเลย์ในพื้นที่ของคุณ</string>
-    <string name="local_section_explainer">รายการรีเลย์ที่กำลังทำงานอยู่ในอุปกรณ์นี้</string>
     <string name="git_web_address">เว็บไซน์</string>
-    <string name="ots_info_title">Timestamp ถูกยืนยัน</string>
-    <string name="ots_info_description">มีหลักฐานว่าโพสต์นี้มีการลงนามก่อน %1$s หลักฐานถูกประทับตราใน Bitcoin blockchain ณ วันและเวลาดังกล่าว</string>
-    <string name="edit_post">แก้ไขโพสต์</string>
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">ไม่สามารถตอบกลับโน้ตฉบับร่างได้</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">ไม่สามารถโควทโน้ตฉบับร่างได้</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">ไม่สามารถกดรีแอคโน้ตฉบับร่างได้</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">ไม่สามารถ zap โน้ตฉบับร่างได้</string>
-    <string name="draft_note">โน๊ตฉบับร่าง</string>
-    <string name="http_status_400">คำขอไม่ถูกต้อง - เซิร์ฟเวอร์ไม่สามารถหรือไม่ยอมดำเนินการตามคำขอ</string>
-    <string name="http_status_401">ไม่ได้รับอนุญาต - ผู้ใช้ไม่มีข้อมูลประจำตัวการตรวจสอบที่ถูกต้อง</string>
-    <string name="http_status_402">ต้องชำระเงิน - เซิร์ฟเวอร์ต้องการการชำระเงินเพื่อดำเนินการตามคำขอ</string>
-    <string name="http_status_403">ไม่สามารถเข้าถึงได้ - ผู้ใช้ไม่มีสิทธิ์การเข้าถึงในการทำคำขอ</string>
-    <string name="http_status_404">ไม่พบที่อยู่ - เซิร์ฟเวอร์ไม่สามารถหาที่อยู่ที่ขอได้</string>
-    <string name="http_status_405">วิธีการไม่อนุญาต - เซิร์ฟเวอร์รองรับวิธีการขอ แต่ไม่รองรับทรัพยากรเป้าหมาย</string>
-    <string name="http_status_406">ไม่ยอมรับ - เซิร์ฟเวอร์ไม่พบเนื้อหาใดที่ตรงตามคำขอ</string>
-    <string name="http_status_407">ต้องการการตรวจสอบพร็อกซี - ผู้ใช้ไม่มีข้อมูลประจำตัวการตรวจสอบที่ถูกต้อง</string>
-    <string name="http_status_408">คำขอหมดเวลา - เซิร์ฟเวอร์หมดเวลารอคำตอบจากบุคคลอื่น</string>
-    <string name="http_status_409">ความขัดแย้ง - เซิร์ฟเวอร์ไม่สามารถดำเนินการตามคำขอได้เนื่องจากมีความขัดแย้งกับทรัพยากร</string>
-    <string name="http_status_410">ไม่พบ - เนื้อหาที่ร้องขอได้ถูกลบถาวรจากเซิร์ฟเวอร์และจะไม่ถูกกู้คืน</string>
-    <string name="http_status_411">ต้องการความยาว - เซิร์ฟเวอร์ปฏิเสธคำขอเพราะต้องการความยาวที่กำหนดไว้</string>
-    <string name="http_status_412">ข้อกำหนดเบื้องต้นล้มเหลว - ข้อกำหนดเบื้องต้นของคำขอในฟิลด์หัวเรื่องที่เซิร์ฟเวอร์ไม่สามารถตอบสนองได้</string>
-    <string name="http_status_413">ข้อมูลขนาดใหญ่เกินไป - คำขอมีขนาดใหญ่กว่าขีดจำกัดที่เซิร์ฟเวอร์กำหนด และเซิร์ฟเวอร์ปฏิเสธที่จะดำเนินการ</string>
-    <string name="http_status_414">URI ยาวเกินไป - URL ที่ร้องขอโดยไคลเอนต์ยาวเกินกว่าที่เซิร์ฟเวอร์จะดำเนินการได้ </string>
-    <string name="http_status_415">ประเภทสื่อไม่รองรับ - คำขอใช้รูปแบบสื่อที่เซิร์ฟเวอร์ไม่รองรับ</string>
-    <string name="http_status_416">จำนวนข้อมูลไม่เหมาะสม - เซิร์ฟเวอร์ไม่สามารถตอบสนองค่าที่ระบุในฟิลด์หัวเรื่องช่วงของคำขอได้ </string>
-    <string name="http_status_417">การคาดหวังล้มเหลว - เซิร์ฟเวอร์ไม่สามารถตอบสนองข้อกำหนดที่ระบุในฟิลด์หัวเรื่องของคำขอ Expect</string>
-    <string name="http_status_426">ต้องการการอัปเกรด - เซิร์ฟเวอร์ปฏิเสธที่จะดำเนินการตามคำขอโดยใช้โปรโตคอลปัจจุบัน เว้นแต่ไคลเอนต์จะอัปเกรดเป็นโปรโตคอลที่แตกต่าง</string>
-    <string name="http_status_500">ข้อผิดพลาดภายในเซิร์ฟเวอร์ - เซิร์ฟเวอร์พบข้อผิดพลาดที่ไม่คาดคิดและไม่สามารถดำเนินการตามคำขอได้</string>
-    <string name="http_status_501">ไม่ไสามารถดำเนินการได้ - เซิร์ฟเวอร์ไม่สามารถตอบสนองคำขอหรือไม่รู้จักวิธีการขอ</string>
-    <string name="http_status_502">Bad Gateway - เซิร์ฟเวอร์ทำหน้าที่เป็นเกตเวย์และได้รับการตอบกลับที่ไม่ถูกต้องจากโฮสต์</string>
-    <string name="http_status_503">บริการไม่พร้อมใช้งาน - มักเกิดขึ้นเมื่อเซิร์ฟเวอร์มีการใช้งานมากเกินไปหรือหยุดทำงานเพื่อบำรุงรักษา</string>
-    <string name="http_status_504">Gateway หมดเวลา - เซิร์ฟเวอร์ทำหน้าที่เป็นเกตเวย์หรือพร็อกซีและหมดเวลารอการตอบกลับ</string>
-    <string name="http_status_505">ไม่รองรับเวอร์ชัน HTTP - เซิร์ฟเวอร์ไม่รองรับเวอร์ชัน HTTP ที่อยู่ในคำขอ</string>
-    <string name="http_status_506">เซิร์ฟเวอร์มีข้อผิดพลาดในการกำหนดค่าภายใน</string>
-    <string name="http_status_507">พื้นที่จัดเก็บไม่เพียงพอ - เซิร์ฟเวอร์มีพื้นที่จัดเก็บไม่เพียงพอที่จะดำเนินการตามคำขอได้สำเร็จ</string>
-    <string name="http_status_508">พบลูป - เซิร์ฟเวอร์ตรวจพบการวนลูปไม่สิ้นสุดขณะประมวลผลคำขอ</string>
-    <string name="http_status_511">ต้องการการตรวจสอบเครือข่าย - ไคลเอนต์ต้องได้รับการตรวจสอบเพื่อเข้าถึงเครือข่าย</string>
-    <string name="add_a_nip96_server">เพิ่ม เซิร์ฟเวอร์ NIP-96</string>
     <string name="torrent_download">ดาวน์โหลด</string>
-    <string name="torrent_failure">ไม่สามารถเปิดไฟล์ได้</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">บริการ Lightning ของ %1$s แลจะไม่พร้อมใช้งานจาก \"%2$s\". Error: %3$s. โปรดตรวจสอบผู้ให้บริการ หรือที่อยู่ Lightning ให้ถูกตต้อง</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">เกิดข้อผิดพลาด %1$s. โปรดตรวจสอบเครือข่ายเน็ต และทบทวนว่า %2$s นั้นถูกต้อง\n\nข้อผิดพลาด : %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">เกิดข้อผิดพลาดในการอ่านบิล JSON จาก %1$s โปรดตรวจสอบการตั้งค่า lightning</string>
@@ -289,37 +18,6 @@
     
     
     
-    <string name="pin_to_profile">ปักหมุดที่โปรไฟล์</string>
-    
-    <string name="unpin_from_profile">เลิกปักหมุดจากโปรไฟล์</string>
-    
-    
-    
-    
-    
-    
-    <string name="bookmark_list_creation_screen_title">รายการบุ๊กมาร์กใหม่</string>
-    
-    <string name="bookmark_list_edit_sub_title">ข้อมูลเมตาของรายการบุ๊กมาร์ก</string>
-    
-    
-    
-    
-    
-    
-    <string name="interest_sets_title">ชุดแฮชแท็ก</string>
-    
-    
-    
-    <string name="interest_set_creation_screen_title">ชุดความสนใจใหม่</string>
-    
-    
-    
-    
-    
-    
-    
-    <string name="interest_set_rename">เปลี่ยนชื่อ</string>
     
     
     
@@ -337,13 +35,33 @@
     
     
     
-    <string name="private_note">ทำให้เป็นส่วนตัว: gift-wrap โน้ตไปยังผู้ใช้ที่ได้รับการแจ้งเตือนเท่านั้น</string>
     
-    <string name="disable_private_note">ทำให้เป็นสาธารณะ</string>
     
-    <string name="private_note_locked">การตอบกลับโน้ตส่วนตัวจะเป็นส่วนตัวเสมอ</string>
     
-    <string name="private_note_visible_to">มองเห็นได้โดย</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     <string name="private_note_no_receivers">ยังไม่มีผู้รับ: เฉพาะคุณเท่านั้นที่จะเห็นโน้ตนี้ เพิ่มผู้คนเพื่อแชร์</string>
     
@@ -359,31 +77,6 @@
     
     
     
-    <string name="bookmark_list_explainer">ข้อมูลเมตาของรายการบุ๊กมาร์กสามารถถูกดูได้โดยทุกคนบน Nostr เฉพาะสมาชิกส่วนตัวของคุณเท่านั้นที่ถูกเข้ารหัส</string>
-    
-    <string name="move_bookmark_to_public_label">ย้ายไปสาธารณะ</string>
-    
-    <string name="move_bookmark_to_private_label">ย้ายไปส่วนตัว</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="reload_mint_confirm">เติมและส่ง zap</string>
-    
-    <string name="reload_mint_send_confirm">ส่ง zap</string>
-    
-    
-    
-    <string name="reload_mint_summary">เติม %1$s sats ไปยัง %2$s และ zap %3$s %4$s sats · ค่าธรรมเนียม ≈ %5$s sats</string>
     
     
     
@@ -398,14 +91,6 @@
     
     
     
-    <string name="poll_single_choice">ตัวเลือกเดียว</string>
-    
-    <string name="poll_multiple_choice">หลายตัวเลือก</string>
-    
-    
-    
-    
-    <string name="content_description_add_media">เพิ่มสื่อ</string>
     
     
     
@@ -413,7 +98,30 @@
     
     
     
-    <string name="file_server_description">เลือกเซิร์ฟเวอร์เพื่ออัปโหลดไฟล์นี้</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -424,20 +132,15 @@
     
     <string name="recommended_media_servers">เซิร์ฟเวอร์สื่อที่แนะนำ</string>
     
-    <string name="payment_targets">เป้าหมายการชำระเงิน</string>
     
     
-    <string name="payment_targets_section_explainer">เพิ่มที่อยู่การชำระเงินสำหรับเครือข่ายต่างๆ (เช่น bitcoin, lightning, ethereum)</string>
     
     
     
     
     
-    <string name="no_payment_app_found">ไม่พบแอปสำหรับการชำระเงินนี้ กรุณาติดตั้งกระเป๋าเงินที่รองรับ</string>
     
-    <string name="no_payment_app_found_for_type">ไม่มีแอปที่ติดตั้งสำหรับการชำระเงิน %1$s กรุณาติดตั้งกระเป๋าเงินที่รองรับ</string>
     
-    <string name="error_dialog_payment_error">ไม่สามารถเปิดการชำระเงินได้</string>
     
     
     
@@ -447,19 +150,13 @@
     
     
     
-    <string name="privacy_options">ตัวเลือกความเป็นส่วนตัว</string>
     
     
     
-    <string name="follow_list_kind3follows_users_only">การติดตามผู้ใช้ทั้งหมด</string>
     
-    <string name="follow_list_kind3_follows_users_only">รายการติดตามเริ่มต้น</string>
     
-    <string name="follow_list_aroundme">รอบตัวฉัน</string>
     
-    <string name="follow_list_curated">คัดสรร</string>
     
-    <string name="follow_list_mine">ของฉัน</string>
     
     
     
@@ -474,9 +171,7 @@
     
     
     
-    <string name="follow_set_creation_dialog_title">รายการติดตามใหม่</string>
     
-    <string name="follow_pack_creation_dialog_title">Follow Pack ใหม่</string>
     
     
     
@@ -490,176 +185,63 @@
     
     
     
-    <string name="follow_set_edit_list_metadata">แก้ไขรายการ</string>
     
     
     
     
-    <string name="use_internal_tor">เครื่องยนต์ Tor ที่ใช้งานอยู่</string>
     
-    <string name="use_internal_tor_explainer">ใช้เวอร์ชันภายในหรือ Orbot</string>
     
-    <string name="tor_preset">การตั้งค่า Tor/ความเป็นส่วนตัว</string>
     
-    <string name="tor_preset_explainer">แก้ไขการตั้งค่าทั้งหมดด้านล่างอย่างรวดเร็ว</string>
     
-    <string name="tor_use_onion_address">URL/Relays แบบ Onion</string>
     
-    <string name="tor_use_onion_address_explainer">ใช้ Tor สำหรับ URL แบบ .onion</string>
     
-    <string name="tor_use_dm_relays_explainer">บังคับให้ Tor ส่งและรับ DM</string>
     
-    <string name="tor_use_new_relays">Relay ที่ไม่น่าเชื่อถือ</string>
     
-    <string name="tor_use_new_relays_explainer">บังคับให้ Tor ใช้ relay outbox/inbox</string>
     
-    <string name="tor_use_trusted_relays">Relay ที่น่าเชื่อถือ</string>
     
-    <string name="tor_use_trusted_relays_explainer">บังคับให้ Tor ใช้ relay ทั้งหมดในรายการของคุณ</string>
     
-    <string name="tor_use_profile_pictures">รูปโปรไฟล์</string>
     
-    <string name="tor_use_profile_pictures_explainer">บังคับให้ Tor เมื่อโหลดรูปโปรไฟล์</string>
     
-    <string name="tor_use_url_previews">ตัวอย่าง URL</string>
     
-    <string name="tor_use_url_previews_explainer">บังคับให้ Tor เมื่อโหลดตัวอย่าง URL</string>
     
-    <string name="tor_use_images">รูปภาพ</string>
     
-    <string name="tor_use_images_explainer">บังคับให้ Tor เมื่อโหลดรูปภาพ</string>
     
-    <string name="tor_use_videos">วิดีโอ</string>
     
-    <string name="tor_use_videos_explainer">บังคับให้ Tor เมื่อโหลดวิดีโอ</string>
     
-    <string name="tor_use_money_operations">การดำเนินการเงิน</string>
     
-    <string name="tor_use_money_operations_explainer">บังคับให้ Tor ใช้กับ zap, Lightning และการโอน Cashu</string>
     
-    <string name="tor_use_nip05_verification">การยืนยันที่อยู่ Nostr</string>
     
-    <string name="tor_use_nip05_verification_explainer">บังคับให้ Tor เมื่อยืนยันที่อยู่ NIP-05</string>
     
-    <string name="tor_use_media_uploads">การอัปโหลดสื่อ</string>
     
-    <string name="tor_use_media_uploads_explainer">บังคับให้ Tor เมื่ออัปโหลดเนื้อหา</string>
     
-    <string name="tor_internal">ภายใน</string>
     
-    <string name="tor_external">Orbot</string>
     
-    <string name="tor_when_needed">พื้นฐาน</string>
     
-    <string name="tor_small_payloads">ทุกอย่างยกเว้นสื่อ</string>
     
-    <string name="tor_full_privacy">ความเป็นส่วนตัวเต็มรูปแบบ</string>
     
-    <string name="tor_when_needed_explainer">ใช้ Tor เมื่อเซิร์ฟเวอร์ต้องการ</string>
     
-    <string name="tor_default_explainer">ซ่อน IP ของคุณจาก relay ทั่วไป</string>
     
-    <string name="tor_custom_explainer">ตั้งค่าเอง</string>
     
-    <string name="app_notification_reply_label">ตอบกลับ</string>
     
-    <string name="app_notification_mark_read_label">ทำเครื่องหมายอ่านแล้ว</string>
     
-    <string name="app_notification_dms_summary">ข้อความใหม่</string>
     
-    <string name="app_notification_zaps_summary">Zap ใหม่</string>
     
-    <string name="app_notification_reactions_channel_name">ปฏิกิริยา</string>
     
-    <string name="app_notification_reactions_channel_description">แจ้งเตือนเมื่อมีคนตอบสนองต่อโพสต์ของคุณ</string>
     
-    <string name="app_notification_reactions_channel_message">%1$s ตอบสนองต่อโพสต์ของคุณ</string>
     
-    <string name="app_notification_reactions_channel_message_for">สำหรับ %1$s</string>
 
-    <string name="app_notification_reactions_summary">ปฏิกิริยาใหม่</string>
     
-    <string name="app_notification_chess_channel_name">หมากรุก</string>
     
-    <string name="app_notification_chess_channel_description">แจ้งเตือนเกี่ยวกับเหตุการณ์ในเกมหมากรุก</string>
     
-    <string name="app_notification_chess_challenge_accepted">%1$s ยอมรับการท้าทายหมากรุกของคุณ</string>
     
-    <string name="app_notification_chess_your_turn">%1$s เดินแล้ว — ถึงตาคุณ</string>
     
-    <string name="app_notification_chess_summary">อัปเดตหมากรุก</string>
     
-    <string name="app_notification_replies_channel_name">การตอบกลับ</string>
     
-    <string name="app_notification_replies_channel_description">แจ้งเตือนเมื่อมีคนตอบกลับโพสต์ของคุณ</string>
     
     <string name="app_notification_replies_channel_message">%1$s ตอบกลับ</string>
     
     <string name="app_notification_replies_channel_message_for">เกี่ยวกับ: %1$s</string>
     
-    <string name="app_notification_replies_summary">การตอบกลับใหม่</string>
-    
-    <string name="app_notification_mentions_channel_name">การกล่าวถึง</string>
-    
-    <string name="app_notification_mentions_channel_description">แจ้งเตือนเมื่อมีคนกล่าวถึงหรืออ้างอิงคุณในโพสต์</string>
-    
-    <string name="app_notification_mentions_channel_message">%1$s กล่าวถึงคุณ</string>
-    
-    <string name="app_notification_mentions_summary">การกล่าวถึงใหม่</string>
-    
-    <string name="app_notification_calls_channel_name">สายเรียกเข้า</string>
-    
-    <string name="app_notification_calls_channel_description">การแจ้งเตือนสำหรับสายโทรด้วยเสียงและวิดีโอที่เข้ามา</string>
-    
-    <string name="call_incoming">สายเรียกเข้า</string>
-    
-    <string name="call_incoming_voice">สายโทรด้วยเสียงเข้ามา…</string>
-    
-    <string name="call_incoming_video">สายโทรด้วยวิดีโอเข้ามา…</string>
-    
-    
-    
-    
-    <string name="call_with">โทรกับ %1$s</string>
-    
-    <string name="call_ongoing">การโทร</string>
-    
-    <string name="call_ongoing_description">การแจ้งเตือนการโทรที่กำลังดำเนินอยู่</string>
-    
-    <string name="call_hangup">วางสาย</string>
-    
-    <string name="call_accept">รับสาย</string>
-    
-    <string name="call_reject">ปฏิเสธ</string>
-    
-    
-    <string name="call_mute">ปิดเสียง</string>
-    
-    <string name="call_unmute">เปิดเสียง</string>
-    
-    <string name="call_camera_on">เปิดกล้อง</string>
-    
-    <string name="call_camera_off">ปิดกล้อง</string>
-    
-    
-    <string name="call_speaker">ลำโพง</string>
-    
-    <string name="call_earpiece">หูฟัง</string>
-    
-    <string name="call_bluetooth">Bluetooth</string>
-    
-    
-    
-    
-    
-    
-    <string name="call_permission_denied_voice">Amethyst ต้องการสิทธิ์เข้าถึงไมโครโฟนเพื่อเริ่มการโทรด้วยเสียง โปรดเปิดใช้งานในการตั้งค่าแอป</string>
-    
-    <string name="call_permission_denied_video">Amethyst ต้องการสิทธิ์เข้าถึงกล้องและไมโครโฟนเพื่อเริ่มการโทรด้วยวิดีโอ โปรดเปิดใช้งานในการตั้งค่าแอป</string>
-    
-    
-    
-    <string name="call_settings">การตั้งค่าการโทร</string>
     
     
     
@@ -675,31 +257,55 @@
     
     
     
-    <string name="always_on_notif_channel_description">รักษาการเชื่อมต่อกับ relay กล่องข้อความของคุณให้ใช้งานได้เพื่อรับการแจ้งเตือนแบบเรียลไทม์</string>
     
-    <string name="always_on_notif_title">การแจ้งเตือน Amethyst ใช้งานอยู่</string>
     
-    <plurals name="always_on_notif_connected">
-    <item quantity="other">เชื่อมต่อกับ %1$d inbox relay แล้ว</item>
-</plurals>
     
-    <plurals name="always_on_notif_connected_foreground">
-    <item quantity="other">เชื่อมต่อกับ %1$d relay แล้ว</item>
-</plurals>
     
-    <string name="always_on_notif_connecting">กำลังเชื่อมต่อกับ inbox relay…</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     <string name="always_on_notif_setting_title">บริการแจ้งเตือนแบบถาวร</string>
     
     <string name="always_on_notif_setting_description">รักษาการเชื่อมต่อถาวรกับ inbox relay ของคุณเพื่อการส่งการแจ้งเตือนแบบทันที แสดงการแจ้งเตือนที่กำลังดำเนินอยู่ ใช้แบตเตอรี่มากขึ้น แต่รับประกันว่าคุณจะไม่พลาดข้อความ</string>
     
-    <string name="split_notifications_setting_title">แยกการแจ้งเตือนตามผู้ที่ติดตาม</string>
     
-    <string name="split_notifications_setting_description">แสดงแท็บการแจ้งเตือนสองแท็บ — กำลังติดตาม (คนที่คุณติดตาม) และทุกคน ตัวบ่งชี้ที่ยังไม่ได้อ่านจะเรืองแสงเฉพาะสำหรับกิจกรรมจากคนที่คุณติดตาม</string>
     
-    <string name="show_messages_in_notifications_setting_title">แสดงข้อความ</string>
     
-    <string name="show_messages_in_notifications_setting_description">รวมข้อความส่วนตัวและกลุ่มในแท็บการแจ้งเตือน ปิดเพื่อเก็บข้อความไว้เฉพาะในแท็บข้อความ</string>
     
     
     
@@ -707,23 +313,14 @@
     
     
     
-    <string name="content_warning_hide_all_sensitive_content_option">ซ่อน</string>
     
-    <string name="content_warning_show_all_sensitive_content_option">แสดง</string>
     
-    <string name="content_warning_see_warnings_option">เตือน</string>
     
-    <string name="filter_spam_from_strangers_title">กรองสแปม</string>
     
-    <string name="filter_spam_from_strangers_explainer">ซ่อนโพสต์จากคนแปลกหน้าที่มีเนื้อหาเหมือนกันตั้งแต่ 5 ครั้งขึ้นไป</string>
     
-    <string name="add_client_tag_title">เพิ่มแท็กไคลเอนต์ในกิจกรรมของฉัน</string>
     
-    <string name="add_client_tag_explainer">เมื่อเปิดใช้งาน Amethyst จะเพิ่มแท็กไคลเอนต์ NIP-89 ในกิจกรรมที่คุณเผยแพร่</string>
     
-    <string name="warn_when_posts_have_reports_from_your_follows_title">เตือนเมื่อมีรายงาน</string>
     
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">แสดงข้อความเตือนเมื่อโพสต์หรือโปรไฟล์มีรายงานจากคนที่คุณติดตาม</string>
     
     
     
@@ -731,20 +328,13 @@
     
     
     
-    <string name="hide_community_rules_violations_title">ซ่อนโพสต์ที่ละเมิดกฎของชุมชน</string>
     
-    <string name="hide_community_rules_violations_explainer">ลบโพสต์ออกจากฟีดชุมชนเมื่อชุมชนเผยแพร่เอกสารกฎ NIP-9B และกิจกรรมไม่ผ่านกฎนั้น ไม่มีผลเมื่อชุมชนไม่มีกฎที่มีโครงสร้าง</string>
     
-    <string name="security_section_filtering_preferences">การตั้งค่าการกรอง</string>
     
-    <string name="security_section_blocked_content">เนื้อหาที่ถูกบล็อก</string>
     
     
-    <string name="security_blocked_users_empty">คุณยังไม่ได้บล็อกผู้ใช้ใดเลย</string>
     
-    <string name="security_spamming_users_empty">ไม่มีบัญชีที่ถูกระบุว่าเป็นสแปมในเซสชันนี้</string>
     
-    <string name="security_hidden_words_empty">ไม่มีคำที่ซ่อนอยู่ เพิ่มคำด้านล่างเพื่อซ่อนโพสต์ที่มีคำนั้น</string>
     
     
     
@@ -759,12 +349,9 @@
     
     
     
-    <string name="privacy_policy">นโยบายความเป็นส่วนตัว</string>
     
     
-    <string name="child_safety_standards">มาตรฐานความปลอดภัยของเด็ก</string>
     
-    <string name="about_legal">เกี่ยวกับและข้อมูลทางกฎหมาย</string>
     
     
     
@@ -812,108 +399,69 @@
     
     
     
-    <string name="discover_follows">Follow Packs</string>
     
     
-    <string name="discover_reads">การอ่าน</string>
     
-    <string name="discover_content_v2">อัลกอริทึมฟีด</string>
     
-    <string name="discover_live_v2">สตรีมสด</string>
     
-    <string name="discover_community_v2">ชุมชน</string>
     
-    <string name="ui_preferences">การตั้งค่า UI</string>
     
     <string name="preferences">การตั้งค่าแอป</string>
     
     
-    <string name="translations">การแปลภาษา</string>
-    
-    <string name="reactions">ปฏิกิริยา</string>
-    
-    <string name="account_settings">การตั้งค่าบัญชี</string>
-    
-    <string name="app_settings">การตั้งค่าแอป</string>
-    
-    
-    
-    <string name="danger_zone">เขตอันตราย</string>
-    
-    <string name="reset_marmot_state">รีเซ็ตสถานะ Marmot</string>
-    
-    
-    
-    
-    <string name="reset_marmot_success">รีเซ็ตสถานะ Marmot แล้ว</string>
-    
-    <string name="reset_marmot_failure">ไม่สามารถรีเซ็ตสถานะ Marmot ได้: %1$s</string>
-    
-    <string name="gallery_type_classic">คลาสสิก</string>
-    
-    <string name="gallery_type_modern">ทันสมัย</string>
-    
-    <string name="wallet_connect">Wallet Connect</string>
-    
-    <string name="autoplay_videos">เล่นวิดีโออัตโนมัติ</string>
-    
-    <string name="gallery_style">สไตล์แกลเลอรีโปรไฟล์</string>
-    
-    <string name="gallery_style_description">เลือกสไตล์แกลเลอรี</string>
-    
-    
-    <string name="skip_back">ย้อนกลับ %d วินาที</string>
-    
-    <string name="skip_forward">ข้ามไปข้างหน้า %d วินาที</string>
-    
-    
-    
-    <string name="geohash_exclusive">โพสต์เฉพาะตำแหน่งที่ตั้ง</string>
-    
-    <string name="geohash_exclusive_explainer">เฉพาะผู้ติดตามตำแหน่งนั้นเท่านั้นที่จะเห็น ผู้ติดตามทั่วไปของคุณจะไม่เห็น</string>
     
     
     
     
     
-    <plurals name="music_playlist_track_count">
-    <item quantity="other">%1$d แทร็ก</item>
-</plurals>
     
-    <plurals name="music_playlist_more_tracks">
-    <item quantity="other">+%1$d แทร็กเพิ่มเติม</item>
-</plurals>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
     
 
-    <string name="music_track_cover_upload_cta">อัปโหลดรูปภาพปก</string>
-    
-    <string name="music_track_cover_upload_hint">เลือกรูปภาพสี่เหลี่ยมจัตุรัสเพื่อใช้เป็นอาร์ตเวิร์กของแทร็กนี้</string>
-    
-    <string name="music_track_audio_upload_cta">อัปโหลดไฟล์เสียง</string>
-    
-    <string name="music_track_audio_upload_hint">เลือกไฟล์ MP3, WAV หรือ FLAC ระบบจะอัปโหลดไปยังเซิร์ฟเวอร์มีเดียของคุณเมื่อบันทึก</string>
-    
-    
-    <string name="music_track_uploading_banner">กำลังอัปโหลดปกและเสียง และเผยแพร่ ระบบจะดำเนินการต่อแม้คุณออกจากหน้าจอ</string>
-    
-    <string name="edit_music_playlist">แก้ไขเพลย์ลิสต์</string>
     
     
     
     
     
-    <string name="music_playlist_cover_upload_cta">อัปโหลดรูปภาพปก</string>
-    
-    <string name="music_playlist_cover_upload_hint">เลือกรูปภาพสี่เหลี่ยมจัตุรัสเพื่อใช้เป็นอาร์ตเวิร์กของเพลย์ลิสต์นี้</string>
     
     
     
     
     
-    <string name="music_playlist_uploading_banner">กำลังอัปโหลดปกและเผยแพร่ ระบบจะดำเนินการต่อแม้คุณออกจากหน้าจอ</string>
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -924,120 +472,71 @@
     
     <string name="messages_create_group">กลุ่ม</string>
     
-    <string name="messages_cant_upload_title">อัปโหลดไม่ได้</string>
-    
-    <string name="messages_cant_upload_explainer">กรุณาระบุปลายทางของข้อความก่อน</string>
-    
-    <string name="couldnt_find_nwc_wallets">ไม่พบกระเป๋าเงิน</string>
-    
-    <string name="couldnt_find_nwc_wallets_description">Amethyst ไม่พบแอปกระเป๋าเงินที่รองรับ Nostr Wallet Connect (NWC)
-\n\nสิ่งที่คุณทำได้:
-\n\t1. ตรวจสอบการรองรับ NWC: ตรวจสอบอีกครั้งว่าแอปกระเป๋าเงินที่คุณต้องการใช้รองรับ Nostr Wallet Connect หรือไม่
-\n\t2. สร้างการเชื่อมต่อ: ไปที่แอปกระเป๋าเงินของคุณและสร้างการเชื่อมต่อ NWC ใหม่
-\n\t3. เชื่อมกับ Amethyst: กระเป๋าเงินของคุณมักจะให้ตัวเลือกสามแบบ:
-\n\t\t3.1 ลิงก์อัตโนมัติ: ปุ่มเพื่อเปิดและเชื่อมต่อกับ Amethyst โดยอัตโนมัติ หากมี ให้กดปุ่มนั้น เปิด Amethyst และกดบันทึกที่หน้าจอใหม่
-\n\t\t3.2 ลิงก์ด้วยตนเอง: URI การเชื่อมต่อที่คุณสามารถคัดลอกและกดไอคอนวางบนหน้าจอนี้เพื่อป้อนโดยตรง
-\n\t\t3.3 QR Code: กระเป๋าเงินสร้าง QR Code ที่คุณสามารถอ่านได้จากปุ่ม QR code ในหน้าจอนี้
-    </string>
-    
-    <string name="autoplay_videos_description">เล่นวิดีโออัตโนมัติเมื่อมองเห็นบนหน้าจอ</string>
     
     
-    <string name="copied_to_clipboard">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
+    
+    
+    
+    
     
     
     <string name="share_target_as_dm">ส่งเป็น DM</string>
     
     
     
-    <string name="media_added">เพิ่มสื่อแล้ว</string>
     
-    <string name="media_added_to_profile_gallery">เพิ่มสื่อในแกลเลอรีโปรไฟล์ของคุณแล้ว</string>
     
     
     
     
-    <string name="error_video_playback_failed">ไม่สามารถเล่นวิดีโอนี้ได้</string>
     
-    <string name="error_video_playback_failed_description">codec หรือรูปแบบไม่รองรับบนอุปกรณ์นี้ (%1$s) ลองเปิดในเบราว์เซอร์ของคุณ</string>
     
-    <string name="error_video_open_in_browser">เปิดในเบราว์เซอร์</string>
     
-    <string name="sign_request_rejected2">คำขอลงชื่อถูกปฏิเสธ</string>
     
-    <string name="no_blossom_apps_found_title">ไม่สามารถเปิดลิงก์ Blossom ได้</string>
     
-    <string name="no_blossom_apps_found_description">ไม่พบแอป Blossom กรุณาติดตั้งแอป Blossom ในเครื่องเพื่อดูไฟล์นี้</string>
     
-    <string name="settings_muted_threads_title">เธรดที่ปิดเสียง</string>
     
-    <string name="settings_muted_threads_empty">ไม่มีเธรดที่ปิดเสียง</string>
     
     
     
     
     
     
-    <string name="could_not_fetch_invoice_from_details">ไม่สามารถดึงใบแจ้งหนี้จาก %1$s: %2$s</string>
     
-    <string name="notification_settings">การแจ้งเตือน</string>
     
-    <string name="notification_settings_section_delivery">การส่ง</string>
     
-    <string name="notification_settings_section_display">การแสดงผลในแอป</string>
     
-    <string name="notification_settings_section_categories">หมวดหมู่</string>
     
     
     
     
     
-    <string name="could_not_check_downloaded_file">ไม่สามารถตรวจสอบไฟล์ที่ดาวน์โหลดหลังจากอัปโหลด: %1$s</string>
     
-    <string name="failed_to_upload_to_server_with_message">อัปโหลดไปยัง %1$s ล้มเหลว: %2$s</string>
     
-    <string name="encrypt_files_label">เข้ารหัสไฟล์</string>
     
-    <string name="encrypt_files_description">เข้ารหัสไฟล์ก่อนอัปโหลดเพื่อความเป็นส่วนตัว บางเซิร์ฟเวอร์อาจไม่รับไฟล์ที่เข้ารหัสในบัญชีฟรี</string>
     
-    <string name="failed_to_upload_encrypted_media_title">การอัปโหลดแบบเข้ารหัสล้มเหลว</string>
     
-    <string name="failed_to_upload_encrypted_media_message">เซิร์ฟเวอร์หลายแห่งไม่รับไฟล์ที่เข้ารหัสในบัญชีฟรี คุณสามารถลองใหม่โดยไม่เข้ารหัส</string>
     
     
     
     
     
     
-    <string name="video_codec_h265_label">ใช้ Codec H.265/HEVC</string>
     
-    <string name="video_codec_h265_description">คุณภาพดีกว่าที่ขนาดไฟล์เล็กกว่า แต่ไม่ใช่ทุกอุปกรณ์รองรับการเล่น H.265</string>
     
-    <string name="convert_gif_to_mp4_label">แปลง GIF เป็น MP4</string>
     
-    <string name="convert_gif_to_mp4_description">แปลง GIF เคลื่อนไหวเป็นวิดีโอ MP4 เพื่อลดขนาดไฟล์และเพิ่มความเข้ากันได้ในการเล่น</string>
     
-    <string name="strip_metadata_label">ลบข้อมูลเมตาส่วนตัว</string>
     
-    <string name="strip_metadata_description">พยายามลบข้อมูลเมตาส่วนตัวออกจากไฟล์มีเดียที่รองรับก่อนอัปโหลด</string>
     
-    <string name="metadata_strip_failed_title">ไม่สามารถลบข้อมูลเมตาได้</string>
     
     
     
-    <string name="metadata_strip_failed_upload_cancelled">ไม่สามารถลบข้อมูลเมตาส่วนตัวออกจากสื่อได้ ยกเลิกการอัปโหลดแล้ว</string>
     
-    <string name="upload_cancelled">ยกเลิกการอัปโหลดแล้ว</string>
     
-    <string name="avif_metadata_strip_failed">ไม่สามารถลบข้อมูลเมตาจาก AVIF: %1$s</string>
     
-    <string name="route_calendars">ปฏิทิน</string>
     
-    <string name="route_calendar_collections">รายการปฏิทิน</string>
     
-    <string name="route_chess">หมากรุก</string>
     
-    <string name="wallet">กระเป๋าเงิน</string>
     
     
     
@@ -1075,7 +574,6 @@
     
     
     
-    <string name="wallet_add_cashu_title">กระเป๋าเงิน Cashu (NIP-60)</string>
     
     
     
@@ -1097,56 +595,11 @@
     
     <string name="cashu_p2pk_manual_label">คีย์ส่วนตัว P2PK (hex)</string>
     
-    <string name="wallet_edit_cashu_title">แก้ไข mints</string>
     
     <string name="wallet_save_changes">บันทึกการเปลี่ยนแปลง</string>
     
     
     
-    <plurals name="cashu_mint_plus_others">
-    <item quantity="other">+%1$d เพิ่มเติม</item>
-</plurals>
-    
-    <plurals name="cashu_mint_recommended_by_others">
-    <item quantity="other">แนะนำโดย %1$d คน</item>
-</plurals>
-    
-    <string name="cashu_mint_popular_header">Mints ยอดนิยม</string>
-    
-    <string name="cashu_mint_matches_header">Mints ที่ตรงกัน</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="cashu_history_incoming">รับแล้ว</string>
-    
-    <string name="cashu_history_outgoing">ส่งแล้ว</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="cashu_settings_delete_confirm_body">เผยแพร่คำขอลบคำแนะนำ kind:38000 ของ %1$s ของคุณ relay ที่รองรับ NIP-09 จะลบออก</string>
-    
-    
-    
-    
-    
-    
-    <string name="cashu_settings_restore_result">กู้คืนได้ %1$s sats จาก %2$s proof</string>
     
     
     
@@ -1170,28 +623,53 @@
     
     
     
-    <string name="cashu_quote_confirm">จ่าย %1$s sat + สูงสุด %2$s sat ในค่าธรรมเนียมใช่หรือไม่?</string>
     
     
     
     
     
     
-    <string name="nutzap_failed_title">Nutzap ล้มเหลว</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-    <string name="nutzap_failed_no_recipient">ไม่มี pubkey ผู้รับในโน้ตนี้</string>
     
-    <string name="nutzap_failed_private_note">nutzap เป็นแบบสาธารณะและจะเปิดเผยโน้ตส่วนตัวนี้ ใช้ Lightning zap แทน</string>
     
-    <string name="nutzap_failed_no_event">ไม่สามารถสร้างการอ้างอิง event ได้</string>
     
     
     
     
     
-    <string name="cashu_waiting_for_payment">รอการชำระใบแจ้งหนี้…</string>
     
-    <string name="cashu_checking_mint">กำลังตรวจสอบ mint…</string>
     
     
     
@@ -1227,38 +705,19 @@
     
     
     
-    <string name="onchain_send_fee_slow">ช้า</string>
     
-    <string name="onchain_send_fee_normal">ปกติ</string>
     
-    <string name="onchain_send_fee_fast">เร็ว</string>
     
-    <string name="onchain_send_fee_eta_slow">~1 ชั่วโมง</string>
     
-    <string name="onchain_send_fee_eta_normal">~30 นาที</string>
     
-    <string name="onchain_send_fee_eta_fast">~10 นาที</string>
     
     
-    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     
     
     
-    <plurals name="onchain_send_button_amount_split">
-    <item quantity="other">ส่ง %1$s sats, %2$d ทาง</item>
-</plurals>
     
-    <plurals name="onchain_send_use_note_split">
-    <item quantity="other">ใช้การแบ่ง zap %1$d ทางของโน้ตนี้</item>
-</plurals>
     
-    <plurals name="onchain_send_splits_label">
-    <item quantity="other">แบ่งให้ %1$d ผู้รับ</item>
-</plurals>
     
-    <plurals name="onchain_send_splits_skipped">
-    <item quantity="other">ข้าม %1$d ผู้รับที่มีแต่ Lightning address — on-chain ต้องการ Nostr pubkey เพื่อสร้างที่อยู่</item>
-</plurals>
     
     
     
@@ -1270,60 +729,34 @@
     
     
     
-    <string name="onchain_stage_loading_utxos">กำลังโหลดยอดคงเหลือ</string>
     
-    <string name="onchain_stage_building">กำลังสร้างธุรกรรม</string>
     
-    <string name="onchain_stage_signing">กำลังเซ็น</string>
     
-    <string name="onchain_stage_broadcasting">กำลังกระจาย</string>
     
-    <string name="onchain_stage_publishing">กำลังเผยแพร่ใบเสร็จ</string>
     
-    <string name="onchain_send_error_backend_not_configured">ไม่ได้ตั้งค่า Bitcoin chain backend ไว้</string>
     
-    <string name="onchain_send_error_load_utxos">ไม่สามารถโหลดยอด Bitcoin ของคุณได้</string>
     
-    <string name="onchain_send_error_build">ไม่สามารถสร้างธุรกรรมได้</string>
     
-    <string name="onchain_send_error_recipient_dust">ส่วนแบ่งของผู้รับต่ำกว่าเกณฑ์ขั้นต่ำ</string>
     
-    <string name="onchain_send_error_sign">ไม่สามารถเซ็นธุรกรรมได้</string>
     
-    <string name="onchain_send_error_broadcast">ไม่สามารถกระจายธุรกรรมได้</string>
     
-    <string name="onchain_send_error_publish_receipt">ส่งการชำระเงินแล้ว แต่ไม่สามารถเผยแพร่ใบเสร็จ zap ได้</string>
     
-    <plurals name="onchain_send_error_publish_receipt_partial">
-    <item quantity="other">ส่งการชำระเงินแล้ว (เผยแพร่ %1$d จาก %2$d ใบเสร็จ) แต่ไม่สามารถเผยแพร่ใบเสร็จถัดไปได้</item>
-</plurals>
     
-    <string name="route_import_follows">นำเข้ารายการที่ติดตาม</string>
     
-    <string name="new_product">สินค้าใหม่</string>
     
-    <string name="new_long_form_post">บทความใหม่</string>
     
     
     
-    <string name="new_calendar_event">กิจกรรมปฏิทินใหม่</string>
     
-    <string name="edit_calendar_event">แก้ไขกิจกรรมปฏิทิน</string>
     
     
-    <string name="new_calendar_collection">ปฏิทินใหม่</string>
     
-    <string name="edit_calendar_collection">แก้ไขปฏิทิน</string>
     
     
     
-    <string name="calendar_view_feed">ฟีด</string>
     
-    <string name="calendar_view_month">เดือน</string>
     
-    <string name="calendar_view_week">สัปดาห์</string>
     
-    <string name="calendar_view_day">วัน</string>
     
     
     
@@ -1357,9 +790,6 @@
     
     
     
-    <plurals name="calendar_day_a11y_events">
-    <item quantity="other">%1$s, %2$d กิจกรรม</item>
-</plurals>
     
     
     
@@ -1386,24 +816,14 @@
     
     
     
-    <string name="calendar_relative_ongoing">กำลังดำเนินอยู่</string>
     
-    <string name="calendar_relative_ongoing_with_end">%1$s · สิ้นสุด %2$s</string>
     
-    <string name="calendar_export_share_title">แชร์กิจกรรมปฏิทิน</string>
     
     
-    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     
-    <string name="calendar_reminder_channel_name">การแจ้งเตือนปฏิทิน</string>
     
-    <string name="calendar_reminder_channel_description">แจ้งเตือนเมื่อกิจกรรมที่คุณเข้าร่วมกำลังจะเริ่ม</string>
     
-    <string name="calendar_reminder_default_title">กิจกรรมปฏิทิน</string>
     
-    <plurals name="calendar_reminder_body">
-    <item quantity="other">เริ่มในอีก %1$d นาที</item>
-</plurals>
     
     
     
@@ -1412,33 +832,23 @@
     
     
     
-    <string name="calendar_event_image_upload_failed">อัปโหลดรูปภาพล้มเหลว</string>
     
-    <string name="calendar_event_image_upload_failed_body">ไม่สามารถอัปโหลดรูปภาพที่เลือก ลองอีกครั้งหรือวาง URL</string>
     
     
     
     
-    <string name="calendar_reminder_settings_title">การแจ้งเตือนปฏิทิน</string>
     
-    <string name="calendar_reminder_settings_enabled_title">ส่งการแจ้งเตือน</string>
     
-    <string name="calendar_reminder_settings_enabled_subtitle">การแจ้งเตือนจะถูกส่งเมื่อกิจกรรมที่คุณเข้าร่วมกำลังจะเริ่ม</string>
     
     
     
-    <plurals name="calendar_reminder_settings_lead_choice">
-    <item quantity="other">%1$d นาที</item>
-</plurals>
     
     
     
     
     
     
-    <string name="calendar_open_in_maps">เปิดในแผนที่</string>
     
-    <string name="calendar_open_link">เปิดลิงก์</string>
     
     
     
@@ -1457,7 +867,6 @@
     
     
     
-    <string name="bottom_bar_settings">แถบนำทางด้านล่าง</string>
     
     <string name="bottom_bar_settings_description">ลากเพื่อจัดลำดับ สลับเพื่อเพิ่มหรือลบรายการออกจากแถบด้านล่าง หากไม่มีรายการ แถบด้านล่างจะถูกซ่อน</string>
     
@@ -1468,21 +877,14 @@
     
     <string name="home_tabs_settings_description">เลือกแท็บที่จะแสดงในหน้าหลัก เมื่อมีเพียงแท็บเดียวที่เปิดใช้งาน แถบแท็บจะถูกซ่อน</string>
     
-    <string name="home_tab_everything">ทั้งหมด</string>
     
-    <string name="profile_ui_settings">ส่วนติดต่อผู้ใช้โปรไฟล์</string>
     
     <string name="profile_ui_settings_description">เลือกส่วนและฟีดที่จะแสดงในหน้าโปรไฟล์ผู้ใช้ ตัวเลือกทั้งหมดเปิดใช้งานตามค่าเริ่มต้น</string>
     
-    <string name="profile_ui_setting_badges">ป้ายโปรไฟล์</string>
     
-    <string name="profile_ui_setting_app_recommendations">คำแนะนำแอป</string>
     
-    <string name="profile_ui_setting_zap_received_feed">ฟีด Zap ที่ได้รับ</string>
     
-    <string name="profile_ui_setting_followers_feed">ฟีดผู้ติดตาม</string>
     
-    <string name="reactions_settings">แถวปฏิกิริยา</string>
     
     
     
@@ -1500,7 +902,6 @@
     
     
     
-    <string name="video_player_settings">ปุ่มเครื่องเล่นวิดีโอ</string>
     
     
     
@@ -1520,7 +921,6 @@
     
     
     
-    <string name="audio_visualizer_settings">ตัวแสดงภาพเสียง</string>
     
     
     
@@ -1532,7 +932,6 @@
     
     
     
-    <string name="expiration_date_label">วันหมดอายุ</string>
     
     
     
@@ -1541,70 +940,45 @@
     
     
     
-    <string name="outbox_relays_title">Outbox Relays</string>
     
     
     
     
     
-    <string name="inbox_relays_title">Inbox Relays</string>
     
     
     
     
     
     
-    <string name="public_home_section_explainer_profile">ผู้ใช้กำลังโพสต์เนื้อหาของตนไปยัง relay เหล่านี้</string>
     
-    <string name="public_notif_section_explainer_profile">ผู้ใช้กำลังรับการแจ้งเตือนบน relay เหล่านี้</string>
     
-    <string name="private_inbox_section_explainer_profile">ผู้ใช้รับ DM บน relay เหล่านี้</string>
     
-    <string name="keypackages">KeyPackages</string>
     
-    <string name="keypackage_section">KeyPackage Relays</string>
     
-    <string name="keypackage_section_explainer">Relays ที่เผยแพร่ MLS KeyPackages ของคุณ (MIP-00) ผู้ใช้รายอื่นดึง KeyPackages เหล่านี้เพื่อเชิญคุณเข้ากลุ่มแชท Marmot ใส่ relay 1–3 รายการที่รับเหตุการณ์ KeyPackage จากคุณและอนุญาตให้อ่านแบบสาธารณะ</string>
     
-    <string name="connected_section">Relays ที่เชื่อมต่อ</string>
     
-    <string name="connected_section_description">รายการ relay ปัจจุบันที่กำลังใช้งาน</string>
     
-    <string name="send_kind0_to_local_relay_title">ส่งต่อโปรไฟล์ไปยัง relay ในเครื่อง</string>
     
-    <string name="send_kind0_to_local_relay_description">ส่งเหตุการณ์โปรไฟล์ (kind 0) ที่ได้รับทั้งหมดไปยัง relay ในเครื่องของคุณ</string>
     
     
-    <string name="trusted_section">Trusted Relays</string>
     
-    <string name="trusted_section_explainer">Relays ที่คุณเชื่อถือว่าไม่จำเป็นต้องใช้การเชื่อมต่อ Tor</string>
     
     
-    <string name="favorite_section">ฟีด Relay โปรด</string>
     
-    <string name="favorite_section_explainer">Relays ที่คุณมักเข้าไปดูฟีดทั่วโลกของพวกเขา</string>
     
     
-    <string name="proxy_section">Proxy Relays</string>
     
-    <string name="proxy_section_explainer">Relay รวมที่แอปต้องใช้เพื่อดาวน์โหลดฟีดของคุณ เช่น filter.nostr.wine ซึ่งจะแทนที่โมเดล outbox และทำให้แอปเชื่อมต่อเฉพาะ relay ในรายการของคุณ</string>
     
     
-    <string name="broadcast_section">Broadcast Relays</string>
     
-    <string name="broadcast_section_explainer">Relays ที่เชี่ยวชาญในการส่งโน้ตของคุณไปยัง relay อื่นๆ ทั้งหมด เช่น sendit.nosflare.com Amethyst จะเพิ่ม relay นี้ในเหตุการณ์ใหม่ทั้งหมดที่คุณสร้าง</string>
     
     
-    <string name="indexer_section">Indexer Relays</string>
     
-    <string name="indexer_section_explainer">Relays ที่เชี่ยวชาญในการโฮสต์ข้อมูลเมตาและรายการ relay ของทุกคน เช่น purplepag.es Amethyst จะใช้ relay เหล่านี้เพื่อค้นหาผู้ใช้ที่ไม่ได้อยู่ในรายการของคุณ</string>
     
     
-    <string name="blocked_section">Blocked Relays</string>
     
-    <string name="blocked_section_explainer">Amethyst จะไม่เชื่อมต่อกับ relay เหล่านี้เด็ดขาด</string>
     
-    <string name="export_relay_settings">ส่งออกการตั้งค่า relay</string>
     
     
     
@@ -1641,35 +1015,21 @@
     
     <string name="media_servers_blossom_explainer">เพิ่มเซิร์ฟเวอร์ได้มากเท่าที่ต้องการ คุณสามารถเลือกเซิร์ฟเวอร์ที่จะใช้ในภายหลังเมื่ออัปโหลดรูปภาพ</string>
     
-    <string name="add_a_blossom_server">เพิ่ม Blossom Server</string>
     
-    <string name="torrent_no_apps">ไม่มีแอป torrent ติดตั้งเพื่อเปิดและดาวน์โหลดไฟล์</string>
     
-    <string name="torrent_no_info">เหตุการณ์ไม่มีข้อมูลเพียงพอในการสร้างลิงก์ magnet</string>
     
-    <string name="my_lists">รายการของฉัน</string>
     
-    <string name="feed_group_feeds">ฟีด</string>
     
-    <string name="feed_group_hashtags">Hashtags</string>
     
-    <string name="feed_group_interest_sets">ชุดความสนใจ</string>
     
-    <string name="feed_group_locations">สถานที่</string>
     
-    <string name="feed_group_communities">ชุมชน</string>
     
-    <string name="feed_group_lists">รายการ</string>
     
-    <string name="feed_group_dvms">อัลกอริทึมฟีด</string>
     
-    <string name="follow_list_all_favorite_dvms">อัลกอริทึมฟีดโปรดทั้งหมด</string>
     
-    <string name="feed_group_relays">Relays</string>
     
     
     
-    <string name="favorite_dvms_title">อัลกอริทึมฟีดโปรด</string>
     
     
     
@@ -1683,18 +1043,13 @@
     
     
     
-    <string name="private_message">ข้อความส่วนตัว</string>
     
-    <string name="public_message">ข้อความสาธารณะ</string>
     
     
     
-    <string name="unable_to_share_image">ไม่สามารถแชร์รูปภาพได้ โปรดลองอีกครั้งในภายหลัง…</string>
     
     
-    <string name="unable_to_share_video">ไม่สามารถแชร์วิดีโอได้ โปรดลองอีกครั้งในภายหลัง…</string>
     
-    <string name="downloading_video_for_sharing">กำลังดาวน์โหลดวิดีโอ…</string>
     
     
     
@@ -1712,17 +1067,11 @@
     
     
     
-    <string name="dont_translate_from">ไม่แปลจาก</string>
     
-    <string name="dont_translate_from_description">ภาษาที่แสดงที่นี่จะไม่ถูกแปล เลือกภาษาเพื่อลบออกและให้แปลอีกครั้ง</string>
     
-    <string name="translate_to">แปลเป็น</string>
     
-    <string name="translate_to_description">เลือกภาษาที่จะแปลเนื้อหาเป็น</string>
     
-    <string name="language_preferences">การตั้งค่าการแสดงภาษา</string>
     
-    <string name="language_preferences_description">สำหรับแต่ละคู่ภาษาที่แปล เลือกภาษาที่จะแสดงก่อน</string>
     
     
     
@@ -1733,9 +1082,7 @@
     
     
     
-    <string name="pause">หยุดชั่วคราว</string>
     
-    <string name="play">เล่น</string>
     
     
     
@@ -1744,7 +1091,6 @@
     
     
     
-    <string name="this_message_will_disappear_in">ข้อความนี้จะหายไปใน %1$s</string>
     
 
     
@@ -1759,15 +1105,10 @@
     
     
     
-    <string name="people_list_title">ข้อมูลเมตาของรายการติดตาม</string>
     
-    <string name="people_list_explainer">ข้อมูลเมตาของรายการติดตามสามารถดูได้โดยทุกคนบน Nostr โดยเฉพาะสมาชิกส่วนตัวของคุณที่จะถูกเข้ารหัส</string>
     
-    <string name="follow_pack_title">ข้อมูลเมตาของ Follow Pack</string>
     
-    <string name="follow_pack_explainer">ข้อมูลเมตาของ Follow Pack สามารถดูได้โดยทุกคนบน Nostr และมักถูกเผยแพร่บนเว็บไซต์ต่าง ๆ ในฐานะชุดเริ่มต้นสำหรับผู้ใช้ใหม่</string>
     
-    <string name="follow_pack_edit_list_metadata">แก้ไข Follow Pack</string>
     
     
     
@@ -1783,12 +1124,10 @@
     
     
     
-    <string name="expand">ขยาย</string>
     
     
     
     
-    <string name="retry">ลองใหม่</string>
     
     
     
@@ -1799,11 +1138,8 @@
     
     
     
-    <string name="reaction">ปฏิกิริยา</string>
     
-    <string name="voice_post">โพสต์เสียง</string>
     
-    <string name="voice_reply">ตอบกลับด้วยเสียง</string>
     
     
     
@@ -1825,285 +1161,145 @@
     
     
     
-    <string name="kind_outbox_relays">Outbox Relays</string>
     
-    <string name="kind_apps">Apps</string>
     
-    <string name="kind_app_recommendations">App Recommendations</string>
     
-    <string name="kind_user_settings">การตั้งค่าผู้ใช้</string>
     
-    <string name="kind_audio_header">Audio Header</string>
     
-    <string name="kind_audio_track">Audio Track</string>
     
-    <string name="kind_music_track">Music Track</string>
     
-    <string name="kind_music_playlist">Music Playlist</string>
     
-    <string name="kind_podcast_episode">Podcast Episode</string>
     
-    <string name="kind_podcast_metadata">Podcast Show</string>
     
-    <string name="kind_authored_podcasts">Authored Podcasts</string>
     
-    <string name="kind_favorite_podcasts">Favorite Podcasts</string>
     
-    <string name="kind_badge_awards">Badge Awards</string>
     
-    <string name="kind_badge_definitions">Badge Definitions</string>
     
-    <string name="kind_accepted_badge_set">Accepted Badge Set</string>
     
-    <string name="kind_profile_badges">Profile Badges</string>
     
-    <string name="kind_blocked_relays">Blocked Relays</string>
     
-    <string name="kind_blossom_servers">Blossom Servers</string>
     
-    <string name="kind_nests_servers">Nests Servers</string>
     
-    <string name="kind_blossom_auth">Blossom Auth</string>
     
-    <string name="kind_broadcast_relays">Broadcast Relays</string>
     
-    <string name="kind_bookmark_list">รายการบุ๊กมาร์ก</string>
     
-    <string name="kind_old_bookmark_list">รายการบุ๊กมาร์กเก่า</string>
     
-    <string name="kind_day_appointment">นัดหมายรายวัน</string>
     
-    <string name="kind_calendar">ปฏิทิน</string>
     
-    <string name="kind_appointment">นัดหมาย</string>
     
-    <string name="kind_appt_rsvp">Appt RSVP</string>
     
-    <string name="kind_chess_games">Chess Games</string>
     
-    <string name="kind_chess_auth">Chess Auth</string>
     
-    <string name="kind_favorite_relays">Favorite Relays</string>
     
-    <string name="kind_chess_challenges">Chess Challenges</string>
     
-    <string name="kind_chess_game_accept">Chess Game Accept</string>
     
-    <string name="kind_chess_move">Chess Move</string>
     
-    <string name="kind_chess_game_end">Chess Game End</string>
     
-    <string name="kind_chess_draw_offer">Chess Draw Offer</string>
     
-    <string name="kind_channel_definition">Channel Definition</string>
     
-    <string name="kind_channel_hide_msg">Channel Hide Msg</string>
     
-    <string name="kind_channel_list">Channel List</string>
     
-    <string name="kind_channel_message">Channel Message</string>
     
-    <string name="kind_channel_metadata">Channel Metadata</string>
     
-    <string name="kind_channel_mute_user">Channel Mute User</string>
     
-    <string name="kind_dm_file">DM File</string>
     
-    <string name="kind_dm_message">DM Message</string>
     
-    <string name="kind_dm_relays">DM Relays</string>
     
-    <string name="kind_classifieds">ประกาศ</string>
     
-    <string name="kind_comments">ความคิดเห็น</string>
     
-    <string name="kind_community_def">Community Def</string>
     
-    <string name="kind_community_list">Community List</string>
     
-    <string name="kind_community_post">Community Post</string>
     
-    <string name="kind_follow_list">Follow List</string>
     
-    <string name="kind_deletions">การลบ</string>
     
-    <string name="kind_drafts">ฉบับร่าง</string>
     
-    <string name="kind_emoji_packs">Emoji Packs</string>
     
-    <string name="kind_emoji_pack_list">Emoji Pack List</string>
     
-    <string name="kind_ephemeral_chat">Ephemeral Chat</string>
     
-    <string name="kind_ephemeral_chatrooms">Ephemeral Chatrooms</string>
     
-    <string name="kind_file_headers">File Headers</string>
     
-    <string name="kind_profile_gallery">Profile Gallery</string>
     
-    <string name="kind_file_servers">File Servers</string>
     
-    <string name="kind_blob_data">Blob Data</string>
     
-    <string name="kind_blob_headers">Blob Headers</string>
     
-    <string name="kind_medical_data">ข้อมูลทางการแพทย์</string>
     
-    <string name="kind_follow_packs">Follow Packs</string>
     
-    <string name="kind_reposts_16">Reposts (16)</string>
     
-    <string name="kind_geohash_follows">Geohash Follows</string>
     
-    <string name="kind_gift_wraps">GiftWraps</string>
     
-    <string name="kind_git_issue">Git Issue</string>
     
-    <string name="kind_git_patch">Git Patch</string>
     
-    <string name="kind_git_repo">Git Repo</string>
     
-    <string name="kind_git_reply">Git Reply</string>
     
-    <string name="kind_zap_goals">Zap Goals</string>
     
-    <string name="kind_hashtag_follows">Hashtag Follows</string>
     
-    <string name="kind_highlights">ไฮไลต์</string>
     
-    <string name="kind_http_auth">Http Auth</string>
     
-    <string name="kind_index_relay_list">Index Relay List</string>
     
-    <string name="kind_adventure_prologue">Adventure Prologue</string>
     
-    <string name="kind_adventure_scene">Adventure Scene</string>
     
-    <string name="kind_adventure_reading">Adventure Reading</string>
     
-    <string name="kind_named_bookmarks">Named Bookmarks</string>
     
-    <string name="kind_live_chats">Live Chats</string>
     
-    <string name="kind_live_streams">Live Streams</string>
     
-    <string name="kind_zaps">Zaps</string>
     
-    <string name="kind_nwc_request">NWC Request</string>
     
-    <string name="kind_nwc_response">NWC Response</string>
     
-    <string name="kind_private_zaps">Private Zaps</string>
     
-    <string name="kind_zap_req">Zap Req</string>
     
-    <string name="kind_blogs">บล็อก</string>
     
-    <string name="kind_meeting_room">ห้องประชุม</string>
     
-    <string name="kind_room_presence">Room Presence</string>
     
-    <string name="kind_meeting_space">Meeting Space</string>
     
-    <string name="kind_profile">โปรไฟล์</string>
     
-    <string name="kind_mute_list">Mute List</string>
     
-    <string name="kind_nns">NNS</string>
     
-    <string name="kind_nip">NIP</string>
     
-    <string name="kind_nostr_connect">Nostr Connect</string>
     
-    <string name="kind_dvm_status">DVM Status</string>
     
-    <string name="kind_dvm_content_req">DVM Content Req</string>
     
-    <string name="kind_dvm_content_resp">DVM Content Resp</string>
     
-    <string name="kind_dvm_user_req">DVM User Req</string>
     
-    <string name="kind_dvm_user_resp">DVM User Resp</string>
     
-    <string name="kind_ots">OTS</string>
     
-    <string name="kind_pay_to">PayTo</string>
     
-    <string name="kind_people_lists">People Lists</string>
     
-    <string name="kind_pictures">รูปภาพ</string>
     
-    <string name="kind_workouts">Workouts</string>
     
-    <string name="kind_pins">Pins</string>
     
-    <string name="kind_zap_poll">Zap Poll</string>
     
-    <string name="kind_poll">โหวต</string>
     
-    <string name="kind_poll_response">Poll Response</string>
     
-    <string name="kind_nip04_dms">NIP-04 DMs</string>
     
-    <string name="kind_private_relays">Private Relays</string>
     
-    <string name="kind_proxy_relays">Proxy Relays</string>
     
-    <string name="kind_public_message">Public Message</string>
     
-    <string name="kind_reactions">Reactions</string>
     
-    <string name="kind_contact_card">Contact Card</string>
     
-    <string name="kind_relay_auth">Relay Auth</string>
     
-    <string name="kind_relay_discovery">Relay Discovery</string>
     
-    <string name="kind_relay_monitor">Relay Monitor Announcement</string>
     
-    <string name="kind_relay_set">Relay Set</string>
     
-    <string name="kind_reports">รายงาน</string>
     
-    <string name="kind_reposts">Reposts</string>
     
-    <string name="kind_user_delete">User Delete</string>
     
-    <string name="kind_seals">Seals</string>
     
-    <string name="kind_search_relays">Search Relays</string>
     
-    <string name="kind_user_status">User Status</string>
     
-    <string name="kind_notes">โน้ต</string>
     
-    <string name="kind_edits">การแก้ไข</string>
     
-    <string name="kind_torrents">Torrents</string>
     
-    <string name="kind_torrent_comments">Torrent Comments</string>
     
-    <string name="kind_trusted_relays">Trusted Relays</string>
     
-    <string name="kind_trusted_providers">Trusted Providers</string>
     
-    <string name="kind_video_repl">Video (Repl)</string>
     
-    <string name="kind_shorts_repl">Shorts (Repl)</string>
     
-    <string name="kind_video">วิดีโอ</string>
     
-    <string name="kind_shorts">Shorts</string>
     
-    <string name="kind_voice_msg">Voice Msg</string>
     
-    <string name="kind_voice_reply">Voice Reply</string>
     
-    <string name="kind_wake">WakeUp</string>
     
-    <string name="kind_web_bookmark">Web Bookmark</string>
     
-    <string name="kind_wiki">Wiki</string>
     
     
 
@@ -2120,9 +1316,7 @@
     
     
     
-    <string name="uptime">เวลาทำงาน %1$d%%</string>
     
-    <string name="namecoin_settings">การตั้งค่า Namecoin</string>
     
     
     
@@ -2133,13 +1327,11 @@
     
     
     
-    <string name="namecoin_response_time">%dms</string>
     
     
     
     
     
-    <string name="event_sync_title">การซิงค์ Relay</string>
     
     
     
@@ -2167,65 +1359,27 @@
     
     
     
-    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     
-    <string name="events_from_you">event จากคุณ</string>
     
-    <string name="events_to_you">event ถึงคุณ</string>
     
-    <string name="searchable_events">event ที่ค้นหาได้</string>
     
-    <string name="dms">DMs</string>
     
-    <string name="profiles">โปรไฟล์</string>
     
-    <string name="relay_settings_lower2">รายการ outbox</string>
     
-    <string name="last_seen">เห็นล่าสุด %1$s ที่ผ่านมา</string>
     
-    <string name="last_seen_on_date">เห็นล่าสุดเมื่อ %1$s (%2$s ที่ผ่านมา)</string>
     
-    <string name="last_seen_just_now">เห็นเมื่อสักครู่นี้</string>
     
-    <string name="last_seen_never">ไม่เคยพบ</string>
     
-    <plurals name="duration_minutes">
-    <item quantity="other">%1$d นาที</item>
-</plurals>
     
-    <plurals name="duration_hours">
-    <item quantity="other">%1$d ชั่วโมง</item>
-</plurals>
     
-    <plurals name="duration_days">
-    <item quantity="other">%1$d วัน</item>
-</plurals>
     
-    <plurals name="duration_weeks">
-    <item quantity="other">%1$d สัปดาห์</item>
-</plurals>
     
-    <plurals name="duration_months">
-    <item quantity="other">%1$d เดือน</item>
-</plurals>
     
-    <plurals name="duration_years">
-    <item quantity="other">%1$d ปี</item>
-</plurals>
     
-    <plurals name="cashu_wallet_subtitle_mints">
-    <item quantity="other">%1$d mint</item>
-</plurals>
     
-    <plurals name="cashu_pending_quotes_title">
-    <item quantity="other">%1$d ใบแจ้งหนี้ที่รอดำเนินการ</item>
-</plurals>
     
     
     
-    <plurals name="cashu_untrusted_mint_title">
-    <item quantity="other">เงินทุนที่ถือครองที่ %1$d mint ที่คุณไม่ได้ใช้</item>
-</plurals>
     
     
     
@@ -2239,7 +1393,6 @@
     
     
     
-    <string name="cashu_move_coins_done">ย้าย %1$s sat ไปยัง %2$s แล้ว</string>
     
     
     
@@ -2252,13 +1405,10 @@
     
     
     
-    <string name="cast_to_device">แคสต์ไปยังอุปกรณ์</string>
     
-    <string name="cast_stop_casting">หยุดการแคสต์</string>
     
     
     
-    <string name="share_hls_video">อัปโหลด HLS</string>
     
     
     
@@ -2279,7 +1429,6 @@
     
     
     
-    <string name="hls_state_uploading_with_label_format">กำลังอัปโหลด %1$s (%2$d จาก %3$d)</string>
     
     
     
@@ -2297,7 +1446,6 @@
     
     
     
-    <string name="attestation">การรับรอง</string>
     
     
     
@@ -2305,12 +1453,9 @@
     
     
     
-    <string name="attestation_request">คำขอการรับรอง</string>
     
-    <string name="attestor_recommendation">คำแนะนำจาก Attestor</string>
     
     
-    <string name="attestor_proficiency">ความเชี่ยวชาญของ Attestor</string>
     
     
     
@@ -2318,11 +1463,8 @@
     
     
     
-    <string name="web_bookmarks">บุ๊กมาร์กเว็บ</string>
     
-    <string name="web_bookmark_add_title">เพิ่มบุ๊กมาร์กเว็บ</string>
     
-    <string name="web_bookmark_edit_title">แก้ไขบุ๊กมาร์กเว็บ</string>
     
     
     
@@ -2337,7 +1479,6 @@
     
     
     
-    <string name="goal_progress">ได้รับทุน %1$s จากเป้าหมาย %2$s sats</string>
     
     
     
@@ -2372,9 +1513,7 @@
     
     
 
-    <string name="new_goal">เป้าหมายใหม่</string>
     
-    <string name="request_to_vanish">คำขอให้ลบข้อมูล</string>
     
     
     
@@ -2388,7 +1527,6 @@
     
     
     
-    <string name="vanish_request_sent">ส่งคำขอให้ลบข้อมูลแล้ว</string>
     
     
     
@@ -2402,22 +1540,16 @@
     
     
     
-    <string name="vanish_history">ประวัติการลบข้อมูล</string>
     
     
     
     
     
     
-    <string name="relay_management_tab_pubkeys">ผู้ใช้</string>
     
-    <string name="relay_management_tab_events">กิจกรรม</string>
     
-    <string name="relay_management_tab_kinds">ประเภท</string>
     
-    <string name="relay_management_tab_ips">IPs</string>
     
-    <string name="relay_management_tab_settings">การตั้งค่า</string>
     
     
     
@@ -2469,23 +1601,14 @@
     
     
     
-    <string name="ai_writing_setting_title">เสนอการปรับปรุงข้อความ</string>
     
-    <string name="ai_writing_setting_description">ใช้โมเดล AI บนอุปกรณ์เพื่อเสนอการแก้ไขข้อความและการเปลี่ยนแปลงโทนเสียง</string>
     
-    <string name="tracked_broadcasts_setting_title">การออกอากาศที่ติดตาม</string>
     
-    <string name="tracked_broadcasts_setting_description">ใช้ตัวออกอากาศที่ติดตามเมื่อส่งกิจกรรม แสดงความคืบหน้าสดและสถานะต่อ relay ขณะออกอากาศ</string>
     
-    <string name="suggest_workouts_setting_title">แนะนำการออกกำลังกายเพื่อแชร์</string>
     
-    <string name="suggest_workouts_setting_description">อ่านการออกกำลังกายที่เสร็จสิ้นจาก Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) และแนะนำให้แชร์เป็นโพสต์ การอนุญาตจะถูกขอเฉพาะเมื่อคุณเชื่อมต่อ</string>
     
-    <string name="compose_settings">การตั้งค่าการแต่ง</string>
     
-    <string name="auto_create_drafts_setting_title">สร้างร่างโดยอัตโนมัติ</string>
     
-    <string name="auto_create_drafts_setting_description">บันทึกกิจกรรมร่างโดยอัตโนมัติเมื่อคุณพิมพ์หรือออกจากตัวแต่งที่มีข้อความที่ยังไม่ได้ส่ง และส่งไปยัง relay outbox ส่วนตัวของคุณ</string>
     
     
     
@@ -2502,9 +1625,7 @@
     
     
     
-    <string name="new_emoji_pack">แพ็ค emoji ใหม่</string>
     
-    <string name="edit_emoji_pack">แก้ไขแพ็ค emoji</string>
     
     
     
@@ -2528,45 +1649,29 @@
     
     
     
-    <string name="manage_emoji_packs">แพ็ค Emoji ของฉัน</string>
     
-    <string name="emoji_sets">Emoji</string>
     
     
     
-    <string name="emoji_public_explainer">Emoji สาธารณะมองเห็นได้โดยทุกคนและปรากฏในเมนูรีแอคชันและตัวเลือก \":\" autocomplete ของคุณเมื่อแพ็คนี้อยู่ในรายการ emoji ของคุณ</string>
     
-    <string name="emoji_private_explainer">Emoji ส่วนตัวถูกจัดเก็บแบบเข้ารหัสบน relay และมองเห็นได้เฉพาะคุณเท่านั้น Emoji เหล่านี้ปรากฏในเมนูรีแอคชันและ \":\" autocomplete เช่นเดียวกับ emoji สาธารณะ</string>
     
     
     
     
     
-    <string name="community_rules_violation_kind_size_exceeded">ร่างมีขนาด %1$d ไบต์ ชุมชนนี้จำกัดประเภทนี้ไว้ที่ %2$d ไบต์</string>
     
-    <string name="community_rules_violation_max_size_exceeded">ร่างมีขนาด %1$d ไบต์ ชุมชนนี้จำกัดกิจกรรมไว้ที่ %2$d ไบต์</string>
     
-    <string name="community_rules_violation_quota_exceeded">คุณโพสต์กิจกรรมประเภทนี้ไปแล้ว %1$d รายการในวันนี้ (จำกัด %2$d)</string>
     
     
     
-    <string name="nowhere_link_card_generic">เว็บไซต์ Nowhere</string>
     
-    <string name="nowhere_link_card_event">กิจกรรม Nowhere</string>
     
-    <string name="nowhere_link_card_fundraiser">การระดมทุน Nowhere</string>
     
-    <string name="nowhere_link_card_store">ร้านค้า Nowhere</string>
     
-    <string name="nowhere_link_card_petition">คำร้อง Nowhere</string>
     
-    <string name="nowhere_link_card_message">ข้อความ Nowhere</string>
     
-    <string name="nowhere_link_card_drop">Drop ของ Nowhere</string>
     
-    <string name="nowhere_link_card_art">งานศิลปะ Nowhere</string>
     
-    <string name="nowhere_link_card_forum">ฟอรัม Nowhere</string>
     
     
     
@@ -2584,23 +1689,14 @@
     
     
     
-    <plurals name="marmot_message_count">
-    <item quantity="other">%1$d ข้อความ</item>
-</plurals>
     
-    <plurals name="marmot_member_count">
-    <item quantity="other">%1$d สมาชิก</item>
-</plurals>
     
     
     
     
     
-    <string name="marmot_group_info_updated">อัปเดตข้อมูลกลุ่มแล้ว</string>
     
-    <string name="marmot_failed_to_update">ไม่สามารถอัปเดตได้: %1$s</string>
     
-    <string name="marmot_failed_to_create_group">ไม่สามารถสร้างกลุ่มได้: %1$s</string>
     
     
     
@@ -2611,13 +1707,9 @@
     
     
     
-    <string name="marmot_failed_to_leave_group">ไม่สามารถออกจากกลุ่มได้: %1$s</string>
     
-    <string name="marmot_adding_user">กำลังเพิ่ม %1$s…</string>
     
-    <string name="marmot_failed_to_add_user">ไม่สามารถเพิ่ม %1$s: %2$s</string>
     
-    <string name="marmot_unknown_error">ข้อผิดพลาดที่ไม่ทราบสาเหตุ</string>
     
     
     
@@ -2626,9 +1718,7 @@
     
     
     
-    <string name="marmot_member_removed">ลบสมาชิกออกแล้ว</string>
     
-    <string name="marmot_failed_to_remove_member">ไม่สามารถลบสมาชิกได้: %1$s</string>
     
     
     
@@ -2636,39 +1726,25 @@
     
     
     
-    <string name="marmot_admin_granted">มอบสิทธิ์ผู้ดูแลระบบแล้ว</string>
     
-    <string name="marmot_failed_to_grant_admin">ไม่สามารถมอบสิทธิ์ผู้ดูแลระบบได้: %1$s</string>
     
     
     
     
     
-    <string name="marmot_admin_revoked">เพิกถอนสิทธิ์ผู้ดูแลระบบแล้ว</string>
     
-    <string name="marmot_failed_to_revoke_admin">ไม่สามารถเพิกถอนสิทธิ์ผู้ดูแลระบบได้: %1$s</string>
     
     
     
     
-    <string name="marmot_not_a_member">ไม่ได้เป็นสมาชิกของกลุ่มนี้</string>
     
     
     
     
     
 
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-    <item quantity="other">โพสต์นี้มีแฮชแท็กมากกว่า %1$d รายการ</item>
-</plurals>
 
-    <plurals name="nip82_assets_count">
-    <item quantity="other">%1$d ไฟล์แนบ</item>
-</plurals>
 
-    <plurals name="thread_collapsed_reply_count">
-    <item quantity="other">+%1$d\nการตอบกลับ</item>
-</plurals>
 
 
 
@@ -2679,36 +1755,24 @@
 
 
 
-    <string name="login_with_a_private_key_to_be_able_to_upload">คุณกำลังใช้คีย์สาธารณะซึ่งอ่านได้อย่างเดียว เข้าสู่ระบบด้วยคีย์ส่วนตัวเพื่ออัปโหลดไฟล์</string>
 
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">คุณกำลังใช้คีย์สาธารณะซึ่งอ่านได้อย่างเดียว เข้าสู่ระบบด้วยคีย์ส่วนตัวเพื่อลงนามเหตุการณ์</string>
 
-    <string name="unauthorized_exception">การถอดรหัสไม่ได้รับอนุญาต</string>
 
-    <string name="unauthorized_exception_description">ผู้ลงนามไม่อนุญาตการถอดรหัสที่จำเป็นสำหรับการดำเนินการนี้ เปิดใช้การถอดรหัส NIP-44 ในแอปผู้ลงนามของคุณแล้วลองใหม่อีกครั้ง</string>
 
-    <string name="signer_not_found_exception">ไม่พบผู้ลงนาม</string>
 
-    <string name="signer_not_found_exception_description">ถอนการติดตั้งแอปผู้ลงนามแล้วหรือไม่ ตรวจสอบว่าติดตั้งผู้ลงนามและมีบัญชีนี้อยู่ ออกจากระบบและเข้าสู่ระบบใหม่หากมีการเปลี่ยนแปลงแอปผู้ลงนาม</string>
 
-    <string name="signer_illegal_state_exception_description">ผู้ลงนามภายนอกส่งคืนข้อมูลที่ผิดปกติสำหรับคำขอนี้ อาจมีข้อผิดพลาดใน Amethyst หรือแอปผู้ลงนาม</string>
 
 
 
 
 
 
-    <string name="clink_requesting_invoice">กำลังขอใบแจ้งหนี้…</string>
 
-    <string name="clink_debit_no_response">บริการเดบิตไม่สามารถดำเนินการชำระเงินได้</string>
 
 
-    <string name="clink_confirm_pay_amount_via_source">ชำระ %1$s ผ่าน %2$s?</string>
 
-    <string name="clink_confirm_pay_via_source">ชำระใบแจ้งหนี้นี้ผ่าน %1$s?</string>
 
 
-    <string name="clink_offer_invalid_amount">กรุณาใส่จำนวนที่ถูกต้องสำหรับข้อเสนอนี้</string>
 
 
 
@@ -2717,13 +1781,9 @@
 
 
 
-    <string name="clink_budget_one_time">ครั้งเดียว</string>
 
-    <string name="clink_budget_daily">รายวัน</string>
 
-    <string name="clink_budget_weekly">รายสัปดาห์</string>
 
-    <string name="clink_budget_monthly">รายเดือน</string>
 
 
 
@@ -2749,13 +1809,11 @@
 
 
 
-    <string name="send_payment_paying_via">กำลังชำระผ่าน %1$s…</string>
 
 
 
 
 
-    <string name="send_payment_failed">การชำระเงินล้มเหลว</string>
 
 
 
@@ -2765,10 +1823,8 @@
 
 
 
-    <string name="send_payment_cashu_balance">ยอดที่ใช้ได้สำหรับผู้รับนี้: %1$s sats</string>
 
 
-    <string name="send_payment_onchain_txid">ธุรกรรม: %1$s</string>
 
 
 
@@ -2779,66 +1835,10 @@
 
 
 
-    <string name="write_a_message">เขียนข้อความ…</string>
 
-    <string name="send">ส่ง</string>
 
     <string name="rename">เปลี่ยนชื่อ</string>
 
-    <string name="error">ข้อผิดพลาด</string>
-
-    <string name="connection_success_rate_description">เปอร์เซ็นต์การเชื่อมต่อสำเร็จกับ relay</string>
-
-
-
-
-
-
-    <string name="download_to_phone">บันทึกลงโทรศัพท์</string>
-
-    <string name="video_download_has_started_toast">เริ่มดาวน์โหลดวิดีโอแล้ว…</string>
-
-    <string name="media_download_has_started_toast">เริ่มดาวน์โหลดสื่อแล้ว…</string>
-
-    <string name="pin_conversation">ปักหมุดไว้ด้านบน</string>
-
-    <string name="unpin_conversation">เลิกปักหมุด</string>
-
-
-    <string name="video_saved_to_the_gallery">บันทึกวิดีโอลงแกลเลอรีในโทรศัพท์แล้ว</string>
-
-    <string name="failed_to_save_the_video">ไม่สามารถบันทึกวิดีโอได้</string>
-
-    <string name="pdf_saved_to_the_gallery">บันทึก PDF ลงใน Downloads/Amethyst แล้ว</string>
-
-    <string name="failed_to_save_the_pdf">ไม่สามารถบันทึก PDF ได้</string>
-
-
-
-
-    <string name="no_camera_app_found">ไม่พบแอปกล้องในอุปกรณ์นี้</string>
-
-
-    <string name="record_a_message_description">กดค้างเพื่อบันทึกข้อความเสียง</string>
-
-
-
-
-    <string name="upload_error_title">ข้อผิดพลาดในการอัปโหลด</string>
-
-    <string name="upload_error_voice_message_failed">ไม่สามารถอัปโหลดข้อความเสียงได้</string>
-
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ยังไม่รองรับข้อความเสียง</string>
-
-    <string name="upload_error_voice_message_exception">การอัปโหลดเสียงล้มเหลว: %1$s</string>
-
-    <string name="voice_preset_none">ไม่มี</string>
-
-    <string name="voice_preset_deep">เสียงทุ้ม</string>
-
-    <string name="voice_preset_high">เสียงสูง</string>
-
-    <string name="voice_preset_neutral">เสียงปกติ</string>
 
 
 
@@ -2847,9 +1847,40 @@
 
 
 
-    <string name="show_private_key_qr_code">แสดง QR code คีย์ส่วนตัว</string>
 
-    <string name="show_encrypted_private_key_qr_code">แสดง QR code คีย์ส่วนตัวแบบเข้ารหัส</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2861,50 +1892,32 @@
 
     <string name="changed_chat_profile_to">โปรไฟล์แชทใหม่:</string>
 
-    <string name="ephemeral_relay_chat">แชทชั่วคราว</string>
 
-    <string name="relay_chat">แชท relay</string>
 
-    <string name="relay_chat_title">แชท relay</string>
 
-    <string name="relay_chat_explainer">แชท relay คือกลุ่มแชทที่ควบคุมโดย relay หลัก มองเห็นได้สำหรับทุกคนบน Nostr และทุกคนสามารถเข้าร่วมได้ เหมาะสำหรับชุมชนเปิดในหัวข้อเฉพาะ บางกลุ่มเป็นแบบชั่วคราวดังนั้นข้อความแชทจะหายไปตามเวลา</string>
 
-    <string name="marmot_group">กลุ่ม MLS</string>
 
 
-    <string name="public_chat_title">ข้อมูลเมตาแชทสาธารณะ</string>
 
-    <string name="public_chat_explainer">แชทสาธารณะมองเห็นได้สำหรับทุกคนบน Nostr และทุกคนสามารถเข้าร่วมได้ เหมาะสำหรับชุมชนเปิดในหัวข้อเฉพาะ การกลั่นกรองสามารถควบคุมได้โดยการลบโพสต์บน relay ของกลุ่ม</string>
 
-    <string name="public_chat_relays_title">relay</string>
 
-    <string name="public_chat_relays_explainer">ใส่ relay 1–3 รายการที่โฮสต์กลุ่มนี้ ไคลเอนต์ Nostr ใช้การตั้งค่านี้เพื่อทราบว่าจะดาวน์โหลดข้อความจากที่ใดและส่งข้อความของคุณไปที่ใด</string>
 
 
 
 
 
 
-    <string name="drawer_section_navigate">นำทาง</string>
 
-    <string name="drawer_section_you">คุณ</string>
 
-    <string name="drawer_section_feeds">ฟีด</string>
 
-    <string name="drawer_section_create">สร้าง</string>
 
-    <string name="drawer_section_system">ระบบ</string>
 
-    <string name="share_as_image">แชร์เป็นรูปภาพ</string>
 
-    <string name="share_as_image_url">แชร์เป็น URL รูปภาพ</string>
 
 
 
 
-    <string name="quick_action_mute_thread">ปิดเสียงกระทู้</string>
 
-    <string name="quick_action_unmute_thread">เปิดเสียงกระทู้</string>
 
 
 
@@ -2912,9 +1925,7 @@
 
 
 
-    <string name="migrate_bookmarks_success">ย้ายบุ๊กมาร์กสำเร็จ</string>
 
-    <string name="scheduled_posts">โพสต์ที่กำหนดเวลา</string>
 
 
 
@@ -2923,14 +1934,10 @@
 
 
 
-    <string name="schedule_post_button_add">กำหนดเวลาโพสต์</string>
 
-    <string name="schedule_post_button_remove">ยกเลิกการกำหนดเวลา</string>
 
 
-    <string name="schedule_post_warning_single">โพสต์ที่กำหนดเวลาอาจไม่เผยแพร่จนกว่าคุณจะเปิดแอปอีกครั้ง เปิดใช้การทำงานตลอดเวลาในการตั้งค่า → การตั้งค่า UI เพื่อกำหนดเวลาในพื้นหลังอย่างน่าเชื่อถือ</string>
 
-    <string name="schedule_post_warning_multi">โพสต์ที่กำหนดเวลาอาจไม่เผยแพร่จนกว่าคุณจะเปิดแอปอีกครั้ง โพสต์ที่กำหนดเวลาของบัญชีอื่นจะไม่ส่งขณะที่บัญชีนี้ใช้งานอยู่ เปิดใช้การทำงานตลอดเวลาในการตั้งค่า → การตั้งค่า UI เพื่อกำหนดเวลาในพื้นหลังอย่างน่าเชื่อถือ</string>
 
 
 
@@ -2939,109 +1946,61 @@
 
 
 
-    <string name="scheduled_posts_at_time">%1$s · อีก %2$s</string>
 
-    <string name="scheduled_posts_at_time_past">%1$s · %2$s ที่แล้ว</string>
 
-    <string name="scheduled_posts_day_tomorrow">พรุ่งนี้</string>
 
-    <string name="scheduled_posts_logout_toast_zero">ออกจากระบบแล้ว</string>
 
-    <plurals name="scheduled_posts_logout_toast">
-    <item quantity="other">ออกจากระบบแล้ว · ลบโพสต์ที่กำหนดเวลา %d รายการ</item>
-</plurals>
 
-    <string name="scheduled_posts_notification_sent_title">เผยแพร่โพสต์ที่กำหนดเวลาแล้ว</string>
 
-    <string name="scheduled_posts_notification_failed_title">โพสต์ที่กำหนดเวลาล้มเหลว</string>
 
-    <string name="app_notification_scheduled_posts_channel_name">โพสต์ที่กำหนดเวลา</string>
 
-    <string name="app_notification_scheduled_posts_channel_description">การแจ้งเตือนเมื่อโพสต์ที่กำหนดเวลาถูกเผยแพร่หรือล้มเหลวในการเผยแพร่</string>
 
-    <string name="scheduled_posts_action_send_now">ส่งทันที</string>
 
 
 
-    <string name="scheduled_posts_error_prefix">ข้อผิดพลาด: %1$s</string>
 
-    <string name="scheduled_posts_status_pending">ตั้งเวลาไว้</string>
 
-    <string name="scheduled_posts_status_publishing">กำลังส่ง…</string>
 
-    <string name="scheduled_posts_status_failed">ล้มเหลว</string>
 
-    <string name="scheduled_posts_status_sent">ส่งแล้ว</string>
 
-    <string name="scheduled_posts_status_cancelled">ยกเลิกแล้ว</string>
 
-    <plurals name="scheduled_posts_logout_warning">
-    <item quantity="other">คุณมี %d โพสต์ที่ตั้งเวลาไว้แต่ยังไม่ได้เผยแพร่ การออกจากระบบจะลบโพสต์เหล่านั้นอย่างถาวร</item>
-</plurals>
 
-    <plurals name="scheduled_posts_subtitle_queued">
-    <item quantity="other">%d รายการในคิว</item>
-</plurals>
 
-    <plurals name="scheduled_posts_subtitle_due_suffix">
-    <item quantity="other"> · %d รายการจะส่งใน 1 ชม.</item>
-</plurals>
 
-    <plurals name="scheduled_posts_relay_count">
-    <item quantity="other">ไปยัง %d relay</item>
-</plurals>
 
-    <string name="scheduled_posts_event_id_copied">คัดลอก ID โน้ตแล้ว</string>
 
-    <string name="polls">โพล</string>
 
-    <string name="open_polls">เปิดอยู่</string>
 
-    <string name="closed_polls">ปิดแล้ว</string>
 
-    <string name="badges">แบดจ์</string>
 
-    <string name="communities">ชุมชน</string>
 
-    <string name="new_community">ชุมชนใหม่</string>
 
-    <string name="edit_community">แก้ไขชุมชน</string>
 
 
 
 
 
 
-    <string name="new_community_moderators_section">ผู้ดูแล</string>
 
 
 
 
 
-    <string name="new_community_relays_section">Relays</string>
 
 
 
 
 
 
-    <string name="new_community_rules_section">กฎที่ตรวจสอบได้ (ไม่บังคับ)</string>
 
 
-    <string name="new_community_rules_kinds_section">ประเภทอีเวนต์ที่อนุญาต</string>
 
 
-    <string name="new_community_rules_kind_short_text">ข้อความสั้น (1)</string>
 
-    <string name="new_community_rules_kind_long_form">บทความยาว (30023)</string>
 
-    <string name="new_community_rules_kind_picture">โพสต์รูปภาพ (20)</string>
 
-    <string name="new_community_rules_kind_video">โพสต์วิดีโอ (21)</string>
 
-    <string name="new_community_rules_kind_short_video">วิดีโอสั้น (22)</string>
 
-    <string name="new_community_rules_kind_comment">ความคิดเห็นในชุมชน (1111)</string>
 
 
 
@@ -3050,23 +2009,18 @@
 
 
 
-    <string name="new_community_rules_banned_section">ผู้ใช้ที่ถูกแบน</string>
 
 
 
 
-    <string name="new_community_rules_wot_section">ประตู Web-of-trust (ไม่บังคับ)</string>
 
 
 
 
 
-    <string name="new_community_rules_max_event_size_section">ขนาดอีเวนต์สูงสุดแบบ Global (ไม่บังคับ)</string>
 
 
-    <string name="new_badge">แบดจ์ใหม่</string>
 
-    <string name="award_badge">มอบแบดจ์</string>
 
 
 
@@ -3083,7 +2037,6 @@
 
 
 
-    <string name="profile_badges_title">แบดจ์โปรไฟล์</string>
 
 
 
@@ -3107,12 +2060,9 @@
 
 
 
-    <string name="pictures">รูปภาพ</string>
 
-    <string name="workouts">การออกกำลังกาย</string>
 
 
-    <string name="new_workout">การออกกำลังกายใหม่</string>
 
 
 
@@ -3139,87 +2089,56 @@
 
 
 
-    <string name="exercise_running">วิ่ง</string>
 
-    <string name="exercise_walking">เดิน</string>
 
-    <string name="exercise_cycling">ปั่นจักรยาน</string>
 
-    <string name="exercise_hiking">เดินป่า</string>
 
-    <string name="exercise_swimming">ว่ายน้ำ</string>
 
-    <string name="exercise_rowing">พาย</string>
 
-    <string name="exercise_strength">ฝึกความแข็งแกร่ง</string>
 
-    <string name="exercise_yoga">โยคะ</string>
 
-    <string name="exercise_meditation">ทำสมาธิ</string>
 
-    <string name="exercise_diet">อาหาร</string>
 
-    <string name="exercise_fasting">อดอาหาร</string>
 
-    <string name="exercise_circuit">เซอร์กิต</string>
 
-    <string name="exercise_emom">EMOM</string>
 
-    <string name="exercise_amrap">AMRAP</string>
 
-    <string name="software_apps">แอป</string>
 
     <string name="route_software_apps">แอป</string>
 
-    <string name="napplets">nApplets</string>
-
-    <string name="nsites">nSites</string>
-
-
-    <string name="browser">เบราว์เซอร์</string>
 
 
 
 
 
 
-    <string name="browser_tor_on">กำลังโหลดผ่าน Tor แตะเพื่อใช้เว็บแบบเปิด</string>
-
-    <string name="browser_tor_off">กำลังโหลดผ่านเว็บแบบเปิด แตะเพื่อใช้ Tor</string>
 
 
 
 
 
-    <string name="browser_favorites">รายการโปรด</string>
-
-
-
-    <string name="favorite_apps">แอปโปรด</string>
-
-
-    <string name="favorite_app_add">เพิ่มในรายการโปรด</string>
-
-    <string name="favorite_app_remove">ลบออกจากรายการโปรด</string>
 
 
 
 
 
-    <string name="favorite_app_network_tor">โหลดผ่าน Tor</string>
-
-    <string name="favorite_app_network_open">โหลดผ่านเว็บแบบเปิด</string>
 
 
-    <string name="favorite_notice_published">เผยแพร่ไปยัง relay แล้ว</string>
 
-    <string name="favorite_notice_uploaded">อัปโหลดไฟล์แล้ว</string>
 
-    <string name="favorite_notice_paid">ชำระเงินแล้ว</string>
 
-    <string name="favorite_app_still_loading">แอปนั้นยังไม่ได้โหลด ลองอีกครั้งในอีกสักครู่</string>
 
-    <string name="favorite_app_recent">ล่าสุด</string>
+
+
+
+
+
+
+
+
+
+
+
 
     <string name="napplet_permissions">สิทธิ์ nApplet</string>
 
@@ -3236,51 +2155,30 @@
 
 
 
-    <string name="napplet_fallback_title">nApplet %1$s…</string>
 
     <string name="napplet_cap_shell">Shell</string>
 
-    <string name="napplet_cap_identity">Identity</string>
 
-    <string name="napplet_cap_keys">การกระทำบนแป้นพิมพ์</string>
 
-    <string name="napplet_cap_relay">Relays</string>
 
-    <string name="napplet_cap_storage">พื้นที่จัดเก็บ</string>
 
-    <string name="napplet_cap_value">การชำระเงิน</string>
 
-    <string name="napplet_cap_resource">เครือข่าย</string>
 
-    <string name="napplet_cap_upload">การอัปโหลด</string>
 
     <string name="napplet_cap_shell_desc">ถามว่าความสามารถใดบ้างที่พร้อมใช้งาน</string>
 
-    <string name="napplet_cap_identity_desc">อ่าน public key ของคุณ</string>
 
-    <string name="napplet_cap_keys_desc">ผูก keyboard shortcuts</string>
 
-    <string name="napplet_cap_relay_desc">อ่าน ลงนาม และเผยแพร่อีเวนต์ของคุณ</string>
 
-    <string name="napplet_cap_storage_desc">พื้นที่จัดเก็บส่วนตัวของตัวเอง</string>
 
-    <string name="napplet_cap_value_desc">ชำระ Lightning invoices</string>
 
-    <string name="napplet_cap_resource_desc">ดึงทรัพยากรจากเว็บและ Blossom</string>
 
-    <string name="napplet_cap_upload_desc">อัปโหลดไฟล์ไปยังเซิร์ฟเวอร์มีเดียของคุณ</string>
 
-    <string name="napplet_cap_theme">ธีม</string>
 
-    <string name="napplet_cap_notify">การแจ้งเตือน</string>
 
-    <string name="napplet_cap_inc">การส่งข้อความ</string>
 
-    <string name="napplet_cap_theme_desc">จับคู่สีของแอปของคุณ</string>
 
-    <string name="napplet_cap_notify_desc">แสดงการแจ้งเตือนให้คุณ</string>
 
-    <string name="napplet_cap_inc_desc">แลกเปลี่ยนข้อความกับ nApplet อื่น</string>
 
     <string name="napplet_consent_capability">ความสามารถ: %1$s</string>
 
@@ -3288,33 +2186,19 @@
 
 
 
-    <string name="napplet_consent_get_pubkey">nApplet นี้ต้องการอ่านคีย์สาธารณะของคุณ</string>
 
-    <string name="napplet_consent_identity_read">nApplet นี้ต้องการอ่านโปรไฟล์และข้อมูลบัญชีของคุณ</string>
 
-    <string name="napplet_consent_publish">nApplet นี้ต้องการลงนามและเผยแพร่อีเวนต์ kind %1$d ในนามของคุณ</string>
 
-    <string name="napplet_consent_publish_preview">nApplet นี้ต้องการลงนามและเผยแพร่อีเวนต์ kind %1$d ในนามของคุณ:</string>
 
-    <string name="napplet_consent_publish_encrypted">nApplet นี้ต้องการส่งอีเวนต์ที่เข้ารหัสในนามของคุณ</string>
 
-    <string name="napplet_consent_query">nApplet นี้ต้องการอ่านอีเวนต์จาก relay ของคุณ</string>
 
-    <string name="napplet_consent_storage">nApplet นี้ต้องการใช้พื้นที่จัดเก็บส่วนตัวของตัวเอง</string>
 
     <string name="napplet_consent_pay">nApplet นี้ต้องการชำระใบแจ้งหนี้ Lightning</string>
 
-    <string name="napplet_consent_resource">nApplet นี้ต้องการดึงข้อมูลทรัพยากรเว็บ</string>
 
-    <string name="napplet_consent_upload">nApplet นี้ต้องการอัปโหลดไฟล์ไปยังเซิร์ฟเวอร์สื่อของคุณ</string>
 
-    <string name="napplet_consent_notify">nApplet นี้ต้องการแสดงการแจ้งเตือนให้คุณ</string>
 
-    <string name="napplet_consent_sign">ไซต์นี้ต้องการลงนามอีเวนต์ kind %1$d ด้วยคีย์ Nostr ของคุณ</string>
 
-    <plurals name="napplet_consent_pay_amount">
-    <item quantity="other">nApplet นี้ต้องการชำระใบแจ้งหนี้ Lightning เป็นจำนวน %1$d sats</item>
-</plurals>
 
 
 
@@ -3328,35 +2212,25 @@
 
 
 
-    <string name="shorts">Shorts</string>
 
-    <string name="public_chats">แชทสาธารณะ</string>
 
-    <string name="follow_packs">Follow Packs</string>
 
-    <string name="live_streams">Live Streams</string>
 
-    <string name="nests">Nests</string>
 
 
 
 
 
-    <string name="nest_raise_hand">ยกมือ</string>
 
-    <string name="nest_lower_hand">ลดมือ</string>
 
 
-    <string name="nest_mute">ปิดเสียง</string>
 
-    <string name="nest_unmute">เปิดเสียง</string>
 
 
 
 
 
 
-    <string name="nest_chat_send_failed_title">ไม่สามารถส่งข้อความได้</string>
 
 
 
@@ -3365,25 +2239,17 @@
 
 
 
-    <string name="nest_mic_mute">ปิดไมค์</string>
 
-    <string name="nest_mic_unmute">เปิดไมค์</string>
 
 
 
 
 
-    <string name="nest_notification_channel">Nests</string>
 
-    <string name="nest_notification_channel_description">เปิดเสียงต่อเนื่องขณะที่ห้องเปิดอยู่</string>
 
-    <string name="nest_notification_listening">Nest เชื่อมต่อแล้ว</string>
 
-    <string name="nest_notification_broadcasting">Nest — Live</string>
 
-    <string name="nest_notification_text">แตะเพื่อกลับ</string>
 
-    <string name="nest_notification_stop">หยุด</string>
 
 
 
@@ -3395,27 +2261,17 @@
 
 
 
-    <string name="nest_presence_raised_hand">ยกมือขึ้น</string>
 
-    <string name="nest_presence_on_stage">ขึ้นเวทีแล้ว</string>
 
-    <string name="nest_presence_speaking">กำลังพูด</string>
 
-    <string name="nest_presence_listening">เข้าร่วมในฐานะผู้ฟัง</string>
 
-    <string name="nest_presence_left">ออกจาก nest แล้ว</string>
 
-    <string name="nest_leave">ออก</string>
 
 
 
 
 
-    <string name="nest_leave_host_close_failed">ไม่สามารถทำเครื่องหมายห้องว่าปิดแล้ว กำลังออกอยู่ดี — ห้องจะปิดอัตโนมัติ</string>
 
-    <plurals name="nest_listener_count">
-    <item quantity="other">%1$d ผู้ฟัง</item>
-</plurals>
 
 
 
@@ -3435,20 +2291,14 @@
 
 
 
-    <string name="nest_hush_local">ปิดเสียงผู้พูดคนนี้</string>
 
-    <string name="nest_hush_local_restore">กู้คืนผู้พูดคนนี้</string>
 
 
 
 
-    <string name="nest_participant_follow">ติดตาม</string>
 
-    <string name="nest_participant_unfollow">เลิกติดตาม</string>
 
-    <string name="nest_participant_mute">ปิดเสียง</string>
 
-    <string name="nest_participant_unmute">เปิดเสียง</string>
 
 
 
@@ -3476,7 +2326,6 @@
 
 
 
-    <string name="nest_no_server_save_failed">ไม่สามารถบันทึกรายการเซิร์ฟเวอร์ nest ของคุณได้ ลองอีกครั้ง</string>
 
 
 
@@ -3490,45 +2339,30 @@
 
 
 
-    <string name="nests_servers_title">เซิร์ฟเวอร์ Nest</string>
 
 
-    <string name="nests_servers_my_section">เซิร์ฟเวอร์ของคุณ</string>
 
-    <string name="nests_servers_my_explainer">บันทึกเป็นอีเวนต์ที่แทนที่ได้ kind-10112 เพื่อให้ไคลเอนต์อื่นอ่านการตั้งค่าของคุณได้</string>
 
 
 
 
 
 
-    <string name="nests_servers_recommended_section">เซิร์ฟเวอร์ที่แนะนำ</string>
 
-    <string name="nests_servers_recommended_explainer">ข้อเสนอแนะในตัวที่คุณสามารถเพิ่มลงในรายการด้วยการแตะครั้งเดียว</string>
 
 
 
 
 
-    <string name="longs">วิดีโอ</string>
 
-    <string name="route_music_tracks">เพลง</string>
 
-    <string name="route_music_playlists">เพลย์ลิสต์</string>
 
-    <string name="route_podcast_episodes">ตอน</string>
 
-    <string name="route_podcasts">พอดแคสต์</string>
 
 
 
-    <plurals name="podcast_episode_count">
-    <item quantity="other">%1$d ตอน</item>
-</plurals>
 
-    <string name="new_music_track">เพลงใหม่</string>
 
-    <string name="new_music_playlist">เพลย์ลิสต์ใหม่</string>
 
 
 
@@ -3546,9 +2380,6 @@
 
 
 
-    <plurals name="music_playlist_track_count_short">
-    <item quantity="other">%1$d แทร็ก</item>
-</plurals>
 
 
 

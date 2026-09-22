@@ -48,9 +48,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_disbanding
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_leaving
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_removed
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_not_a_member
+import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -250,7 +254,7 @@ fun MarmotGroupMessageComposer(
             shape = EditFieldBorder,
             placeholder = {
                 Text(
-                    text = stringRes(R.string.reply_here),
+                    text = stringRes(Res.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -338,7 +342,7 @@ private fun MarmotGroupFileUploadDialog(
                         Toast
                             .makeText(
                                 context,
-                                stringRes(context, R.string.marmot_not_a_member),
+                                stringRes(Res.string.marmot_not_a_member),
                                 Toast.LENGTH_SHORT,
                             ).show()
                     }
@@ -383,9 +387,9 @@ private fun MarmotGroupFileUploadDialog(
 private fun MarmotGroupClosedComposer(gate: LocalOutboundGate) {
     val message =
         when (gate) {
-            LocalOutboundGate.DISBANDING -> stringRes(R.string.marmot_group_composer_disbanding)
-            LocalOutboundGate.LEAVING -> stringRes(R.string.marmot_group_composer_leaving)
-            LocalOutboundGate.REMOVED -> stringRes(R.string.marmot_group_composer_removed)
+            LocalOutboundGate.DISBANDING -> stringRes(Res.string.marmot_group_composer_disbanding)
+            LocalOutboundGate.LEAVING -> stringRes(Res.string.marmot_group_composer_leaving)
+            LocalOutboundGate.REMOVED -> stringRes(Res.string.marmot_group_composer_removed)
         }
     Row(
         modifier = EditFieldModifier.fillMaxWidth(),
