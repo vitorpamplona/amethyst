@@ -22,56 +22,118 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.looking_for_event
+import com.vitorpamplona.amethyst.commons.resources.looking_for_event_title
+import com.vitorpamplona.amethyst.commons.resources.looking_for_private_event
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteLocally
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * The waiting room for an event we can only name: hold here until it arrives, then replace
+ * this entry with wherever it actually belongs.
+ *
+ * It is a real screen, not a bare label. A notification tap on a cold process lands here
+ * (LocalCache is empty until the event is re-fetched), and with nothing but a line of text
+ * on `colorScheme.background` — black on the dark theme — the wait read as the app opening
+ * to a black screen, with no top bar and no way back other than the system gesture.
+ */
 @Composable
 fun LoadRedirectScreen(
     eventId: String?,
+    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     if (eventId == null) return
 
-    LoadNote(eventId, accountViewModel) { note ->
-        note?.let {
-            LoadRedirectScreen(
-                baseNote = note,
-                accountViewModel = accountViewModel,
-                nav = nav,
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            TopBarExtensibleWithBackButton(
+                title = { Text(stringRes(Res.string.looking_for_event_title)) },
+                popBack = nav::popBack,
             )
+        },
+        accountViewModel = accountViewModel,
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 50.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            CircularProgressIndicator()
+
+            LoadNote(eventId, accountViewModel) { note ->
+                Text(
+                    // A private id is not something to show a user, and it must not be
+                    // copyable off the screen either.
+                    text =
+                        if (isPrivate) {
+                            stringRes(Res.string.looking_for_private_event)
+                        } else {
+                            stringRes(Res.string.looking_for_event, note?.idHex ?: eventId)
+                        },
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 20.dp),
+                )
+
+                note?.let {
+                    WatchAndRedirect(
+                        baseNote = it,
+                        isPrivate = isPrivate,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
         }
     }
 }
 
+/**
+ * Renders nothing: it only watches [baseNote] and pops this entry for the real destination
+ * the moment the event lands.
+ *
+ * A public note is watched through [observeNote], which also holds a relay subscription open
+ * so the note is actually fetched. A private one is watched through [observeNoteLocally],
+ * which asks no relay: a rumor id must never appear in a REQ, and it does not need to — the
+ * envelope carrying it is re-fetched by the always-on gift-wrap tail, and unwrapping it fires
+ * this flow.
+ */
 @Composable
-fun LoadRedirectScreen(
+private fun WatchAndRedirect(
     baseNote: Note,
+    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(baseNote, accountViewModel)
+    val noteState by if (isPrivate) observeNoteLocally(baseNote) else observeNote(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = noteState) {
         val event = noteState.note.event
@@ -82,13 +144,5 @@ fun LoadRedirectScreen(
                 }
             }
         }
-    }
-
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth().padding(horizontal = 50.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringRes(Res.string.looking_for_event, baseNote.idHex))
     }
 }

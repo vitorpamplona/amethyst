@@ -1346,6 +1346,8 @@
     <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
     <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="looking_for_event">Looking for Event %1$s</string>
+    <string name="looking_for_event_title">Loading</string>
+    <string name="looking_for_private_event">Waiting for your private messages to load…</string>
     <string name="send_zap">Send Zap</string>
     <string name="custom_zaps_add_a_message">Add a public message</string>
     <string name="custom_zaps_add_a_message_private">Add a private message</string>
