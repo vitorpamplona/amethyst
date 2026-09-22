@@ -98,10 +98,11 @@ fun <T> ListCard(
         )
     }
 
-    // Said even when some members are public, because otherwise the visible ones read as the whole
-    // list. A list whose members are *all* private — which is what divine.video publishes — would
-    // otherwise show a title and nothing else, and look broken rather than closed.
-    if (hasUnreadablePrivateItems) {
+    // Only when there is nothing else to show. A card with visible members already reads as a list,
+    // and most lists keep something private, so saying so on every one of them is noise. The line
+    // exists for the case that would otherwise be a title and blank space — an all-private list,
+    // which is what divine.video publishes — so that it reads as closed rather than as broken.
+    if (hasUnreadablePrivateItems && items.isEmpty()) {
         Text(
             text = stringRes(R.string.nip51_list_has_private_members),
             style = MaterialTheme.typography.bodySmall,
