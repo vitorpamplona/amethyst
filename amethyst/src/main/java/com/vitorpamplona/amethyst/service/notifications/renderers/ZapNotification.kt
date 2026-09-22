@@ -142,8 +142,8 @@ object ZapNotification {
         createdAt: Long,
         sender: User,
         zappedNote: Note?,
-        title: (String) -> String,
-        body: (String, String) -> String,
+        title: suspend (String) -> String,
+        body: suspend (String, String) -> String,
     ) {
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.notificationsUri(accountNpub, id)

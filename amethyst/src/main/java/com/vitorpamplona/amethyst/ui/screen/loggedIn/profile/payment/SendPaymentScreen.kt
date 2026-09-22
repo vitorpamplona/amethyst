@@ -458,8 +458,8 @@ private fun SendPaymentLoaded(
                     payViaIntent(
                         invoice,
                         context,
-                        onPaid = { postStage(PaymentFlowStage.Success(successTitle, sentToWalletLabel)) },
-                        onError = { postStage(PaymentFlowStage.Failure(it)) },
+                        onPaid = { scope.launch { postStage(PaymentFlowStage.Success(successTitle, sentToWalletLabel)) } },
+                        onError = { scope.launch { postStage(PaymentFlowStage.Failure(it)) } },
                     )
                 }
         }
@@ -474,7 +474,7 @@ private fun SendPaymentLoaded(
             milliSats = amount * 1000,
             message = message,
             onNewInvoice = ::payBolt11,
-            onError = { _, msg -> postStage(PaymentFlowStage.Failure(msg)) },
+            onError = { _, msg -> scope.launch { postStage(PaymentFlowStage.Failure(msg)) } },
             onProgress = {},
             context = context,
             zapType = zapType,
