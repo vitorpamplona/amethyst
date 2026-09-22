@@ -45,10 +45,27 @@ class KeyStoreEncryption {
         private const val GCM_TAG_LENGTH_BITS = 128
     }
 
-    private val cipher = Cipher.getInstance(TRANSFORMATION)
+    // One Cipher per thread rather than one shared instance. A Cipher carries
+    // the state of the operation in progress, so two coroutines encrypting on
+    // different Dispatchers.IO threads through the same object would corrupt
+    // each other's output.
+    private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(TRANSFORMATION) }
+
     private val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
 
-    private fun getKey(): SecretKey {
+    // The key handle never changes for the life of the alias, but fetching it
+    // is a round trip to the keystore daemon. Every encrypted store here reads
+    // and writes through this class, so doing that per operation put an IPC in
+    // front of every Marmot group-state write and every message appended.
+    @Volatile
+    private var cachedKey: SecretKey? = null
+
+    private fun getKey(): SecretKey =
+        cachedKey ?: synchronized(this) {
+            cachedKey ?: loadOrCreateKey().also { cachedKey = it }
+        }
+
+    private fun loadOrCreateKey(): SecretKey {
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
         return existingKey?.secretKey ?: createKey()
     }
@@ -95,11 +112,15 @@ class KeyStoreEncryption {
     fun encrypt(bytes: ByteArray): ByteArray {
         try {
             // Initializes the cipher in encrypt mode and encrypts data
+            val cipher = ciphers.get()
             cipher.init(Cipher.ENCRYPT_MODE, getKey())
             val iv = cipher.iv
             val encrypted = cipher.doFinal(bytes)
             return iv + encrypted
         } catch (e: Exception) {
+            // A key the system has retired (a wipe, a credential reset) keeps
+            // failing until it is re-read, so the cached handle goes with it.
+            cachedKey = null
             Log.e(TAG, "encrypt() failed: ${e.message}", e)
             throw e
         }
@@ -112,9 +133,11 @@ class KeyStoreEncryption {
             // IvParameterSpec), so we must pass the 128-bit auth tag length.
             val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
             val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
+            val cipher = ciphers.get()
             cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {
+            cachedKey = null
             Log.e(TAG, "decrypt() failed (input ${bytes.size} bytes): ${e.message}", e)
             throw e
         }
