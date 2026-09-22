@@ -37,6 +37,27 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
+ * Which install owns the newest KeyPackage currently on the account's relays.
+ *
+ * An inviter picks the highest `created_at` kind:30443 and nothing else
+ * ([KeyPackageFetcher.fetchKeyPackage]), and only the install holding that
+ * bundle's private keys can open the Welcome it produces. With the same
+ * account signed in twice, the two installs publish under different random
+ * d-tag slots, so both KeyPackages persist and the most recent publisher
+ * silently owns every future invite.
+ */
+enum class LatestKeyPackageOwner {
+    /** This install holds the bundle — invites land here. */
+    THIS_DEVICE,
+
+    /** A newer KeyPackage we have no private keys for — invites land elsewhere. */
+    OTHER_DEVICE,
+
+    /** Nothing published for this account, or nowhere to ask. */
+    NONE,
+}
+
+/**
  * Marmot (MLS encrypted groups) orchestration for an [Account]: group create/
  * leave/reset, member add/remove via key-package fetch, admin grant/revoke,
  * metadata updates, group messaging, and key-package publishing. MLS state
@@ -398,6 +419,36 @@ class AccountMarmotActions(
     suspend fun hasPublishedKeyPackage(): Boolean {
         val manager = account.marmotManager ?: return false
         return manager.hasActiveKeyPackages()
+    }
+
+    /**
+     * Ask the relays which install currently owns this account's invites.
+     *
+     * Deliberately a read, never a self-correcting one. Republishing whenever
+     * the answer is [LatestKeyPackageOwner.OTHER_DEVICE] would deadlock two
+     * installs against each other — each device's correction is the other's
+     * trigger, and neither ever settles — so the decision belongs to the user,
+     * with this as the evidence.
+     *
+     * Queries the same set we publish our own KeyPackages to, which is the
+     * inviter's view of us minus their own outbox: `fetchRelaysFor` unions our
+     * NIP-65 write set and our legacy kind:10051 with the inviter's outbox, and
+     * the first two are exactly [keyPackagePublishRelays].
+     */
+    suspend fun latestKeyPackageOwner(): LatestKeyPackageOwner {
+        val manager = account.marmotManager ?: return LatestKeyPackageOwner.NONE
+        val relays = keyPackagePublishRelays()
+        if (relays.isEmpty()) return LatestKeyPackageOwner.NONE
+
+        val latest =
+            KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
+                ?: return LatestKeyPackageOwner.NONE
+
+        val mine = manager.ownsKeyPackageEvent(latest.id)
+        Log.d("MarmotDbg") {
+            "latestKeyPackageOwner: newest KeyPackage id=${latest.id.take(8)}… createdAt=${latest.createdAt} mine=$mine"
+        }
+        return if (mine) LatestKeyPackageOwner.THIS_DEVICE else LatestKeyPackageOwner.OTHER_DEVICE
     }
 
     /**

@@ -2444,6 +2444,21 @@ class MarmotManager(
     suspend fun hasActiveKeyPackages(): Boolean = keyPackageRotationManager.hasActiveKeyPackages()
 
     /**
+     * True when the private bundle behind [eventId] — the Nostr id of a
+     * published kind:30443 — is one this install holds, active or retained.
+     *
+     * Two installs of the same account each mint their own random d-tag slot
+     * ([KeyPackageRotationManager.getOrCreateSlotDTag]), so their KeyPackages
+     * never replace one another and both sit on relays indefinitely. An
+     * inviter then takes whichever has the highest `created_at`, and only the
+     * install holding that bundle can open the resulting Welcome. This is how
+     * a device answers "would an invite against that KeyPackage reach me?" —
+     * deliberately the same lookup the Welcome path itself performs, so the
+     * answer cannot disagree with what actually happens on arrival.
+     */
+    suspend fun ownsKeyPackageEvent(eventId: HexKey): Boolean = keyPackageRotationManager.findBundleByEventId(eventId) != null
+
+    /**
      * Check if a specific group membership exists.
      */
     fun isMember(nostrGroupId: HexKey): Boolean = groupManager.isMember(nostrGroupId)

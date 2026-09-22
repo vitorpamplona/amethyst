@@ -1348,6 +1348,10 @@
     <string name="child_safety_search_keywords" translatable="false">legal, safety, abuse, csae, child protection</string>
 
     <string name="danger_zone">Danger Zone</string>
+    <string name="marmot_invite_device">Marmot Invite Device</string>
+    <string name="marmot_invite_device_search_keywords" translatable="false">mls, marmot, keypackage, key package, invite, device, group chat</string>
+    <string name="marmot_invite_device_success">This device now receives your Marmot invites.</string>
+    <string name="marmot_invite_device_failure">Failed to publish KeyPackage: %1$s</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_success">Marmot state reset.</string>
     <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>

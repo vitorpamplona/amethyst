@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -2503,6 +2504,9 @@ class AccountViewModel(
     }
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
+
+    /** Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner]. */
+    suspend fun latestKeyPackageOwner(): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)

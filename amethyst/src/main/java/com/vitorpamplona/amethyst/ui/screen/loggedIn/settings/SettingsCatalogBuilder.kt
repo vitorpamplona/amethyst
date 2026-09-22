@@ -30,7 +30,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 
 /**
  * Assembles the full settings catalog. Not composable: actions close over [nav],
- * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey].
+ * [uriHandler], [onResetMarmot] and [onMarmotInviteDevice]; conditional rows are included
+ * via [hasPrivateKey].
  * The blank-query render of this catalog must match the legacy hardcoded screen.
  */
 fun buildSettingsCatalog(
@@ -38,6 +39,7 @@ fun buildSettingsCatalog(
     uriHandler: UriHandler,
     hasPrivateKey: Boolean,
     onResetMarmot: () -> Unit,
+    onMarmotInviteDevice: () -> Unit,
 ): List<SettingsCategory> {
     // Most rows are a symbol icon + a keyword blob that navigates to a route. This local
     // helper collapses that shape to one line per row and makes a mismatched keyword/route
@@ -84,6 +86,16 @@ fun buildSettingsCatalog(
                     symEntry(R.string.napplet_permissions_title, MaterialSymbols.Apps, R.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
                     symEntry(R.string.relay_auth_settings_title, MaterialSymbols.Lock, R.string.relay_auth_search_keywords, Route.RelayAuthSettings),
                     symEntry(R.string.call_settings, MaterialSymbols.Phone, R.string.call_settings_search_keywords, Route.CallSettings),
+                    // Opens a dialog rather than a route: the row's whole job is
+                    // to report which device currently owns this account's Marmot
+                    // invites, and that answer costs a relay round trip, so it is
+                    // fetched on demand instead of on every settings render.
+                    SettingsEntry(
+                        titleRes = R.string.marmot_invite_device,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Key),
+                        keywordsRes = R.string.marmot_invite_device_search_keywords,
+                        onClick = onMarmotInviteDevice,
+                    ),
                 ),
         )
 
