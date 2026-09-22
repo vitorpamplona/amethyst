@@ -68,13 +68,13 @@ class CallForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override suspend fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
         Amethyst.instance.callSession.setActive(true)
         createNotificationChannel()
     }
 
-    override suspend fun onStartCommand(
+    override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,

@@ -113,7 +113,7 @@ class NestForegroundService : Service() {
             }
         }
 
-    override suspend fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
         Amethyst.instance.nestsSession.setActive(true)
         createNotificationChannel()
@@ -310,7 +310,7 @@ class NestForegroundService : Service() {
             else -> NestAudioFocusState.Granted
         }
 
-    override suspend fun onStartCommand(
+    override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,

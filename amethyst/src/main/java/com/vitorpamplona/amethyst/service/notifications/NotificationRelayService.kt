@@ -169,7 +169,7 @@ class NotificationRelayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override suspend fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
         Amethyst.instance.alwaysOnSession.setActive(true)
@@ -177,7 +177,7 @@ class NotificationRelayService : Service() {
         ensureForeground()
     }
 
-    override suspend fun onStartCommand(
+    override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,

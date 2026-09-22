@@ -255,7 +255,7 @@ open class ShortNotePostViewModel :
             pTags = value
         }
 
-    override suspend fun onAudienceChanged() = draftTag.newVersion()
+    override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())

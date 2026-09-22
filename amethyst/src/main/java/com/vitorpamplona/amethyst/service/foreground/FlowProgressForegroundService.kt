@@ -173,7 +173,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override suspend fun onStartCommand(
+    override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,

@@ -75,7 +75,7 @@ class CallActivity : AppCompatActivity() {
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
-            override suspend fun onReceive(
+            override fun onReceive(
                 context: Context,
                 intent: Intent,
             ) {
@@ -220,7 +220,7 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    override suspend fun onUserLeaveHint() {
+    override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPipIfActive()
     }

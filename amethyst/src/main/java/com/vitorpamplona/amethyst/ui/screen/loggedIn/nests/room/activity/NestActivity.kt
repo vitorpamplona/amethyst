@@ -125,7 +125,7 @@ class NestActivity : AppCompatActivity() {
      */
     val toggleMuteSignal: SharedFlow<Unit> get() = _toggleMuteSignal.asSharedFlow()
 
-    override suspend fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val accountViewModel = NestBridge.accountViewModel
@@ -217,7 +217,7 @@ class NestActivity : AppCompatActivity() {
         }
     }
 
-    override suspend fun onUserLeaveHint() {
+    override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enterPip()
     }
