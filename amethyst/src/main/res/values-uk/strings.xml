@@ -2640,7 +2640,7 @@
 
 
 
-    <string name="always_on_notif_channel_description">Підтримує активні з'єднання з вашими inbox relay для сповіщень у реальному часі</string>
+    <string name="always_on_notif_channel_description">Підтримує активні з\'єднання з вашими inbox relay для сповіщень у реальному часі</string>
     <plurals name="always_on_notif_connected">
     <item quantity="one">Підключено до %1$d inbox relay</item>
     <item quantity="few">Підключено до %1$d inbox relay</item>

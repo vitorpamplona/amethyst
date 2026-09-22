@@ -176,7 +176,7 @@
     <string name="voice_post">Post vocale</string>
     <string name="voice_reply">Risposta vocale</string>
     <string name="private_message">Messaggio privato</string>
-    <string name="nest_notification_channel_description">Mantiene l'audio attivo mentre una stanza è aperta.</string>
+    <string name="nest_notification_channel_description">Mantiene l\'audio attivo mentre una stanza è aperta.</string>
     <string name="nest_notification_listening">Nest connesso</string>
     <string name="nest_notification_stop">Ferma</string>
     <string name="nest_notification_text">Tocca per tornare.</string>
@@ -195,7 +195,7 @@
     <string name="napplet_cap_theme">Tema</string>
     <string name="napplet_cap_notify">Notifiche</string>
     <string name="napplet_cap_inc">Messaggistica</string>
-    <string name="muted_button">Mutato. Clicca per riattivare l'audio</string>
+    <string name="muted_button">Mutato. Clicca per riattivare l\'audio</string>
     <string name="mute_button">Audio acceso. Clicca per disattivarlo</string>
     <string name="play">Riproduci</string>
     <string name="pause">Pausa</string>

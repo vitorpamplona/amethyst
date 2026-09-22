@@ -158,16 +158,16 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
-    <string name="always_on_notif_channel_description">Gerçek zamanlı bildirimler için gelen kutusu relay'lerinize bağlantıları etkin tutar</string>
+    <string name="always_on_notif_channel_description">Gerçek zamanlı bildirimler için gelen kutusu relay\'lerinize bağlantıları etkin tutar</string>
     <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d gelen kutusu relay'ine bağlandı</item>
-        <item quantity="other">%1$d gelen kutusu relay'ine bağlandı</item>
+        <item quantity="one">%1$d gelen kutusu relay\'ine bağlandı</item>
+        <item quantity="other">%1$d gelen kutusu relay\'ine bağlandı</item>
     </plurals>
     <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d relay'e bağlandı</item>
-        <item quantity="other">%1$d relay'e bağlandı</item>
+        <item quantity="one">%1$d relay\'e bağlandı</item>
+        <item quantity="other">%1$d relay\'e bağlandı</item>
     </plurals>
-    <string name="always_on_notif_connecting">Gelen kutusu relay'lerine bağlanılıyor…</string>
+    <string name="always_on_notif_connecting">Gelen kutusu relay\'lerine bağlanılıyor…</string>
     <string name="always_on_notif_title">Amethyst Bildirimleri Etkin</string>
     <string name="call_ongoing">Aramalar</string>
     <string name="call_ongoing_description">Devam eden arama bildirimi</string>
@@ -191,7 +191,7 @@
     <string name="call_unmute">Sesi Aç</string>
     <string name="napplet_cap_identity">Kimlik</string>
     <string name="napplet_cap_keys">Klavye eylemleri</string>
-    <string name="napplet_cap_relay">relay'ler</string>
+    <string name="napplet_cap_relay">relay\'ler</string>
     <string name="napplet_cap_storage">Depolama</string>
     <string name="napplet_cap_value">Ödemeler</string>
     <string name="napplet_cap_resource">Ağ</string>

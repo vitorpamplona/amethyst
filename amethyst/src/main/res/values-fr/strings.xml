@@ -2316,7 +2316,7 @@
     <string name="always_on_notif_connecting">Connexion aux relais de boîte de réception…</string>
     <string name="always_on_notif_title">Notifications Amethyst actives</string>
     <string name="call_ongoing">Appels</string>
-    <string name="call_ongoing_description">Notification d'appel en cours</string>
+    <string name="call_ongoing_description">Notification d\'appel en cours</string>
     <string name="call_with">Appel avec %1$s</string>
     <string name="call_hangup">Raccrocher</string>
     <string name="reaction">Réaction</string>
@@ -2327,7 +2327,7 @@
     <string name="private_message">Message privé</string>
     <string name="nest_notification_broadcasting">Nest — En direct</string>
     <string name="nest_notification_channel">Nests</string>
-    <string name="nest_notification_channel_description">Maintient l'audio actif pendant qu'une salle est ouverte.</string>
+    <string name="nest_notification_channel_description">Maintient l\'audio actif pendant qu\'une salle est ouverte.</string>
     <string name="nest_notification_listening">Nest connecté</string>
     <string name="nest_notification_stop">Arrêter</string>
     <string name="nest_notification_text">Appuyer pour revenir.</string>

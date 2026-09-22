@@ -160,18 +160,18 @@
          NavBarItemDef labels are R.string ids. -->
     <string name="always_on_notif_channel_description">Real vaqtli bildirishnomalar uchun kirish relaylaringizga ulanishni faol saqlaydi</string>
     <plurals name="always_on_notif_connected">
-        <item quantity="one">%1$d kirish relay'iga ulangan</item>
-        <item quantity="other">%1$d kirish relay'lariga ulangan</item>
+        <item quantity="one">%1$d kirish relay\'iga ulangan</item>
+        <item quantity="other">%1$d kirish relay\'lariga ulangan</item>
     </plurals>
     <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">%1$d relay'ga ulangan</item>
-        <item quantity="other">%1$d relay'larga ulangan</item>
+        <item quantity="one">%1$d relay\'ga ulangan</item>
+        <item quantity="other">%1$d relay\'larga ulangan</item>
     </plurals>
     <string name="always_on_notif_connecting">Kirish relaylariga ulanilmoqda…</string>
     <string name="always_on_notif_title">Amethyst Bildirishnomalari Faol</string>
-    <string name="call_ongoing">Qo'ng'iroqlar</string>
-    <string name="call_ongoing_description">Davom etayotgan qo'ng'iroq bildirishномаsi</string>
-    <string name="call_with">%1$s bilan qo'ng'iroq</string>
+    <string name="call_ongoing">Qo\'ng\'iroqlar</string>
+    <string name="call_ongoing_description">Davom etayotgan qo\'ng\'iroq bildirishномаsi</string>
+    <string name="call_with">%1$s bilan qo\'ng\'iroq</string>
     <string name="call_hangup">Tugatish</string>
     <string name="reaction">Reaksiya</string>
     <string name="boost">Targʻib qilish</string>
@@ -180,20 +180,20 @@
     <string name="private_message">Shaxsiy Xabar</string>
     <string name="nest_notification_broadcasting">Nest — Jonli</string>
     <string name="nest_notification_channel">Nestlar</string>
-    <string name="nest_notification_channel_description">Xona ochiq bo'lganda audio ijrosini davom ettiradi.</string>
+    <string name="nest_notification_channel_description">Xona ochiq bo\'lganda audio ijrosini davom ettiradi.</string>
     <string name="nest_notification_listening">Nest ulandi</string>
-    <string name="nest_notification_stop">To'xtatish</string>
+    <string name="nest_notification_stop">To\'xtatish</string>
     <string name="nest_notification_text">Qaytish uchun bosing.</string>
     <string name="nest_leave">Chiqish</string>
-    <string name="nest_mute">Ovozni o'chirish</string>
+    <string name="nest_mute">Ovozni o\'chirish</string>
     <string name="nest_unmute">Ovozni yoqish</string>
-    <string name="call_mute">Ovozni o'chirish</string>
+    <string name="call_mute">Ovozni o\'chirish</string>
     <string name="call_unmute">Ovozni yoqish</string>
     <string name="napplet_cap_identity">Shaxsiyat</string>
     <string name="napplet_cap_keys">Klaviatura amallari</string>
     <string name="napplet_cap_relay">Relaylar</string>
     <string name="napplet_cap_storage">Saqlash</string>
-    <string name="napplet_cap_value">To'lovlar</string>
+    <string name="napplet_cap_value">To\'lovlar</string>
     <string name="napplet_cap_resource">Tarmoq</string>
     <string name="napplet_cap_upload">Yuklamalar</string>
     <string name="napplet_cap_theme">Mavzu</string>
