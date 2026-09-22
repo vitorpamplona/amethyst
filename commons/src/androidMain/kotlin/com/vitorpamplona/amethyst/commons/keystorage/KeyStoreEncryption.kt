@@ -24,6 +24,7 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -34,13 +35,48 @@ internal class KeyStoreEncryption {
     companion object {
         private const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
-        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
-        private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
+
+        /**
+         * GCM is a stream mode: it pads nothing, and `AES/GCM/NoPadding` is the
+         * only transformation JCA defines for it. [LEGACY_PADDING] is what this
+         * class has always asked for, and some providers accept it, so the keys
+         * and ciphertext already on those devices were made under that name.
+         */
+        private const val LEGACY_PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
+        private const val GCM_PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
         private const val PURPOSE = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
+
+        private fun transformationFor(padding: String) = "$ALGORITHM/$BLOCK_MODE/$padding"
+
+        /**
+         * Which padding name this device's providers actually answer to.
+         *
+         * Asking for the legacy name where it works keeps every existing key
+         * and every encrypted file readable — switching unconditionally would
+         * orphan them, and one of them holds account secrets. Where no provider
+         * offers it (seen on a Samsung API 34 tablet, where `Cipher.getInstance`
+         * throws `NoSuchAlgorithmException`), the correct GCM name is used
+         * instead. Before this, that throw propagated out of the constructor:
+         * callers that guarded it silently lost persistence, and the one that
+         * did not — cordn, from `Account`'s constructor — hung the app on
+         * "Loading account" forever.
+         *
+         * Resolved once per process: the answer cannot change under us, and
+         * every instance would otherwise repeat the failing lookup.
+         */
+        private val resolvedPadding: String by lazy {
+            try {
+                Cipher.getInstance(transformationFor(LEGACY_PADDING))
+                LEGACY_PADDING
+            } catch (_: GeneralSecurityException) {
+                GCM_PADDING
+            }
+        }
     }
 
-    private val cipher = Cipher.getInstance(TRANSFORMATION)
+    private val padding = resolvedPadding
+    private val cipher = Cipher.getInstance(transformationFor(padding))
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
     private fun getKey(): SecretKey {
@@ -55,7 +91,7 @@ internal class KeyStoreEncryption {
                     KeyGenParameterSpec
                         .Builder(KEY_ALIAS, PURPOSE)
                         .setBlockModes(BLOCK_MODE)
-                        .setEncryptionPaddings(PADDING)
+                        .setEncryptionPaddings(padding)
                         .setIsStrongBoxBacked(true)
                         .build()
 
@@ -74,7 +110,7 @@ internal class KeyStoreEncryption {
             KeyGenParameterSpec
                 .Builder(KEY_ALIAS, PURPOSE)
                 .setBlockModes(BLOCK_MODE)
-                .setEncryptionPaddings(PADDING)
+                .setEncryptionPaddings(padding)
                 .build()
 
         val generator = KeyGenerator.getInstance(ALGORITHM, "AndroidKeyStore")

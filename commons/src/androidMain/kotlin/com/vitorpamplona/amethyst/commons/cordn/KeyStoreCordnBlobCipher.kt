@@ -45,7 +45,13 @@ class KeyStoreCordnBlobCipher : CordnBlobCipher {
     // so taking one publicly would leak an internal type. Nothing needs to
     // inject it either — a test that wanted a different cipher implements
     // [CordnBlobCipher] directly, which is what the seam is for.
-    private val encryption = KeyStoreEncryption()
+    // Built on first use, not at construction. This cipher is reached from
+    // CordnRuntime, which Account builds eagerly, so a KeyStoreEncryption that
+    // throws here takes the whole account down before any UI exists — the app
+    // sits on "Loading account" forever. Every other user of KeyStoreEncryption
+    // already guards it (AccountCacheState falls back to an in-memory Marmot
+    // store); deferring keeps a cordn-only failure inside cordn.
+    private val encryption by lazy { KeyStoreEncryption() }
     private val lock = Any()
 
     override fun encrypt(bytes: ByteArray): ByteArray = synchronized(lock) { encryption.encrypt(bytes) }
