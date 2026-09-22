@@ -53,11 +53,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.public_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
@@ -152,7 +152,7 @@ fun NewPublicMessageScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.public_message,
+                titleRes = Res.string.public_message,
                 isActive = postViewModel::canPost,
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this

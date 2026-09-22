@@ -61,9 +61,46 @@ class PollResponseEvent(
     companion object {
         const val KIND = 1018
 
-        fun build(
+        /**
+         * The answer to a single-choice poll.
+         *
+         * NIP-88: "polltype: singlechoice: The first response tag is to be considered the actual
+         * response." One code in, one `response` tag out — there is no way to express an answer
+         * whose meaning depends on which tag the reader happens to look at first.
+         */
+        fun buildSingleChoice(
+            poll: EventHintBundle<PollEvent>,
+            response: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<PollResponseEvent>.() -> Unit = {},
+        ) = build(poll, listOf(response), createdAt, initializer)
+
+        /**
+         * The answer to a multiple-choice poll.
+         *
+         * NIP-88: "the first response tag pointing to each id is considered the actual response,
+         * without considering the order of the response tags" — so a Set is exactly the right
+         * shape here, and the conversion to a list below is only about writing them down.
+         */
+        fun buildMultipleChoice(
             poll: EventHintBundle<PollEvent>,
             responses: Set<String>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<PollResponseEvent>.() -> Unit = {},
+        ) = build(poll, responses.toList(), createdAt, initializer)
+
+        /**
+         * Writes [responses] as `response` tags in the order given.
+         *
+         * Prefer [buildSingleChoice] / [buildMultipleChoice]: the poll type decides whether order
+         * matters, and this overload cannot know which one it is being used for. It takes a List
+         * rather than a Set so that a caller who does know keeps control of the order — passing an
+         * unordered Set here would hand a single-choice answer to whatever iteration order the
+         * collection happened to have.
+         */
+        fun build(
+            poll: EventHintBundle<PollEvent>,
+            responses: List<String>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PollResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {

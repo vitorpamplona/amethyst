@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -41,16 +43,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_avatar_url_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_info_footer
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_update
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_updated
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
+import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -98,7 +104,7 @@ fun EditGroupInfoScreen(
     Scaffold(
         topBar = {
             ActionTopBar(
-                postRes = R.string.save,
+                postRes = Res.string.save,
                 onCancel = { nav.popBack() },
                 onPost = {
                     isSaving = true
@@ -130,7 +136,7 @@ fun EditGroupInfoScreen(
                             }
                             launch(Dispatchers.Main) {
                                 Toast
-                                    .makeText(context, stringRes(context, R.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
+                                    .makeText(context, loadStringRes(Res.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
                                     .show()
                             }
                             nav.popBack()
@@ -140,7 +146,7 @@ fun EditGroupInfoScreen(
                                 Toast
                                     .makeText(
                                         context,
-                                        stringRes(context, R.string.marmot_failed_to_update, e.message),
+                                        loadStringRes(Res.string.marmot_failed_to_update, e.message),
                                         Toast.LENGTH_LONG,
                                     ).show()
                             }
@@ -157,6 +163,11 @@ fun EditGroupInfoScreen(
                     .padding(padding)
                     .consumeWindowInsets(padding)
                     .imePaddingSafe()
+                    // Same reason as CreateGroupScreen: name + description +
+                    // avatar-url + footer is taller than what is left once the
+                    // IME is up, so the padding alone would clip the lower
+                    // fields with no way to reach them.
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -195,7 +206,7 @@ fun EditGroupInfoScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text(stringRes(R.string.description)) },
+                label = { Text(stringRes(Res.string.description)) },
                 placeholder = { Text(stringRes(Res.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
@@ -241,6 +252,7 @@ fun EditGroupInfoScreen(
                 text = stringRes(Res.string.marmot_edit_info_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
             )
         }
     }

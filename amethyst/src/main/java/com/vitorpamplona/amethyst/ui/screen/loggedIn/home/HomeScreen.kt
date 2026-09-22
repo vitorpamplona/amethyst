@@ -55,7 +55,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -63,7 +62,10 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.conversations
 import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
+import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
+import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.service.OnlineChecker
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun HomeScreen(
@@ -168,7 +171,7 @@ private fun AssembleHomeTabs(
                     if (showNewThreads) {
                         add(
                             TabItem(
-                                resource = R.string.new_threads,
+                                resource = Res.string.new_threads,
                                 feedState = newThreadsFeedState,
                                 routeForLastRead = "HomeFollows",
                                 scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
@@ -179,7 +182,7 @@ private fun AssembleHomeTabs(
                     if (showConversations) {
                         add(
                             TabItem(
-                                resource = R.string.conversations,
+                                resource = Res.string.conversations,
                                 feedState = repliesFeedState,
                                 routeForLastRead = "HomeFollowsReplies",
                                 scrollStateKey = ScrollStateKeys.HOME_REPLIES,
@@ -190,7 +193,7 @@ private fun AssembleHomeTabs(
                     if (showEverything) {
                         add(
                             TabItem(
-                                resource = R.string.home_tab_everything,
+                                resource = Res.string.home_tab_everything,
                                 feedState = everythingFeedState,
                                 routeForLastRead = "HomeFollowsEverything",
                                 scrollStateKey = ScrollStateKeys.HOME_EVERYTHING,
@@ -203,7 +206,7 @@ private fun AssembleHomeTabs(
                     if (isEmpty()) {
                         add(
                             TabItem(
-                                resource = R.string.new_threads,
+                                resource = Res.string.new_threads,
                                 feedState = newThreadsFeedState,
                                 routeForLastRead = "HomeFollows",
                                 scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
@@ -589,7 +592,7 @@ fun WatchAccountForHomeScreen(
 
 @Immutable
 class TabItem(
-    val resource: Int,
+    val resource: StringResource,
     val feedState: FeedContentState,
     val routeForLastRead: String,
     val scrollStateKey: String,

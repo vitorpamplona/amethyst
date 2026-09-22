@@ -52,12 +52,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offer
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers_explainer
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.delete_bolt12_offer
 import com.vitorpamplona.amethyst.commons.resources.invalid_bolt12_offer
 import com.vitorpamplona.amethyst.commons.resources.no_bolt12_offers_message
@@ -102,7 +104,7 @@ fun Bolt12OffersScaffold(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.bolt12_offers,
+                titleRes = Res.string.bolt12_offers,
                 onCancel = {
                     viewModel.refresh()
                     onClose()
@@ -152,8 +154,8 @@ fun Bolt12OffersBody(viewModel: Bolt12OffersViewModel) {
     ) {
         item {
             SettingsCategory(
-                R.string.bolt12_offers,
-                R.string.bolt12_offers_section_explainer,
+                Res.string.bolt12_offers,
+                Res.string.bolt12_offers_section_explainer,
                 SettingsCategoryFirstModifier,
             )
         }
@@ -251,7 +253,7 @@ fun Bolt12OfferAddField(onAdd: (raw: String) -> Boolean) {
                 shape = ButtonBorder,
                 enabled = offer.isNotBlank(),
             ) {
-                Text(text = stringRes(id = R.string.add), color = Color.White)
+                Text(text = stringRes(id = Res.string.add), color = Color.White)
             }
         }
     }

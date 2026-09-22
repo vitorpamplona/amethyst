@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
@@ -56,6 +55,8 @@ import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_add_pla
 import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_private_toggle
 import com.vitorpamplona.amethyst.commons.resources.interest_set_toggle_visibility
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_empty
+import com.vitorpamplona.amethyst.commons.resources.interest_sets_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -73,7 +74,7 @@ fun InterestSetScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = set?.title ?: stringRes(R.string.interest_sets_title), nav)
+            TopBarWithBackButton(caption = set?.title ?: stringRes(Res.string.interest_sets_title), nav)
         },
     ) { paddingValues ->
         if (set == null) {
@@ -241,7 +242,7 @@ private fun HashtagRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     symbol = MaterialSymbols.Delete,
-                    contentDescription = stringRes(R.string.quick_action_delete),
+                    contentDescription = stringRes(Res.string.quick_action_delete),
                 )
             }
         },

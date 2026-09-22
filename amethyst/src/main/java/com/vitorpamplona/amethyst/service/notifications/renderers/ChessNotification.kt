@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_name
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
@@ -31,8 +32,8 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Chess game notifications — NIP-64 challenge-accepted and move events. Rendered
@@ -44,7 +45,7 @@ object ChessNotification {
         context: Context,
         account: Account,
         event: BaseChessEvent,
-        @StringRes contentRes: Int,
+        contentRes: StringResource,
     ) {
         // NIP-64 chess is a debug-only feature for now; don't notify in release.
         if (!isDebug) return
@@ -65,8 +66,8 @@ object ChessNotification {
             nm.postStandard(
                 category = NotificationCategory.CHESS,
                 id = event.id,
-                messageTitle = stringRes(context, R.string.app_notification_chess_channel_name),
-                messageBody = stringRes(context, contentRes, author.toBestDisplayName()),
+                messageTitle = loadStringRes(Res.string.app_notification_chess_channel_name),
+                messageBody = loadStringRes(contentRes, author.toBestDisplayName()),
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,

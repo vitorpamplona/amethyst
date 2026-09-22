@@ -28,11 +28,11 @@ import com.vitorpamplona.quartz.utils.Log
  * loop functional and observable until one is added.
  */
 class LoggingScheduledPostNotifier : ScheduledPostNotifier {
-    override fun notifySent(post: ScheduledPost) {
+    override suspend fun notifySent(post: ScheduledPost) {
         Log.i(TAG) { "Scheduled post ${post.id} sent" }
     }
 
-    override fun notifyFailed(
+    override suspend fun notifyFailed(
         post: ScheduledPost,
         error: String?,
     ) {

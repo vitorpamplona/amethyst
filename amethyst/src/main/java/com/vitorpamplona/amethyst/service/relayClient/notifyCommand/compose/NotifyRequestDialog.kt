@@ -36,12 +36,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
+import com.vitorpamplona.amethyst.commons.resources.notify_block_relay
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
@@ -119,7 +119,7 @@ fun NotifyRequestDialog(
                             )
                             Spacer(StdHorzSpacer)
                             Text(
-                                text = stringRes(R.string.notify_block_relay),
+                                text = stringRes(Res.string.notify_block_relay),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }

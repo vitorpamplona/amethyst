@@ -26,13 +26,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * A star toggle that pins/unpins an nsite or napplet (a [FavoriteApp.NostrApp]) by its addressable
@@ -60,7 +62,7 @@ fun FavoriteToggleButton(
     ) {
         Icon(
             if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-            contentDescription = stringResource(if (isFavorite) R.string.favorite_app_remove else R.string.favorite_app_add),
+            contentDescription = stringRes(if (isFavorite) Res.string.favorite_app_remove else Res.string.favorite_app_add),
             tint = if (isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
         )
     }

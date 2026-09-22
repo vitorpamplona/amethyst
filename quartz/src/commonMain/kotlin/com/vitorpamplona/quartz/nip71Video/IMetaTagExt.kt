@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip71Video.tags.BitrateTag
 import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
+import com.vitorpamplona.quartz.nip71Video.tags.HlsImetaTag
 import com.vitorpamplona.quartz.nip71Video.tags.LanguageImetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
@@ -76,6 +77,8 @@ fun IMetaTag.summary() = properties.get(SummaryTag.TAG_NAME)
 fun IMetaTag.fallback() = properties.get(FallbackTag.TAG_NAME)
 
 fun IMetaTag.service() = properties.get(ServiceTag.TAG_NAME)
+
+fun IMetaTag.hls() = properties.get(HlsImetaTag.TAG_NAME)
 
 fun IMetaTag.bitrate(): Int? = properties.get(BitrateTag.TAG_NAME)?.firstOrNull()?.toIntOrNull()
 

@@ -21,11 +21,23 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import android.content.Context
+import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pow_estimate_days
+import com.vitorpamplona.amethyst.commons.resources.pow_estimate_hours
+import com.vitorpamplona.amethyst.commons.resources.pow_estimate_instant
+import com.vitorpamplona.amethyst.commons.resources.pow_estimate_minutes
+import com.vitorpamplona.amethyst.commons.resources.pow_estimate_seconds
+import com.vitorpamplona.amethyst.commons.resources.pow_time_left
+import com.vitorpamplona.amethyst.commons.resources.pow_time_left_soon
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.PluralStringResource
 import kotlin.math.roundToLong
 
 /**
@@ -46,6 +58,75 @@ suspend fun deviceHashesPerSecond(): Double = PoWEstimator.hashesPerSecond(PoWPo
  * and are the statistical mean of a memoryless search — any single post can be
  * much luckier or unluckier, so always present these as approximations.
  */
+@Composable
+fun formatApproxDuration(seconds: Double): String {
+    @Composable
+    fun quantity(
+        id: PluralStringResource,
+        count: Long,
+    ) = pluralStringRes(id, count.toInt(), count.toInt())
+
+    return when {
+        seconds < 1.0 -> stringRes(Res.string.pow_estimate_instant)
+        seconds < 90.0 -> quantity(Res.plurals.pow_estimate_seconds, seconds.roundToLong())
+        seconds < 90.0 * 60.0 -> quantity(Res.plurals.pow_estimate_minutes, (seconds / 60.0).roundToLong())
+        seconds < 48.0 * 3600.0 -> quantity(Res.plurals.pow_estimate_hours, (seconds / 3600.0).roundToLong())
+        else -> quantity(Res.plurals.pow_estimate_days, (seconds / 86400.0).roundToLong())
+    }
+}
+
+/**
+ * "≈ 10 minutes left" while [elapsedSec] is inside the [expectedSec] mean,
+ * "any moment now" once past it — a memoryless search has no shrinking
+ * remainder, so past the mean the only honest claim is "soon".
+ */
+@Composable
+fun formatTimeLeft(
+    expectedSec: Double,
+    elapsedSec: Long,
+): String {
+    val remaining = expectedSec - elapsedSec
+    return if (remaining > 1.0) {
+        stringRes(Res.string.pow_time_left, formatApproxDuration(remaining))
+    } else {
+        stringRes(Res.string.pow_time_left_soon)
+    }
+}
+
+/** Suspend twin of [formatApproxDuration] for the mining foreground service,
+ *  which builds its notification text outside composition. */
+suspend fun loadApproxDuration(seconds: Double): String {
+    suspend fun quantity(
+        id: PluralStringResource,
+        count: Long,
+    ) = loadPluralStringRes(id, count.toInt(), count.toInt())
+
+    return when {
+        seconds < 1.0 -> loadStringRes(Res.string.pow_estimate_instant)
+        seconds < 90.0 -> quantity(Res.plurals.pow_estimate_seconds, seconds.roundToLong())
+        seconds < 90.0 * 60.0 -> quantity(Res.plurals.pow_estimate_minutes, (seconds / 60.0).roundToLong())
+        seconds < 48.0 * 3600.0 -> quantity(Res.plurals.pow_estimate_hours, (seconds / 3600.0).roundToLong())
+        else -> quantity(Res.plurals.pow_estimate_days, (seconds / 86400.0).roundToLong())
+    }
+}
+
+/** Suspend twin of [formatTimeLeft]; see [loadApproxDuration]. */
+suspend fun loadTimeLeft(
+    expectedSec: Double,
+    elapsedSec: Long,
+): String {
+    val remaining = expectedSec - elapsedSec
+    return if (remaining > 1.0) {
+        loadStringRes(Res.string.pow_time_left, loadApproxDuration(remaining))
+    } else {
+        loadStringRes(Res.string.pow_time_left_soon)
+    }
+}
+
+/**
+ * Android-resource twin of [formatApproxDuration]; see [powKindLabelResId] for why
+ * the mining notification cannot read from the Compose catalog.
+ */
 fun formatApproxDuration(
     context: Context,
     seconds: Double,
@@ -64,11 +145,7 @@ fun formatApproxDuration(
     }
 }
 
-/**
- * "≈ 10 minutes left" while [elapsedSec] is inside the [expectedSec] mean,
- * "any moment now" once past it — a memoryless search has no shrinking
- * remainder, so past the mean the only honest claim is "soon".
- */
+/** Android-resource twin of [formatTimeLeft]. */
 fun formatTimeLeft(
     context: Context,
     expectedSec: Double,

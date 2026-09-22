@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -91,14 +90,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_post
+import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_note_id
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.commons.resources.relays
+import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_action_send_now
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_at_time
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_at_time_past
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_day_tomorrow
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_empty_hint
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_empty_title
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_error_prefix
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_event_id_copied
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_relay_count
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_status_cancelled
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_status_failed
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_status_pending
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_status_publishing
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_status_sent
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_subtitle_due_suffix
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_subtitle_queued
+import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
@@ -112,6 +129,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
@@ -165,18 +183,18 @@ fun ScheduledPostsScreen(
                 expandedHeight = barHeight,
                 title = {
                     Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
-                        Text(stringRes(R.string.scheduled_posts))
+                        Text(stringRes(Res.string.scheduled_posts))
                         if (totalActive > 0) {
                             val queuedText =
-                                pluralStringResource(
-                                    id = R.plurals.scheduled_posts_subtitle_queued,
+                                pluralStringRes(
+                                    id = Res.plurals.scheduled_posts_subtitle_queued,
                                     count = totalActive,
                                     totalActive,
                                 )
                             val dueText =
                                 if (dueSoonCount > 0) {
-                                    pluralStringResource(
-                                        id = R.plurals.scheduled_posts_subtitle_due_suffix,
+                                    pluralStringRes(
+                                        id = Res.plurals.scheduled_posts_subtitle_due_suffix,
                                         count = dueSoonCount,
                                         dueSoonCount,
                                     )
@@ -222,7 +240,7 @@ fun ScheduledPostsScreen(
             ) {
                 groups.forEach { group ->
                     stickyHeader(key = group.day) {
-                        DayHeader(group.day, today, context)
+                        DayHeader(group.day, today)
                     }
                     items(group.posts, key = { it.id }) { post ->
                         val isExpanded = expandedId == post.id
@@ -260,7 +278,7 @@ fun ScheduledPostsScreen(
                                 SwipeToDeleteWithConfirmation(
                                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                                     onDelete = { viewModel.cancel(post.id) },
-                                    confirmLabelRes = R.string.quick_action_delete,
+                                    confirmLabelRes = Res.string.quick_action_delete,
                                 ) {
                                     ScheduledPostCardCollapsed(
                                         post = post,
@@ -312,8 +330,8 @@ private fun ScheduledPostCardCollapsed(
     val preview = remember(post.id) { extractContentPreview(post, 200) }
     val media = remember(post.id) { extractFirstMediaUrl(post) }
     val relayCountText =
-        pluralStringResource(
-            id = R.plurals.scheduled_posts_relay_count,
+        pluralStringRes(
+            id = Res.plurals.scheduled_posts_relay_count,
             count = post.relayUrls.size,
             post.relayUrls.size,
         )
@@ -361,7 +379,7 @@ private fun ScheduledPostCardCollapsed(
             ) {
                 StatusPill(post.status)
                 Text(
-                    text = formatAtTime(post.publishAtSec, nowSec, context),
+                    text = formatAtTime(post.publishAtSec, nowSec),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -397,6 +415,7 @@ private fun ScheduledPostCardExpandedPanel(
     onPublishNow: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val scheduledPostsEventIdCopiedStr = stringRes(Res.string.scheduled_posts_event_id_copied)
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -425,7 +444,7 @@ private fun ScheduledPostCardExpandedPanel(
 
         if (eventId != null) {
             Column {
-                SectionLabel(stringRes(R.string.quick_action_copy_note_id))
+                SectionLabel(stringRes(Res.string.quick_action_copy_note_id))
                 Text(
                     text = eventId,
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
@@ -440,7 +459,7 @@ private fun ScheduledPostCardExpandedPanel(
                                     Toast
                                         .makeText(
                                             context,
-                                            stringRes(context, R.string.scheduled_posts_event_id_copied),
+                                            scheduledPostsEventIdCopiedStr,
                                             Toast.LENGTH_SHORT,
                                         ).show()
                                 },
@@ -452,7 +471,7 @@ private fun ScheduledPostCardExpandedPanel(
         val err = post.lastError
         if (post.status == ScheduledPostStatus.FAILED && !err.isNullOrBlank()) {
             Text(
-                text = stringRes(R.string.scheduled_posts_error_prefix, err),
+                text = stringRes(Res.string.scheduled_posts_error_prefix, err),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -466,9 +485,9 @@ private fun ScheduledPostCardExpandedPanel(
             ) {
                 val labelRes =
                     when (post.status) {
-                        ScheduledPostStatus.FAILED -> R.string.retry
-                        ScheduledPostStatus.PUBLISHING -> R.string.scheduled_posts_status_publishing
-                        else -> R.string.scheduled_posts_action_send_now
+                        ScheduledPostStatus.FAILED -> Res.string.retry
+                        ScheduledPostStatus.PUBLISHING -> Res.string.scheduled_posts_status_publishing
+                        else -> Res.string.scheduled_posts_action_send_now
                     }
                 Text(stringRes(labelRes))
             }
@@ -480,7 +499,7 @@ private fun ScheduledPostCardExpandedPanel(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
             ) {
-                Text(stringRes(R.string.quick_action_delete))
+                Text(stringRes(Res.string.quick_action_delete))
             }
         }
     }
@@ -501,14 +520,13 @@ private fun SectionLabel(text: String) {
 private fun DayHeader(
     day: LocalDate,
     today: LocalDate,
-    context: android.content.Context,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = formatDayHeader(day, today, context),
+            text = formatDayHeader(day, today),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -522,23 +540,23 @@ private fun StatusPill(status: ScheduledPostStatus) {
     val (labelRes, color, pulse) =
         when (status) {
             ScheduledPostStatus.PENDING -> {
-                Triple(R.string.scheduled_posts_status_pending, MaterialTheme.colorScheme.primary, false)
+                Triple(Res.string.scheduled_posts_status_pending, MaterialTheme.colorScheme.primary, false)
             }
 
             ScheduledPostStatus.PUBLISHING -> {
-                Triple(R.string.scheduled_posts_status_publishing, PublishingAmber, true)
+                Triple(Res.string.scheduled_posts_status_publishing, PublishingAmber, true)
             }
 
             ScheduledPostStatus.FAILED -> {
-                Triple(R.string.scheduled_posts_status_failed, MaterialTheme.colorScheme.error, false)
+                Triple(Res.string.scheduled_posts_status_failed, MaterialTheme.colorScheme.error, false)
             }
 
             ScheduledPostStatus.SENT -> {
-                Triple(R.string.scheduled_posts_status_sent, MaterialTheme.colorScheme.tertiary, false)
+                Triple(Res.string.scheduled_posts_status_sent, MaterialTheme.colorScheme.tertiary, false)
             }
 
             ScheduledPostStatus.CANCELLED -> {
-                Triple(R.string.scheduled_posts_status_cancelled, MaterialTheme.colorScheme.onSurfaceVariant, false)
+                Triple(Res.string.scheduled_posts_status_cancelled, MaterialTheme.colorScheme.onSurfaceVariant, false)
             }
         }
     val dotAlpha =
@@ -632,10 +650,10 @@ private fun EmptyState(
 private val shortTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 private val fullDateFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 
+@Composable
 private fun formatAtTime(
     publishAtSec: Long,
     nowSec: Long,
-    context: android.content.Context,
 ): String {
     val absolute =
         Instant
@@ -644,19 +662,19 @@ private fun formatAtTime(
             .toLocalTime()
             .format(shortTimeFormatter)
     return if (publishAtSec > nowSec) {
-        stringRes(context, R.string.scheduled_posts_at_time, absolute, timeAheadNoDot(publishAtSec, context))
+        stringRes(Res.string.scheduled_posts_at_time, absolute, timeAheadNoDot(publishAtSec))
     } else {
-        stringRes(context, R.string.scheduled_posts_at_time_past, absolute, timeAgoNoDot(publishAtSec, context).trim())
+        stringRes(Res.string.scheduled_posts_at_time_past, absolute, timeAgoNoDot(publishAtSec).trim())
     }
 }
 
+@Composable
 private fun formatDayHeader(
     day: LocalDate,
     today: LocalDate,
-    context: android.content.Context,
 ): String =
     when (day) {
-        today -> stringRes(context, R.string.today)
-        today.plusDays(1) -> stringRes(context, R.string.scheduled_posts_day_tomorrow)
+        today -> stringRes(Res.string.today)
+        today.plusDays(1) -> stringRes(Res.string.scheduled_posts_day_tomorrow)
         else -> day.format(fullDateFormatter)
     }

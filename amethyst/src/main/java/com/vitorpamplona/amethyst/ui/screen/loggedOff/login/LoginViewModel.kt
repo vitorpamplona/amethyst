@@ -28,7 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.invalid_key
+import com.vitorpamplona.amethyst.commons.resources.invalid_key_with_message
+import com.vitorpamplona.amethyst.commons.resources.key_is_required
+import com.vitorpamplona.amethyst.commons.resources.login_bunker_not_supported
+import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_supported
+import com.vitorpamplona.amethyst.commons.resources.password_is_required
+import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
@@ -124,7 +131,7 @@ class LoginViewModel : ViewModel() {
         }
 
         if (key.text.isBlank()) {
-            errorManager.error(R.string.key_is_required)
+            errorManager.error(Res.string.key_is_required)
             return false
         }
 
@@ -135,16 +142,16 @@ class LoginViewModel : ViewModel() {
         // can persist is an external signer app (see AccountSettings.isWriteable).
         val trimmedKey = key.text.trim()
         if (trimmedKey.startsWith("bunker:", ignoreCase = true)) {
-            errorManager.error(R.string.login_bunker_not_supported)
+            errorManager.error(Res.string.login_bunker_not_supported)
             return false
         }
         if (trimmedKey.startsWith("nostrconnect:", ignoreCase = true)) {
-            errorManager.error(R.string.login_nostrconnect_not_supported)
+            errorManager.error(Res.string.login_nostrconnect_not_supported)
             return false
         }
 
         if (needsPassword && password.text.isBlank()) {
-            errorManager.error(R.string.password_is_required)
+            errorManager.error(Res.string.password_is_required)
             return false
         }
 
@@ -161,9 +168,9 @@ class LoginViewModel : ViewModel() {
             ) {
                 processingLogin = false
                 if (it != null) {
-                    errorManager.error(R.string.invalid_key_with_message, it)
+                    errorManager.error(Res.string.invalid_key_with_message, it)
                 } else {
-                    errorManager.error(R.string.invalid_key)
+                    errorManager.error(Res.string.invalid_key)
                 }
             }
         }
@@ -179,7 +186,7 @@ class LoginViewModel : ViewModel() {
                 packageName = packageName,
             ) {
                 processingLogin = false
-                errorManager.error(R.string.sign_request_rejected_description)
+                errorManager.error(Res.string.sign_request_rejected_description)
             }
         }
     }

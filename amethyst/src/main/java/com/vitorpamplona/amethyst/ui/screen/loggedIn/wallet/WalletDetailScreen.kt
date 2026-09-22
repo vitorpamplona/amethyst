@@ -52,10 +52,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.wallet
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
@@ -82,7 +83,7 @@ fun WalletDetailScreen(
     val isLoading by walletViewModel.isLoading.collectAsState()
     val error by walletViewModel.error.collectAsState()
     val wallets by walletViewModel.wallets.collectAsState()
-    val walletName = wallets.firstOrNull { it.id == walletId }?.name ?: stringRes(R.string.wallet)
+    val walletName = wallets.firstOrNull { it.id == walletId }?.name ?: stringRes(Res.string.wallet)
 
     LaunchedEffect(walletId) {
         walletViewModel.fetchBalance()
@@ -97,7 +98,7 @@ fun WalletDetailScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },

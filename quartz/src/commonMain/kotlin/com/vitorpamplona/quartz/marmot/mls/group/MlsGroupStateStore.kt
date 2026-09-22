@@ -89,4 +89,39 @@ interface MlsGroupStateStore {
      * @return list of TLS-encoded [RetainedEpochSecrets], empty if none
      */
     suspend fun loadRetainedEpochs(nostrGroupId: String): List<ByteArray>
+
+    /**
+     * Persist just this leaf's sender ratchet position, as its own record.
+     *
+     * Sending an application message advances the SecretTree and nothing else,
+     * so writing the whole of [save] to record it means re-encrypting the
+     * ratchet tree, the group context and every epoch secret to persist a
+     * secret and a counter — per message, growing with the group. This is the
+     * small record that carries the same guarantee, in the spirit of OpenMLS
+     * keeping `message_secrets` separate from `group_state`.
+     *
+     * The write MUST be durable before it returns, for the same reason [save]
+     * must: a position that is lost re-emits a generation already used, which
+     * reuses an AEAD key+nonce pair.
+     *
+     * @param nostrGroupId hex-encoded Nostr group ID
+     * @param state TLS-encoded bytes from [OwnSenderRatchet.encodeTls]
+     * @return false when this store does not implement the split, in which case
+     *   the caller falls back to a full [save]. Defaulting to false keeps an
+     *   implementation that has not adopted it correct rather than silently
+     *   dropping the position.
+     */
+    suspend fun saveSenderRatchet(
+        nostrGroupId: String,
+        state: ByteArray,
+    ): Boolean = false
+
+    /**
+     * Load the sender ratchet record written after the last full [save].
+     *
+     * @return TLS-encoded [OwnSenderRatchet] bytes, or null when there is none
+     *   — which is the normal case for a group that has not sent since its last
+     *   epoch change, and for a store that does not implement the split.
+     */
+    suspend fun loadSenderRatchet(nostrGroupId: String): ByteArray? = null
 }

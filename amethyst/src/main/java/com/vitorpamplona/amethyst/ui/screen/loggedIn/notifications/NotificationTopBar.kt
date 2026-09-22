@@ -25,9 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
@@ -67,7 +67,7 @@ fun NotificationTopBar(
                 onChange = accountViewModel.account.settings::changeDefaultNotificationFollowList,
             )
         } else {
-            Text(text = stringRes(R.string.route_notifications))
+            Text(text = stringRes(Res.string.route_notifications))
         }
     }
 }

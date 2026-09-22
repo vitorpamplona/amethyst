@@ -34,8 +34,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_reply_in_chat
+import com.vitorpamplona.amethyst.commons.resources.chat_reply_in_thread
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -74,7 +76,7 @@ fun ReplyModeToggle(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = stringRes(if (minichat) R.string.chat_reply_in_thread else R.string.chat_reply_in_chat),
+                    text = stringRes(if (minichat) Res.string.chat_reply_in_thread else Res.string.chat_reply_in_chat),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )

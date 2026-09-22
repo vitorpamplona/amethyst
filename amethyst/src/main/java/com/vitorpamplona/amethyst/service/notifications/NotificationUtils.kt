@@ -37,6 +37,7 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.LocusIdCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
@@ -45,8 +46,13 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
+import com.vitorpamplona.amethyst.commons.resources.app_notification_me
+import com.vitorpamplona.amethyst.commons.resources.app_notification_private_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_label
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,6 +86,7 @@ object NotificationUtils {
      * [KEY_TARGET_EVENT_ID], which is the note an inline reply is addressed to.
      */
     const val KEY_EVENT_ID = "key_event_id"
+
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
@@ -166,6 +173,29 @@ object NotificationUtils {
         ) : ReplyAction
     }
 
+    /**
+     * Identity of the chat a conversation notification belongs to, so the system can treat it
+     * as one — see [ConversationShortcuts] for what that buys and why it needs a shortcut.
+     *
+     * [id] must be stable for the life of the conversation and unique across accounts; [label]
+     * is what the conversation is called, which is not always the sender (a group message is
+     * from a person but belongs to the group).
+     *
+     * Callers pass this only when the account allows message content in notifications: the
+     * shortcut it publishes is readable from the launcher.
+     */
+    data class Conversation(
+        val id: String,
+        val label: String,
+        /**
+         * The chat's own picture, when it has one. Null falls back to the message sender's
+         * avatar, which is the right face for a one-to-one DM and the wrong one for a group —
+         * hence [isGroup], which suppresses that fallback along with the sender `Person`.
+         */
+        val iconUrl: String? = null,
+        val isGroup: Boolean = false,
+    )
+
     /** A prior message rendered above the main one in a MessagingStyle notification (thread context). */
     data class ParentMessage(
         val senderName: String,
@@ -218,7 +248,7 @@ object NotificationUtils {
                 .setSmallIcon(category.smallIcon)
                 .setColor(category.color)
                 .setContentTitle(messageTitle)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(loadStringRes(Res.string.app_notification_private_message))
                 .setContentIntent(contentPendingIntent)
                 .setPriority(category.priority())
                 .setAutoCancel(true)
@@ -281,6 +311,7 @@ object NotificationUtils {
         replyAction: ReplyAction? = null,
         publicInlineReply: InlineReplyTarget? = null,
         addMarkRead: Boolean = true,
+        conversation: Conversation? = null,
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
     ) {
@@ -304,7 +335,7 @@ object NotificationUtils {
         val me =
             Person
                 .Builder()
-                .setName(stringRes(applicationContext, R.string.app_notification_me))
+                .setName(loadStringRes(Res.string.app_notification_me))
                 .apply { accountAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
                 .build()
 
@@ -330,13 +361,24 @@ object NotificationUtils {
 
         val contentPendingIntent = contentIntent(applicationContext, notId, uri)
 
+        // Published before the notification that names it: a shortcutId the system cannot
+        // resolve is worse than none, so the id is only stamped below when this succeeded.
+        val shortcutId =
+            conversation?.let {
+                val conversationIcon =
+                    it.iconUrl?.let { url -> loadBitmap(url, applicationContext)?.let { bmp -> circleCrop(bmp) } }
+                        ?: avatar.takeUnless { _ -> it.isGroup }
+
+                ConversationShortcuts.push(applicationContext, it, uri, sender, conversationIcon)
+            }
+
         val builderPublic =
             NotificationCompat
                 .Builder(applicationContext, channelId)
                 .setSmallIcon(category.smallIcon)
                 .setColor(category.color)
                 .setContentTitle(senderName)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(loadStringRes(Res.string.app_notification_private_message))
                 .setLargeIcon(avatar)
                 .setContentIntent(contentPendingIntent)
                 .setPriority(category.priority())
@@ -359,6 +401,15 @@ object NotificationUtils {
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
+
+        // The three halves of the conversation contract: the shortcut the shade resolves, the
+        // locus that ties this notification to it, and the people it is with. All three have to
+        // be present or the notification is ranked as an ordinary alert.
+        if (shortcutId != null) {
+            builder.setShortcutId(shortcutId)
+            builder.setLocusId(LocusIdCompat(shortcutId))
+        }
+        builder.addPerson(sender)
 
         when (replyAction) {
             is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
@@ -423,13 +474,13 @@ object NotificationUtils {
         )
     }
 
-    private fun replyRemoteInput(applicationContext: Context): RemoteInput =
+    private suspend fun replyRemoteInput(applicationContext: Context): RemoteInput =
         RemoteInput
             .Builder(KEY_REPLY_TEXT)
-            .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+            .setLabel(loadStringRes(Res.string.app_notification_reply_label))
             .build()
 
-    private fun buildReplyAction(
+    private suspend fun buildReplyAction(
         applicationContext: Context,
         notId: Int,
         intent: Intent,
@@ -442,14 +493,14 @@ object NotificationUtils {
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_action_reply, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+            .Builder(R.drawable.ic_action_reply, loadStringRes(Res.string.app_notification_reply_label), replyPendingIntent)
             .addRemoteInput(replyRemoteInput(applicationContext))
             .setAllowGeneratedReplies(true)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
             .build()
     }
 
-    private fun dmReplyAction(
+    private suspend fun dmReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -466,7 +517,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun marmotReplyAction(
+    private suspend fun marmotReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -485,7 +536,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun publicReplyAction(
+    private suspend fun publicReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -502,7 +553,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun markReadAction(
+    private suspend fun markReadAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -521,7 +572,7 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_action_mark_read, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+            .Builder(R.drawable.ic_action_mark_read, loadStringRes(Res.string.app_notification_mark_read_label), markReadPendingIntent)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
             .build()
     }
@@ -630,7 +681,7 @@ object NotificationUtils {
      * it alone. It costs nothing visually: the shade hides any group with fewer than
      * two children and shows the child on its own.
      */
-    private fun NotificationManager.sendGroupSummary(
+    private suspend fun NotificationManager.sendGroupSummary(
         category: NotificationCategory,
         groupKey: String,
         summaryId: Int,
@@ -657,7 +708,7 @@ object NotificationUtils {
                 .setStyle(
                     NotificationCompat
                         .InboxStyle()
-                        .setSummaryText(stringRes(applicationContext, category.summaryTextRes)),
+                        .setSummaryText(loadStringRes(category.summaryTextRes)),
                 )
 
         notify(summaryId, summaryBuilder.build())

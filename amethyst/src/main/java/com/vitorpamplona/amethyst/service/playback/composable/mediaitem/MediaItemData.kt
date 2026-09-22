@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
+import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Immutable
 data class MediaItemData(
@@ -48,6 +51,9 @@ data class MediaItemData(
     val dim: DimensionTag? = null,
     val hash: String? = null,
     val thumbhash: String? = null,
+    // NIP-71 `text-track` captions to side-load. A data class is the cache key, so this has to be
+    // a value that compares by content — ImmutableList keeps that true and keeps the key @Stable.
+    val captions: ImmutableList<CaptionTrack> = persistentListOf(),
 )
 
 @Immutable

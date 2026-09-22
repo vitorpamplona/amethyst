@@ -91,8 +91,16 @@ class KeyPackageRotationManager(
     private val eventIdToSlot = mutableMapOf<String, String>()
 
     /**
-     * Consumed KeyPackages we deliberately keep the private keys for, keyed by
+     * Published KeyPackages we deliberately keep the private keys for, keyed by
      * the Nostr event id (kind:30443) they were published as.
+     *
+     * Two things land here. A KeyPackage a Welcome consumed, per the
+     * last-resort reasoning below; and a KeyPackage a slot regenerated out from
+     * under, which is retained for a plainer reason: regenerating replaces
+     * `activeBundles[slot]` but does nothing to the kind:30443 already sitting
+     * on relays, so dropping its keys would leave us advertising a KeyPackage
+     * no one can invite us through. Keeping it is what makes the advertisement
+     * honest.
      *
      * A KeyPackage carrying the LastResort marker (`0x000A`) is not single-use:
      * OpenMLS skips `delete_key_package` for one, so MDK — which marks every
@@ -394,7 +402,7 @@ class KeyPackageRotationManager(
 
         val bundle = KeyPackageBundle(keyPackage, initKp.privateKey, encKp.privateKey, sigKp.privateKey)
         mutex.withLock {
-            activeBundles[dTagSlot] = bundle
+            installIntoSlotUnlocked(dTagSlot, bundle)
             persistUnlocked()
         }
         return bundle
@@ -418,7 +426,7 @@ class KeyPackageRotationManager(
     ): KeyPackageBundle {
         val bundle = CurrentProfileGroupFactory.createKeyPackage(signer, ciphersuite = ciphersuite)
         mutex.withLock {
-            activeBundles[dTagSlot] = bundle
+            installIntoSlotUnlocked(dTagSlot, bundle)
             persistUnlocked()
         }
         return bundle
@@ -578,8 +586,46 @@ class KeyPackageRotationManager(
         dTagSlot: String,
         bundle: KeyPackageBundle,
     ) = mutex.withLock {
-        activeBundles[dTagSlot] = bundle
+        installIntoSlotUnlocked(dTagSlot, bundle)
         persistUnlocked()
+    }
+
+    /**
+     * Install [bundle] at [dTagSlot], retaining whatever it displaces.
+     *
+     * The displaced bundle's kind:30443 is still on relays — regenerating a
+     * slot publishes a NEW addressable event only once the caller sends it, and
+     * a send that never lands, or lands while a peer is already holding the
+     * older KeyPackage, leaves that older one live. So its keys move to
+     * [retainedBundles] rather than being dropped.
+     *
+     * Its event ids also leave [eventIdToSlot]. That index answers
+     * "which slot backs this id", and after this call the honest answer is
+     * "none" — leaving it would make [findBundleByEventId] resolve the id
+     * through the slot to the bundle that just *replaced* it, handing the
+     * Welcome path keys that cannot open the message it is holding.
+     *
+     * Caller must hold the mutex.
+     */
+    private fun installIntoSlotUnlocked(
+        dTagSlot: String,
+        bundle: KeyPackageBundle,
+    ) {
+        val displaced = activeBundles.put(dTagSlot, bundle)
+        if (displaced == null) return
+
+        val staleEventIds = eventIdToSlot.entries.filter { it.value == dTagSlot }.map { it.key }
+        for (staleEventId in staleEventIds) {
+            eventIdToSlot.remove(staleEventId)
+            // Re-inserted so the most recently displaced entry sorts last and
+            // survives eviction the longest, matching [consumeSlotUnlocked].
+            retainedBundles.remove(staleEventId)
+            retainedBundles[staleEventId] = displaced
+        }
+        pruneExpiredRetainedUnlocked()
+        while (retainedBundles.size > MAX_RETAINED_BUNDLES) {
+            retainedBundles.remove(retainedBundles.keys.first())
+        }
     }
 
     /**

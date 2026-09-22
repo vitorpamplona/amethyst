@@ -20,7 +20,32 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.blocked_section
+import com.vitorpamplona.amethyst.commons.resources.blocked_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.broadcast_section
+import com.vitorpamplona.amethyst.commons.resources.broadcast_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.favorite_section
+import com.vitorpamplona.amethyst.commons.resources.favorite_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.indexer_section
+import com.vitorpamplona.amethyst.commons.resources.indexer_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.local_section
+import com.vitorpamplona.amethyst.commons.resources.local_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section
+import com.vitorpamplona.amethyst.commons.resources.private_inbox_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.private_outbox_section
+import com.vitorpamplona.amethyst.commons.resources.private_outbox_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.proxy_section
+import com.vitorpamplona.amethyst.commons.resources.proxy_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_home_section
+import com.vitorpamplona.amethyst.commons.resources.public_home_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section
+import com.vitorpamplona.amethyst.commons.resources.public_notif_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.search_section
+import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.trusted_section
+import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
+import org.jetbrains.compose.resources.StringResource
 
 data class RelayListCollection(
     val homeRelays: List<BasicRelaySetupInfo>,
@@ -38,24 +63,24 @@ data class RelayListCollection(
 ) {
     fun sections(): List<RelaySection> =
         listOf(
-            RelaySection("home", R.string.public_home_section, R.string.public_home_section_explainer, homeRelays),
-            RelaySection("notifications", R.string.public_notif_section, R.string.public_notif_section_explainer, notifRelays),
-            RelaySection("private_inbox", R.string.private_inbox_section, R.string.private_inbox_section_explainer, dmRelays),
-            RelaySection("private_outbox", R.string.private_outbox_section, R.string.private_outbox_section_explainer, privateOutboxRelays),
-            RelaySection("proxy", R.string.proxy_section, R.string.proxy_section_explainer, proxyRelays),
-            RelaySection("broadcast", R.string.broadcast_section, R.string.broadcast_section_explainer, broadcastRelays),
-            RelaySection("indexer", R.string.indexer_section, R.string.indexer_section_explainer, indexerRelays),
-            RelaySection("search", R.string.search_section, R.string.search_section_explainer, searchRelays),
-            RelaySection("local", R.string.local_section, R.string.local_section_explainer, localRelays),
-            RelaySection("trusted", R.string.trusted_section, R.string.trusted_section_explainer, trustedRelays),
-            RelaySection("favorites", R.string.favorite_section, R.string.favorite_section_explainer, favoriteRelays),
-            RelaySection("blocked", R.string.blocked_section, R.string.blocked_section_explainer, blockedRelays),
+            RelaySection("home", Res.string.public_home_section, Res.string.public_home_section_explainer, homeRelays),
+            RelaySection("notifications", Res.string.public_notif_section, Res.string.public_notif_section_explainer, notifRelays),
+            RelaySection("private_inbox", Res.string.private_inbox_section, Res.string.private_inbox_section_explainer, dmRelays),
+            RelaySection("private_outbox", Res.string.private_outbox_section, Res.string.private_outbox_section_explainer, privateOutboxRelays),
+            RelaySection("proxy", Res.string.proxy_section, Res.string.proxy_section_explainer, proxyRelays),
+            RelaySection("broadcast", Res.string.broadcast_section, Res.string.broadcast_section_explainer, broadcastRelays),
+            RelaySection("indexer", Res.string.indexer_section, Res.string.indexer_section_explainer, indexerRelays),
+            RelaySection("search", Res.string.search_section, Res.string.search_section_explainer, searchRelays),
+            RelaySection("local", Res.string.local_section, Res.string.local_section_explainer, localRelays),
+            RelaySection("trusted", Res.string.trusted_section, Res.string.trusted_section_explainer, trustedRelays),
+            RelaySection("favorites", Res.string.favorite_section, Res.string.favorite_section_explainer, favoriteRelays),
+            RelaySection("blocked", Res.string.blocked_section, Res.string.blocked_section_explainer, blockedRelays),
         )
 }
 
 data class RelaySection(
     val fileName: String,
-    val titleRes: Int,
-    val descriptionRes: Int,
+    val titleRes: StringResource,
+    val descriptionRes: StringResource,
     val relays: List<BasicRelaySetupInfo>,
 )

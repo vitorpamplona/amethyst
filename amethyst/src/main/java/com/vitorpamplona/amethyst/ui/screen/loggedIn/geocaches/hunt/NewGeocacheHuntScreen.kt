@@ -47,10 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_banner
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_description
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_move_down
@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_remove
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_title
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
+import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache_hunt
+import com.vitorpamplona.amethyst.commons.resources.route_new_geocache_hunt
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -70,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * The hunt composer.
@@ -110,13 +111,13 @@ fun NewGeocacheHuntScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringRes(if (model.isEditing) R.string.route_edit_geocache_hunt else R.string.route_new_geocache_hunt))
+                    Text(stringRes(if (model.isEditing) Res.string.route_edit_geocache_hunt else Res.string.route_new_geocache_hunt))
                 },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
@@ -126,7 +127,7 @@ fun NewGeocacheHuntScreen(
                     TextButton(
                         enabled = model.isValid() && !model.isPublishing.value,
                         onClick = { scope.launch { if (model.publish()) nav.popBack() } },
-                    ) { Text(stringResource(Res.string.geocache_new_publish)) }
+                    ) { Text(stringRes(Res.string.geocache_new_publish)) }
                 },
             )
         },
@@ -144,7 +145,7 @@ fun NewGeocacheHuntScreen(
             OutlinedTextField(
                 value = model.title.value,
                 onValueChange = { model.title.value = it },
-                label = { Text(stringResource(Res.string.geocache_hunt_title)) },
+                label = { Text(stringRes(Res.string.geocache_hunt_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -152,7 +153,7 @@ fun NewGeocacheHuntScreen(
             OutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
-                label = { Text(stringResource(Res.string.geocache_hunt_description)) },
+                label = { Text(stringRes(Res.string.geocache_hunt_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -160,13 +161,13 @@ fun NewGeocacheHuntScreen(
             OutlinedTextField(
                 value = model.bannerUrl.value,
                 onValueChange = { model.bannerUrl.value = it },
-                label = { Text(stringResource(Res.string.geocache_hunt_banner)) },
+                label = { Text(stringRes(Res.string.geocache_hunt_banner)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
 
             Text(
-                text = stringResource(Res.string.geocache_hunt_pick_caches),
+                text = stringRes(Res.string.geocache_hunt_pick_caches),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -174,7 +175,7 @@ fun NewGeocacheHuntScreen(
 
             if (model.caches.isEmpty()) {
                 Text(
-                    text = stringResource(Res.string.geocache_hunt_needs_caches),
+                    text = stringRes(Res.string.geocache_hunt_needs_caches),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -200,7 +201,7 @@ fun NewGeocacheHuntScreen(
                         Text(
                             text =
                                 listing?.cacheName()?.trim()?.ifBlank { null }
-                                    ?: stringResource(Res.string.geocache_unnamed),
+                                    ?: stringRes(Res.string.geocache_unnamed),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
@@ -208,7 +209,7 @@ fun NewGeocacheHuntScreen(
                         IconButton(onClick = { model.move(index, index - 1) }, enabled = index > 0) {
                             Icon(
                                 symbol = MaterialSymbols.ArrowUpward,
-                                contentDescription = stringResource(Res.string.geocache_hunt_move_up),
+                                contentDescription = stringRes(Res.string.geocache_hunt_move_up),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -220,7 +221,7 @@ fun NewGeocacheHuntScreen(
                         ) {
                             Icon(
                                 symbol = MaterialSymbols.ArrowDownward,
-                                contentDescription = stringResource(Res.string.geocache_hunt_move_down),
+                                contentDescription = stringRes(Res.string.geocache_hunt_move_down),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -229,7 +230,7 @@ fun NewGeocacheHuntScreen(
                         IconButton(onClick = { model.removeCache(address) }) {
                             Icon(
                                 symbol = MaterialSymbols.Close,
-                                contentDescription = stringResource(Res.string.geocache_hunt_remove),
+                                contentDescription = stringRes(Res.string.geocache_hunt_remove),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

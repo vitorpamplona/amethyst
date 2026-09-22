@@ -45,10 +45,10 @@ import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.coroutines.launch
@@ -139,8 +139,6 @@ class CallActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
-                StringResSetup()
-
                 // Pauses relay services when the app pauses
                 ManageRelayServices()
                 ManageWebOkHttp()
@@ -364,8 +362,8 @@ class CallActivity : AppCompatActivity() {
                     this,
                     if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on,
                 ),
-                getString(if (isMuted) R.string.call_unmute else R.string.call_mute),
-                getString(if (isMuted) R.string.call_unmute else R.string.call_mute),
+                stringRes(this, if (isMuted) R.string.call_unmute else R.string.call_mute),
+                stringRes(this, if (isMuted) R.string.call_unmute else R.string.call_mute),
                 muteIntent,
             )
         actions.add(muteAction)
@@ -381,8 +379,8 @@ class CallActivity : AppCompatActivity() {
         val hangupAction =
             RemoteAction(
                 Icon.createWithResource(this, R.drawable.ic_call_end),
-                getString(R.string.call_hangup),
-                getString(R.string.call_hangup),
+                stringRes(this, R.string.call_hangup),
+                stringRes(this, R.string.call_hangup),
                 hangupIntent,
             )
         actions.add(hangupAction)

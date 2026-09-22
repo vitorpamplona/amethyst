@@ -70,6 +70,16 @@ fun GetVideoController(
     // warm-pool fast path keeps position and buffered data intact.
     val keepAlive = remember { mutableStateOf(true) }
 
+    // Captions can resolve *after* playback starts: a `text-track` tag naming a kind-39307
+    // coordinate is only turned into a SubtitleConfiguration once that event arrives, which
+    // rebuilds `mediaItem` with the same videoUri and a different subtitle list. The mediaId is
+    // the video URI either way, so the warm-pool fast path below would read "already loaded" and
+    // the new tracks would never reach the player. A MediaController doesn't carry the item's
+    // `localConfiguration` across the service IPC, so the subtitles can't be read back off the
+    // controller to compare — we remember what we last pushed instead. Deliberately keyless so it
+    // survives the keyed remember below being rebuilt by the very change it has to detect.
+    val lastAppliedCaptions = remember { mutableStateOf<Int?>(null) }
+
     val controllerState by remember(mediaItem, keepAlive.value) {
         if (keepAlive.value) {
             PlaybackServiceClient
@@ -118,6 +128,7 @@ fun GetVideoController(
                     // We still re-prepare if the player ended up IDLE somehow (e.g. it was demoted
                     // to cold and resurfaced, or hit an error before we attached).
                     val targetMediaId = mediaItem.item.mediaId
+                    val captionsFingerprint = mediaItem.src.captions.hashCode()
                     val needsLoad = state.controller.currentMediaItem?.mediaId != targetMediaId
                     if (needsLoad) {
                         // Cold load: a fresh decoder/codec instance gets allocated here. If a
@@ -127,6 +138,20 @@ fun GetVideoController(
                         Log.d("PlaybackService") { "Cold load (setMediaItem+prepare) for $targetMediaId" }
                         state.controller.setMediaItem(mediaItem.item)
                         state.controller.prepare()
+                        lastAppliedCaptions.value = captionsFingerprint
+                    } else if (lastAppliedCaptions.value != null && lastAppliedCaptions.value != captionsFingerprint) {
+                        // Same video, new caption set, and this composable is the one that loaded
+                        // it: re-set the item so the side-loaded subtitle sources get merged in.
+                        // Restarting from the current position keeps the rebuffer down to whatever
+                        // the cache can't serve. The `!= null` guard is what keeps a warm player
+                        // that arrived already carrying someone else's item from being re-prepared
+                        // on a fingerprint we never pushed — that's the rebuffer the pool exists
+                        // to avoid, and its captions are whatever that mount applied.
+                        val resumeAt = state.controller.currentPosition
+                        Log.d("PlaybackService") { "Captions changed for $targetMediaId - re-applying at $resumeAt" }
+                        state.controller.setMediaItem(mediaItem.item, resumeAt)
+                        state.controller.prepare()
+                        lastAppliedCaptions.value = captionsFingerprint
                     } else if (state.controller.playbackState == Player.STATE_IDLE) {
                         Log.d("PlaybackService") { "Warm controller in STATE_IDLE — re-preparing" }
                         state.controller.prepare()

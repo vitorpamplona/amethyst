@@ -27,17 +27,25 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_amount_via_source
+import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_via_source
 import com.vitorpamplona.amethyst.commons.resources.clink_confirm_payment_title
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import kotlinx.coroutines.launch
 
 /**
  * Pays a single BOLT-11 from an in-post card (offer card, invoice card) through the
@@ -58,15 +66,20 @@ fun InvoicePaymentDispatcher(
     onError: (String) -> Unit,
     onSuccess: () -> Unit = {},
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
+    val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     if (bolt11 == null) return
     val context = LocalContext.current
+    // The NIP-47 callbacks below are invoked by the relay dispatcher, not by
+    // composition, so their bodies run in this scope to read their messages.
+    val scope = rememberCoroutineScope()
 
     val source = remember(bolt11) { accountViewModel.account.settings.defaultPaymentSource() }
 
     if (source == null) {
         // No in-app wallet configured -> hand off to an external wallet app (it confirms).
         LaunchedEffect(bolt11) {
-            payViaIntent(bolt11, context, onSuccess, onError)
+            payViaIntent(bolt11, context, noWalletFoundStr, onSuccess, onError)
             onClear()
         }
         return
@@ -90,10 +103,12 @@ fun InvoicePaymentDispatcher(
                     accountViewModel.sendZapPaymentRequestFor(
                         bolt11 = bolt11,
                         zappedNote = null,
-                        onTimeout = { onError(nwcTimeoutMessage(context)) },
+                        onTimeout = { scope.launch { onError(nwcTimeoutMessage()) } },
                         onResponse = { response ->
-                            val failure = response.nwcFailureDetail(context)
-                            if (failure == null) onSuccess() else onError(failure)
+                            scope.launch {
+                                val failure = response.nwcFailureDetail()
+                                if (failure == null) onSuccess() else onError(failure)
+                            }
                         },
                     )
 
@@ -104,7 +119,7 @@ fun InvoicePaymentDispatcher(
                         } else {
                             onError(
                                 response?.failureDetail()
-                                    ?: stringRes(context, R.string.clink_debit_no_response),
+                                    ?: clinkDebitNoResponseStr,
                             )
                         }
                     }
@@ -125,10 +140,10 @@ private fun ConfirmPaymentDialog(
     val context = LocalContext.current
     val message =
         if (amountSats != null) {
-            val amountText = "$amountSats ${stringRes(context, R.string.sats)}"
-            stringRes(context, R.string.clink_confirm_pay_amount_via_source, amountText, sourceName)
+            val amountText = "$amountSats ${stringRes(Res.string.sats)}"
+            stringRes(Res.string.clink_confirm_pay_amount_via_source, amountText, sourceName)
         } else {
-            stringRes(context, R.string.clink_confirm_pay_via_source, sourceName)
+            stringRes(Res.string.clink_confirm_pay_via_source, sourceName)
         }
 
     AlertDialog(
@@ -136,10 +151,10 @@ private fun ConfirmPaymentDialog(
         title = { Text(stringRes(Res.string.clink_confirm_payment_title)) },
         text = { Text(message) },
         confirmButton = {
-            Button(onClick = onConfirm) { Text(stringRes(R.string.pay)) }
+            Button(onClick = onConfirm) { Text(stringRes(Res.string.pay)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

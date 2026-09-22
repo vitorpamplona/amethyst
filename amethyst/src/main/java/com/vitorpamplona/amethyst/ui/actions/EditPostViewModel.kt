@@ -29,10 +29,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.R
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -48,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -66,6 +70,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.launch
 
 @Stable
 open class EditPostViewModel : ViewModel() {
@@ -167,13 +172,17 @@ open class EditPostViewModel : ViewModel() {
         onError: (String, String) -> Unit,
         context: Context,
         stripMetadata: Boolean = true,
-    ) = try {
-        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context, stripMetadata)
-    } catch (e: SignerExceptions.ReadOnlyException) {
-        onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
-        )
+    ) {
+        try {
+            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context, stripMetadata)
+        } catch (e: SignerExceptions.ReadOnlyException) {
+            viewModelScope.launch {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+            }
+        }
     }
 
     fun uploadUnsafe(
@@ -256,9 +265,9 @@ open class EditPostViewModel : ViewModel() {
 
                     this@EditPostViewModel.multiOrchestrator = null
                 } else {
-                    val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+                    val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
 
-                    onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
                 }
             } finally {
                 mediaUploadTracker.finishUpload()

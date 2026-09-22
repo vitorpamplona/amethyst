@@ -70,12 +70,12 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.types.RenderGeocache
 import com.vitorpamplona.amethyst.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
-import org.jetbrains.compose.resources.stringResource
 
 /** Which of the hub's list tabs is rendering, which decides the row and the empty copy. */
 enum class GeocacheListKind {
@@ -230,9 +230,9 @@ private fun DistanceSortHeader(
         Text(
             text =
                 if (sorting) {
-                    stringResource(Res.string.geocache_sorted_by_distance)
+                    stringRes(Res.string.geocache_sorted_by_distance)
                 } else {
-                    stringResource(Res.string.geocache_sorted_by_recent)
+                    stringRes(Res.string.geocache_sorted_by_recent)
                 },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -241,7 +241,7 @@ private fun DistanceSortHeader(
 
         if (!requested) {
             TextButton(onClick = onRequest) {
-                Text(stringResource(Res.string.geocache_use_my_location))
+                Text(stringRes(Res.string.geocache_use_my_location))
             }
         }
     }
@@ -251,10 +251,10 @@ private fun DistanceSortHeader(
 private fun GeocacheEmpty(kind: GeocacheListKind) {
     val message =
         when (kind) {
-            GeocacheListKind.NEARBY -> stringResource(Res.string.geocache_empty_nearby)
-            GeocacheListKind.HUNTS -> stringResource(Res.string.geocache_empty_hunts)
-            GeocacheListKind.FINDS -> stringResource(Res.string.geocache_empty_finds)
-            GeocacheListKind.MINE -> stringResource(Res.string.geocache_empty_mine)
+            GeocacheListKind.NEARBY -> stringRes(Res.string.geocache_empty_nearby)
+            GeocacheListKind.HUNTS -> stringRes(Res.string.geocache_empty_hunts)
+            GeocacheListKind.FINDS -> stringRes(Res.string.geocache_empty_finds)
+            GeocacheListKind.MINE -> stringRes(Res.string.geocache_empty_mine)
         }
 
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {

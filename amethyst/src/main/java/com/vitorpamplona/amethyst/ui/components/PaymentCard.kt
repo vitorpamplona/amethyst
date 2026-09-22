@@ -45,9 +45,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -111,7 +113,7 @@ private fun CopyToClipboardButton(value: String) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val copiedMessage = stringRes(R.string.copied_to_clipboard)
+    val copiedMessage = stringRes(Res.string.copied_to_clipboard)
 
     IconButton(
         onClick = {
@@ -124,7 +126,7 @@ private fun CopyToClipboardButton(value: String) {
     ) {
         Icon(
             symbol = MaterialSymbols.ContentCopy,
-            contentDescription = stringRes(R.string.copy_to_clipboard),
+            contentDescription = stringRes(Res.string.copy_to_clipboard),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Size18Modifier,
         )

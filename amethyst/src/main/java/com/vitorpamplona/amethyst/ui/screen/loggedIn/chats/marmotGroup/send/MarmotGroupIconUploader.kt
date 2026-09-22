@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
 import android.content.Context
 import android.net.Uri
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -138,7 +138,7 @@ class MarmotGroupIconUploader(
 
             val message =
                 if (state is UploadingState.Error) {
-                    stringRes(context, state.errorResource, *state.params)
+                    loadStringRes(state.errorResource, *state.params)
                 } else {
                     "Group icon upload failed"
                 }

@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,20 +46,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDelivery
+import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatSendState
 import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.RecipientDelivery
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_accepted
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_delivered_all
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_failed
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_no_relay_info
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_pending
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_sending
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -71,14 +83,17 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The timestamp on a chat message, as a single tap target that opens the relay /
  * delivery detail — "where did this message come from" and, for our own messages, how
  * far it got. It's always tappable so the relay list is one tap away on every message.
  *
- * Own messages additionally render the relay-acceptance tick glyph next to the time when
+ * Own messages additionally render the send/relay-acceptance glyph next to the time when
  * we have delivery data:
+ * - pulsing clock: still being encrypted, wrapped or handed to the relay pool
+ * - warning: the send failed before it reached the relay pool; tap it to retry
  * - clock: published, no relay has accepted yet
  * - single check: accepted somewhere (at least one relay OK / seen-on relay)
  * - double check (green): every recipient's / target relay accepted
@@ -114,7 +129,11 @@ fun ChatTimeWithDelivery(
             ChatTimeAgo(baseNote)
             if (isLoggedInUser && (delivery != null || seenSomewhere)) {
                 Spacer(StdHorzSpacer)
-                RenderDeliveryTicks(delivery, seenSomewhere)
+                RenderDeliveryTicks(
+                    delivery = delivery,
+                    seenSomewhere = seenSomewhere,
+                    onRetry = { accountViewModel.retryChatSend(baseNote.idHex) },
+                )
             }
         }
     }
@@ -232,9 +251,9 @@ private fun ChatDeliveryDetailDialog(
                             text =
                                 stringRes(
                                     if (delivery != null) {
-                                        R.string.chat_delivery_pending
+                                        Res.string.chat_delivery_pending
                                     } else {
-                                        R.string.chat_delivery_no_relay_info
+                                        Res.string.chat_delivery_no_relay_info
                                     },
                                 ),
                             color = MaterialTheme.colorScheme.placeholderText,
@@ -311,9 +330,9 @@ private fun RelayDeliveryRow(
 @Composable
 private fun DeliveryStatusTick(delivered: Boolean) {
     if (delivered) {
-        TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+        TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
     } else {
-        TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+        TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -321,16 +340,34 @@ private fun DeliveryStatusTick(delivered: Boolean) {
 private fun RenderDeliveryTicks(
     delivery: ChatDelivery?,
     seenSomewhere: Boolean,
+    onRetry: () -> Unit,
 ) {
     val pendingColor = MaterialTheme.colorScheme.placeholderText
     val deliveredColor = MaterialTheme.colorScheme.allGoodColor
 
+    // The send's own lifecycle outranks relay acceptance: until the event has
+    // been handed to the relay pool there is nothing for a relay to have
+    // accepted, and a failed send must not read as merely "not accepted yet".
+    when (delivery?.sendState) {
+        ChatSendState.SENDING -> {
+            SendingTick()
+            return
+        }
+
+        ChatSendState.FAILED -> {
+            FailedTick(onRetry)
+            return
+        }
+
+        else -> Unit
+    }
+
     if (delivery == null) {
         // Untracked (sent before a restart): the seen-on relay set is the only signal.
         if (seenSomewhere) {
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, pendingColor)
+            TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, pendingColor)
         } else {
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, pendingColor)
+            TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, pendingColor)
         }
         return
     }
@@ -372,20 +409,69 @@ private fun DeliveryLadderTick(
 ) {
     when {
         pending ->
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+            TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
 
         fullyAccepted ->
-            TickIcon(MaterialSymbols.DoneAll, R.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
+            TickIcon(MaterialSymbols.DoneAll, Res.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
 
         else ->
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)
+            TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)
+    }
+}
+
+/**
+ * The message is on screen but has not left the device yet. A slow pulse says
+ * work is still happening without claiming a percentage we don't have — the
+ * encrypt/wrap/publish steps report nothing until they're done.
+ */
+@Composable
+private fun SendingTick() {
+    val transition = rememberInfiniteTransition(label = "chatSending")
+    // Deliberately NOT read with `by`: this is a chat list, and a composition
+    // read here would recompose the row on every animation frame. Reading the
+    // state inside graphicsLayer defers it to the draw phase, so the pulse
+    // costs a redraw of one glyph and nothing above it.
+    val alpha =
+        transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.3f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 700),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "chatSendingAlpha",
+        )
+
+    Icon(
+        symbol = MaterialSymbols.Schedule,
+        contentDescription = stringRes(Res.string.chat_delivery_sending),
+        modifier = Modifier.size(14.dp).graphicsLayer { this.alpha = alpha.value },
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}
+
+/**
+ * The send never reached the relay pool. The bubble keeps the text — losing what
+ * someone typed is worse than any marker — and the glyph is the retry affordance,
+ * so a failed message is recoverable with one tap instead of being retyped.
+ */
+@Composable
+private fun FailedTick(onRetry: () -> Unit) {
+    ClickableBox(onClick = onRetry) {
+        Icon(
+            symbol = MaterialSymbols.ErrorOutline,
+            contentDescription = stringRes(Res.string.chat_delivery_failed),
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.error,
+        )
     }
 }
 
 @Composable
 private fun TickIcon(
     symbol: MaterialSymbol,
-    contentDescription: Int,
+    contentDescription: StringResource,
     tint: Color,
 ) {
     Icon(

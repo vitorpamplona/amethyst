@@ -57,14 +57,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -74,13 +72,19 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_create_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_community_add_people
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_section_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_dm_see_all_count
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_forum_create_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_import_loading
+import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_empty
 import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_not_nip29
+import com.vitorpamplona.amethyst.commons.resources.relay_group_create_title
+import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_member
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_archived
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_channels
@@ -100,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
@@ -443,7 +448,7 @@ fun RelayGroupChannelListScreen(
                 FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.relay_group_create_title),
+                        contentDescription = stringRes(Res.string.relay_group_create_title),
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -525,7 +530,7 @@ fun RelayGroupChannelListScreen(
                                 collapsed = channelsCollapsed,
                                 onToggle = if (buzzChatChannels.isNotEmpty()) ({ toggleSection("channels") }) else null,
                             ) {
-                                SectionAddButton(stringRes(R.string.buzz_channel_create_title)) {
+                                SectionAddButton(stringRes(Res.string.buzz_channel_create_title)) {
                                     nav.nav(Route.RelayGroupCreate(relay.url))
                                 }
                             }
@@ -553,7 +558,7 @@ fun RelayGroupChannelListScreen(
                                 collapsed = forumsCollapsed,
                                 onToggle = if (buzzForumChannels.isNotEmpty()) ({ toggleSection("forums") }) else null,
                             ) {
-                                SectionAddButton(stringRes(R.string.buzz_forum_create_title)) {
+                                SectionAddButton(stringRes(Res.string.buzz_forum_create_title)) {
                                     nav.nav(Route.RelayGroupCreate(relay.url, isForum = true))
                                 }
                             }
@@ -647,7 +652,7 @@ fun RelayGroupChannelListScreen(
                         if (dmRows.size > INLINE_DM_LIMIT) {
                             val extra = dmRows.size - INLINE_DM_LIMIT
                             item(key = "dm-see-all") {
-                                SeeAllRow(pluralStringResource(R.plurals.buzz_dm_see_all_count, extra, extra)) {
+                                SeeAllRow(pluralStringRes(Res.plurals.buzz_dm_see_all_count, extra, extra)) {
                                     nav.nav(Route.BuzzDmList(relay.url))
                                 }
                             }
@@ -878,7 +883,7 @@ private fun BuzzDmInlineRow(
         }
         if (row.lastActivity > 0) {
             Text(
-                text = timeAgoShort(row.lastActivity, stringRes(R.string.now)),
+                text = timeAgoShort(row.lastActivity, stringRes(Res.string.now)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -992,7 +997,7 @@ private fun RelayGroupChannelRow(
             val subtitle =
                 channel.summary()?.takeIf { it.isNotBlank() }
                     ?: if (memberCount > 0) {
-                        pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+                        pluralStringRes(Res.plurals.relay_group_member_count, memberCount, memberCount)
                     } else {
                         null
                     }

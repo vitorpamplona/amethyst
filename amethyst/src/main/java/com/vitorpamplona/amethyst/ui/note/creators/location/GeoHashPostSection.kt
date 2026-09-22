@@ -40,11 +40,12 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geohash_title
+import com.vitorpamplona.amethyst.commons.resources.location_change_place
+import com.vitorpamplona.amethyst.commons.resources.location_pick_on_map
 import com.vitorpamplona.amethyst.commons.resources.remove_location
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -111,7 +112,7 @@ fun GeoHashPostSection(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(if (picked != null) R.string.location_change_place else R.string.location_pick_on_map),
+                text = stringRes(if (picked != null) Res.string.location_change_place else Res.string.location_pick_on_map),
                 modifier = Modifier.padding(start = 6.dp),
             )
         }

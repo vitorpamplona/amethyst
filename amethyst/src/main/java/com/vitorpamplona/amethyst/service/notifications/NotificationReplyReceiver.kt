@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -46,11 +47,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 class NotificationReplyReceiver : BroadcastReceiver() {
+    companion object {
+        /**
+         * How long a send may run before the notification stops claiming it is sending. Set
+         * under the ten seconds a foreground broadcast gets, so the honest state is rendered
+         * while this process is still alive to render it.
+         */
+        private const val UNCONFIRMED_AFTER_MS = 8_000L
+    }
+
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -88,12 +100,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             }
 
             NotificationUtils.REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
@@ -102,35 +109,25 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
                 if (members.isEmpty()) return
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendReply(accountNpub, members, replyText)
                 }
             }
 
             NotificationUtils.PUBLIC_REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
                 val targetEventId = intent.getStringExtra(NotificationUtils.KEY_TARGET_EVENT_ID) ?: return
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendPublicReply(accountNpub, targetEventId, replyText)
                 }
             }
 
             NotificationUtils.MARMOT_REPLY_ACTION -> {
-                val replyText =
-                    RemoteInput
-                        .getResultsFromIntent(intent)
-                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                        ?.toString()
-
+                val replyText = replyTextFrom(intent)
                 if (replyText.isNullOrBlank()) return
 
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
@@ -138,21 +135,50 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val replyToInnerId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_ID)
                 val replyToInnerAuthor = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_AUTHOR)
 
-                runOnRelay(notificationManager, notificationId, eventId) {
+                runOnRelay(context, notificationManager, notificationId, eventId, replyText, intent) {
                     sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyToInnerAuthor, replyText)
                 }
             }
         }
     }
 
+    /**
+     * The text of an inline reply: typed into the shade, or carried by a Retry re-sending one
+     * that failed. A RemoteInput cannot be pre-filled, so a retry has to bring its own copy.
+     */
+    private fun replyTextFrom(intent: Intent): String? =
+        RemoteInput
+            .getResultsFromIntent(intent)
+            ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
+            ?.toString()
+            ?: intent.getStringExtra(NotificationUtils.KEY_REPLY_TEXT)
+
+    /**
+     * Sends [block] and keeps the notification honest about how it went.
+     *
+     * The notification stays up rather than being cancelled on success. That is what every
+     * other messenger does — the reply appears in the thread you replied to — and it is what
+     * makes a failure visible at all: there is something left on screen to put the error on.
+     * It clears the usual way, when the conversation is read in the app.
+     *
+     * The dismissal guard is recorded on **both** outcomes. On success it stops the enrichment
+     * window resurrecting the pre-reply version seconds later; on failure it stops that same
+     * re-render overwriting the error and the Retry that carries the user's text. A nicer
+     * avatar is not worth losing an unsent message to.
+     */
     private fun runOnRelay(
+        context: Context,
         notificationManager: NotificationManager,
         notificationId: Int,
         eventId: String?,
+        replyText: String,
+        source: Intent,
         block: suspend () -> Unit,
     ) {
         val pendingResult = goAsync()
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        val appContext = context.applicationContext
 
         scope.launch {
             val collectionJob =
@@ -161,19 +187,85 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                         .collect()
                 }
 
+            // Stops "Sending…" becoming a lie the shade keeps telling. A broadcast receiver is
+            // killed around ten seconds in, and a NIP-17 send can outlive that on its own — an
+            // Amber round trip, a relay publish, proof-of-work mining — so whatever is on
+            // screen at that moment is what the user is left with.
+            //
+            // A watchdog, deliberately, not a `withTimeout`: timing the send out would *cancel*
+            // it, and a publish cancelled halfway is a worse outcome than a slow one. This only
+            // changes what the notification says. If the send does finish afterwards, the Sent
+            // or Failed render below overwrites it.
+            val watchdog =
+                scope.launch {
+                    delay(UNCONFIRMED_AFTER_MS)
+                    notificationManager.renderReplyState(
+                        appContext,
+                        notificationId,
+                        ReplyState.Unconfirmed(replyText),
+                    )
+                }
+
             try {
+                // Inside the try: everything from here on must reach the `finally`, which is
+                // what calls pendingResult.finish() and releases the broadcast.
+                notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sending(replyText))
                 block()
+                // Joined, not just cancelled: if the watchdog is already inside its render, the
+                // two notify() calls would land in an undefined order and the shade could keep
+                // "Still sending…" over a message that went out.
+                watchdog.cancelAndJoin()
                 eventId?.let { NotificationUtils.markDismissed(it) }
-                notificationManager.cancelAndPrune(notificationId)
+                notificationManager.renderReplyState(appContext, notificationId, ReplyState.Sent)
             } catch (e: Exception) {
+                // Rethrown first: joining is a suspend call, which an already-cancelled
+                // coroutine cannot make. `scope.cancel()` below takes the watchdog with it.
                 if (e is CancellationException) throw e
+                watchdog.cancelAndJoin()
                 Log.e("NotificationReply") { "Failed to send reply: ${e.message}" }
+                eventId?.let { NotificationUtils.markDismissed(it) }
+                notificationManager.renderReplyState(
+                    appContext,
+                    notificationId,
+                    ReplyState.Failed(replyText, retryIntent(appContext, notificationId, replyText, source)),
+                )
             } finally {
                 pendingResult.finish()
                 collectionJob.cancel()
                 scope.cancel()
             }
         }
+    }
+
+    /**
+     * A one-tap re-send of exactly what the user typed.
+     *
+     * A copy of [source] — which already carries the action and the account, room, group or
+     * target this reply was addressed to — plus the text. Keeping the original action is what
+     * makes this free: [onReceive] routes it back to the branch it came from with no alias to
+     * resolve, the dismissal guard already treats it as the reply action it is, and
+     * [replyTextFrom] already prefers a RemoteInput result and falls back to this extra.
+     */
+    private fun retryIntent(
+        applicationContext: Context,
+        notificationId: Int,
+        replyText: String,
+        source: Intent,
+    ): PendingIntent {
+        val intent =
+            Intent(source).apply {
+                setClass(applicationContext, NotificationReplyReceiver::class.java)
+                putExtra(NotificationUtils.KEY_REPLY_TEXT, replyText)
+            }
+
+        return PendingIntent.getBroadcast(
+            applicationContext,
+            // The other three request codes for this notification are notId, +1 (mark read)
+            // and +2 (dismiss).
+            notificationId + 3,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
     }
 
     private suspend fun sendReply(
@@ -206,16 +298,17 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         // LocalCache hasn't been rehydrated yet (cold-process broadcast
         // receiver: Account.restoreAll runs async on init and may not have
         // finished by the time we get here).
-        val bundle =
-            manager.buildTextMessage(
-                nostrGroupId = nostrGroupId,
+        // Only the rumor here: sendMarmotGroupMessage does the MLS encryption
+        // and the group-state write, and building an envelope we would throw
+        // away would ratchet the group an extra step for nothing.
+        val innerEvent =
+            manager.buildTextRumor(
                 text = replyText,
                 replyToEventId = replyToInnerEventId,
                 replyToAuthorPubKey = replyToInnerAuthor,
-                persistOwn = false,
             )
 
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))
     }
 
     private suspend fun sendPublicReply(

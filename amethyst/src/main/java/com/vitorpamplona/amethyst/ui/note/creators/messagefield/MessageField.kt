@@ -47,10 +47,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun MessageField(
-    placeholder: Int,
+    placeholder: StringResource,
     viewModel: IMessageField,
     requestFocus: Boolean = true,
     onContentReceived: ((Uri, String?) -> Unit)? = null,

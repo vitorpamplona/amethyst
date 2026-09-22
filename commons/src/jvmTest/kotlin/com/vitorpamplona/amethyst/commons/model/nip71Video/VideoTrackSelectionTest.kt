@@ -57,6 +57,42 @@ class VideoTrackSelectionTest {
     )
 
     @Test
+    fun anHlsPropertyOnTheImetaBecomesTheSelectedTrack() {
+        // divine.video's shape: one imeta for the progressive file, with the adaptive manifest
+        // hung off the non-standard `hls` key instead of a second imeta.
+        val progressive =
+            VideoMeta(
+                url = "https://media.divine.video/abc",
+                mimeType = "video/mp4",
+                dimension = DimensionTag(1080, 1920),
+                hash = "abc",
+                size = 6579464,
+                hls = "https://media.divine.video/abc/hls/master.m3u8",
+            )
+        val selected = event(progressive).selectVideoTrack()
+
+        assertEquals("https://media.divine.video/abc/hls/master.m3u8", selected?.url)
+        assertEquals(hls, selected?.mimeType)
+        // Shape metadata is the same footage, so it carries over...
+        assertEquals("1080x1920", selected?.dimension.toString())
+        // ...but `x` and `size` describe the mp4 blob, and a manifest is not that blob.
+        assertNull(selected?.hash)
+        assertNull(selected?.size)
+    }
+
+    @Test
+    fun aRedundantHlsPropertyDoesNotDuplicateTheTrack() {
+        val selfReferential =
+            VideoMeta(
+                url = "https://host/master.m3u8",
+                mimeType = hls,
+                hls = "https://host/master.m3u8",
+            )
+
+        assertEquals("https://host/master.m3u8", event(selfReferential).selectVideoTrack()?.url)
+    }
+
+    @Test
     fun picksTheMasterWhenItIsListedFirst() {
         // Amethyst's own layout (HlsVideoEventBuilder): master first, dim = the top rung.
         val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))

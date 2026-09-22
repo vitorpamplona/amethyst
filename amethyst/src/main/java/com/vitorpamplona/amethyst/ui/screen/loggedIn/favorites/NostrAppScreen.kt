@@ -40,6 +40,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,20 +48,26 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_static
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_title
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_open
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_tor
+import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
+import com.vitorpamplona.amethyst.commons.resources.favorite_apps
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
@@ -75,6 +82,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
@@ -114,6 +123,7 @@ private fun EmbeddedNostrAppTab(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
     // Matches FavoriteApp.NostrApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "nostr:$coordinate"
@@ -133,6 +143,7 @@ private fun EmbeddedNostrAppTab(
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
 
+    val scope = rememberCoroutineScope()
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
 
@@ -148,7 +159,9 @@ private fun EmbeddedNostrAppTab(
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
         controller.onNotice = { notice ->
-            noticeResId(notice)?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+            noticeResId(notice)?.let { res ->
+                scope.launch { Toast.makeText(context, loadStringRes(res), Toast.LENGTH_SHORT).show() }
+            }
         }
     }
 
@@ -163,7 +176,7 @@ private fun EmbeddedNostrAppTab(
                 title = title.ifBlank { coordinate },
                 isSandbox = true,
                 onReload = { controller.reload() },
-                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis())) },
+                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr) },
                 onInfo = { showAccess = true },
                 onPermissions = { nav.nav(Route.ConnectedAppDetail(permissionCoordinate)) },
                 isFavorite = isFavorite,
@@ -239,7 +252,7 @@ private fun UnavailableTab(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.favorite_apps)) }) },
+        topBar = { TopAppBar(title = { Text(stringRes(Res.string.favorite_apps)) }) },
         bottomBar = {
             AppBottomBar(Route.NostrApp(coordinate), nav, accountViewModel) { route -> nav.navBottomBar(route) }
         },
@@ -276,7 +289,7 @@ private fun AccessDialog(
         }
     val networkBody =
         if (showsNetwork) {
-            "\n\n" + stringResource(if (useTor) R.string.favorite_app_network_tor else R.string.favorite_app_network_open)
+            "\n\n" + stringRes(if (useTor) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open)
         } else {
             ""
         }
@@ -285,15 +298,15 @@ private fun AccessDialog(
         title = { Text(if (title.isBlank()) stringRes(Res.string.favorite_app_access_title) else title) },
         text = { Text(capsBody + networkBody) },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(android.R.string.ok)) }
         },
     )
 }
 
-private fun noticeResId(notice: String): Int? =
+private fun noticeResId(notice: String): StringResource? =
     when (notice) {
-        NappletEmbedContract.NOTICE_PUBLISHED -> R.string.favorite_notice_published
-        NappletEmbedContract.NOTICE_UPLOADED -> R.string.favorite_notice_uploaded
-        NappletEmbedContract.NOTICE_PAID -> R.string.favorite_notice_paid
+        NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
+        NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded
+        NappletEmbedContract.NOTICE_PAID -> Res.string.favorite_notice_paid
         else -> null
     }

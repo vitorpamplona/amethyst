@@ -26,7 +26,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**
@@ -54,7 +53,6 @@ class HealthConnectRationaleActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
-                StringResSetup()
                 HealthConnectRationaleScreen(
                     onOpenPrivacyPolicy = {
                         runCatching { startActivity(Intent(Intent.ACTION_VIEW, PRIVACY_POLICY_URL.toUri())) }

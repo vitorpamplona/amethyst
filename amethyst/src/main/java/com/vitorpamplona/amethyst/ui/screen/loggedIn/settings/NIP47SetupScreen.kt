@@ -41,13 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
 import com.vitorpamplona.amethyst.commons.resources.no_payment_targets_message
+import com.vitorpamplona.amethyst.commons.resources.payment_targets
+import com.vitorpamplona.amethyst.commons.resources.payment_targets_section_explainer
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetAddField
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -100,7 +102,7 @@ fun NIP47SetupScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.wallet_connect,
+                titleRes = Res.string.wallet_connect,
                 isActive = postViewModel::hasChanged,
                 onCancel = {
                     postViewModel.cancel()
@@ -168,8 +170,8 @@ private fun PaymentTargetsInlineSection(viewModel: PaymentTargetsViewModel) {
     val targets by viewModel.paymentTargets.collectAsStateWithLifecycle()
 
     SettingsCategory(
-        R.string.payment_targets,
-        R.string.payment_targets_section_explainer,
+        Res.string.payment_targets,
+        Res.string.payment_targets_section_explainer,
         SettingsCategorySpacingModifier,
     )
 

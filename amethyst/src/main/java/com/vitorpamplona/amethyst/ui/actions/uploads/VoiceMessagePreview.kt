@@ -48,13 +48,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.re_record
 import com.vitorpamplona.amethyst.commons.resources.record_a_message
 import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -125,7 +127,7 @@ fun VoiceMessagePreview(
                 ) {
                     Icon(
                         symbol = if (isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
-                        contentDescription = if (isPlaying) stringRes(context, R.string.pause) else stringRes(context, R.string.play),
+                        contentDescription = if (isPlaying) stringRes(Res.string.pause) else stringRes(Res.string.play),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -168,7 +170,7 @@ fun VoiceMessagePreview(
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(context, R.string.remove),
+                        contentDescription = stringRes(Res.string.remove),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

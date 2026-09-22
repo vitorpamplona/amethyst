@@ -44,14 +44,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_sats
+import com.vitorpamplona.amethyst.commons.resources.clink_offer_invalid_amount
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_pay_to
+import com.vitorpamplona.amethyst.commons.resources.clink_requesting_invoice
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
@@ -103,7 +108,7 @@ fun ClinkOfferPreview(
 
     errorMessage?.let {
         ErrorMessageDialog(
-            title = stringRes(context, R.string.error_dialog_pay_invoice_error),
+            title = stringRes(Res.string.error_dialog_pay_invoice_error),
             textContent = it,
             onDismiss = { errorMessage = null },
         )
@@ -139,7 +144,7 @@ fun ClinkOfferPreview(
             activeOffer.price?.let {
                 PaymentCardAmount(
                     amount = NumberFormat.getIntegerInstance().format(it),
-                    unit = stringRes(R.string.sats),
+                    unit = stringRes(Res.string.sats),
                 )
             }
         }
@@ -203,13 +208,13 @@ fun ClinkOfferPreview(
                     amountRange = response.range
                     errorMessage =
                         response.error?.takeIf { it.isNotBlank() }
-                            ?: stringRes(context, R.string.clink_offer_invalid_amount)
+                            ?: loadStringRes(Res.string.clink_offer_invalid_amount)
                 }
                 else -> {
                     requesting = false
                     errorMessage =
                         response?.error?.takeIf { it.isNotBlank() }
-                            ?: stringRes(context, R.string.error_dialog_pay_invoice_error)
+                            ?: loadStringRes(Res.string.error_dialog_pay_invoice_error)
                 }
             }
         }
@@ -226,7 +231,7 @@ fun ClinkOfferPreview(
             },
             shape = ButtonBorder,
         ) {
-            Text(text = stringRes(if (requesting) R.string.clink_requesting_invoice else R.string.pay))
+            Text(text = stringRes(if (requesting) Res.string.clink_requesting_invoice else Res.string.pay))
         }
     }
 }

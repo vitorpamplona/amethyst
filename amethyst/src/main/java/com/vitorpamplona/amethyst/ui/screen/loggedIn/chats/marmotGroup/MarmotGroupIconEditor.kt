@@ -38,9 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_add_photo
+import com.vitorpamplona.amethyst.commons.resources.marmot_change_photo
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_icon
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_photo
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -110,7 +111,7 @@ fun MarmotGroupIconEditor(
                 enabled = enabled,
                 onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             ) {
-                Text(stringRes(if (hasIcon) R.string.marmot_change_photo else R.string.marmot_add_photo))
+                Text(stringRes(if (hasIcon) Res.string.marmot_change_photo else Res.string.marmot_add_photo))
             }
 
             if (hasIcon) {

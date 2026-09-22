@@ -64,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +73,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -94,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.content_size
 import com.vitorpamplona.amethyst.commons.resources.countries
 import com.vitorpamplona.amethyst.commons.resources.discards_older_than
 import com.vitorpamplona.amethyst.commons.resources.duplicated_post
+import com.vitorpamplona.amethyst.commons.resources.errors
 import com.vitorpamplona.amethyst.commons.resources.event_retention
 import com.vitorpamplona.amethyst.commons.resources.fees_and_payments
 import com.vitorpamplona.amethyst.commons.resources.languages
@@ -115,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.resources.payment_required
 import com.vitorpamplona.amethyst.commons.resources.payments_url
 import com.vitorpamplona.amethyst.commons.resources.policies_and_links
 import com.vitorpamplona.amethyst.commons.resources.posting_policy
+import com.vitorpamplona.amethyst.commons.resources.privacy_policy
 import com.vitorpamplona.amethyst.commons.resources.publication
 import com.vitorpamplona.amethyst.commons.resources.relay_active_subscriptions
 import com.vitorpamplona.amethyst.commons.resources.relay_count_subscriptions
@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.resources.restricted_writes
 import com.vitorpamplona.amethyst.commons.resources.see_relay_feed
 import com.vitorpamplona.amethyst.commons.resources.self
 import com.vitorpamplona.amethyst.commons.resources.software
+import com.vitorpamplona.amethyst.commons.resources.spam
 import com.vitorpamplona.amethyst.commons.resources.subscription
 import com.vitorpamplona.amethyst.commons.resources.supported_grasps
 import com.vitorpamplona.amethyst.commons.resources.supports
@@ -210,7 +211,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.map
-import org.jetbrains.compose.resources.stringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -482,7 +482,7 @@ val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, Re
 @Composable
 fun KindChip(kind: Int) {
     val nameResId = kindDisplayName(kind)
-    val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
+    val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
     val (bg, fg) =
         when (kind) {
             in posts -> {
@@ -642,7 +642,7 @@ private fun FilterVisual(
                 // Since
                 filter.since?.let { since ->
                     FilterAttributeChip(
-                        text = stringRes(Res.string.relay_filter_since, timeAgoNoDot(since, context)),
+                        text = stringRes(Res.string.relay_filter_since, timeAgoNoDot(since)),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         textColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -651,7 +651,7 @@ private fun FilterVisual(
                 // Until
                 filter.until?.let { until ->
                     FilterAttributeChip(
-                        text = stringRes(Res.string.relay_filter_until, timeAgoNoDot(until, context)),
+                        text = stringRes(Res.string.relay_filter_until, timeAgoNoDot(until)),
                     )
                 }
 
@@ -779,7 +779,7 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
         ) {
             // Timestamp with Monospace font for alignment
             Text(
-                text = timeAgoNoDot(msg.time, context),
+                text = timeAgoNoDot(msg.time),
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             )
@@ -788,9 +788,9 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
             Text(
                 text =
                     when (msg) {
-                        is ErrorDebugMessage -> stringRes(R.string.errors)
+                        is ErrorDebugMessage -> stringRes(Res.string.errors)
                         is NoticeDebugMessage -> stringRes(Res.string.relay_notice)
-                        is SpamDebugMessage -> stringRes(R.string.spam)
+                        is SpamDebugMessage -> stringRes(Res.string.spam)
                     },
                 style =
                     MaterialTheme.typography.labelSmall.copy(
@@ -1365,13 +1365,13 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val pp = relay.privacy_policy
 
             if (pp != null) {
-                ClickableInfoRow(MaterialSymbols.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
+                ClickableInfoRow(MaterialSymbols.PrivacyTip, stringRes(Res.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(pp)
                     }
                 }
             } else {
-                InfoRow(MaterialSymbols.PrivacyTip, stringRes(R.string.privacy_policy), stringRes(Res.string.not_available_acronym))
+                InfoRow(MaterialSymbols.PrivacyTip, stringRes(Res.string.privacy_policy), stringRes(Res.string.not_available_acronym))
             }
 
             val ts = relay.terms_of_service
@@ -1441,7 +1441,7 @@ private fun RelayMonitorReportCard(
                 }
 
                 Text(
-                    text = timeAgoNoDot(event.createdAt, context),
+                    text = timeAgoNoDot(event.createdAt),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )

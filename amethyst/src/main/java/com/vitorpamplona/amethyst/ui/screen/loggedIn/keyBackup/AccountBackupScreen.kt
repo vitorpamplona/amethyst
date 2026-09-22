@@ -90,10 +90,19 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.account_backup_tips2_md
 import com.vitorpamplona.amethyst.commons.resources.account_backup_tips3_md
+import com.vitorpamplona.amethyst.commons.resources.backup_keys
 import com.vitorpamplona.amethyst.commons.resources.copies_the_nsec_id_your_password_to_the_clipboard_for_backup
+import com.vitorpamplona.amethyst.commons.resources.copy_my_secret_key
 import com.vitorpamplona.amethyst.commons.resources.encrypt_and_copy_my_secret_key
+import com.vitorpamplona.amethyst.commons.resources.failed_to_encrypt_key
+import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
+import com.vitorpamplona.amethyst.commons.resources.password_is_required
+import com.vitorpamplona.amethyst.commons.resources.secret_key_copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.show_encrypted_private_key_qr_code
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.resources.show_private_key_qr_code
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -101,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
+import com.vitorpamplona.amethyst.ui.note.rememberAuthPromptLabels
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -118,6 +128,7 @@ import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /** Best-effort delay before the plaintext nsec is wiped from the clipboard. */
 private const val CLIPBOARD_CLEAR_DELAY_MS = 60_000L
@@ -151,6 +162,8 @@ private fun AccountBackupScreenContent(
     // screen is on-screen. Cleared on dispose so the flag never leaks to other
     // screens. This is the only FLAG_SECURE usage in the app — scoped on purpose.
     val context = LocalContext.current
+    val authLabels = rememberAuthPromptLabels()
+    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
     DisposableEffect(context) {
         val window = context.getFragmentActivity()?.window
         window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -162,7 +175,7 @@ private fun AccountBackupScreenContent(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                stringRes(R.string.backup_keys),
+                stringRes(Res.string.backup_keys),
                 nav = nav,
             )
         },
@@ -256,7 +269,7 @@ private fun AccountBackupScreenContent(
                                         stringRes(Res.string.show_password)
                                     } else {
                                         stringRes(
-                                            R.string.hide_password,
+                                            Res.string.hide_password,
                                         )
                                     },
                             )
@@ -286,6 +299,8 @@ private fun AccountBackupScreenContent(
 private fun NSecCopyButton(accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
+    val authLabels = rememberAuthPromptLabels()
+    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
     val scope = rememberCoroutineScope()
 
     val keyguardLauncher =
@@ -299,8 +314,9 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
+                title = authLabelCopyKey,
                 context = context,
+                labels = authLabels,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { copyNSec(context, scope, accountViewModel.account, clipboardManager) },
                 onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
@@ -321,7 +337,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
             modifier = Modifier.padding(end = 5.dp),
         )
         Text(
-            stringRes(id = R.string.copy_my_secret_key),
+            stringRes(id = Res.string.copy_my_secret_key),
             color = MaterialTheme.colorScheme.onPrimary,
         )
     }
@@ -334,6 +350,8 @@ private fun EncryptNSecCopyButton(
 ) {
     val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
+    val authLabels = rememberAuthPromptLabels()
+    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
     val scope = rememberCoroutineScope()
 
     val keyguardLauncher =
@@ -349,8 +367,9 @@ private fun EncryptNSecCopyButton(
                 modifier = Modifier.padding(horizontal = 3.dp),
                 onClick = {
                     authenticate(
-                        title = stringRes(context, R.string.copy_my_secret_key),
+                        title = authLabelCopyKey,
                         context = context,
+                        labels = authLabels,
                         keyguardLauncher = keyguardLauncher,
                         onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
                         onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
@@ -402,7 +421,7 @@ private fun copyNSec(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.secret_key_copied_to_clipboard),
+                    loadStringRes(Res.string.secret_key_copied_to_clipboard),
                     Toast.LENGTH_SHORT,
                 ).show()
 
@@ -429,7 +448,7 @@ private fun encryptCopyNSec(
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.password_is_required),
+                    loadStringRes(Res.string.password_is_required),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -442,7 +461,7 @@ private fun encryptCopyNSec(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.secret_key_copied_to_clipboard),
+                            loadStringRes(Res.string.secret_key_copied_to_clipboard),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -451,7 +470,7 @@ private fun encryptCopyNSec(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.failed_to_encrypt_key),
+                            loadStringRes(Res.string.failed_to_encrypt_key),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
@@ -464,10 +483,12 @@ private fun encryptCopyNSec(
 private fun QrCodeButtonBase(
     accountViewModel: AccountViewModel,
     isEnabled: Boolean = true,
-    contentDescription: Int,
+    contentDescription: StringResource,
     onDialogShow: () -> String?,
 ) {
     val context = LocalContext.current
+    val authLabels = rememberAuthPromptLabels()
+    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
 
     // store the dialog open or close state
     var dialogOpen by remember { mutableStateOf(false) }
@@ -483,8 +504,9 @@ private fun QrCodeButtonBase(
         enabled = isEnabled,
         onClick = {
             authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
+                title = authLabelCopyKey,
                 context = context,
+                labels = authLabels,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { dialogOpen = true },
                 onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
@@ -511,7 +533,7 @@ private fun QrCodeButtonBase(
 private fun QrCodeButton(accountViewModel: AccountViewModel) {
     QrCodeButtonBase(
         accountViewModel = accountViewModel,
-        contentDescription = R.string.show_private_key_qr_code,
+        contentDescription = Res.string.show_private_key_qr_code,
         onDialogShow = {
             accountViewModel.account.settings.keyPair.privKey
                 ?.toNsec()
@@ -527,7 +549,7 @@ private fun QrCodeButtonEncrypted(
     QrCodeButtonBase(
         accountViewModel = accountViewModel,
         isEnabled = password.value.text.isNotBlank(),
-        contentDescription = R.string.show_encrypted_private_key_qr_code,
+        contentDescription = Res.string.show_encrypted_private_key_qr_code,
         onDialogShow = {
             accountViewModel.account.settings.keyPair.privKey
                 ?.toHexKey()

@@ -44,11 +44,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.action_unmute
+import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_empty
+import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_title
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_unknown
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -76,7 +77,7 @@ fun MutedThreadsScreen(
     InvalidateOnBlockListChange(accountViewModel) { viewModel.invalidateData() }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.settings_muted_threads_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.settings_muted_threads_title), nav) },
     ) { padding ->
         MutedThreadsList(
             modifier = Modifier.padding(padding),
@@ -112,7 +113,7 @@ private fun MutedThreadsList(
             }
 
             is FeedState.Empty -> {
-                EmptyState(R.string.settings_muted_threads_empty)
+                EmptyState(Res.string.settings_muted_threads_empty)
             }
 
             is FeedState.Loading -> {

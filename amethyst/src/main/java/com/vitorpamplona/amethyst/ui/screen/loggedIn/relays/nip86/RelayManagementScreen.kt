@@ -66,7 +66,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
@@ -74,7 +73,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -117,6 +115,11 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_descr
 import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_icon_url
 import com.vitorpamplona.amethyst.commons.resources.relay_management_relay_name
 import com.vitorpamplona.amethyst.commons.resources.relay_management_remove
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_events
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_ips
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_kinds
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
+import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
@@ -148,6 +151,7 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun RelayManagementScreen(
@@ -332,7 +336,7 @@ private fun RelayManagementContent(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(stringResource(tab.titleRes)) },
+                        text = { Text(stringRes(tab.titleRes)) },
                     )
                 }
             }
@@ -376,13 +380,13 @@ private fun RelayManagementContent(
 }
 
 private enum class ManagementTab(
-    val titleRes: Int,
+    val titleRes: StringResource,
 ) {
-    PUBKEYS(R.string.relay_management_tab_pubkeys),
-    EVENTS(R.string.relay_management_tab_events),
-    KINDS(R.string.relay_management_tab_kinds),
-    IPS(R.string.relay_management_tab_ips),
-    SETTINGS(R.string.relay_management_tab_settings),
+    PUBKEYS(Res.string.relay_management_tab_pubkeys),
+    EVENTS(Res.string.relay_management_tab_events),
+    KINDS(Res.string.relay_management_tab_kinds),
+    IPS(Res.string.relay_management_tab_ips),
+    SETTINGS(Res.string.relay_management_tab_settings),
 }
 
 // Pubkeys Tab
@@ -936,7 +940,7 @@ private fun KindEntryCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val nameResId = kindDisplayName(kind)
-            val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "")
+            val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
                 "Kind $kind: $name",

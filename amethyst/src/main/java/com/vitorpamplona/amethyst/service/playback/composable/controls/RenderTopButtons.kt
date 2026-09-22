@@ -46,17 +46,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.captions_turn_off
+import com.vitorpamplona.amethyst.commons.resources.captions_turn_on
+import com.vitorpamplona.amethyst.commons.resources.cast_stop_casting
+import com.vitorpamplona.amethyst.commons.resources.cast_to_device
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
 import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
@@ -98,6 +104,8 @@ fun RenderTopButtonsPreview() {
                 onPictureInPictureClick = {},
                 onZoomClick = {},
                 onOverflowQualityClick = {},
+                captionsEnabled = true,
+                onCaptionsClick = {},
                 modifier = Modifier,
                 accountViewModel = mockAccountViewModel(),
             )
@@ -142,6 +150,43 @@ fun RenderTopButtons(
     }
     val videoGroup = getVideoTrackGroup(tracks)
     val hasMultipleQualities = videoGroup != null && videoGroup.length > 1
+
+    // Captions are side-loaded from the event's `text-track` tags (MediaItemCache flags the first
+    // one default). The account setting is the source of truth, not the player: a player comes
+    // out of the warm pool carrying whatever track selection the previous video left on it, so
+    // reading the preference off the instance would make the button's state depend on which
+    // player this video happened to be handed.
+    val captionsEnabled by accountViewModel.captionsEnabledFlow().collectAsStateWithLifecycle()
+
+    // Push the preference onto whichever player is attached, and re-push when either changes.
+    // Disabling the whole track type rather than deselecting one group: the type-level switch
+    // survives the player later picking a different track.
+    LaunchedEffect(player, captionsEnabled) {
+        val alreadyDisabled = player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+        if (alreadyDisabled == captionsEnabled) {
+            player.trackSelectionParameters =
+                player.trackSelectionParameters
+                    .buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captionsEnabled)
+                    .build()
+        }
+    }
+
+    // A video with one track has nothing to choose between, so the button stays a toggle. Only a
+    // multi-language video opens a menu — paying a popup for a single "English" row would be a
+    // worse answer to the same tap.
+    val captionChoices = remember(tracks) { getTextTrackChoices(tracks) }
+    val captionsPopupOpen = remember { mutableStateOf(false) }
+    val onCaptionsClick =
+        remember(captionsEnabled, captionChoices) {
+            {
+                if (captionChoices.size > 1) {
+                    captionsPopupOpen.value = true
+                } else {
+                    accountViewModel.setCaptionsEnabled(!captionsEnabled)
+                }
+            }
+        }
 
     val overflowQualityOpen = remember { mutableStateOf(false) }
 
@@ -210,9 +255,30 @@ fun RenderTopButtons(
                 }
             },
         onOverflowQualityClick = { overflowQualityOpen.value = true },
+        captionsEnabled = captionsEnabled,
+        onCaptionsClick = onCaptionsClick,
         modifier = modifier,
         accountViewModel = accountViewModel,
     )
+
+    if (captionsPopupOpen.value) {
+        CaptionLanguagePopup(
+            choices = captionChoices,
+            captionsEnabled = captionsEnabled,
+            onSelectOff = {
+                accountViewModel.setCaptionsEnabled(false)
+                captionsPopupOpen.value = false
+            },
+            onSelectTrack = { choice ->
+                // The override goes straight onto the player (it is per-video), while the
+                // preference is what persists the fact that captions are wanted at all.
+                selectTextTrack(player, choice)
+                accountViewModel.setCaptionsEnabled(true)
+                captionsPopupOpen.value = false
+            },
+            onDismiss = { captionsPopupOpen.value = false },
+        )
+    }
 
     if (overflowQualityOpen.value && videoGroup != null) {
         VideoQualityPopup(
@@ -237,10 +303,15 @@ fun RenderTopButtons(
     onPictureInPictureClick: () -> Unit,
     onZoomClick: (() -> Unit)?,
     onOverflowQualityClick: () -> Unit,
+    captionsEnabled: Boolean,
+    onCaptionsClick: () -> Unit,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
+    val captionsIcon = if (captionsEnabled) MaterialSymbols.ClosedCaption else MaterialSymbols.ClosedCaptionDisabled
+    val captionsContentDescription =
+        stringRes(if (captionsEnabled) Res.string.captions_turn_off else Res.string.captions_turn_on)
     val shareDialogVisible = remember { mutableStateOf(false) }
     val castDialogVisible = remember { mutableStateOf(false) }
     val castSessionState by Amethyst.instance.castRegistry.sessionState
@@ -249,7 +320,7 @@ fun RenderTopButtons(
         (castSessionState as? CastSessionState.Casting)?.request?.url == mediaData.videoUri
     val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
     val castContentDescription =
-        stringRes(if (isThisVideoCasting) R.string.cast_stop_casting else R.string.cast_to_device)
+        stringRes(if (isThisVideoCasting) Res.string.cast_stop_casting else Res.string.cast_to_device)
     val onCastButtonClick =
         remember(isThisVideoCasting) {
             {
@@ -297,21 +368,28 @@ fun RenderTopButtons(
             VideoPlayerAction.Cast -> {
                 BuildConfig.IS_CASTING_AVAILABLE && mediaData.videoUri.startsWith("http", ignoreCase = true)
             }
+
+            // A video with no `text-track` has nothing to toggle, so the button stays out of the
+            // row entirely rather than sitting there inert.
+            VideoPlayerAction.Captions -> {
+                mediaData.captions.isNotEmpty()
+            }
         }
 
     val canFullscreen = onZoomClick != null
+    val hasCaptions = mediaData.captions.isNotEmpty()
     // ImmutableList so Compose can treat the action lists as stable parameters when they're
     // passed through to AnimatedOverflowMenuButton — a plain List is unstable and forces the
     // overflow tree to recompose whenever any unrelated parent state ticks.
     val topBarActions =
-        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported, hasCaptions) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.TopBar && isAvailable(it.action) }
                 .map { it.action }
                 .toImmutableList()
         }
     val overflowActions =
-        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported) {
+        remember(buttonItems, canFullscreen, hasMultipleQualities, isLive, pipSupported, hasCaptions) {
             buttonItems
                 .filter { it.location == VideoButtonLocation.OverflowMenu && isAvailable(it.action) }
                 .map { it.action }
@@ -346,7 +424,7 @@ fun RenderTopButtons(
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
                         symbol = MaterialSymbols.Share,
-                        contentDescription = stringRes(R.string.share_or_save),
+                        contentDescription = stringRes(Res.string.share_or_save),
                         onClick = { shareDialogVisible.value = true },
                     )
                 }
@@ -355,7 +433,7 @@ fun RenderTopButtons(
                     AnimatedTopBarIconButton(
                         controllerVisible = controllerVisible,
                         symbol = MaterialSymbols.SaveAlt,
-                        contentDescription = stringRes(R.string.download_to_phone),
+                        contentDescription = stringRes(Res.string.download_to_phone),
                         onClick = saveAction,
                     )
                 }
@@ -377,6 +455,15 @@ fun RenderTopButtons(
                         onClick = onCastButtonClick,
                     )
                 }
+
+                VideoPlayerAction.Captions -> {
+                    AnimatedTopBarIconButton(
+                        controllerVisible = controllerVisible,
+                        symbol = captionsIcon,
+                        contentDescription = captionsContentDescription,
+                        onClick = onCaptionsClick,
+                    )
+                }
             }
         }
 
@@ -394,6 +481,9 @@ fun RenderTopButtons(
                 onCastClick = onCastButtonClick,
                 castIcon = castIcon,
                 castContentDescription = castContentDescription,
+                onCaptionsClick = onCaptionsClick,
+                captionsIcon = captionsIcon,
+                captionsContentDescription = captionsContentDescription,
             )
         }
 

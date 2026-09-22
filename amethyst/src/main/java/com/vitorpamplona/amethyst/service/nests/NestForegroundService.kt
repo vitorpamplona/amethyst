@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -389,19 +390,19 @@ class NestForegroundService : Service() {
 
         val title =
             if (promoted) {
-                getString(R.string.nest_notification_broadcasting)
+                stringRes(this, R.string.nest_notification_broadcasting)
             } else {
-                getString(R.string.nest_notification_listening)
+                stringRes(this, R.string.nest_notification_listening)
             }
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText(getString(R.string.nest_notification_text))
+            .setContentText(stringRes(this, R.string.nest_notification_text))
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .setContentIntent(openIntent)
-            .addAction(0, getString(R.string.nest_notification_stop), stopIntent)
+            .addAction(0, stringRes(this, R.string.nest_notification_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .build()
     }
@@ -412,10 +413,10 @@ class NestForegroundService : Service() {
             mgr.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    getString(R.string.nest_notification_channel),
+                    stringRes(this, R.string.nest_notification_channel),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = getString(R.string.nest_notification_channel_description)
+                    description = stringRes(this@NestForegroundService, R.string.nest_notification_channel_description)
                     setShowBadge(false)
                 },
             )

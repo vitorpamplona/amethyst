@@ -38,9 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.mute_button
+import com.vitorpamplona.amethyst.commons.resources.muted_button
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -123,7 +125,7 @@ fun MuteButton(
 fun MutedIcon() {
     Icon(
         symbol = MaterialSymbols.AutoMirrored.VolumeOff,
-        contentDescription = stringRes(id = R.string.muted_button),
+        contentDescription = stringRes(id = Res.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )
@@ -133,7 +135,7 @@ fun MutedIcon() {
 fun MuteIcon() {
     Icon(
         symbol = MaterialSymbols.AutoMirrored.VolumeUp,
-        contentDescription = stringRes(id = R.string.mute_button),
+        contentDescription = stringRes(id = Res.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )

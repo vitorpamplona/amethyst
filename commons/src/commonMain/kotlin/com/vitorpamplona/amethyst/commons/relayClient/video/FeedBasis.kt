@@ -28,7 +28,30 @@ import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
-val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
+// The media types the video/shorts feeds will admit. HLS playlists are in here because a
+// blossom-hosted manifest is `https://host/<sha256>` with no extension at all, so the MIME is the
+// only thing SupportedContent can match on — without them an adaptive-only video is dropped from
+// the feed entirely. All four spellings appear in the wild; RichTextParser.isHlsMimeType and
+// MediaItemCache.toExoPlayerMimeType recognise the same set.
+val SUPPORTED_VIDEO_FEED_MIME_TYPES =
+    listOf(
+        "image/jpeg",
+        "image/gif",
+        "image/png",
+        "image/webp",
+        "image/avif",
+        "video/mp4",
+        "video/mpeg",
+        "video/webm",
+        "audio/aac",
+        "audio/mpeg",
+        "audio/webm",
+        "audio/wav",
+        "application/vnd.apple.mpegurl",
+        "application/x-mpegurl",
+        "audio/x-mpegurl",
+        "audio/mpegurl",
+    )
 val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
 
 val PictureAndVideoKinds =

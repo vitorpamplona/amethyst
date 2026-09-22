@@ -48,9 +48,24 @@ import androidx.compose.ui.text.input.TextFieldValue // kept for readonly dropdo
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.classifieds_category
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_accessories
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_art
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_books
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_clothing
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_collectibles
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_crafts
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_electronics
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_fitness
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_food
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_furniture
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_home
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_misc
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_office
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_other
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_pets
+import com.vitorpamplona.amethyst.commons.resources.classifieds_category_sports
 import com.vitorpamplona.amethyst.commons.resources.classifieds_condition
 import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_fair
 import com.vitorpamplona.amethyst.commons.resources.classifieds_condition_fair_explainer
@@ -264,22 +279,22 @@ fun SellProduct(postViewModel: NewProductViewModel) {
 
             val categoryList =
                 listOf(
-                    R.string.classifieds_category_clothing,
-                    R.string.classifieds_category_accessories,
-                    R.string.classifieds_category_electronics,
-                    R.string.classifieds_category_furniture,
-                    R.string.classifieds_category_collectibles,
-                    R.string.classifieds_category_books,
-                    R.string.classifieds_category_pets,
-                    R.string.classifieds_category_sports,
-                    R.string.classifieds_category_fitness,
-                    R.string.classifieds_category_art,
-                    R.string.classifieds_category_crafts,
-                    R.string.classifieds_category_home,
-                    R.string.classifieds_category_office,
-                    R.string.classifieds_category_food,
-                    R.string.classifieds_category_misc,
-                    R.string.classifieds_category_other,
+                    Res.string.classifieds_category_clothing,
+                    Res.string.classifieds_category_accessories,
+                    Res.string.classifieds_category_electronics,
+                    Res.string.classifieds_category_furniture,
+                    Res.string.classifieds_category_collectibles,
+                    Res.string.classifieds_category_books,
+                    Res.string.classifieds_category_pets,
+                    Res.string.classifieds_category_sports,
+                    Res.string.classifieds_category_fitness,
+                    Res.string.classifieds_category_art,
+                    Res.string.classifieds_category_crafts,
+                    Res.string.classifieds_category_home,
+                    Res.string.classifieds_category_office,
+                    Res.string.classifieds_category_food,
+                    Res.string.classifieds_category_misc,
+                    Res.string.classifieds_category_other,
                 )
 
             val categoryTypes = categoryList.map { Triple(it, stringRes(id = it), null) }

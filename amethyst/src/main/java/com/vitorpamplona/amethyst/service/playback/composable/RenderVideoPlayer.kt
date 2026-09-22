@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.Fullscree
 import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
 import com.vitorpamplona.amethyst.service.playback.composable.controls.METERED_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
+import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCaptions
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
@@ -216,6 +217,15 @@ fun RenderVideoPlayer(
             // background otherwise) avoids the black blink when re-entering the feed.
             shutter = {},
         )
+
+        // Above the picture but below the controls, so the transport bar and the bottom gradient
+        // draw over the cues rather than the other way around.
+        if (mediaItem.src.captions.isNotEmpty()) {
+            RenderCaptions(
+                controllerState = controllerState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
 
         RenderPlaybackError(
             controllerState = controllerState,

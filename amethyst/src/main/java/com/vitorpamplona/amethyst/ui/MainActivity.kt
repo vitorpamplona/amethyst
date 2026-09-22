@@ -34,16 +34,20 @@ import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
+import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
+import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
 import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -86,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
 
         setContent {
-            StringResSetup()
             AmethystTheme {
                 NowProvider {
                     AccountScreen(Amethyst.instance.sessionManager)
@@ -172,6 +175,56 @@ fun fragmentHashtagOrNull(uri: String): String? {
 
 fun isUrlRoute(uri: String) = uri.startsWith("url?id=") || uri.startsWith("nostr:url?id=")
 
+/**
+ * A private chatroom, addressed by its participants rather than by a message.
+ * Posted by DM notifications — see [NotificationRoutes.chatroomUri] for why a DM
+ * cannot deep-link through its own note.
+ */
+fun isChatroomRoute(uri: String) = uri.startsWith("chatroom?id=") || uri.startsWith("nostr:chatroom?id=")
+
+/**
+ * Note what this deliberately does *not* do: register the room on the account.
+ *
+ * `routeToMessage` would, and that is right for the in-app callers, but wrong here twice over.
+ * `uriToRoute` runs against whichever account is current, *before* `?account=` is read and the
+ * switch happens (`AppNavigation.NavigateIfIntentRequested`), so a DM notification for account B
+ * tapped while A is on screen would insert an empty conversation into **A**'s message list. And
+ * `nostr:` is an exported, browsable scheme, so any web page could post
+ * `nostr:chatroom?id=<hex>&account=…` and inject a room of its choosing.
+ *
+ * Nothing needs it: `ChatroomFeedFilter.chatroom()` calls `getOrCreatePrivateChatroom` when the
+ * screen actually opens, by which point the switch has happened and the room lands on the right
+ * account.
+ *
+ * The ids are still checked here — a room key is a set of pubkeys, so anything that isn't one is
+ * not a room, and a bad deep link should resolve to nothing rather than to an unopenable screen.
+ */
+fun chatroomRoute(uri: String): Route? {
+    val users =
+        uri
+            .findQueryParameterValue("id")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.takeIf { it.isNotEmpty() && it.all(::isPubKeyHex) }
+            ?.toSet() ?: return null
+
+    return Route.Room(ChatroomKey(users))
+}
+
+/** A bare 32-byte lowercase-hex pubkey, the only thing a chatroom key is made of. */
+private fun isPubKeyHex(value: String) = value.length == 64 && value.all { it in '0'..'9' || it in 'a'..'f' }
+
+/**
+ * A NIP-17 private note or reply, addressed by the rumor's own id because its `nevent`
+ * names the undeliverable gift wrap instead — see [NotificationRoutes.privateNoteUri].
+ */
+fun isPrivateNoteRoute(uri: String) = uri.startsWith("privatenote?id=") || uri.startsWith("nostr:privatenote?id=")
+
+fun privateNoteRoute(uri: String): Route? {
+    val id = uri.findQueryParameterValue("id") ?: return null
+    return Route.EventRedirect(id, isPrivate = true)
+}
+
 fun isConnectedAppRoute(uri: String) = uri.startsWith("connectedapp?coordinate=") || uri.startsWith("nostr:connectedapp?coordinate=")
 
 /**
@@ -232,7 +285,7 @@ fun uriToRoute(
     account: Account,
 ): Route? {
     if (isNotificationRoute(uri)) {
-        val scrollTo = runCatching { java.net.URI(uri.removePrefix(NOSTR_URI_PREFIX)).findParameterValue("scrollTo") }.getOrNull()
+        val scrollTo = uri.findQueryParameterValue("scrollTo")
         return Route.Notification(scrollToEventId = scrollTo)
     }
     if (isActiveSubscriptionsRoute(uri)) {
@@ -249,6 +302,12 @@ fun uriToRoute(
     }
     if (isUrlRoute(uri)) {
         return urlRoute(uri)
+    }
+    if (isChatroomRoute(uri)) {
+        return chatroomRoute(uri)
+    }
+    if (isPrivateNoteRoute(uri)) {
+        return privateNoteRoute(uri)
     }
     if (isConnectedAppRoute(uri)) {
         return connectedAppRoute(uri)
@@ -284,10 +343,15 @@ fun uriToRoute(
                 }
 
                 is NEvent -> {
-                    routeFor(
-                        note = LocalCache.getOrCreateNote(nip19.hex),
-                        loggedIn = account,
-                    ) ?: Route.EventRedirect(nip19.hex)
+                    val note = LocalCache.getOrCreateNote(nip19.hex)
+                    // Only fall back to the pointer's own kind while the body is missing: once the
+                    // event is cached it may belong somewhere the kind alone can't name (a channel,
+                    // a chatroom), and routeFor knows that.
+                    if (note.event == null) {
+                        routeForPointer(nip19.kind, nip19.hex) ?: Route.EventRedirect(nip19.hex)
+                    } else {
+                        routeFor(note = note, loggedIn = account) ?: Route.EventRedirect(nip19.hex)
+                    }
                 }
 
                 is NAddress -> {

@@ -50,7 +50,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
@@ -60,9 +59,21 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_work_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_archive
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_delete
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.buzz_channel_unarchive
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.resources.relay_group_delete
+import com.vitorpamplona.amethyst.commons.resources.relay_group_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.relay_group_invite_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_edit
 import com.vitorpamplona.amethyst.commons.resources.relay_group_menu_members
@@ -70,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pending
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
+import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -265,7 +277,7 @@ fun RelayGroupTopBar(
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         symbol = MaterialSymbols.MoreVert,
-                        contentDescription = stringRes(R.string.more_options),
+                        contentDescription = stringRes(Res.string.more_options),
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -281,7 +293,7 @@ fun RelayGroupTopBar(
                     if (isBuzzRelay && isDm) {
                         val dmHidden = channel.groupId.id in (hiddenDms[myPubkey] ?: emptySet())
                         DropdownMenuItem(
-                            text = { Text(stringRes(if (dmHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
+                            text = { Text(stringRes(if (dmHidden) Res.string.add_to_messages else Res.string.remove_from_messages)) },
                             onClick = {
                                 menuOpen = false
                                 if (dmHidden) {
@@ -322,11 +334,13 @@ fun RelayGroupTopBar(
                     }
                     if (naddr != null) {
                         val context = LocalContext.current
+                        val shareLinkTitle = stringRes(Res.string.quick_action_share_browser_link)
+                        val shareChooserTitle = stringRes(Res.string.quick_action_share)
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.quick_action_share)) },
+                            text = { Text(stringRes(Res.string.quick_action_share)) },
                             onClick = {
                                 menuOpen = false
-                                shareRelayGroup(context, naddr)
+                                shareRelayGroup(context, naddr, shareLinkTitle, shareChooserTitle)
                             },
                         )
                     }
@@ -370,7 +384,7 @@ fun RelayGroupTopBar(
                         // what makes the entry flip so the action is visibly undoable. Leave still pops.
                         val onMyList = channel.groupId in joinedGroupIds
                         DropdownMenuItem(
-                            text = { Text(stringRes(if (onMyList) R.string.remove_from_messages else R.string.add_to_messages)) },
+                            text = { Text(stringRes(if (onMyList) Res.string.remove_from_messages else Res.string.add_to_messages)) },
                             onClick = {
                                 menuOpen = false
                                 if (onMyList) {
@@ -381,7 +395,7 @@ fun RelayGroupTopBar(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+                            text = { Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 menuOpen = false
                                 accountViewModel.leaveRelayGroup(channel)
@@ -394,7 +408,7 @@ fun RelayGroupTopBar(
                         if (isBuzzRelay && !isDm && displayMembership == RelayGroupMembership.ADMIN) {
                             val archived = channel.isArchived()
                             DropdownMenuItem(
-                                text = { Text(stringRes(if (archived) R.string.buzz_channel_unarchive else R.string.buzz_channel_archive)) },
+                                text = { Text(stringRes(if (archived) Res.string.buzz_channel_unarchive else Res.string.buzz_channel_archive)) },
                                 onClick = {
                                     menuOpen = false
                                     accountViewModel.archiveRelayGroup(channel, !archived)
@@ -408,7 +422,7 @@ fun RelayGroupTopBar(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        text = stringRes(if (isBuzzRelay) R.string.buzz_channel_delete else R.string.relay_group_delete),
+                                        text = stringRes(if (isBuzzRelay) Res.string.buzz_channel_delete else Res.string.relay_group_delete),
                                         color = MaterialTheme.colorScheme.error,
                                     )
                                 },
@@ -441,14 +455,14 @@ fun RelayGroupTopBar(
     }
 
     if (confirmDelete) {
-        val deleteLabel = stringRes(if (isBuzzRelay) R.string.buzz_channel_delete else R.string.relay_group_delete)
+        val deleteLabel = stringRes(if (isBuzzRelay) Res.string.buzz_channel_delete else Res.string.relay_group_delete)
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(deleteLabel) },
             text = {
                 Text(
                     stringRes(
-                        if (isBuzzRelay) R.string.buzz_channel_delete_confirm else R.string.relay_group_delete_confirm,
+                        if (isBuzzRelay) Res.string.buzz_channel_delete_confirm else Res.string.relay_group_delete_confirm,
                         channel.toBestDisplayName(),
                     ),
                 )
@@ -464,7 +478,7 @@ fun RelayGroupTopBar(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -493,15 +507,17 @@ private fun DmParticipantTitle(
 private fun shareRelayGroup(
     context: Context,
     naddr: String,
+    linkTitle: String,
+    chooserTitle: String,
 ) {
     val sendIntent =
         Intent().apply {
             action = Intent.ACTION_SEND
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, njumpLink(naddr))
-            putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.quick_action_share_browser_link))
+            putExtra(Intent.EXTRA_TITLE, linkTitle)
         }
-    context.startActivity(Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share)))
+    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 /** A small colored pill naming the user's role/status in the group. */

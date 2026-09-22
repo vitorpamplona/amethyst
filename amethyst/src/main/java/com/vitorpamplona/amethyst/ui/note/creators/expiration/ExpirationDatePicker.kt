@@ -53,12 +53,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.expiration_date_explainer
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
 import com.vitorpamplona.amethyst.commons.resources.expiration_date_select
 import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
 import com.vitorpamplona.amethyst.commons.resources.expiration_time
@@ -108,13 +108,13 @@ fun ExpirationDatePicker(model: IExpiration) {
         ) {
             Icon(
                 symbol = MaterialSymbols.Timer,
-                contentDescription = stringRes(R.string.expiration_date_label),
+                contentDescription = stringRes(Res.string.expiration_date_label),
                 modifier = Modifier.size(20.dp),
                 tint = Color(0xFFFF6600),
             )
 
             Text(
-                text = stringRes(R.string.expiration_date_label),
+                text = stringRes(Res.string.expiration_date_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -141,10 +141,10 @@ fun ExpirationDatePicker(model: IExpiration) {
                 Spacer(Modifier.width(12.dp))
 
                 if (model.expirationDate < TimeUtils.oneMinuteFromNow()) {
-                    Text(stringRes(R.string.expiration_date_label) + " " + model.expirationDate, style = MaterialTheme.typography.bodyLarge)
+                    Text(stringRes(Res.string.expiration_date_label) + " " + model.expirationDate, style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(
-                        text = stringRes(Res.string.expiration_expires_in, timeAheadNoDot(model.expirationDate, context)),
+                        text = stringRes(Res.string.expiration_expires_in, timeAheadNoDot(model.expirationDate)),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 
 class RelayExporter(
     val context: Context,
 ) {
-    fun export(collection: RelayListCollection) {
+    suspend fun export(collection: RelayListCollection) {
         val text = buildExportText(collection)
 
         val sendIntent =
@@ -35,20 +38,20 @@ class RelayExporter(
                 action = Intent.ACTION_SEND
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_TITLE, context.getString(R.string.export_relay_settings))
+                putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.export_relay_settings))
             }
 
         val shareIntent =
             Intent.createChooser(
                 sendIntent,
-                context.getString(R.string.export_relay_settings),
+                loadStringRes(Res.string.export_relay_settings),
             )
         context.startActivity(shareIntent)
     }
 
-    fun buildExportText(collection: RelayListCollection): String {
+    suspend fun buildExportText(collection: RelayListCollection): String {
         val builder = StringBuilder()
-        builder.appendLine("# ${context.getString(R.string.relay_settings)}")
+        builder.appendLine("# ${loadStringRes(Res.string.relay_settings)}")
         builder.appendLine()
 
         collection.sections().forEach { section ->
@@ -58,13 +61,13 @@ class RelayExporter(
         return builder.toString().trimEnd()
     }
 
-    private fun formatSection(
+    private suspend fun formatSection(
         section: RelaySection,
         builder: StringBuilder,
     ) {
         if (section.relays.isEmpty()) return
-        builder.appendLine("## ${context.getString(section.titleRes)}")
-        builder.appendLine("# ${context.getString(section.descriptionRes)}")
+        builder.appendLine("## ${loadStringRes(section.titleRes)}")
+        builder.appendLine("# ${loadStringRes(section.descriptionRes)}")
         builder.appendLine()
         section.relays.forEach { relay ->
             builder.appendLine(relay.relay.url)

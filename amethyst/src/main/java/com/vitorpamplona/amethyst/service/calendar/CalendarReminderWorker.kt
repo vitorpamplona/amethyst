@@ -27,12 +27,14 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_body
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -98,12 +100,11 @@ class CalendarReminderWorker(
             // enters the lead window — the old notification stays valid in the system tray.
             if (store.wasNotified(eventId, start)) return@forEach
 
-            val title = view.title ?: stringRes(applicationContext, R.string.calendar_reminder_default_title)
+            val title = view.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
             val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
             val body =
-                pluralStringRes(
-                    applicationContext,
-                    R.plurals.calendar_reminder_body,
+                loadPluralStringRes(
+                    Res.plurals.calendar_reminder_body,
                     minutesAway,
                     minutesAway,
                 )

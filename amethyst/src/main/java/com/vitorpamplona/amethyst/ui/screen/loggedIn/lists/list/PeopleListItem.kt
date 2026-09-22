@@ -47,12 +47,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_dialog_title
@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_current_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_edit_list_metadata
 import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
 import com.vitorpamplona.amethyst.commons.resources.follow_set_icon_description
@@ -68,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_first_part
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_dialog_indicator_second_part
 import com.vitorpamplona.amethyst.commons.resources.list_management_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
+import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
@@ -329,7 +332,7 @@ private fun ListOptionsMenu(
             onDismiss = onDismiss,
         ) {
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {
+                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.follow_set_edit_list_metadata)) {
                     onListEditMetadata()
                     onDismiss()
                 }
@@ -339,7 +342,7 @@ private fun ListOptionsMenu(
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     onDismiss()
                 }
@@ -417,10 +420,10 @@ private fun ListRenameDialog(
                     onListRename(newName)
                     onDismissDialog()
                 },
-            ) { Text(text = stringRes(R.string.rename)) }
+            ) { Text(text = stringRes(Res.string.rename)) }
         },
         dismissButton = {
-            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+            Button(onClick = onDismissDialog) { Text(text = stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -483,7 +486,7 @@ private fun ListModifyDescriptionDialog(
             ) { Text(text = stringRes(Res.string.follow_set_desc_modify_btn_label)) }
         },
         dismissButton = {
-            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+            Button(onClick = onDismissDialog) { Text(text = stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -553,7 +556,7 @@ private fun ListCloneDialog(
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

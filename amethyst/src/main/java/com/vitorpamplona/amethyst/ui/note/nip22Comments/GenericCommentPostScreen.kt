@@ -62,7 +62,6 @@ import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.geo_post_posting_to
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.post_anonymously
+import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -405,7 +405,7 @@ private fun GenericCommentPostBody(
                         }
                     }
                     MessageField(
-                        R.string.what_s_on_your_mind,
+                        Res.string.what_s_on_your_mind,
                         postViewModel,
                         onContentReceived = { uri, mimeType ->
                             postViewModel.selectImage(

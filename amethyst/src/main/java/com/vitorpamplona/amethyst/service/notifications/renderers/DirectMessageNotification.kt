@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
@@ -96,7 +98,23 @@ object DirectMessageNotification {
             }
 
         val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(chatNote, accountNpub)
+        // The room, not the message: a rumor's nevent cites the gift wrap that delivered it,
+        // which is gone from LocalCache as soon as the process dies and is unfetchable from
+        // any relay. See [NotificationRoutes.chatroomUri].
+        val uri = NotificationRoutes.chatroomUri(chatRoom, accountNpub)
+
+        // Names the chat for the shade's Conversations section. Withheld when the account has
+        // turned message content off, because publishing it puts the counterparty's name and
+        // avatar in the launcher — see [ConversationShortcuts].
+        val conversation =
+            if (account.settings.showMessagesInNotifications.value) {
+                Conversation(
+                    id = NotificationRoutes.chatroomShortcutId(chatRoom, accountNpub),
+                    label = roomLabel(chatRoom, author),
+                )
+            } else {
+                null
+            }
         val replyAction =
             if (decrypt) {
                 null // NIP-04 is read-only in the tray
@@ -125,7 +143,22 @@ object DirectMessageNotification {
                 applicationContext = context,
                 accountPictureUrl = account.userProfile().profilePicture(),
                 replyAction = replyAction,
+                conversation = conversation,
             )
         }
     }
+
+    /**
+     * What to call the chat. A one-to-one room is the other person, which is also the sender;
+     * a group room is everyone in it, so the sender's name alone would mislabel it.
+     */
+    private fun roomLabel(
+        chatRoom: ChatroomKey,
+        author: User,
+    ): String =
+        if (chatRoom.users.size <= 1) {
+            author.toBestDisplayName()
+        } else {
+            chatRoom.users.joinToString(", ") { LocalCache.getOrCreateUser(it).toBestDisplayName() }
+        }
 }

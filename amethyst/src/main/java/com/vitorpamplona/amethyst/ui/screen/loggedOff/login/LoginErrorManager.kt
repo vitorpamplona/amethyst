@@ -23,16 +23,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.jetbrains.compose.resources.StringResource
 
 class LoginErrorManager {
     interface IErrorMsg
 
     class SingleErrorMsg(
-        val errorResId: Int,
+        val errorResId: StringResource,
     ) : IErrorMsg
 
     class ParamsErrorMsg(
-        val errorResId: Int,
+        val errorResId: StringResource,
         val params: Array<out String>,
     ) : IErrorMsg
 
@@ -42,12 +43,12 @@ class LoginErrorManager {
         error = null
     }
 
-    fun error(resourceId: Int) {
+    fun error(resourceId: StringResource) {
         error = SingleErrorMsg(resourceId)
     }
 
     fun error(
-        resourceId: Int,
+        resourceId: StringResource,
         vararg params: String,
     ) {
         error = ParamsErrorMsg(resourceId, params)

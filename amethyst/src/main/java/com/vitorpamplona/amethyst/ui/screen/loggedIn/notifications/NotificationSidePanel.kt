@@ -43,9 +43,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -122,7 +123,7 @@ fun NotificationSidePanel(
                 )
                 Spacer(modifier = StdHorzSpacer)
                 Text(
-                    text = stringRes(R.string.route_notifications),
+                    text = stringRes(Res.string.route_notifications),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }

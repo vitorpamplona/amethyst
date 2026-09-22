@@ -68,11 +68,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_to_hunt
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived_notice
@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_navigate
 import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
+import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpoilerHint
@@ -107,7 +108,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.TypeModifier
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * The page every geocaching entry point lands on: a feed card, an `naddr` deep link, a
@@ -153,12 +153,12 @@ fun GeocacheDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.route_geocache_detail)) },
+                title = { Text(stringRes(Res.string.route_geocache_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
@@ -228,7 +228,7 @@ fun GeocacheDetailScreen(
 private fun LoadingPlaceholder() {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Text(
-            text = stringResource(Res.string.geocache_loading),
+            text = stringRes(Res.string.geocache_loading),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -319,7 +319,7 @@ private fun GeocacheDetailBody(
 
         mission?.let {
             GeocacheAccentPanel(palette.proven) {
-                SectionLabel(stringResource(Res.string.geocache_mission_section))
+                SectionLabel(stringRes(Res.string.geocache_mission_section))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
@@ -336,7 +336,7 @@ private fun GeocacheDetailBody(
         // a cache with six pictures does not push its own logs off the screen.
         if (showImages && images.size > 1) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel(stringResource(Res.string.geocache_photos_section))
+                SectionLabel(stringRes(Res.string.geocache_photos_section))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(images.drop(1)) { url ->
                         MyAsyncImage(
@@ -357,11 +357,11 @@ private fun GeocacheDetailBody(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            SectionLabel(stringResource(Res.string.geocache_logs_section) + " · " + logs.all.size)
+            SectionLabel(stringRes(Res.string.geocache_logs_section) + " · " + logs.all.size)
 
             if (logs.all.isEmpty()) {
                 Text(
-                    text = stringResource(Res.string.geocache_no_logs),
+                    text = stringRes(Res.string.geocache_no_logs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -442,7 +442,7 @@ private fun GeocacheNavigateRow(
             tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.size(6.dp))
-        Text(stringResource(Res.string.geocache_navigate))
+        Text(stringRes(Res.string.geocache_navigate))
     }
 }
 
@@ -485,7 +485,7 @@ private fun GeocacheActionBar(
             when {
                 listing.isArchived() ->
                     GeocacheAccentPanel(palette.over) {
-                        StatusStrip(stringResource(Res.string.geocache_archived_notice))
+                        StatusStrip(stringRes(Res.string.geocache_archived_notice))
                     }
 
                 winner != null && winner != me ->
@@ -495,7 +495,7 @@ private fun GeocacheActionBar(
 
                 listing.isFirstToFind() ->
                     GeocacheAccentPanel(palette.prize) {
-                        StatusStrip("🥇  " + stringResource(Res.string.geocache_ftf_available))
+                        StatusStrip("🥇  " + stringRes(Res.string.geocache_ftf_available))
                     }
             }
 
@@ -504,19 +504,19 @@ private fun GeocacheActionBar(
                     Button(
                         onClick = { nav.nav(Route.LogGeocacheFind(address)) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(Res.string.geocache_i_found_it)) }
+                    ) { Text(stringRes(Res.string.geocache_i_found_it)) }
 
                     OutlinedButton(
                         onClick = { onOpenSheet(GeocacheLogSheetType.DNF) },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(Res.string.geocache_didnt_find_it)) }
+                    ) { Text(stringRes(Res.string.geocache_didnt_find_it)) }
                 }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                SmallAction(stringResource(Res.string.geocache_add_note)) { onOpenSheet(GeocacheLogSheetType.NOTE) }
-                SmallAction(stringResource(Res.string.geocache_needs_maintenance)) { onOpenSheet(GeocacheLogSheetType.MAINTENANCE) }
-                SmallAction(stringResource(Res.string.geocache_add_to_hunt)) { onAddToHunt() }
+                SmallAction(stringRes(Res.string.geocache_add_note)) { onOpenSheet(GeocacheLogSheetType.NOTE) }
+                SmallAction(stringRes(Res.string.geocache_needs_maintenance)) { onOpenSheet(GeocacheLogSheetType.MAINTENANCE) }
+                SmallAction(stringRes(Res.string.geocache_add_to_hunt)) { onAddToHunt() }
             }
         }
     }

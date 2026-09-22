@@ -48,9 +48,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_setup_short
 import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
+import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
+import com.vitorpamplona.amethyst.commons.resources.privacy_options
+import com.vitorpamplona.amethyst.commons.resources.tor_preset
+import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_images
+import com.vitorpamplona.amethyst.commons.resources.tor_use_images_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_media_uploads
+import com.vitorpamplona.amethyst.commons.resources.tor_use_media_uploads_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_money_operations
+import com.vitorpamplona.amethyst.commons.resources.tor_use_money_operations_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_new_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_new_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_nip05_verification
+import com.vitorpamplona.amethyst.commons.resources.tor_use_nip05_verification_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_onion_address
+import com.vitorpamplona.amethyst.commons.resources.tor_use_onion_address_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_trusted_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_trusted_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_url_previews
+import com.vitorpamplona.amethyst.commons.resources.tor_use_url_previews_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_videos
+import com.vitorpamplona.amethyst.commons.resources.tor_use_videos_explainer
+import com.vitorpamplona.amethyst.commons.resources.use_internal_tor
+import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -66,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun ConnectTorDialog(
@@ -137,7 +164,7 @@ fun TorDialogContents(
         topBar = {
             val toastMessage = stringRes(Res.string.invalid_port_number)
             SavingTopBar(
-                titleRes = R.string.privacy_options,
+                titleRes = Res.string.privacy_options,
                 onCancel = onClose,
                 onPost = {
                     try {
@@ -170,8 +197,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
         verticalArrangement = Arrangement.spacedBy(Size10dp),
     ) {
         SettingsRow(
-            R.string.use_internal_tor,
-            R.string.use_internal_tor_explainer,
+            Res.string.use_internal_tor,
+            Res.string.use_internal_tor_explainer,
             persistentListOf(
                 TitleExplainer(stringRes(TorType.OFF.resourceId)),
                 TitleExplainer(stringRes(TorType.INTERNAL.resourceId)),
@@ -188,8 +215,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
             exit = fadeOut() + shrinkVertically(),
         ) {
             SettingsRow(
-                R.string.orbot_socks_port,
-                R.string.connect_through_your_orbot_setup_short,
+                Res.string.orbot_socks_port,
+                Res.string.connect_through_your_orbot_setup_short,
             ) {
                 OutlinedTextField(
                     value = dialogViewModel.socksPortStr.value,
@@ -220,8 +247,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
             verticalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             SettingsRow(
-                R.string.tor_preset,
-                R.string.tor_preset_explainer,
+                Res.string.tor_preset,
+                Res.string.tor_preset_explainer,
                 persistentListOf(
                     TitleExplainer(stringRes(TorPresetType.ONLY_WHEN_NEEDED.resourceId), stringRes(TorPresetType.ONLY_WHEN_NEEDED.explainerId)),
                     TitleExplainer(stringRes(TorPresetType.DEFAULT.resourceId), stringRes(TorPresetType.DEFAULT.explainerId)),
@@ -235,71 +262,71 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
             }
 
             SwitchSettingsRow(
-                R.string.tor_use_onion_address,
-                R.string.tor_use_onion_address_explainer,
+                Res.string.tor_use_onion_address,
+                Res.string.tor_use_onion_address_explainer,
                 dialogViewModel.onionRelaysViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_dm_relays,
-                R.string.tor_use_dm_relays_explainer,
+                Res.string.tor_use_dm_relays,
+                Res.string.tor_use_dm_relays_explainer,
                 dialogViewModel.dmRelaysViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_new_relays,
-                R.string.tor_use_new_relays_explainer,
+                Res.string.tor_use_new_relays,
+                Res.string.tor_use_new_relays_explainer,
                 dialogViewModel.newRelaysViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_trusted_relays,
-                R.string.tor_use_trusted_relays_explainer,
+                Res.string.tor_use_trusted_relays,
+                Res.string.tor_use_trusted_relays_explainer,
                 dialogViewModel.trustedRelaysViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_money_operations,
-                R.string.tor_use_money_operations_explainer,
+                Res.string.tor_use_money_operations,
+                Res.string.tor_use_money_operations_explainer,
                 dialogViewModel.moneyOperationsViaTor,
             )
 
             /*
              * Too hard to separate Coil into regular images and profile pics
              SwitchSettingsRow(
-             R.string.tor_use_profile_pictures,
-             R.string.tor_use_profile_pictures_explainer,
+             Res.string.tor_use_profile_pictures,
+             Res.string.tor_use_profile_pictures_explainer,
              dialogViewModel.profilePicsViaTor,
              )
              */
 
             SwitchSettingsRow(
-                R.string.tor_use_nip05_verification,
-                R.string.tor_use_nip05_verification_explainer,
+                Res.string.tor_use_nip05_verification,
+                Res.string.tor_use_nip05_verification_explainer,
                 dialogViewModel.nip05VerificationsViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_url_previews,
-                R.string.tor_use_url_previews_explainer,
+                Res.string.tor_use_url_previews,
+                Res.string.tor_use_url_previews_explainer,
                 dialogViewModel.urlPreviewsViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_images,
-                R.string.tor_use_images_explainer,
+                Res.string.tor_use_images,
+                Res.string.tor_use_images_explainer,
                 dialogViewModel.imagesViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_videos,
-                R.string.tor_use_videos_explainer,
+                Res.string.tor_use_videos,
+                Res.string.tor_use_videos_explainer,
                 dialogViewModel.videosViaTor,
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_media_uploads,
-                R.string.tor_use_media_uploads_explainer,
+                Res.string.tor_use_media_uploads,
+                Res.string.tor_use_media_uploads_explainer,
                 dialogViewModel.mediaUploadsViaTor,
             )
         }
@@ -308,8 +335,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
 @Composable
 fun SwitchSettingsRow(
-    name: Int,
-    desc: Int,
+    name: StringResource,
+    desc: StringResource,
     checked: MutableState<Boolean>,
 ) {
     SettingsRow(

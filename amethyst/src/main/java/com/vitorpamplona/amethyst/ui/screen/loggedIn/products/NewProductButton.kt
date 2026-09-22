@@ -24,9 +24,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -49,7 +50,7 @@ fun NewProductButton(
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = R.string.new_product),
+            contentDescription = stringRes(id = Res.string.new_product),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

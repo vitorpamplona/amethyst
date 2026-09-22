@@ -59,10 +59,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_captions
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_captions_description
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_cast
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_cast_description
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_download
@@ -111,7 +113,7 @@ fun VideoPlayerSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.video_player_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.video_player_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
@@ -359,6 +361,7 @@ fun videoPlayerActionName(action: VideoPlayerAction): String =
         VideoPlayerAction.Download -> stringRes(Res.string.video_player_settings_action_download)
         VideoPlayerAction.PictureInPicture -> stringRes(Res.string.video_player_settings_action_pip)
         VideoPlayerAction.Cast -> stringRes(Res.string.video_player_settings_action_cast)
+        VideoPlayerAction.Captions -> stringRes(Res.string.video_player_settings_action_captions)
     }
 
 @Composable
@@ -371,4 +374,5 @@ fun videoPlayerActionDescription(action: VideoPlayerAction): String =
         VideoPlayerAction.Download -> stringRes(Res.string.video_player_settings_action_download_description)
         VideoPlayerAction.PictureInPicture -> stringRes(Res.string.video_player_settings_action_pip_description)
         VideoPlayerAction.Cast -> stringRes(Res.string.video_player_settings_action_cast_description)
+        VideoPlayerAction.Captions -> stringRes(Res.string.video_player_settings_action_captions_description)
     }

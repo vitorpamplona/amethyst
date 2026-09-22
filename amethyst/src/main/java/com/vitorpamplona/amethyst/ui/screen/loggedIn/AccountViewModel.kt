@@ -39,7 +39,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -61,18 +60,53 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
+import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_sent
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
+import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
+import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_event
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_recipient
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_private_note
+import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_title
+import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
+import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.signer_illegal_state_exception_description
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception
+import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_description
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
+import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
+import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -108,7 +142,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
@@ -297,11 +330,11 @@ class AccountViewModel(
         // silently — the composer already returned when it was enqueued.
         viewModelScope.launch {
             Amethyst.instance.powPublishQueue.failures.collect { failure ->
-                val kindLabel = stringRes(Amethyst.instance.appContext, powKindLabelRes(failure.kind))
+                val kindLabel = loadStringRes(powKindLabelRes(failure.kind))
                 if (failure.willRetryOnRestart) {
-                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed_retry, kindLabel)
+                    toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
                 } else {
-                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                    toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
                 }
             }
         }
@@ -635,7 +668,7 @@ class AccountViewModel(
         roleIds: List<String>,
     ) = launchSigner {
         if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
-            toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
+            toastManager.toast(Res.string.concord_members_roles_title, Res.string.concord_members_roles_failed)
         }
     }
 
@@ -1191,7 +1224,7 @@ class AccountViewModel(
     }
 
     /** True when the account has at least one NIP-47 wallet configured. */
-    fun hasNwcWallet(): Boolean =
+    suspend fun hasNwcWallet(): Boolean =
         account.settings.nwcWallets.value
             .isNotEmpty()
 
@@ -1210,10 +1243,10 @@ class AccountViewModel(
     ) = launchSigner {
         account.zaps.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
             when (response) {
-                is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
+                is PaySuccessResponse -> toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
                 is IErrorResponseLike ->
-                    toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, response.errorMessage() ?: "")
-                else -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, "")
+                    toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_failed, response.errorMessage() ?: "")
+                else -> toastManager.toast(Res.string.bolt12_offers, Res.string.bolt12_payment_failed, "")
             }
         }
     }
@@ -1229,7 +1262,7 @@ class AccountViewModel(
      * errors on [toastManager]. The external-wallet intent fallback is skipped while [streaming]
      * (you can't auto-fire a wallet app every minute); streaming is gated to NWC/CLINK callers.
      */
-    fun payV4V(
+    suspend fun payV4V(
         value: PodcastValue,
         totalSats: Long,
         podcastName: String?,
@@ -1279,6 +1312,11 @@ class AccountViewModel(
                 senderName = account.userProfile().toBestDisplayName(),
             )
 
+        // onPayInvoicesViaIntent is a plain callback the payment handler invokes later,
+        // so both strings are resolved here, while still inside the signer coroutine.
+        val noWalletFoundStr = loadStringRes(Res.string.no_wallet_found)
+        val zapErrorTitle = loadStringRes(Res.string.error_dialog_zap_error)
+
         V4VPaymentHandler(account).pay(
             value = value,
             totalMilliSats = totalMilliSats,
@@ -1295,8 +1333,8 @@ class AccountViewModel(
             onPayInvoicesViaIntent = { invoices ->
                 if (!streaming) {
                     invoices.forEach { invoice ->
-                        payViaIntent(invoice, context, onPaid = {}, onError = {
-                            toastManager.toast(stringRes(context, R.string.error_dialog_zap_error), it)
+                        payViaIntent(invoice, context, noWalletFoundStr, onPaid = {}, onError = {
+                            toastManager.toast(zapErrorTitle, it)
                         })
                     }
                 }
@@ -1322,8 +1360,8 @@ class AccountViewModel(
         // on a private rumor that would leak the rumor id to public relays.
         if (baseNote.isPrivateRumor()) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_private_note),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_private_note),
                 baseNote.author,
             )
             return@launchSigner
@@ -1331,8 +1369,8 @@ class AccountViewModel(
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_recipient),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_no_recipient),
                 null,
             )
             return@launchSigner
@@ -1340,8 +1378,8 @@ class AccountViewModel(
         val zappedEvent = baseNote.toEventHint<com.vitorpamplona.quartz.nip01Core.core.Event>()
         if (zappedEvent == null) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_event),
+                loadStringRes(Res.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_no_event),
                 baseNote.author,
             )
             return@launchSigner
@@ -1361,7 +1399,7 @@ class AccountViewModel(
             // noise.
         } catch (e: Exception) {
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_title),
                 describeMintError(e),
                 baseNote.author,
             )
@@ -1393,7 +1431,7 @@ class AccountViewModel(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onError(
-                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                loadStringRes(Res.string.nutzap_failed_title),
                 describeMintError(e),
                 getUserIfExists(recipientPubKey),
             )
@@ -1648,18 +1686,18 @@ class AccountViewModel(
             throw e
         } catch (_: SignerExceptions.ReadOnlyException) {
             toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_be_able_to_sign_events,
             )
         } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
             toastManager.toast(
-                R.string.unauthorized_exception,
-                R.string.unauthorized_exception_description,
+                Res.string.unauthorized_exception,
+                Res.string.unauthorized_exception_description,
             )
         } catch (_: SignerExceptions.SignerNotFoundException) {
             toastManager.toast(
-                R.string.signer_not_found_exception,
-                R.string.signer_not_found_exception_description,
+                Res.string.signer_not_found_exception,
+                Res.string.signer_not_found_exception_description,
             )
         } catch (e: SignerExceptions.TimedOutException) {
             Log.w("AccountViewModel", "TimedOutException", e)
@@ -1675,8 +1713,8 @@ class AccountViewModel(
             Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
         } catch (e: IllegalStateException) {
             toastManager.toast(
-                R.string.signer_not_found_exception,
-                R.string.signer_illegal_state_exception_description,
+                Res.string.signer_not_found_exception,
+                Res.string.signer_illegal_state_exception_description,
                 e,
             )
         }
@@ -2011,6 +2049,12 @@ class AccountViewModel(
         }
 
     fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
+
+    fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
+
+    fun setCaptionsEnabled(enabled: Boolean) {
+        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+    }
 
     fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
         launchSigner {
@@ -2395,8 +2439,42 @@ class AccountViewModel(
         }
     }
 
+    /**
+     * Re-runs the send behind a chat bubble that failed before reaching the
+     * relay pool. The action was registered by the send path itself
+     * ([com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDeliveryTracker.markSending]),
+     * so this works for every chat surface without the UI knowing which one it
+     * is looking at. A message old enough to have fallen out of the tracked
+     * window has no action left and the tap is a no-op.
+     */
+    fun retryChatSend(displayedNoteId: HexKey) {
+        val retry = account.chatDeliveryTracker.retryFor(displayedNoteId) ?: return
+        // On the account scope, not the ViewModel's: a retry re-runs the whole
+        // send inline, and leaving the screen must not abandon it half-done.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                retry()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountViewModel", "Retry of chat send $displayedNoteId failed", e)
+            }
+        }
+    }
+
     // --- Marmot Group Messaging ---
 
+    /**
+     * Post a Marmot group message and return as soon as it is on screen.
+     *
+     * Only the cheap half runs here: mention rewriting and the inner kind:9
+     * rumor, neither of which touches MLS. The bubble goes up immediately and
+     * everything expensive — the ratchet step, the encrypted group-state
+     * write, the outer wrap, the relay hand-off — runs on the account scope
+     * afterwards. Deliberately NOT the caller's scope: the composer's
+     * [androidx.compose.runtime.rememberCoroutineScope] dies when the user
+     * navigates away, which would abandon a send that is already showing as
+     * sent.
+     */
     suspend fun sendMarmotGroupMessage(
         nostrGroupId: String,
         text: String,
@@ -2409,21 +2487,40 @@ class AccountViewModel(
         val tagger = NewMessageTagger(text, null, null, this)
         tagger.run()
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
-        // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
-        // event through LocalCache which already handles own-message display.
-        val bundle =
-            account.marmotManager
-                ?.buildTextMessage(
-                    nostrGroupId = nostrGroupId,
-                    text = tagger.message,
-                    replyToEventId = replyToInnerEventId,
-                    replyToAuthorPubKey = replyToInnerAuthorPubKey,
-                    persistOwn = false,
-                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+        val manager = account.marmotManager ?: return
+        val innerEvent =
+            manager.buildTextRumor(
+                text = tagger.message,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthorPubKey,
+                mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+            )
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
+    }
+
+    /**
+     * Show [innerEvent] in the group's chat now and publish it on the account
+     * scope. Shared by every Marmot send that originates in the UI.
+     */
+    private fun deliverMarmotGroupMessage(
+        nostrGroupId: String,
+        innerEvent: Event,
+    ) {
+        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                account.marmot.sendMarmotGroupMessage(
+                    nostrGroupId,
+                    innerEvent,
+                    account.marmot.marmotGroupRelays(nostrGroupId),
                 )
-                ?: return
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // The bubble already carries the failure and its retry; this
+                // is only here so one bad send cannot take the scope down.
+                Log.w("AccountViewModel", "Marmot send failed for $nostrGroupId", e)
+            }
+        }
     }
 
     suspend fun sendMarmotGroupMediaMessage(
@@ -2448,8 +2545,7 @@ class AccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
@@ -2481,9 +2577,7 @@ class AccountViewModel(
         caption: String,
     ) {
         val manager = account.marmotManager ?: return
-        val bundle = manager.buildMediaMessage(nostrGroupId, reference, caption, persistOwn = false)
-        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
-        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption))
     }
 
     suspend fun createMarmotGroup(
@@ -2503,6 +2597,20 @@ class AccountViewModel(
     }
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
+
+    /**
+     * Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner].
+     *
+     * [maxAgeSeconds] lets a passive caller reuse a recent answer instead of
+     * fanning a REQ across the write set; 0 always asks the relays.
+     */
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner(maxAgeSeconds)
+
+    /** Republishes this device's KeyPackage; true only when a relay accepted it. */
+    suspend fun republishKeyPackage(): Boolean = account.marmot.republishKeyPackageConfirmed()
+
+    /** False for a read-only (pubkey-only) login, which cannot publish at all. */
+    fun canPublish(): Boolean = account.isWriteable()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
@@ -2671,8 +2779,8 @@ class AccountViewModel(
     ) {
         if (baseNote.isDraft()) {
             toastManager.toast(
-                R.string.draft_note,
-                R.string.it_s_not_possible_to_quote_to_a_draft_note,
+                Res.string.draft_note,
+                Res.string.it_s_not_possible_to_quote_to_a_draft_note,
             )
             return
         }
@@ -2688,8 +2796,8 @@ class AccountViewModel(
             }
         } else {
             toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_boost_posts,
+                Res.string.read_only_user,
+                Res.string.login_with_a_private_key_to_be_able_to_boost_posts,
             )
         }
     }
@@ -2723,10 +2831,9 @@ class AccountViewModel(
                                     .toSet(),
                         )
                     onDone(
-                        stringRes(context, R.string.cashu_successful_redemption),
-                        stringRes(
-                            context,
-                            R.string.cashu_successful_redemption_explainer,
+                        loadStringRes(Res.string.cashu_successful_redemption),
+                        loadStringRes(
+                            Res.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
                             meltResult.fees.toString(),
                         ),
@@ -2736,20 +2843,21 @@ class AccountViewModel(
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     onDone(
-                        stringRes(context, R.string.cashu_failed_redemption),
-                        stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                        loadStringRes(Res.string.cashu_failed_redemption),
+                        loadStringRes(Res.string.cashu_failed_redemption_explainer_error_msg, e.message),
                     )
                 }
             }
         } else {
-            onDone(
-                stringRes(context, R.string.no_lightning_address_set),
-                stringRes(
-                    context,
-                    R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                    account.userProfile().toBestDisplayName(),
-                ),
-            )
+            viewModelScope.launch {
+                onDone(
+                    loadStringRes(Res.string.no_lightning_address_set),
+                    loadStringRes(
+                        Res.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                        account.userProfile().toBestDisplayName(),
+                    ),
+                )
+            }
         }
     }
 
@@ -2992,6 +3100,8 @@ class AccountViewModel(
         localContext: Context,
     ) {
         viewModelScope.launch {
+            // onSuccess is a plain callback, so the text is resolved here first.
+            val savedText = loadStringRes(Res.string.video_saved_to_the_gallery)
             MediaSaverToDisk.saveDownloadingIfNeeded(
                 videoUri = videoUri,
                 okHttpClient = httpClientBuilder::okHttpClientForVideo,
@@ -3005,12 +3115,12 @@ class AccountViewModel(
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast
-                            .makeText(localContext.applicationContext, R.string.video_saved_to_the_gallery, Toast.LENGTH_SHORT)
+                            .makeText(localContext.applicationContext, savedText, Toast.LENGTH_SHORT)
                             .show()
                     }
                 },
                 onError = {
-                    toastManager.toast(R.string.failed_to_save_the_video, null, it)
+                    toastManager.toast(Res.string.failed_to_save_the_video, null, it)
                 },
             )
         }

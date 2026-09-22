@@ -21,19 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.ui.platform.UriHandler
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.about_legal
+import com.vitorpamplona.amethyst.commons.resources.child_safety_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.child_safety_standards
+import com.vitorpamplona.amethyst.commons.resources.privacy_policy
+import com.vitorpamplona.amethyst.commons.resources.privacy_policy_search_keywords
 
 /** Play build surfaces the GitHub-hosted legal policy links. */
 fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =
     SettingsCategory(
-        titleRes = R.string.about_legal,
+        titleRes = Res.string.about_legal,
         entries =
             listOf(
                 SettingsEntry(
-                    titleRes = R.string.privacy_policy,
+                    titleRes = Res.string.privacy_policy,
                     icon = SettingsIcon.Symbol(MaterialSymbols.Lock),
-                    keywordsRes = R.string.privacy_policy_search_keywords,
+                    keywordsRes = Res.string.privacy_policy_search_keywords,
                     onClick = {
                         runCatching {
                             uriHandler.openUri(
@@ -43,9 +48,9 @@ fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =
                     },
                 ),
                 SettingsEntry(
-                    titleRes = R.string.child_safety_standards,
+                    titleRes = Res.string.child_safety_standards,
                     icon = SettingsIcon.Symbol(MaterialSymbols.Shield),
-                    keywordsRes = R.string.child_safety_search_keywords,
+                    keywordsRes = Res.string.child_safety_search_keywords,
                     onClick = {
                         runCatching {
                             uriHandler.openUri(

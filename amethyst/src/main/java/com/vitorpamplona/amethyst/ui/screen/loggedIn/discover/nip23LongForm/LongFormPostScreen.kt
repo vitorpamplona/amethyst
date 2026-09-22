@@ -78,7 +78,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -88,10 +87,13 @@ import com.vitorpamplona.amethyst.commons.resources.add_a_tag
 import com.vitorpamplona.amethyst.commons.resources.add_header_image
 import com.vitorpamplona.amethyst.commons.resources.article_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.article_summary
+import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
+import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.markdown_edit
 import com.vitorpamplona.amethyst.commons.resources.markdown_preview
+import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
 import com.vitorpamplona.amethyst.commons.resources.start_writing_article
 import com.vitorpamplona.amethyst.commons.resources.tags_label
 import com.vitorpamplona.amethyst.commons.resources.url_slug
@@ -177,7 +179,7 @@ fun LongFormPostScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.new_long_form_post,
+                titleRes = Res.string.new_long_form_post,
                 isActive = postViewModel::canPost,
                 onPost = {
                     accountViewModel.launchSigner {
@@ -464,8 +466,8 @@ private fun MarkdownPostScreenBody(
                     ) {
                         GeoHashPostSection(postViewModel) {
                             SettingsRow(
-                                R.string.geohash_exclusive,
-                                R.string.geohash_exclusive_explainer,
+                                Res.string.geohash_exclusive,
+                                Res.string.geohash_exclusive_explainer,
                             ) {
                                 Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
                             }

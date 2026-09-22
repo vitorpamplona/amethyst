@@ -28,7 +28,12 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_channel_desc
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_channel_name
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_tap
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Surfaces a signer consent/connect [android.app.Activity] from the **background**.
@@ -51,17 +56,17 @@ import com.vitorpamplona.amethyst.ui.stringRes
 object SignerConsentNotifier {
     private const val CHANNEL_ID = "com.vitorpamplona.amethyst.SIGNER_CONSENT_CHANNEL"
 
-    private fun ensureChannel(context: Context): NotificationChannel {
+    private suspend fun ensureChannel(context: Context): NotificationChannel {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.getNotificationChannel(CHANNEL_ID)?.let { return it }
 
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                stringRes(context, R.string.nip46_signer_notif_channel_name),
+                loadStringRes(Res.string.nip46_signer_notif_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = stringRes(context, R.string.nip46_signer_notif_channel_desc)
+                description = loadStringRes(Res.string.nip46_signer_notif_channel_desc)
             }
         manager.createNotificationChannel(channel)
         return channel
@@ -72,12 +77,12 @@ object SignerConsentNotifier {
      * [activityClass] carrying [token]. Returns the notification id to pass to [cancel] once the
      * request resolves.
      */
-    fun show(
+    suspend fun show(
         context: Context,
         activityClass: Class<*>,
         extraKey: String,
         token: String,
-        titleRes: Int,
+        titleRes: StringResource,
     ): Int {
         // When Amethyst already owns the foreground the direct startActivity opens the dialog, so a
         // heads-up notification would just be redundant noise on top of it. Only fall back to the
@@ -104,8 +109,8 @@ object SignerConsentNotifier {
             NotificationCompat
                 .Builder(context, channel.id)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(stringRes(context, titleRes))
-                .setContentText(stringRes(context, R.string.nip46_signer_notif_tap))
+                .setContentTitle(loadStringRes(titleRes))
+                .setContentText(loadStringRes(Res.string.nip46_signer_notif_tap))
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

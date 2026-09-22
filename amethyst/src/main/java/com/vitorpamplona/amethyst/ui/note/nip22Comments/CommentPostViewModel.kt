@@ -32,14 +32,18 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -71,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -771,13 +774,17 @@ open class CommentPostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         stripMetadata: Boolean = true,
-    ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
-    } catch (_: SignerExceptions.ReadOnlyException) {
-        onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
-        )
+    ) {
+        try {
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            viewModelScope.launch {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+            }
+        }
     }
 
     fun uploadUnsafe(
@@ -855,14 +862,13 @@ open class CommentPostViewModel :
                 val errorMessages =
                     results.errors
                         .map {
-                            stringRes(
-                                context,
+                            loadStringRes(
                                 it.errorResource,
                                 *it.params,
                             )
                         }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             mediaUploadTracker.finishUpload()

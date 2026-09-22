@@ -26,9 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_add
+import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_remove
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -41,7 +43,7 @@ fun ScheduleAtButton(
             symbol = MaterialSymbols.Schedule,
             contentDescription =
                 stringRes(
-                    if (isActive) R.string.schedule_post_button_remove else R.string.schedule_post_button_add,
+                    if (isActive) Res.string.schedule_post_button_remove else Res.string.schedule_post_button_add,
                 ),
             modifier = Modifier.size(20.dp),
             tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,

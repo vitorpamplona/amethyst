@@ -70,7 +70,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -79,7 +78,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -87,6 +85,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cashu_action_receive
 import com.vitorpamplona.amethyst.commons.resources.cashu_action_redeem
 import com.vitorpamplona.amethyst.commons.resources.cashu_action_send_ln
@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_action_send_token
 import com.vitorpamplona.amethyst.commons.resources.cashu_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.cashu_balance
 import com.vitorpamplona.amethyst.commons.resources.cashu_building_token
+import com.vitorpamplona.amethyst.commons.resources.cashu_checking_mint
 import com.vitorpamplona.amethyst.commons.resources.cashu_completing_mint
 import com.vitorpamplona.amethyst.commons.resources.cashu_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.cashu_copy_token
@@ -106,12 +107,15 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_get_quote
 import com.vitorpamplona.amethyst.commons.resources.cashu_getting_quote
 import com.vitorpamplona.amethyst.commons.resources.cashu_history
 import com.vitorpamplona.amethyst.commons.resources.cashu_history_all_loaded
+import com.vitorpamplona.amethyst.commons.resources.cashu_history_incoming
 import com.vitorpamplona.amethyst.commons.resources.cashu_history_loading_older
+import com.vitorpamplona.amethyst.commons.resources.cashu_history_outgoing
 import com.vitorpamplona.amethyst.commons.resources.cashu_history_some_relays_unreachable
 import com.vitorpamplona.amethyst.commons.resources.cashu_invoice_bolt11
 import com.vitorpamplona.amethyst.commons.resources.cashu_memo_optional
 import com.vitorpamplona.amethyst.commons.resources.cashu_mints
 import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_body
+import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_done
 import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_export_token
 import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_fee_hint
 import com.vitorpamplona.amethyst.commons.resources.cashu_move_coins_move
@@ -127,7 +131,9 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_pay_invoice
 import com.vitorpamplona.amethyst.commons.resources.cashu_paying_invoice
 import com.vitorpamplona.amethyst.commons.resources.cashu_pending_quotes_resume
 import com.vitorpamplona.amethyst.commons.resources.cashu_pending_quotes_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_pending_quotes_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_pick_mint
+import com.vitorpamplona.amethyst.commons.resources.cashu_quote_confirm
 import com.vitorpamplona.amethyst.commons.resources.cashu_receive_invoice_explainer
 import com.vitorpamplona.amethyst.commons.resources.cashu_received_amount
 import com.vitorpamplona.amethyst.commons.resources.cashu_redeem_button
@@ -141,9 +147,12 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_token_ready
 import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_badge
 import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_move
 import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_subtitle
+import com.vitorpamplona.amethyst.commons.resources.cashu_untrusted_mint_title
+import com.vitorpamplona.amethyst.commons.resources.cashu_waiting_for_payment
 import com.vitorpamplona.amethyst.commons.resources.cashu_wallet_title
 import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.topup_mint_action
+import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.components.util.getText
@@ -152,6 +161,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -243,7 +253,7 @@ fun CashuWalletScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -425,7 +435,7 @@ private fun EmptyCashuWallet(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onCreate) {
-            Text(stringRes(R.string.wallet_add_cashu_title))
+            Text(stringRes(Res.string.wallet_add_cashu_title))
         }
     }
 }
@@ -645,8 +655,8 @@ private fun PendingQuoteBanner(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text =
-                        pluralStringResource(
-                            R.plurals.cashu_pending_quotes_title,
+                        pluralStringRes(
+                            Res.plurals.cashu_pending_quotes_title,
                             count,
                             count,
                         ),
@@ -704,8 +714,8 @@ private fun UntrustedMintBanner(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text =
-                        pluralStringResource(
-                            R.plurals.cashu_untrusted_mint_title,
+                        pluralStringRes(
+                            Res.plurals.cashu_untrusted_mint_title,
                             count,
                             count,
                         ),
@@ -782,7 +792,7 @@ private fun EvacuateMintDialog(
                         Text(
                             text =
                                 stringRes(
-                                    R.string.cashu_move_coins_done,
+                                    Res.string.cashu_move_coins_done,
                                     s.movedSats.toString(),
                                     s.targetMintUrl,
                                 ),
@@ -856,7 +866,7 @@ private fun EvacuateMintDialog(
         },
         dismissButton = {
             if (!busy && !done) {
-                TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
             }
         },
     )
@@ -1122,9 +1132,9 @@ private fun HistoryRow(
                         text =
                             stringRes(
                                 if (isIncoming) {
-                                    R.string.cashu_history_incoming
+                                    Res.string.cashu_history_incoming
                                 } else {
-                                    R.string.cashu_history_outgoing
+                                    Res.string.cashu_history_outgoing
                                 },
                             ),
                         style = MaterialTheme.typography.bodyMedium,
@@ -1272,9 +1282,9 @@ private fun ReceiveDialog(
                             Text(
                                 stringRes(
                                     if (s.checking) {
-                                        R.string.cashu_checking_mint
+                                        Res.string.cashu_checking_mint
                                     } else {
-                                        R.string.cashu_waiting_for_payment
+                                        Res.string.cashu_waiting_for_payment
                                     },
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
@@ -1361,7 +1371,7 @@ private fun ReceiveDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -1459,7 +1469,7 @@ private fun SendLnDialog(
                     is CashuMeltFlowState.Quoted -> {
                         Text(
                             stringRes(
-                                R.string.cashu_quote_confirm,
+                                Res.string.cashu_quote_confirm,
                                 s.quote.amount.toString(),
                                 s.quote.feeReserve.toString(),
                             ),
@@ -1531,7 +1541,7 @@ private fun SendLnDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -1653,7 +1663,7 @@ private fun SendTokenDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -1757,7 +1767,7 @@ private fun RedeemDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

@@ -39,11 +39,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -86,9 +87,12 @@ fun VideoDisplay(
     val image = remember(imeta) { imeta.image.firstOrNull() }
     val isYouTube = remember(imeta) { imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be") }
     val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    val captions = rememberCaptionTracks(videoEvent, accountViewModel)
 
     val content: BaseMediaContent =
-        remember(note) {
+        // Keyed on the captions too: an addressable `text-track` resolves after the first frame,
+        // and the player only picks up a track that is in the MediaItemData it was handed.
+        remember(note, captions) {
             val description = videoEvent.content.ifBlank { null } ?: event.alt()
             // A NIP-71 event asserts its own type, so only an explicit image imeta diverts to the
             // viewer; an unclassifiable one still belongs in the player. See classifyMedia.
@@ -118,6 +122,7 @@ fun VideoDisplay(
                     mimeType = imeta.mimeType,
                     blurhash = imeta.blurhash,
                     thumbhash = imeta.thumbhash,
+                    captions = captions,
                 )
             }
         }
@@ -141,7 +146,7 @@ fun VideoDisplay(
                             imageUrl = it,
                             contentDescription =
                                 stringRes(
-                                    R.string.preview_card_image_for,
+                                    Res.string.preview_card_image_for,
                                     it,
                                 ),
                             contentScale = ContentScale.FillWidth,
@@ -200,6 +205,11 @@ fun VideoDisplay(
                     }
                 }
             }
+
+            // Outside the summary block on purpose: divine.video shorts routinely credit a
+            // soundtrack or a collaborator while leaving the description empty, and those credits
+            // are the only attribution the reused work gets.
+            RenderVideoCredits(videoEvent, accountViewModel, nav)
         }
     }
 }

@@ -31,12 +31,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.poll_option_description
+import com.vitorpamplona.amethyst.commons.resources.poll_option_index
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -68,7 +68,7 @@ fun ZapPollOption(
             },
             label = {
                 Text(
-                    text = stringRes(R.string.poll_option_index).format(optionIndex + 1),
+                    text = stringRes(Res.string.poll_option_index).format(optionIndex + 1),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

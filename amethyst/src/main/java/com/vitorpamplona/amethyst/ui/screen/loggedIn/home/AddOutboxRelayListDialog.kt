@@ -36,10 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_editing
 import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_examples
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_title
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -73,7 +73,7 @@ fun AddOutboxRelayListDialog(
         Scaffold(
             topBar = {
                 SavingTopBar(
-                    titleRes = R.string.outbox_relays_title,
+                    titleRes = Res.string.outbox_relays_title,
                     onCancel = {
                         postViewModel.clear()
                         onClose()

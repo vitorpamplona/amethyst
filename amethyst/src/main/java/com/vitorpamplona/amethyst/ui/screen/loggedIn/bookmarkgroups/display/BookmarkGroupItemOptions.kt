@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -44,8 +43,17 @@ import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
 import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
+import com.vitorpamplona.amethyst.commons.resources.edit_post
+import com.vitorpamplona.amethyst.commons.resources.follow
+import com.vitorpamplona.amethyst.commons.resources.move_bookmark_to_private_label
+import com.vitorpamplona.amethyst.commons.resources.move_bookmark_to_public_label
+import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
+import com.vitorpamplona.amethyst.commons.resources.unfollow
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -118,6 +126,8 @@ fun BookmarkGroupItemOptionsMenu(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
+    val quickActionShareStr = stringRes(Res.string.quick_action_share)
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
@@ -168,7 +178,7 @@ fun BookmarkGroupItemOptionsMenu(
         M3ActionSection {
             M3ActionRow(
                 icon = if (isBookmarkItemPrivate) MaterialSymbols.LockOpen else MaterialSymbols.Lock,
-                text = stringRes(if (isBookmarkItemPrivate) R.string.move_bookmark_to_public_label else R.string.move_bookmark_to_private_label),
+                text = stringRes(if (isBookmarkItemPrivate) Res.string.move_bookmark_to_public_label else Res.string.move_bookmark_to_private_label),
             ) {
                 if (isBookmarkItemPrivate) onMoveBookmarkToPublic() else onMoveBookmarkToPrivate()
             }
@@ -185,13 +195,13 @@ fun BookmarkGroupItemOptionsMenu(
         // Follow section
         M3ActionSection {
             if (!state.isFollowingAuthor) {
-                M3ActionRow(icon = MaterialSymbols.PersonAdd, text = stringRes(R.string.follow)) {
+                M3ActionRow(icon = MaterialSymbols.PersonAdd, text = stringRes(Res.string.follow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.follow(author)
                     onDismiss()
                 }
             } else {
-                M3ActionRow(icon = MaterialSymbols.PersonRemove, text = stringRes(R.string.unfollow)) {
+                M3ActionRow(icon = MaterialSymbols.PersonRemove, text = stringRes(Res.string.unfollow)) {
                     val author = note.author ?: return@M3ActionRow
                     accountViewModel.unfollow(author)
                     onDismiss()
@@ -229,7 +239,7 @@ fun BookmarkGroupItemOptionsMenu(
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+            M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
                 val sendIntent =
                     Intent().apply {
                         action = Intent.ACTION_SEND
@@ -240,12 +250,12 @@ fun BookmarkGroupItemOptionsMenu(
                         )
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(actContext, R.string.quick_action_share_browser_link),
+                            quickActionShareBrowserLinkStr,
                         )
                     }
 
                 val shareIntent =
-                    Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+                    Intent.createChooser(sendIntent, quickActionShareStr)
                 actContext.startActivity(shareIntent)
                 onDismiss()
             }
@@ -263,11 +273,11 @@ fun BookmarkGroupItemOptionsMenu(
             if (!note.isDraft()) {
                 if (note.event is TextNoteEvent) {
                     if (state.isLoggedUser) {
-                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_post)) {
+                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.edit_post)) {
                             wantsToEditPost.value = true
                         }
                     } else {
-                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.propose_an_edit)) {
+                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.propose_an_edit)) {
                             wantsToEditPost.value = true
                         }
                     }
@@ -296,7 +306,7 @@ fun BookmarkGroupItemOptionsMenu(
                 }
             }
             if (state.isLoggedUser) {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()
                 }

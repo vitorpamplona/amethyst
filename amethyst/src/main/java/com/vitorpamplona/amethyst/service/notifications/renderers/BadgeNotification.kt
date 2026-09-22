@@ -21,15 +21,17 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_message_from
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 
 /**
@@ -61,8 +63,8 @@ object BadgeNotification {
             nm.postStandard(
                 category = NotificationCategory.BADGE,
                 id = event.id,
-                messageTitle = stringRes(context, R.string.app_notification_badges_channel_message),
-                messageBody = stringRes(context, R.string.app_notification_badges_channel_message_from, issuer.toBestDisplayName()),
+                messageTitle = loadStringRes(Res.string.app_notification_badges_channel_message),
+                messageBody = loadStringRes(Res.string.app_notification_badges_channel_message_from, issuer.toBestDisplayName()),
                 time = event.createdAt,
                 pictureUrl = issuer.profilePicture(),
                 uri = uri,

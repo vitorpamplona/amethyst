@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.bookmark_list_articles_btn_l
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_clone_btn_label
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_posts_btn_label
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_indicator_description
@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_desc_modify_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
 import com.vitorpamplona.amethyst.commons.resources.group_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -319,7 +320,7 @@ private fun GroupOptionsMenu(
                 }
             }
             M3ActionSection {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(Res.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     onDismiss()
                 }
@@ -410,7 +411,7 @@ private fun GroupCloneDialog(
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

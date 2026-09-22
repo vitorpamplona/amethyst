@@ -30,16 +30,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.create
+import com.vitorpamplona.amethyst.commons.resources.post
+import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionTopBar(
-    postRes: Int,
-    titleRes: Int? = null,
+    postRes: StringResource,
+    titleRes: StringResource? = null,
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
@@ -85,13 +90,13 @@ fun ActionTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostingTopBar(
-    titleRes: Int? = null,
+    titleRes: StringResource? = null,
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
     // A private note is not posted, it is sealed and delivered to a named set of
     // people. The button says which of the two is about to happen.
-    postRes: Int = R.string.post,
+    postRes: StringResource = Res.string.post,
 ) = ActionTopBar(
     titleRes = titleRes,
     postRes = postRes,
@@ -103,14 +108,14 @@ fun PostingTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavingTopBar(
-    titleRes: Int? = null,
+    titleRes: StringResource? = null,
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
     additionalActions: @Composable (() -> Unit)? = null,
 ) = ActionTopBar(
     titleRes = titleRes,
-    postRes = R.string.save,
+    postRes = Res.string.save,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,
@@ -120,14 +125,14 @@ fun SavingTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendingTopBar(
-    titleRes: Int? = null,
+    titleRes: StringResource? = null,
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
     additionalActions: @Composable (() -> Unit)? = null,
 ) = ActionTopBar(
     titleRes = titleRes,
-    postRes = R.string.send,
+    postRes = Res.string.send,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,
@@ -137,13 +142,13 @@ fun SendingTopBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatingTopBar(
-    titleRes: Int? = null,
+    titleRes: StringResource? = null,
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
 ) = ActionTopBar(
     titleRes = titleRes,
-    postRes = R.string.create,
+    postRes = Res.string.create,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,

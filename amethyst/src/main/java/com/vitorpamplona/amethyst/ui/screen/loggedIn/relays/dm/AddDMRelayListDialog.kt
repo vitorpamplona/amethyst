@@ -37,12 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
 import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_editing
 import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_examples2
+import com.vitorpamplona.amethyst.commons.resources.dm_relays_title
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -75,7 +75,7 @@ fun AddDMRelayListDialog(
         Scaffold(
             topBar = {
                 SavingTopBar(
-                    titleRes = R.string.dm_relays_title,
+                    titleRes = Res.string.dm_relays_title,
                     onCancel = {
                         postViewModel.clear()
                         onClose()

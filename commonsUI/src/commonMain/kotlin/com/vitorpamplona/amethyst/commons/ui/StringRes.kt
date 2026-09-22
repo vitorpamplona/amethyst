@@ -44,15 +44,22 @@ import org.jetbrains.compose.resources.stringResource
  * Format args use the positional `%1$s` form. Compose-resources does NOT
  * understand bare `%s`/`%d` — `tools/strings-migrate` flags those at
  * migration time.
+ *
+ * Args are nullable because the commonest one is `Throwable.message`. A null
+ * becomes an empty string rather than the literal "null" Android's
+ * `Resources.getString` would have printed at the user; compose-resources
+ * takes a non-null `Any` and would not accept it at all.
  */
+private fun Array<out Any?>.orEmptyStrings(): Array<Any> = Array(size) { this[it] ?: "" }
+
 @Composable
 fun stringRes(id: StringResource): String = stringResource(id)
 
 @Composable
 fun stringRes(
     id: StringResource,
-    vararg args: Any,
-): String = stringResource(id, *args)
+    vararg args: Any?,
+): String = stringResource(id, *args.orEmptyStrings())
 
 @Composable
 fun pluralStringRes(
@@ -64,20 +71,20 @@ fun pluralStringRes(
 fun pluralStringRes(
     id: PluralStringResource,
     count: Int,
-    vararg args: Any,
-): String = pluralStringResource(id, count, *args)
+    vararg args: Any?,
+): String = pluralStringResource(id, count, *args.orEmptyStrings())
 
 /** Non-composable resolver (launch/onClick scopes) — twin of the `ctx`-taking overloads. */
 suspend fun loadStringRes(id: StringResource): String = getString(id)
 
 suspend fun loadStringRes(
     id: StringResource,
-    vararg args: Any,
-): String = getString(id, *args)
+    vararg args: Any?,
+): String = getString(id, *args.orEmptyStrings())
 
 /** Non-composable plural resolver — twin of the app's `pluralStringRes(ctx, ...)`. */
 suspend fun loadPluralStringRes(
     id: PluralStringResource,
     count: Int,
-    vararg args: Any,
-): String = if (args.isEmpty()) getPluralString(id, count) else getPluralString(id, count, *args)
+    vararg args: Any?,
+): String = if (args.isEmpty()) getPluralString(id, count) else getPluralString(id, count, *args.orEmptyStrings())

@@ -48,16 +48,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.library_blossom_piece
+import com.vitorpamplona.amethyst.commons.resources.library_directory
+import com.vitorpamplona.amethyst.commons.resources.library_directory_items
+import com.vitorpamplona.amethyst.commons.resources.library_directory_more_items
+import com.vitorpamplona.amethyst.commons.resources.library_learning_resource
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
@@ -71,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -125,7 +131,7 @@ fun RenderLearningResource(
     Column(Modifier.fillMaxWidth()) {
         LibraryHeader(
             symbol = MaterialSymbols.MenuBook,
-            label = stringRes(R.string.library_learning_resource),
+            label = stringRes(Res.string.library_learning_resource),
             title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
             subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
             // The byline is what tells a shelf of books apart; without it "Effective Executive"
@@ -272,10 +278,10 @@ fun RenderBookshelfDirectory(
     Column(Modifier.fillMaxWidth()) {
         LibraryHeader(
             symbol = MaterialSymbols.Collections,
-            label = stringRes(R.string.library_directory),
+            label = stringRes(Res.string.library_directory),
             title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
             subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
-            detail = if (itemCount > 0) pluralStringResource(R.plurals.library_directory_items, itemCount, itemCount) else null,
+            detail = if (itemCount > 0) pluralStringRes(Res.plurals.library_directory_items, itemCount, itemCount) else null,
             banner = remember(noteEvent) { noteEvent.image()?.ifBlank { null } },
             accountViewModel = accountViewModel,
         )
@@ -302,7 +308,7 @@ fun RenderBlossomPieceIndex(
 
     LibraryHeader(
         symbol = MaterialSymbols.Storage,
-        label = stringRes(R.string.library_blossom_piece),
+        label = stringRes(Res.string.library_blossom_piece),
         title = remember(noteEvent) { noteEvent.titleOrIdentifier() },
         subtitle = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
         // What actually distinguishes one file record from another: what it is, how big, and how
@@ -359,7 +365,7 @@ private fun DirectoryContents(
 
             val remaining = items.size - MAX_PREVIEW_ITEMS
             Text(
-                text = pluralStringResource(R.plurals.library_directory_more_items, remaining, remaining),
+                text = pluralStringRes(Res.plurals.library_directory_more_items, remaining, remaining),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
@@ -468,7 +474,7 @@ private fun LibraryBanner(
         if (banner != null) {
             MyAsyncImage(
                 imageUrl = banner,
-                contentDescription = stringRes(R.string.preview_card_image_for, banner),
+                contentDescription = stringRes(Res.string.preview_card_image_for, banner),
                 contentScale = ContentScale.Crop,
                 mainImageModifier = Modifier.fillMaxSize(),
                 loadedImageModifier = modifier,

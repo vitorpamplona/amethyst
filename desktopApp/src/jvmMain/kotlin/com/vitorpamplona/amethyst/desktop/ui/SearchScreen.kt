@@ -154,12 +154,7 @@ fun SearchScreen(
     val searchRelays by relayCategories.searchRelays.collectAsState()
     val displayText by state.displayText.collectAsState()
 
-    // The field drives the query. The reverse direction only fires for a form-driven change (the
-    // advanced panel, a loaded saved search), and the guard is what keeps the two from looping.
-    LaunchedEffect(fieldState.text) { state.updateFromText(fieldState.text) }
-    LaunchedEffect(displayText) {
-        if (fieldState.text != displayText) fieldState.setText(displayText)
-    }
+    BindSearchField(fieldState, state, displayText)
 
     // The people a half-written `from:`/`to:` token offers. Cache first, then the search relays.
     val userSearch =
@@ -1001,5 +996,26 @@ private fun SearchResultCard(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * Keeps the field and the query in step. The field drives the query; the reverse direction only
+ * fires for a form-driven change (the advanced panel, a loaded saved search).
+ *
+ * The guard compares against the query's *current* text, not the [displayText] this effect was
+ * keyed on: that value arrives through `collectAsState` a frame late, so two keystrokes landing
+ * between frames would otherwise see the field ahead of a stale key and roll the second one back.
+ */
+@Composable
+internal fun BindSearchField(
+    fieldState: SearchFieldState,
+    state: AdvancedSearchBarState,
+    displayText: String,
+) {
+    LaunchedEffect(fieldState.text) { state.updateFromText(fieldState.text) }
+    LaunchedEffect(displayText) {
+        val current = state.displayText.value
+        if (fieldState.text != current) fieldState.setText(current)
     }
 }

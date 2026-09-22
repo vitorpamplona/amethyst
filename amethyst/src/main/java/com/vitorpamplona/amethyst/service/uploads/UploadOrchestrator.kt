@@ -23,7 +23,17 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
+import com.vitorpamplona.amethyst.commons.resources.blossom_payment_required
+import com.vitorpamplona.amethyst.commons.resources.could_not_check_downloaded_file
+import com.vitorpamplona.amethyst.commons.resources.could_not_download_from_the_server
+import com.vitorpamplona.amethyst.commons.resources.could_not_open_the_compressed_file
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_upload
+import com.vitorpamplona.amethyst.commons.resources.media_too_big_for_nip95
+import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
+import com.vitorpamplona.amethyst.commons.resources.upload_cancelled
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
@@ -44,6 +54,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.jetbrains.compose.resources.StringResource
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -67,7 +78,7 @@ sealed class UploadingState {
     ) : UploadingFinalState()
 
     class Error(
-        val errorResource: Int,
+        val errorResource: StringResource,
         val params: Array<out String>,
     ) : UploadingFinalState()
 }
@@ -82,7 +93,7 @@ class UploadOrchestrator {
         }
 
     fun error(
-        resId: Int,
+        resId: StringResource,
         vararg params: String,
     ) = UploadingState.Error(resId, params).also { updateState(0.0, it) }
 
@@ -115,7 +126,7 @@ class UploadOrchestrator {
 
         if (bytes != null) {
             if (bytes.size > 80000) {
-                return error(R.string.media_too_big_for_nip95)
+                return error(Res.string.media_too_big_for_nip95)
             }
 
             updateState(0.8, UploadingState.Hashing)
@@ -132,11 +143,11 @@ class UploadOrchestrator {
                     return finish(OrchestratorResult.NIP95Result(it, bytes, originalContentType, originalHash))
                 },
                 onFailure = {
-                    return error(R.string.could_not_check_downloaded_file, it.message ?: it.javaClass.simpleName)
+                    return error(Res.string.could_not_check_downloaded_file, it.message ?: it.javaClass.simpleName)
                 },
             )
         } else {
-            return error(R.string.could_not_open_the_compressed_file)
+            return error(Res.string.could_not_open_the_compressed_file)
         }
     }
 
@@ -184,10 +195,10 @@ class UploadOrchestrator {
                 okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
             )
         } catch (_: SignerExceptions.ReadOnlyException) {
-            error(R.string.login_with_a_private_key_to_be_able_to_upload)
+            error(Res.string.login_with_a_private_key_to_be_able_to_upload)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+            error(Res.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
         }
     }
 
@@ -260,13 +271,13 @@ class UploadOrchestrator {
 
             finalState
         } catch (_: SignerExceptions.ReadOnlyException) {
-            error(R.string.login_with_a_private_key_to_be_able_to_upload)
+            error(Res.string.login_with_a_private_key_to_be_able_to_upload)
         } catch (e: BlossomPaymentException) {
             // BUD-07: the server wants payment before it will store the blob.
-            error(R.string.blossom_payment_required, e.payment.reason ?: serverBaseUrl)
+            error(Res.string.blossom_payment_required, e.payment.reason ?: serverBaseUrl)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            error(R.string.failed_to_upload_media, e.message?.ifBlank { null } ?: e.javaClass.simpleName)
+            error(Res.string.failed_to_upload_media, e.message?.ifBlank { null } ?: e.javaClass.simpleName)
         }
     }
 
@@ -318,7 +329,7 @@ class UploadOrchestrator {
         okHttpClient: (String) -> OkHttpClient,
     ): UploadingFinalState {
         if (uploadResult.url.isNullOrBlank()) {
-            return error(R.string.server_did_not_provide_a_url_after_uploading)
+            return error(Res.string.server_did_not_provide_a_url_after_uploading)
         }
 
         updateState(0.6, UploadingState.Downloading)
@@ -326,7 +337,7 @@ class UploadOrchestrator {
         // Use streaming verification for memory efficiency with large files
         val verification =
             ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
-                ?: return error(R.string.could_not_download_from_the_server)
+                ?: return error(Res.string.could_not_download_from_the_server)
 
         updateState(0.8, UploadingState.Hashing)
 
@@ -458,10 +469,10 @@ class UploadOrchestrator {
             try {
                 stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
-                return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
+                return error(Res.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
                 }
-            } ?: return error(R.string.upload_cancelled).also {
+            } ?: return error(Res.string.upload_cancelled).also {
                 deleteTempUri(compressed.uri, uri)
             }
 
@@ -500,10 +511,10 @@ class UploadOrchestrator {
             try {
                 stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
-                return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
+                return error(Res.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
                 }
-            } ?: return error(R.string.upload_cancelled).also {
+            } ?: return error(Res.string.upload_cancelled).also {
                 deleteTempUri(compressed.uri, uri)
             }
 

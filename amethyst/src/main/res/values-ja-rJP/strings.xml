@@ -1,113 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="other">このポストには %1$d 件以上のハッシュタグが含まれています</item>
-    </plurals>
-    <plurals name="nip82_assets_count">
-        <item quantity="other">%1$d 件のアセットがバンドルされています</item>
-    </plurals>
-    <plurals name="thread_collapsed_reply_count">
-        <item quantity="other">+%1$d\n件の返信</item>
-    </plurals>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="spam">スパム</string>
-    <string name="spam_description">この relay から送信されたスパムイベントの数</string>
-    <string name="impersonation">なりすまし</string>
-    <string name="illegal_behavior">不法行為</string>
-    <string name="request_deletion">削除をリクエスト</string>
     <string name="block_hide_user"><![CDATA[ユーザをブロックして非表示]]></string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">秘密鍵でログインするとリプライできます</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">秘密鍵でログインすると投稿をブーストできます</string>
-    <string name="login_with_a_private_key_to_like_posts">秘密鍵でログインするといいねができます</string>
-    <string name="no_zap_amount_setup_long_press_to_change">ザップ額が未設定です。長押しで変更</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">秘密鍵でログインするとザップすることができます</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">秘密鍵でログインするとフォローすることができます</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">秘密鍵でログインするとフォロー解除することができます</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">公開鍵でログインしています。公開鍵は読み取り専用です。ワードやフレーズを非表示にするには、秘密鍵でログインしてください</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">公開鍵でログインしています。公開鍵は読み取り専用です。ワードやフレーズを表示するには、秘密鍵でログインしてください</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">公開鍵でログインしています。公開鍵は読み取り専用です。アップロードするには、秘密鍵でログインしてください</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">公開鍵でログインしています。公開鍵は読み取り専用です。イベントに署名するには、秘密鍵でログインしてください</string>
-    <string name="unauthorized_exception">復号化が許可されていません</string>
-    <string name="unauthorized_exception_description">この操作に必要な復号化が署名アプリによって許可されませんでした。署名アプリで NIP-44 復号化を有効にして、もう一度お試しください</string>
-    <string name="signer_not_found_exception">署名アプリが見つかりません</string>
-    <string name="signer_not_found_exception_description">署名アプリはアンインストールされましたか？署名アプリがインストールされており、このアカウントが登録されているか確認してください。署名アプリが変更された場合は、一度ログアウトしてからログインし直してください。</string>
-    <string name="signer_illegal_state_exception_description">外部署名アプリがリクエストに対して予期しないペイロードを返しました。Amethyst または署名アプリにバグがある可能性があります。</string>
-    <string name="zaps">ザップ</string>
-    <string name="boost">ブースト</string>
     <string name="boosted">ブーストされました</string>
     <string name="edited_number">編集 #%1$s</string>
-    <string name="propose_an_edit">編集を提案する</string>
-    <string name="add">追加</string>
-    <string name="error_parsing_error_message">エラーメッセージの解析に失敗しました</string>
-    <string name="profile">プロフィール</string>
-    <string name="security_filters">セキュリティフィルタ</string>
-    <string name="clink_requesting_invoice">インボイスを要求中…</string>
-    <string name="clink_debit_no_response">デビットサービスが支払いを完了しませんでした。</string>
-    <string name="clink_confirm_pay_amount_via_source">%2$s 経由で %1$s を支払いますか？</string>
-    <string name="clink_confirm_pay_via_source">%1$s 経由でこのインボイスを支払いますか？</string>
-    <string name="clink_offer_invalid_amount">このオファーに有効な金額を入力してください。</string>
-    <string name="clink_budget_one_time">1 回のみ</string>
-    <string name="clink_budget_daily">毎日</string>
-    <string name="clink_budget_weekly">毎週</string>
-    <string name="clink_budget_monthly">毎月</string>
-    <string name="pay">支払う</string>
-    <string name="send_payment_paying_via">%1$s 経由で支払い中…</string>
-    <string name="send_payment_failed">支払いに失敗しました</string>
-    <string name="send_payment_cashu_balance">この受取人への支払い可能額: %1$s sats</string>
-    <string name="send_payment_onchain_txid">トランザクション: %1$s</string>
-    <string name="preview_card_image_for">"%1$sのプレビューカード画像"</string>
-    <string name="description">説明</string>
-    <string name="what_s_on_your_mind">何か思いついた？</string>
-    <string name="write_a_message">メッセージを入力…</string>
-    <string name="post">送信</string>
     <string name="save">保存</string>
-    <string name="send">送信</string>
-    <string name="create">作成</string>
     <string name="rename">名前を変更</string>
-    <string name="cancel">キャンセル</string>
-    <string name="error">エラー</string>
-    <string name="errors">エラー</string>
-    <string name="connection_success_rate_description">relay への接続成功率</string>
-    <string name="download_to_phone">端末に保存</string>
-    <string name="image_saved_to_the_gallery">画像を保存しました</string>
-    <string name="video_download_has_started_toast">動画のダウンロードを開始しました…</string>
-    <string name="media_download_has_started_toast">メディアのダウンロードを開始しました…</string>
-    <string name="pin_conversation">トップに固定</string>
-    <string name="unpin_conversation">固定を解除</string>
-    <string name="failed_to_save_the_image">画像の保存に失敗しました</string>
-    <string name="video_saved_to_the_gallery">動画を端末のギャラリーに保存しました</string>
-    <string name="failed_to_save_the_video">動画の保存に失敗しました</string>
-    <string name="pdf_saved_to_the_gallery">PDF を Downloads/Amethyst に保存しました</string>
-    <string name="failed_to_save_the_pdf">PDF の保存に失敗しました</string>
-    <string name="no_camera_app_found">この端末にカメラアプリが見つかりません</string>
-    <string name="record_a_message_description">長押ししてメッセージを録音</string>
-    <string name="upload_error_title">アップロードエラー</string>
-    <string name="upload_error_voice_message_failed">ボイスメッセージのアップロードに失敗しました</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 はボイスメッセージにまだ対応していません</string>
-    <string name="upload_error_voice_message_exception">ボイスのアップロードに失敗しました: %1$s</string>
-    <string name="voice_preset_none">なし</string>
-    <string name="voice_preset_deep">低音</string>
-    <string name="voice_preset_high">高音</string>
-    <string name="voice_preset_neutral">ニュートラル</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">satsを受け取るためのLightningアドレスが設定されていません</string>
-    <string name="reply_here">"ここに返信… "</string>
-    <string name="known">知り合い</string>
-    <string name="new_requests">新しいリクエスト</string>
-    <string name="blocked_users">ブロック済みユーザ</string>
-    <string name="new_threads">新規スレッド</string>
-    <string name="conversations">会話</string>
-    <string name="more_options">詳細なオプション</string>
-    <string name="show_private_key_qr_code">秘密鍵の QR コードを表示</string>
-    <string name="show_encrypted_private_key_qr_code">暗号化された秘密鍵の QR コードを表示</string>
-    <string name="follow">フォロー</string>
-    <string name="follow_back">フォローバック</string>
-    <string name="hide_password">パスワードを非表示</string>
-    <string name="invalid_key">無効な鍵</string>
-    <string name="invalid_key_with_message">無効な鍵: %1$s</string>
-    <string name="password_is_required">パスワードは必須です</string>
-    <string name="key_is_required">鍵が必要です</string>
-    <string name="name_is_required">名前は必須です</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -116,153 +15,7 @@
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="changed_chat_profile_to">新しいチャットプロフィール:</string>
-    <string name="leave">退出</string>
-    <string name="unfollow">フォロー解除</string>
-    <string name="ephemeral_relay_chat">消えるチャット</string>
-    <string name="relay_chat">relay チャット</string>
-    <string name="relay_chat_title">relay チャット</string>
-    <string name="relay_chat_explainer">relay チャットは、ホスト relay によって管理されるチャットグループです。
-        Nostr 上の全員に公開されており、誰でも参加できます。
-        特定のトピックを中心としたオープンなコミュニティに最適です。一部のグループは一時的なもので、
-        チャットメッセージは時間とともに消えます</string>
-    <string name="public_chat">公開チャット</string>
-    <string name="marmot_group">MLS グループ</string>
-    <string name="public_chat_title">パブリックチャットのメタデータ</string>
-    <string name="public_chat_explainer">パブリックチャットは Nostr 上の全員に公開されており、誰でも
-        参加できます。特定のトピックを中心としたオープンなコミュニティに最適です。
-        モデレーションは、その relay 上のポストを削除することで管理できます</string>
-    <string name="public_chat_relays_title">Relay</string>
-    <string name="public_chat_relays_explainer">このグループをホストする relay を 1〜3 件入力してください。
-        Nostr クライアントはこの設定を使用して、メッセージのダウンロード先と送信先を決定します。</string>
-    <string name="remove">削除</string>
-    <string name="never">なし</string>
-    <string name="now">今</string>
-    <string name="h">時間</string>
-    <string name="m">分</string>
-    <string name="d">日</string>
-    <string name="nudity">ヌード</string>
-    <string name="profanity_hateful_speech">誹謗中傷 / ヘイトスピーチ</string>
-    <string name="backup_keys">鍵をバックアップ</string>
-    <string name="failed_to_encrypt_key">秘密鍵の暗号化に失敗しました</string>
-    <string name="secret_key_copied_to_clipboard">秘密鍵 (nsec) をクリップボードにコピーしました</string>
-    <string name="copy_my_secret_key">秘密鍵をコピー</string>
-    <string name="biometric_authentication_failed">認証に失敗しました</string>
-    <string name="biometric_authentication_failed_explainer">生体認証でこの端末の所有者を確認できませんでした</string>
-    <string name="biometric_authentication_failed_explainer_with_error">生体認証でこの端末の所有者を確認できませんでした。エラー: %1$s</string>
-    <string name="copied_note_text_to_clipboard">テキストがクリップボードにコピーされました</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">\@npubをクリップボードにコピーしました</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">投稿ID (@note1) をクリップボードにコピーしました</string>
-    <string name="private_conversation_notification">"&lt;プライベートメッセージの復号に失敗しました&gt;\n\n%1$s と %2$s のプライベート/暗号化された会話であなたが言及されました。"</string>
-    <string name="drawer_accounts">アカウント</string>
-    <string name="drawer_section_navigate">ナビゲート</string>
-    <string name="drawer_section_you">あなた</string>
-    <string name="drawer_section_feeds">フィード</string>
-    <string name="drawer_section_create">作成</string>
-    <string name="drawer_section_system">システム</string>
-    <string name="back">戻る</string>
-    <string name="quick_action_share_browser_link">ブラウザリンクを共有</string>
-    <string name="quick_action_share">共有</string>
-    <string name="share_as_image">画像として共有</string>
-    <string name="share_as_image_url">画像 URL として共有</string>
-    <string name="quick_action_copy_note_id">投稿ID</string>
-    <string name="quick_action_delete">削除</string>
-    <string name="quick_action_mute_thread">スレッドをミュート</string>
-    <string name="quick_action_unmute_thread">スレッドのミュートを解除</string>
-    <string name="report_dialog_block_hide_user_btn"><![CDATA[ユーザをブロックして非表示]]></string>
-    <string name="block_only">ブロック</string>
-    <string name="bookmarks">ブックマーク</string>
-    <string name="migrate_bookmarks_success">ブックマークの移行が完了しました</string>
-    <string name="drafts">下書き</string>
-    <string name="scheduled_posts">予約投稿</string>
-    <string name="schedule_post_button_add">投稿を予約</string>
-    <string name="schedule_post_button_remove">予約をキャンセル</string>
-    <string name="schedule_post_warning_single">予約投稿は次回アプリを開くまで公開されない場合があります。確実なバックグラウンドスケジューリングのために、設定 → UI設定で常時通知を有効にしてください。</string>
-    <string name="schedule_post_warning_multi">予約投稿は次回アプリを開くまで公開されない場合があります。このアカウントがアクティブな間、他のアカウントの予約投稿は実行されません。確実なバックグラウンドスケジューリングのために、設定 → UI設定で常時通知を有効にしてください。</string>
-    <string name="scheduled_posts_at_time">%1$s · %2$s後</string>
-    <string name="scheduled_posts_at_time_past">%1$s · %2$s前</string>
-    <string name="scheduled_posts_day_tomorrow">明日</string>
-    <string name="scheduled_posts_logout_toast_zero">ログアウトしました</string>
-    <plurals name="scheduled_posts_logout_toast">
-        <item quantity="other">ログアウトしました · %d件の予約投稿を削除しました</item>
-    </plurals>
-    <string name="scheduled_posts_notification_sent_title">予約投稿が公開されました</string>
-    <string name="scheduled_posts_notification_failed_title">予約投稿に失敗しました</string>
-    <string name="app_notification_scheduled_posts_channel_name">予約投稿</string>
-    <string name="app_notification_scheduled_posts_channel_description">予約投稿が公開または失敗したときの通知。</string>
-    <string name="scheduled_posts_action_send_now">今すぐ送信</string>
-    <string name="scheduled_posts_error_prefix">エラー: %1$s</string>
-    <string name="scheduled_posts_status_pending">予約済み</string>
-    <string name="scheduled_posts_status_publishing">送信中…</string>
-    <string name="scheduled_posts_status_failed">失敗</string>
-    <string name="scheduled_posts_status_sent">送信済み</string>
-    <string name="scheduled_posts_status_cancelled">キャンセル済み</string>
-    <plurals name="scheduled_posts_logout_warning">
-        <item quantity="other">%d件の予約投稿がまだ公開されていません。ログアウトすると完全に削除されます。</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_queued">
-        <item quantity="other">%d件キュー中</item>
-    </plurals>
-    <plurals name="scheduled_posts_subtitle_due_suffix">
-        <item quantity="other"> · %d件が1時間以内に公開</item>
-    </plurals>
-    <plurals name="scheduled_posts_relay_count">
-        <item quantity="other">%d個のrelayへ</item>
-    </plurals>
-    <string name="scheduled_posts_event_id_copied">ノートIDをコピーしました</string>
-    <string name="polls">投票</string>
-    <string name="open_polls">進行中</string>
-    <string name="closed_polls">終了</string>
-    <string name="badges">バッジ</string>
-    <string name="communities">コミュニティ</string>
-    <string name="new_community">新しいコミュニティ</string>
-    <string name="edit_community">コミュニティを編集</string>
-    <string name="new_community_moderators_section">モデレーター</string>
-    <string name="new_community_relays_section">relay</string>
-    <string name="new_community_rules_section">検証可能なルール（任意）</string>
-    <string name="new_community_rules_kinds_section">許可されたイベントの種類</string>
-    <string name="new_community_rules_kind_short_text">ショートテキスト（1）</string>
-    <string name="new_community_rules_kind_long_form">長文記事（30023）</string>
-    <string name="new_community_rules_kind_picture">画像投稿（20）</string>
-    <string name="new_community_rules_kind_video">動画投稿（21）</string>
-    <string name="new_community_rules_kind_short_video">ショート動画（22）</string>
-    <string name="new_community_rules_kind_comment">コミュニティコメント（1111）</string>
-    <string name="new_community_rules_banned_section">バンされたユーザー</string>
-    <string name="new_community_rules_wot_section">Web-of-trustゲート（任意）</string>
-    <string name="new_community_rules_max_event_size_section">グローバル最大イベントサイズ（任意）</string>
-    <string name="new_badge">新しいバッジ</string>
-    <string name="award_badge">バッジを授与</string>
-    <string name="profile_badges_title">プロフィールバッジ</string>
-    <string name="pictures">画像</string>
-    <string name="workouts">ワークアウト</string>
-    <string name="new_workout">新しいワークアウト</string>
-    <string name="exercise_running">ランニング</string>
-    <string name="exercise_walking">ウォーキング</string>
-    <string name="exercise_cycling">サイクリング</string>
-    <string name="exercise_hiking">ハイキング</string>
-    <string name="exercise_swimming">水泳</string>
-    <string name="exercise_rowing">ローイング</string>
-    <string name="exercise_strength">筋トレ</string>
-    <string name="exercise_yoga">ヨガ</string>
-    <string name="exercise_meditation">瞑想</string>
-    <string name="exercise_diet">食事管理</string>
-    <string name="exercise_fasting">断食</string>
-    <string name="exercise_circuit">サーキット</string>
-    <string name="software_apps">アプリ</string>
     <string name="route_software_apps">アプリ</string>
-    <string name="browser">ブラウザ</string>
-    <string name="browser_tor_on">Tor経由で読み込み中。タップしてオープンウェブを使用します。</string>
-    <string name="browser_tor_off">オープンウェブで読み込み中。タップしてTorを使用します。</string>
-    <string name="browser_favorites">お気に入り</string>
-    <string name="favorite_apps">お気に入りアプリ</string>
-    <string name="favorite_app_add">お気に入りに追加</string>
-    <string name="favorite_app_remove">お気に入りから削除</string>
-    <string name="favorite_app_network_tor">Tor 経由で読み込みます。</string>
-    <string name="favorite_app_network_open">オープンウェブ経由で読み込みます。</string>
-    <string name="favorite_notice_published">relay に公開しました</string>
-    <string name="favorite_notice_uploaded">ファイルをアップロードしました</string>
-    <string name="favorite_notice_paid">支払いを行いました</string>
-    <string name="favorite_app_still_loading">そのアプリはまだ読み込まれていません。しばらくしてから再試行してください。</string>
-    <string name="favorite_app_recent">最近</string>
     <string name="napplet_permissions">nApplet の権限</string>
     <string name="napplet_permissions_empty">nApplet の権限はまだありません</string>
     <string name="napplet_permissions_empty_subtitle">nApplet に付与した権限はここに表示されます。</string>
@@ -272,45 +25,11 @@
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
     <string name="napplet_cap_shell">シェル</string>
-    <string name="napplet_cap_identity">ID</string>
-    <string name="napplet_cap_keys">キーボード操作</string>
-    <string name="napplet_cap_relay">relay</string>
-    <string name="napplet_cap_storage">ストレージ</string>
-    <string name="napplet_cap_value">支払い</string>
-    <string name="napplet_cap_resource">ネットワーク</string>
-    <string name="napplet_cap_upload">アップロード</string>
     <string name="napplet_cap_shell_desc">利用可能な機能を確認する</string>
-    <string name="napplet_cap_identity_desc">公開鍵を読み取る</string>
-    <string name="napplet_cap_keys_desc">キーボードショートカットをバインドする</string>
-    <string name="napplet_cap_relay_desc">イベントを読み取り、署名して公開する</string>
-    <string name="napplet_cap_storage_desc">専用のプライベートストレージ</string>
-    <string name="napplet_cap_value_desc">Lightning インボイスを支払う</string>
-    <string name="napplet_cap_resource_desc">ウェブおよび Blossom リソースを取得する</string>
-    <string name="napplet_cap_upload_desc">メディアサーバーにファイルをアップロードする</string>
-    <string name="napplet_cap_theme">テーマ</string>
-    <string name="napplet_cap_notify">通知</string>
-    <string name="napplet_cap_inc">メッセージング</string>
-    <string name="napplet_cap_theme_desc">アプリの色に合わせる</string>
-    <string name="napplet_cap_notify_desc">通知を表示する</string>
-    <string name="napplet_cap_inc_desc">他の napplet とメッセージをやり取りする</string>
     <!-- Napplet consent dialog -->
     <string name="napplet_consent_capability">機能: %1$s</string>
-    <string name="napplet_consent_get_pubkey">この nApplet はあなたの公開鍵を読み取ろうとしています。</string>
-    <string name="napplet_consent_identity_read">この nApplet はあなたのプロフィールとアカウントデータを読み取ろうとしています。</string>
-    <string name="napplet_consent_publish">この nApplet はあなたとして kind %1$d イベントに署名して公開しようとしています。</string>
-    <string name="napplet_consent_publish_preview">この nApplet はあなたとして kind %1$d イベントに署名して公開しようとしています：</string>
-    <string name="napplet_consent_publish_encrypted">この nApplet はあなたとして暗号化されたイベントを送信しようとしています。</string>
-    <string name="napplet_consent_query">この nApplet はあなたの relay からイベントを読み取ろうとしています。</string>
-    <string name="napplet_consent_storage">この nApplet はプライベートストレージを使用しようとしています。</string>
     <string name="napplet_consent_pay">この nApplet は Lightning インボイスを支払おうとしています。</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
-    <string name="napplet_consent_resource">この nApplet はウェブリソースを取得しようとしています。</string>
-    <string name="napplet_consent_upload">この nApplet はメディアサーバーにファイルをアップロードしようとしています。</string>
-    <string name="napplet_consent_notify">この nApplet はあなたに通知を表示しようとしています。</string>
-    <string name="napplet_consent_sign">このサイトはあなたの Nostr 鍵で kind %1$d イベントに署名しようとしています。</string>
-    <plurals name="napplet_consent_pay_amount">
-        <item quantity="other">この nApplet は %1$d sats の Lightning インボイスを支払おうとしています。</item>
-    </plurals>
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
@@ -343,188 +62,16 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="shorts">ショート</string>
-    <string name="public_chats">パブリックチャット</string>
-    <string name="follow_packs">フォローパック</string>
-    <string name="live_streams">ライブ配信</string>
-    <string name="nest_raise_hand">手を挙げる</string>
-    <string name="nest_lower_hand">手を下ろす</string>
-    <string name="nest_mute">ミュート</string>
-    <string name="nest_unmute">ミュート解除</string>
-    <string name="nest_chat_send_failed_title">メッセージを送信できませんでした</string>
-    <string name="nest_mic_mute">マイクをミュート</string>
-    <string name="nest_mic_unmute">マイクのミュートを解除</string>
-    <string name="nest_notification_channel_description">ルームが開いている間オーディオを再生し続けます。</string>
-    <string name="nest_notification_listening">Nest に接続しました</string>
-    <string name="nest_notification_broadcasting">Nest — ライブ中</string>
-    <string name="nest_notification_text">タップして戻る。</string>
-    <string name="nest_notification_stop">停止</string>
-    <string name="nest_presence_raised_hand">手を挙げました</string>
-    <string name="nest_presence_on_stage">ステージに上がりました</string>
-    <string name="nest_presence_speaking">話しています</string>
-    <string name="nest_presence_listening">オーディエンスとして参加しました</string>
-    <string name="nest_presence_left">Nest を退出しました</string>
-    <string name="nest_leave">退出</string>
-    <string name="nest_leave_host_close_failed">ルームをクローズ済みとしてマークできませんでした。退出します — ルームは自動的に閉じます。</string>
-    <plurals name="nest_listener_count">
-        <item quantity="other">%1$d 人のリスナー</item>
-    </plurals>
-    <string name="nest_hush_local">このスピーカーをミュート</string>
-    <string name="nest_hush_local_restore">このスピーカーを復元</string>
-    <string name="nest_participant_follow">フォロー</string>
-    <string name="nest_participant_unfollow">フォロー解除</string>
-    <string name="nest_participant_mute">ミュート</string>
-    <string name="nest_participant_unmute">ミュート解除</string>
-    <string name="nest_no_server_save_failed">Nest サーバーリストを保存できませんでした。再試行してください。</string>
-    <string name="nests_servers_title">Nest サーバー</string>
-    <string name="nests_servers_my_section">あなたのサーバー</string>
-    <string name="nests_servers_my_explainer">kind-10112 の置き換え可能なイベントとして保存され、他のクライアントがあなたの設定を読み取ることができます。</string>
-    <string name="nests_servers_recommended_section">おすすめのサーバー</string>
-    <string name="nests_servers_recommended_explainer">ワンタップでリストに追加できる組み込みの候補です。</string>
-    <string name="longs">動画</string>
-    <string name="route_music_tracks">音楽</string>
-    <string name="route_music_playlists">プレイリスト</string>
-    <string name="route_podcast_episodes">エピソード</string>
-    <string name="route_podcasts">ポッドキャスト</string>
-    <plurals name="podcast_episode_count">
-        <item quantity="other">%1$d エピソード</item>
-    </plurals>
-    <string name="new_music_track">新しい音楽トラック</string>
-    <string name="new_music_playlist">新しいプレイリスト</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="other">%1$d トラック</item>
-    </plurals>
-    <string name="add_to_public_bookmarks">公開ブックマークに追加</string>
-    <string name="remove_from_public_bookmarks">公開ブックマークから削除</string>
-    <string name="pin_to_profile">プロフィールにピン留め</string>
-    <string name="unpin_from_profile">プロフィールのピン留めを解除</string>
-    <string name="bookmark_list_creation_screen_title">新しいブックマークリスト</string>
-    <string name="bookmark_list_edit_sub_title">ブックマークリストのメタデータ</string>
-    <string name="interest_sets_title">ハッシュタグセット</string>
-    <string name="interest_set_creation_screen_title">新しいインタレストセット</string>
-    <string name="interest_set_rename">名前を変更</string>
-    <string name="private_note">プライベートにする：通知ユーザーのみへのgift-wrapノート</string>
-    <string name="disable_private_note">公開にする</string>
-    <string name="private_note_locked">プライベートノートへの返信は常にプライベートのままです</string>
-    <string name="private_note_visible_to">閲覧可能なユーザー</string>
     <string name="private_note_no_receivers">まだ受信者がいません：あなただけがこのノートを見ることができます。共有したい人を追加してください。</string>
     <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">追加</string>
     <string name="notify_remove_user">通知からユーザーを削除</string>
     <string name="notify_search_and_add_user">通知するユーザーを検索して追加</string>
-    <string name="bookmark_list_explainer">ブックマークリストのメタデータはNostr上の誰でも見ることができます。プライベートメンバーのみ暗号化されます。</string>
-    <string name="move_bookmark_to_public_label">公開に移動</string>
-    <string name="move_bookmark_to_private_label">プライベートに移動</string>
-    <string name="reload_mint_confirm">チャージ &amp; Zapを送信</string>
-    <string name="reload_mint_send_confirm">Zapを送信</string>
-    <string name="reload_mint_summary">%2$sに%1$s satsをチャージして%3$sへ%4$s satsをZap · 手数料 ≈ %5$s sats</string>
-    <string name="poll_option_index">選択肢%s</string>
-    <string name="poll_consensus_threshold_percent">（0〜100）%</string>
-    <string name="poll_single_choice">単一選択</string>
-    <string name="poll_multiple_choice">複数選択</string>
-    <string name="poll_unable_to_vote">投票できません</string>
-    <string name="poll_is_closed_explainer">この投票は新規票を受け付けていません</string>
-    <string name="one_vote_per_user_on_atomic_votes">このタイプの投票では、1ユーザにつき1回のみ投票可能です</string>
-    <string name="poll_author_no_vote">投票の作成者が投票することはできません。</string>
-    <string name="hash_verification_info_title">これはどういう意味ですか？</string>
-    <string name="hash_verification_passed">画像は投稿時と同じです</string>
-    <string name="hash_verification_failed">画像が変更されています。作者は変更に気づいていないかもしれません</string>
-    <string name="content_description_add_media">メディアを追加</string>
-    <string name="content_description_add_image">画像を追加</string>
-    <string name="content_description_add_video">動画を追加</string>
-    <string name="content_description_add_document">ドキュメントを追加</string>
-    <string name="file_server">ファイルサーバ</string>
-    <string name="file_server_description">このファイルをアップロードするサーバーを選択</string>
-    <string name="media_servers">メディアサーバー</string>
     <string name="set_preferred_media_servers">優先するメディアアップロードサーバーを設定してください。</string>
     <string name="recommended_media_servers">おすすめのメディアサーバー</string>
     <string name="built_in_servers_description">Amethystのデフォルトリストです。個別に追加するかリスト全体を追加できます。</string>
-    <string name="payment_targets">支払い先</string>
-    <string name="payment_targets_section_explainer">異なるネットワーク（例：bitcoin、lightning、ethereum）の支払いアドレスを追加してください。</string>
-    <string name="no_payment_app_found">この支払いを処理できるアプリが見つかりません。対応するウォレットをインストールしてください。</string>
-    <string name="no_payment_app_found_for_type">%1$s の支払いを処理できるアプリがインストールされていません。対応するウォレットをインストールしてください。</string>
-    <string name="error_dialog_payment_error">支払いを開けません</string>
-    <string name="privacy_options">プライバシーオプション</string>
-    <string name="follow_list_kind3follows">すべてのフォロー</string>
-    <string name="follow_list_kind3follows_users_only">すべてのユーザーフォロー</string>
-    <string name="follow_list_kind3_follows_users_only">デフォルトフォローリスト</string>
-    <string name="follow_list_aroundme">周辺</string>
-    <string name="follow_list_global">グローバル</string>
-    <string name="follow_list_curated">キュレーション</string>
-    <string name="follow_list_mine">マイリスト</string>
-    <string name="follow_list_mute_list">ミュートリスト</string>
-    <string name="follow_set_creation_dialog_title">新しいフォローリスト</string>
-    <string name="follow_pack_creation_dialog_title">新しいフォローパック</string>
-    <string name="follow_set_edit_list_metadata">リストを編集</string>
-    <string name="connect_through_your_orbot_setup_short">デフォルトポートは 9050</string>
-    <string name="orbot_socks_port">OrbotのSocksポート番号</string>
-    <string name="use_internal_tor">Tor エンジンを有効化</string>
-    <string name="use_internal_tor_explainer">内蔵版または Orbot を使用</string>
-    <string name="tor_preset">Tor／プライバシープリセット</string>
-    <string name="tor_preset_explainer">以下の設定をすばやく変更</string>
-    <string name="tor_use_onion_address">Onion URL／relay</string>
-    <string name="tor_use_onion_address_explainer">.onion URL に Tor を使用</string>
-    <string name="tor_use_dm_relays">DM relay</string>
-    <string name="tor_use_dm_relays_explainer">DM の送受信に Tor を強制</string>
-    <string name="tor_use_new_relays">信頼されていない relay</string>
-    <string name="tor_use_new_relays_explainer">アウトボックス／インボックス relay に Tor を強制</string>
-    <string name="tor_use_trusted_relays">信頼済み relay</string>
-    <string name="tor_use_trusted_relays_explainer">リスト内のすべての relay に Tor を強制</string>
-    <string name="tor_use_profile_pictures">プロフィール画像</string>
-    <string name="tor_use_profile_pictures_explainer">プロフィール画像の読み込みに Tor を強制</string>
-    <string name="tor_use_url_previews">URL プレビュー</string>
-    <string name="tor_use_url_previews_explainer">URL プレビューの読み込みに Tor を強制</string>
-    <string name="tor_use_images">画像</string>
-    <string name="tor_use_images_explainer">画像の読み込みに Tor を強制</string>
-    <string name="tor_use_videos">動画</string>
-    <string name="tor_use_videos_explainer">動画の読み込みに Tor を強制</string>
-    <string name="tor_use_money_operations">送金操作</string>
-    <string name="tor_use_money_operations_explainer">zap、Lightning、Cashu 送金に Tor を強制</string>
-    <string name="tor_use_nip05_verification">Nostr アドレス認証</string>
-    <string name="tor_use_nip05_verification_explainer">NIP-05 アドレスの検証に Tor を強制</string>
-    <string name="tor_use_media_uploads">メディアアップロード</string>
-    <string name="tor_use_media_uploads_explainer">コンテンツのアップロードに Tor を強制</string>
-    <string name="tor_internal">内蔵</string>
-    <string name="tor_off">オフ</string>
-    <string name="tor_when_needed">基本</string>
-    <string name="tor_default">デフォルト</string>
-    <string name="tor_small_payloads">メディア以外すべて</string>
-    <string name="tor_full_privacy">完全プライバシー</string>
-    <string name="tor_custom">カスタム</string>
-    <string name="tor_when_needed_explainer">サーバーが必要とする場合に Tor を使用</string>
-    <string name="tor_default_explainer">ランダムな relay からIPアドレスを隠す</string>
-    <string name="tor_small_payloads_explainer">画像と動画を除くすべての接続でIPアドレスを隠す</string>
-    <string name="tor_full_privacy_explainer">すべての接続でIPアドレスを隠す</string>
-    <string name="tor_custom_explainer">独自の設定を作成</string>
-    <string name="app_notification_dms_channel_name">プライベートメッセージ</string>
-    <string name="app_notification_dms_channel_description">プライベートメッセージが届いたら通知する</string>
-    <string name="app_notification_zaps_channel_name">ザップを受け取りました</string>
-    <string name="app_notification_zaps_channel_description">誰かがあなたにザップしたら通知する</string>
-    <string name="app_notification_zaps_channel_message_from">%1$sから</string>
-    <string name="app_notification_zaps_channel_message_for">%1$sに</string>
-    <string name="app_notification_reply_label">返信</string>
-    <string name="app_notification_mark_read_label">既読にする</string>
-    <string name="app_notification_dms_summary">新しいメッセージ</string>
-    <string name="app_notification_zaps_summary">新しい zap</string>
-    <string name="app_notification_reactions_channel_name">リアクション</string>
-    <string name="app_notification_reactions_channel_description">誰かがあなたの投稿にリアクションしたときに通知します</string>
-    <string name="app_notification_reactions_channel_message">%1$s があなたの投稿にリアクションしました</string>
-    <string name="app_notification_reactions_channel_message_for">%1$s に対して</string>
-    <string name="app_notification_reactions_summary">新しいリアクション</string>
-    <string name="app_notification_chess_channel_name">チェス</string>
-    <string name="app_notification_chess_channel_description">チェスゲームのイベントを通知します</string>
-    <string name="app_notification_chess_challenge_accepted">%1$s があなたのチェスの挑戦を受け入れました</string>
-    <string name="app_notification_chess_your_turn">%1$s が動かしました — あなたの番です</string>
-    <string name="app_notification_chess_summary">チェスの更新</string>
-    <string name="app_notification_replies_channel_name">返信</string>
-    <string name="app_notification_replies_channel_description">誰かがあなたの投稿に返信したときに通知します</string>
     <string name="app_notification_replies_channel_message">%1$s が返信しました</string>
     <string name="app_notification_replies_channel_message_for">投稿: %1$s</string>
-    <string name="app_notification_replies_summary">新しい返信</string>
-    <string name="app_notification_mentions_channel_name">メンション</string>
-    <string name="app_notification_mentions_channel_description">誰かがあなたをメンションまたは引用したときに通知します</string>
-    <string name="app_notification_mentions_channel_message">%1$s があなたをメンションしました</string>
-    <string name="app_notification_mentions_summary">新しいメンション</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -534,34 +81,6 @@
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
     <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
-    <string name="app_notification_calls_channel_name">着信</string>
-    <string name="app_notification_calls_channel_description">音声・ビデオ通話の着信通知</string>
-    <string name="call_incoming">着信</string>
-    <string name="call_incoming_voice">音声通話着信中…</string>
-    <string name="call_incoming_video">ビデオ通話着信中…</string>
-    <string name="call_with">%1$s との通話</string>
-    <string name="call_ongoing">通話</string>
-    <string name="call_ongoing_description">通話中の通知</string>
-    <string name="call_hangup">切る</string>
-    <string name="call_accept">受ける</string>
-    <string name="call_reject">拒否</string>
-    <string name="call_mute">ミュート</string>
-    <string name="call_unmute">ミュート解除</string>
-    <string name="call_camera_on">カメラオン</string>
-    <string name="call_camera_off">カメラオフ</string>
-    <string name="call_speaker">スピーカー</string>
-    <string name="call_earpiece">イヤピース</string>
-    <string name="call_permission_denied_voice">Amethyst が音声通話を開始するにはマイクのアクセス権が必要です。アプリの設定で有効にしてください。</string>
-    <string name="call_permission_denied_video">Amethyst がビデオ通話を開始するにはカメラとマイクのアクセス権が必要です。アプリの設定で有効にしてください。</string>
-    <string name="call_settings">通話設定</string>
-    <string name="always_on_notif_channel_description">リアルタイム通知のためにインボックス relay への接続を維持します</string>
-    <string name="always_on_notif_title">Amethyst 通知有効中</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">%1$d 件のインボックス relay に接続中</item>
-    </plurals>
-    <plurals name="always_on_notif_connected_foreground">
-        <item quantity="other">%1$d 件の relay に接続中</item>
-    </plurals>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
@@ -572,113 +91,16 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_connecting">インボックス relay に接続中…</string>
     <string name="always_on_notif_setting_title">常時接続通知サービス</string>
     <string name="always_on_notif_setting_description">インボックス relay への永続的な接続を維持し、通知をすぐに届けます。継続中の通知が表示されます。バッテリー消費は増えますが、メッセージを見逃しません。</string>
-    <string name="split_notifications_setting_title">フォロー別に通知を分割</string>
-    <string name="split_notifications_setting_description">「フォロー中」（フォローしている人）と「全員」の2つの通知タブを表示します。未読インジケーターはフォロー中の人のアクティビティのみ光ります。</string>
-    <string name="show_messages_in_notifications_setting_title">メッセージを表示</string>
-    <string name="show_messages_in_notifications_setting_description">通知タブにダイレクト・グループメッセージを含めます。オフにするとメッセージはメッセージタブのみに表示されます。</string>
-    <string name="reply_notify">通知: </string>
-    <string name="today">今日</string>
-    <string name="content_warning_hide_all_sensitive_content_option">非表示</string>
-    <string name="content_warning_show_all_sensitive_content_option">表示</string>
-    <string name="content_warning_see_warnings_option">警告</string>
-    <string name="filter_spam_from_strangers_title">スパムをフィルタリング</string>
-    <string name="filter_spam_from_strangers_explainer">見知らぬ人の同一投稿が5回以上繰り返された場合に非表示にします</string>
-    <string name="add_client_tag_title">イベントにクライアントタグを追加</string>
-    <string name="add_client_tag_explainer">有効にすると、Amethyst は公開するイベントに NIP-89 クライアントタグを付加します。</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_title">報告時に警告</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">フォロー中の人から報告された投稿やプロフィールに警告メッセージを表示します</string>
-    <string name="hide_community_rules_violations_title">コミュニティルール違反の投稿を非表示</string>
-    <string name="hide_community_rules_violations_explainer">コミュニティが NIP-9B ルール文書を公開している場合、違反するイベントをコミュニティフィードから除外します。構造化されたルールのないコミュニティには影響しません。</string>
-    <string name="security_section_filtering_preferences">フィルタリング設定</string>
-    <string name="security_section_blocked_content">ブロック済みコンテンツ</string>
-    <string name="security_blocked_users_empty">まだユーザーをブロックしていません。</string>
-    <string name="security_spamming_users_empty">このセッションでスパムとして報告されたアカウントはありません。</string>
-    <string name="security_hidden_words_empty">非表示の単語はありません。下に単語を追加すると、その単語を含む投稿が非表示になります。</string>
-    <string name="no_reaction_type_setup_long_press_to_change">リアクションタイプが選択されていません。長押しして変更</string>
-    <string name="read_from_relay">リレーから読み込み</string>
-    <string name="write_to_relay">リレーに書き込み</string>
-    <string name="write_to_relay_description">フィルターやイベントを含む、この relay に送信されたバイト数</string>
-    <string name="read_from_relay_description">フィルターやイベントを含む、この relay から受信したバイト数</string>
-    <string name="privacy_policy">プライバシーポリシー</string>
-    <string name="child_safety_standards">児童安全基準</string>
-    <string name="about_legal">概要 &amp; 法的情報</string>
-    <string name="cashu">Cashuトークン</string>
-    <string name="no_lightning_address_set">Lightning アドレスが設定されていません</string>
-    <string name="relay_setup">リレー</string>
-    <string name="discover_follows">フォローパック</string>
-    <string name="discover_reads">読み物</string>
-    <string name="discover_content_v2">フィードアルゴリズム</string>
-    <string name="discover_marketplace">マーケットプレイス</string>
-    <string name="discover_live_v2">ライブストリーム</string>
-    <string name="discover_community_v2">コミュニティ</string>
-    <string name="discover_chat">チャット</string>
-    <string name="add_sensitive_content_label">センシティブなコンテンツ</string>
-    <string name="add_sensitive_content_description">コンテンツを表示する前に、センシティブなコンテンツであることを示す警告を表示します</string>
-    <string name="ui_preferences">UI設定</string>
     <string name="preferences">アプリ設定</string>
-    <string name="translations">翻訳</string>
-    <string name="reactions">リアクション</string>
-    <string name="settings">設定</string>
-    <string name="account_settings">アカウント設定</string>
-    <string name="app_settings">アプリ設定</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
-    <string name="danger_zone">危険ゾーン</string>
-    <string name="reset_marmot_state">Marmot 状態をリセット</string>
-    <string name="reset_marmot_success">Marmot 状態をリセットしました。</string>
-    <string name="reset_marmot_failure">Marmot 状態のリセットに失敗しました: %1$s</string>
-    <string name="connectivity_type_always">常に</string>
-    <string name="connectivity_type_unmetered_wifi_only">従量制なし WiFi</string>
-    <string name="connectivity_type_never">なし</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
-    <string name="ui_feature_set_type_complete">完全</string>
-    <string name="ui_feature_set_type_simplified">シンプル</string>
-    <string name="ui_feature_set_type_performance">パフォーマンス</string>
     <!-- Compact labels for the segmented control. -->
-    <string name="gallery_type_classic">クラシック</string>
-    <string name="gallery_type_modern">モダン</string>
-    <string name="system">システム</string>
-    <string name="light">ライト</string>
-    <string name="dark">ダーク</string>
-    <string name="theme">テーマ</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="automatically_load_images_gifs">自動的に画像/GIFを読み込み</string>
-    <string name="automatically_play_videos">自動的に動画を再生</string>
-    <string name="autoplay_videos">動画の自動再生</string>
-    <string name="automatically_show_url_preview">自動的にURLプレビューを表示</string>
-    <string name="automatically_hide_nav_bars">没入スクロール</string>
-    <string name="automatically_hide_nav_bars_description">スクロール中にナビゲーションバーを非表示</string>
-    <string name="ui_style">UIモード</string>
-    <string name="ui_style_description">投稿スタイルを選択</string>
-    <string name="gallery_style">プロフィールギャラリースタイル</string>
-    <string name="gallery_style_description">ギャラリースタイルを選択</string>
-    <string name="spamming_users">スパマー</string>
-    <string name="muted_button">ミュート中。クリックしてミュート解除</string>
-    <string name="mute_button">音声オン。クリックしてミュート</string>
-    <string name="skip_back">%d 秒戻る</string>
-    <string name="skip_forward">%d 秒進む</string>
-    <string name="geohash_exclusive">位置情報限定投稿</string>
-    <string name="geohash_exclusive_explainer">その位置のフォロワーのみに表示されます。一般のフォロワーには表示されません。</string>
-    <plurals name="music_playlist_track_count">
-        <item quantity="other">%1$d トラック</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="other">+%1$d トラック</item>
-    </plurals>
-    <string name="music_track_cover_upload_cta">カバー画像をアップロード</string>
-    <string name="music_track_cover_upload_hint">このトラックのアートワークとして正方形の画像を選んでください。</string>
-    <string name="music_track_audio_upload_cta">音声ファイルをアップロード</string>
-    <string name="music_track_audio_upload_hint">MP3、WAV、または FLAC を選んでください。保存時にメディアサーバーにアップロードされます。</string>
-    <string name="music_track_uploading_banner">カバーと音声をアップロードして公開中です。画面を離れても処理は続きます。</string>
-    <string name="edit_music_playlist">プレイリストを編集</string>
-    <string name="music_playlist_cover_upload_cta">カバー画像をアップロード</string>
-    <string name="music_playlist_cover_upload_hint">このプレイリストのアートワークとして正方形の画像を選んでください。</string>
-    <string name="music_playlist_uploading_banner">カバーをアップロードして公開中です。画面を離れても処理は続きます。</string>
     <string name="messages_create_public_chat">公開</string>
     <string name="messages_create_group">グループ</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
@@ -687,618 +109,46 @@
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="messages_new_message">プライベート</string>
-    <string name="messages_new_message_subject">件名</string>
-    <string name="messages_cant_upload_title">アップロードできません</string>
-    <string name="messages_cant_upload_explainer">先にメッセージの宛先を入力してください</string>
-    <string name="couldnt_find_nwc_wallets">ウォレットが見つかりません</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst は Nostr Wallet Connect（NWC）に対応したウォレットアプリを見つけられませんでした。
-\n\n対処方法:
-\n\t1. NWC サポートを確認: お使いのウォレットアプリが Nostr Wallet Connect に対応しているか再確認してください。
-\n\t2. 接続を作成: ウォレットアプリで新しい NWC 接続を作成してください。
-\n\t3. Amethyst にリンク: ウォレットは通常、以下の3つの方法を提供します:
-\n\t\t3.1 自動リンク: 自動的に Amethyst を開いて接続するボタン。その場合、ボタンをクリックして Amethyst を開き、新しい画面で保存を押してください。
-\n\t\t3.2 手動リンク: この画面の貼り付けアイコンをクリックして直接入力できる接続 URI。
-\n\t\t3.3 QR コード: ウォレットが作成する QR コード。この画面の QR コードボタンから読み取れます。
-    </string>
-    <string name="theme_description">ダーク、ライト、またはシステムテーマ</string>
-    <string name="automatically_load_images_gifs_description">画像と GIF を自動的に読み込む</string>
-    <string name="automatically_play_videos_description">動画と GIF を自動的に読み込む</string>
-    <string name="autoplay_videos_description">画面に表示されたときに動画を自動再生する</string>
-    <string name="automatically_show_url_preview_description">URL プレビューを表示</string>
-    <string name="copy_to_clipboard">クリップボードにコピー</string>
-    <string name="copied_to_clipboard">クリップボードにコピーしました</string>
-    <string name="share_or_save">共有または保存</string>
     <string name="share_target_as_dm">DM として送信</string>
-    <string name="media_added">メディアを追加しました</string>
-    <string name="media_added_to_profile_gallery">プロフィールギャラリーにメディアを追加しました</string>
-    <string name="error_dialog_zap_error">zap を送信できません</string>
-    <string name="missing_lud16">Lightning の設定がありません</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">ユーザー %1$s は sats を受け取るための Lightning アドレスを設定していません</string>
-    <string name="error_opening_external_signer">署名アプリを開くエラー</string>
-    <string name="error_opening_external_signer_description">署名アプリが見つかりませんでした。アプリがアンインストールされていないか確認してください</string>
-    <string name="error_video_playback_failed">この動画を再生できません</string>
-    <string name="error_video_playback_failed_description">このデバイスではコーデックまたは形式がサポートされていません（%1$s）。ブラウザで開いてみてください。</string>
-    <string name="error_video_open_in_browser">ブラウザで開く</string>
-    <string name="sign_request_rejected2">署名リクエストが拒否されました</string>
-    <string name="sign_request_rejected_description">署名アプリがこのトランザクションを承認していることを確認してください</string>
-    <string name="no_wallet_found_with_error">Lightning 請求書を支払うウォレットが見つかりません（エラー: %1$s）。zap を使用するには Lightning ウォレットをインストールしてください</string>
-    <string name="no_wallet_found">Lightning 請求書を支払うウォレットが見つかりません。zap を使用するには Lightning ウォレットをインストールしてください</string>
-    <string name="no_blossom_apps_found_title">Blossom リンクを開けません</string>
-    <string name="no_blossom_apps_found_description">Blossom アプリが見つかりませんでした。このファイルを表示するにはローカルの Blossom アプリをインストールしてください</string>
-    <string name="hidden_words">非表示ワード</string>
-    <string name="settings_muted_threads_title">ミュートしたスレッド</string>
-    <string name="settings_muted_threads_empty">ミュートしたスレッドはありません</string>
-    <string name="automatically_show_profile_picture">プロフィール画像</string>
-    <string name="automatically_show_profile_picture_description">プロフィール画像を表示</string>
-    <string name="error_dialog_pay_invoice_error">請求書を支払えませんでした</string>
-    <string name="error_dialog_pay_withdraw_error">引き出しできませんでした</string>
-    <string name="cashu_failed_redemption">Cashu を換金できませんでした</string>
-    <string name="cashu_failed_redemption_explainer_error_msg">Mint から次のエラーメッセージが返されました: %1$s</string>
-    <string name="cashu_successful_redemption">Cashu を受け取りました</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats がウォレットに送られました。（手数料: %2$s sats）</string>
-    <string name="cashu_no_wallet_found">対応する Cashu ウォレットがシステムに見つかりません</string>
-    <string name="error_unable_to_fetch_invoice">受信者のサーバーから請求書を取得できません</string>
-    <string name="wallet_connect_pay_invoice_error_error">Wallet Connect プロバイダーから次のエラーが返されました: %1$s</string>
-    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning アドレス「%1$s」から LNUrl を組み立てられませんでした。ユーザーの設定を確認してください</string>
-    <string name="could_not_fetch_invoice_from_details">%1$s から請求書を取得できませんでした: %2$s</string>
-    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">%1$s からの JSON の解析エラー。ユーザーの Lightning 設定を確認してください</string>
-    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">%1$s のレスポンスにコールバック URL が見つかりませんでした</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">%2$s からの請求書金額が正しくありません（%1$s sats）。正しい金額は %3$s であるべきでした</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">zap 送信前に Lightning 請求書を作成できませんでした。受信者の Lightning ウォレットから次のエラーが送信されました: %1$s</string>
-    <string name="read_only_user">読み取り専用ユーザー</string>
-    <string name="no_reactions_setup">リアクションが設定されていません</string>
-    <string name="notification_settings">通知</string>
-    <string name="notification_settings_section_delivery">配信</string>
-    <string name="notification_settings_section_display">アプリ内表示</string>
-    <string name="notification_settings_section_categories">カテゴリ</string>
-    <string name="payment_required_title">%1$sからのメッセージ</string>
-    <string name="hi_seller_is_this_still_available">%1$sさん、こちらはまだ入手可能ですか？</string>
-    <string name="classifieds_category_clothing">衣類</string>
-    <string name="classifieds_category_accessories">アクセサリー</string>
-    <string name="classifieds_category_electronics">電子機器</string>
-    <string name="classifieds_category_furniture">家具</string>
-    <string name="classifieds_category_collectibles">コレクターアイテム</string>
-    <string name="classifieds_category_books">書籍</string>
-    <string name="classifieds_category_pets">ペット</string>
-    <string name="classifieds_category_sports">スポーツ</string>
-    <string name="classifieds_category_fitness">フィットネス</string>
-    <string name="classifieds_category_art">アート</string>
-    <string name="classifieds_category_crafts">クラフト</string>
-    <string name="classifieds_category_home">ホーム</string>
-    <string name="classifieds_category_office">オフィス</string>
-    <string name="classifieds_category_food">食品</string>
-    <string name="classifieds_category_misc">その他雑多</string>
-    <string name="classifieds_category_other">その他</string>
-    <string name="failed_to_upload_media_no_details">メディアのアップロードに失敗しました</string>
-    <string name="could_not_open_the_compressed_file">圧縮ファイルを開けませんでした</string>
-    <string name="failed_to_upload_media">アップロードエラー：%1$s</string>
-    <string name="server_did_not_provide_a_url_after_uploading">アップロード後にサーバーがURLを提供しませんでした</string>
-    <string name="could_not_download_from_the_server">アップロードされたメディアをサーバーからダウンロードできませんでした</string>
-    <string name="could_not_check_downloaded_file">アップロード後にダウンロードしたファイルを確認できませんでした：%1$s</string>
-    <string name="failed_to_upload_to_server_with_message">%1$sへのアップロードに失敗しました：%2$s</string>
-    <string name="failed_to_delete_with_message">削除に失敗しました：%1$s</string>
-    <string name="media_too_big_for_nip95">メディアがNIP-95には大きすぎます</string>
-    <string name="encrypt_files_label">ファイルを暗号化</string>
-    <string name="encrypt_files_description">プライバシーのためにアップロード前にファイルを暗号化します。一部のサーバーでは無料アカウントで暗号化ファイルを受け付けない場合があります。</string>
-    <string name="failed_to_upload_encrypted_media_title">暗号化アップロード失敗</string>
-    <string name="failed_to_upload_encrypted_media_message">多くのサーバーは無料アカウントで暗号化ファイルを受け付けません。暗号化なしで再試行できます。</string>
-    <string name="video_codec_h265_label">H.265/HEVCコーデックを使用</string>
-    <string name="video_codec_h265_description">小さいファイルサイズでより高い品質ですが、すべての端末がH.265の再生をサポートしているわけではありません。</string>
-    <string name="convert_gif_to_mp4_label">GIFをMP4に変換</string>
-    <string name="convert_gif_to_mp4_description">アニメーションGIFをMP4動画に変換してファイルサイズを縮小し、再生互換性を向上させます。</string>
-    <string name="strip_metadata_label">プライベートメタデータを削除</string>
-    <string name="strip_metadata_description">アップロード前に対応するメディアファイルからプライベートメタデータの削除を試みます</string>
-    <string name="metadata_strip_failed_title">メタデータを削除できませんでした</string>
-    <string name="metadata_strip_failed_upload_cancelled">メディアからプライベートメタデータを削除できませんでした。アップロードをキャンセルしました。</string>
-    <string name="upload_cancelled">アップロードをキャンセルしました</string>
-    <string name="avif_metadata_strip_failed">AVIFからメタデータを削除できません：%1$s</string>
-    <string name="route_home">ホーム</string>
-    <string name="route_discover">発見</string>
-    <string name="route_messages">メッセージ</string>
-    <string name="route_notifications">通知</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="route_calendars">カレンダー</string>
-    <string name="route_calendar_collections">カレンダーリスト</string>
-    <string name="route_chess">チェス</string>
-    <string name="wallet">ウォレット</string>
-    <string name="wallet_add_cashu_title">Cashu ウォレット（NIP-60）</string>
     <string name="cashu_p2pk_section">Nutzapキー（上級者向け）</string>
     <string name="cashu_p2pk_explainer">NIP-61 nutzapを受け取るためだけに使用する別の秘密鍵です。Nostrのアイデンティティキーではありません。</string>
     <string name="cashu_p2pk_autogen">新しいキーを生成</string>
     <string name="cashu_p2pk_manual_label">P2PK秘密鍵（hex）</string>
-    <string name="wallet_edit_cashu_title">mintを編集</string>
     <string name="wallet_save_changes">変更を保存</string>
-    <plurals name="cashu_mint_plus_others">
-        <item quantity="other">+%1$d件</item>
-    </plurals>
-    <plurals name="cashu_mint_recommended_by_others">
-        <item quantity="other">他%1$d人がおすすめ</item>
-    </plurals>
-    <string name="cashu_mint_popular_header">人気のmint</string>
-    <string name="cashu_mint_matches_header">一致するmint</string>
-    <string name="cashu_history_incoming">受取済み</string>
-    <string name="cashu_history_outgoing">送金済み</string>
-    <string name="cashu_settings_delete_confirm_body">%1$sのkind:38000おすすめの削除リクエストを公開します。NIP-09を承認するrelayはこれを削除します。</string>
-    <string name="cashu_settings_restore_result">%2$s個のproofから%1$s satsを回復しました。</string>
-    <string name="cashu_quote_confirm">%1$s sat + 最大%2$s satの手数料を支払いますか？</string>
-    <string name="nutzap_failed_title">Nutzapが失敗しました</string>
-    <string name="nutzap_failed_no_recipient">ノートに受信者の公開鍵がありません</string>
-    <string name="nutzap_failed_private_note">Nutzapは公開されるため、このプライベートノートが公開されてしまいます。代わりにLightning zapを使用してください。</string>
-    <string name="nutzap_failed_no_event">イベント参照を構築できません</string>
-    <string name="cashu_waiting_for_payment">インボイスの支払いを待っています…</string>
-    <string name="cashu_checking_mint">mintを確認しています…</string>
     <!-- Onchain zap send dialog -->
-    <string name="onchain_send_fee_slow">遅い</string>
-    <string name="onchain_send_fee_normal">普通</string>
-    <string name="onchain_send_fee_fast">速い</string>
-    <string name="onchain_send_fee_eta_slow">約1時間</string>
-    <string name="onchain_send_fee_eta_normal">約30分</string>
-    <string name="onchain_send_fee_eta_fast">約10分</string>
-    <plurals name="onchain_send_button_amount_split">
-        <item quantity="other">%1$s satsを%2$d分割で送る</item>
-    </plurals>
-    <plurals name="onchain_send_use_note_split">
-        <item quantity="other">このノートの%1$d分割zapを使用する</item>
-    </plurals>
-    <plurals name="onchain_send_splits_label">
-        <item quantity="other">%1$d人の受信者に分割</item>
-    </plurals>
-    <plurals name="onchain_send_splits_skipped">
-        <item quantity="other">Lightningアドレスのみの受信者%1$dをスキップしています — オンチェーンにはアドレスを導出するためのNostr公開鍵が必要です。</item>
-    </plurals>
-    <string name="onchain_stage_loading_utxos">残高を読み込んでいます</string>
-    <string name="onchain_stage_building">トランザクションを構築しています</string>
-    <string name="onchain_stage_signing">署名しています</string>
-    <string name="onchain_stage_broadcasting">ブロードキャストしています</string>
-    <string name="onchain_stage_publishing">領収書を公開しています</string>
-    <string name="onchain_send_error_backend_not_configured">Bitcoinチェーンバックエンドが設定されていません</string>
-    <string name="onchain_send_error_load_utxos">Bitcoin残高を読み込めませんでした</string>
-    <string name="onchain_send_error_build">トランザクションを構築できませんでした</string>
-    <string name="onchain_send_error_recipient_dust">受信者の取り分がダスト以下です</string>
-    <string name="onchain_send_error_sign">トランザクションに署名できませんでした</string>
-    <string name="onchain_send_error_broadcast">トランザクションをブロードキャストできませんでした</string>
-    <string name="onchain_send_error_publish_receipt">支払いは送信されましたが、zap領収書を公開できませんでした</string>
-    <plurals name="onchain_send_error_publish_receipt_partial">
-        <item quantity="other">支払いは送信されました（%2$d件中%1$d件の領収書を公開済み）が、次の領収書を公開できませんでした</item>
-    </plurals>
-    <string name="route_import_follows">フォローをインポート</string>
-    <string name="new_product">新規商品</string>
-    <string name="new_long_form_post">新規記事</string>
-    <string name="new_calendar_event">新規カレンダーイベント</string>
-    <string name="edit_calendar_event">カレンダーイベントを編集</string>
-    <string name="new_calendar_collection">新規カレンダー</string>
-    <string name="edit_calendar_collection">カレンダーを編集</string>
-    <string name="calendar_view_feed">フィード</string>
-    <string name="calendar_view_month">月</string>
-    <string name="calendar_view_week">週</string>
-    <string name="calendar_view_day">日</string>
-    <plurals name="calendar_day_a11y_events">
-        <item quantity="other">%1$s、%2$dイベント</item>
-    </plurals>
-    <string name="calendar_relative_ongoing">開催中</string>
-    <string name="calendar_relative_ongoing_with_end">%1$s · 終了：%2$s</string>
-    <string name="calendar_export_share_title">カレンダーイベントを共有</string>
-    <string name="calendar_reminder_channel_name">カレンダーリマインダー</string>
-    <string name="calendar_reminder_channel_description">参加予定のイベントが始まる前に通知します。</string>
-    <string name="calendar_reminder_default_title">カレンダーイベント</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="other">%1$d分後に開始します</item>
-    </plurals>
-    <string name="calendar_event_image_upload_failed">画像のアップロードに失敗しました</string>
-    <string name="calendar_event_image_upload_failed_body">選択した画像をアップロードできませんでした。もう一度試すか、URLを貼り付けてください。</string>
-    <string name="calendar_reminder_settings_title">カレンダーリマインダー</string>
-    <string name="calendar_reminder_settings_enabled_title">リマインダーを送る</string>
-    <string name="calendar_reminder_settings_enabled_subtitle">参加予定のイベントが始まる前に通知が送られます。</string>
-    <plurals name="calendar_reminder_settings_lead_choice">
-        <item quantity="other">%1$d分</item>
-    </plurals>
-    <string name="calendar_open_in_maps">マップで開く</string>
-    <string name="calendar_open_link">リンクを開く</string>
-    <string name="open_all_reactions_to_this_post">この投稿へのすべてのリアクションを開く</string>
-    <string name="close_all_reactions_to_this_post">この投稿へのすべてのリアクションを閉じる</string>
-    <string name="bottom_bar_settings">ボトムナビゲーションバー</string>
     <string name="bottom_bar_settings_description">ドラッグして並べ替え。トグルでボトムバーへの追加・削除を切り替え。アイテムが0個の場合はボトムバーが非表示になります。</string>
     <string name="bottom_bar_settings_reorder">並べ替え</string>
     <string name="home_tabs_settings_description">ホーム画面に表示するタブを選択します。タブが1つだけ有効の場合、タブバーは非表示になります。</string>
-    <string name="home_tab_everything">すべて</string>
-    <string name="profile_ui_settings">プロフィール UI</string>
     <string name="profile_ui_settings_description">ユーザープロフィール画面に表示するセクションとフィードを選択します。デフォルトではすべての項目が有効になっています。</string>
-    <string name="profile_ui_setting_badges">プロフィールバッジ</string>
-    <string name="profile_ui_setting_app_recommendations">アプリのおすすめ</string>
-    <string name="profile_ui_setting_zap_received_feed">受信した Zap フィード</string>
-    <string name="profile_ui_setting_followers_feed">フォロワーフィード</string>
-    <string name="reactions_settings">リアクションバー</string>
-    <string name="video_player_settings">ビデオプレーヤーボタン</string>
-    <string name="audio_visualizer_settings">オーディオビジュアライザー</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="expiration_date_label">有効期限</string>
-    <string name="invalid_nip19_uri">無効なアドレス</string>
-    <string name="invalid_nip19_uri_description">Amethyst が開くための URI を受信しましたが、その URI は無効でした: %1$s</string>
-    <string name="dm_relays_title">DM 受信 Relay</string>
-    <string name="search_relays_title">検索 Relay</string>
-    <string name="search_relays_not_found_examples">おすすめの選択肢:\n%1$s</string>
-    <string name="outbox_relays_title">Outbox Relay</string>
-    <string name="inbox_relays_title">Inbox Relay</string>
-    <string name="relay_settings">Relay 設定</string>
-    <string name="public_home_section">パブリック Outbox / ホーム Relay</string>
-    <string name="public_home_section_explainer_profile">ユーザーはこれらの relay にコンテンツを投稿しています</string>
-    <string name="public_home_section_explainer">この relay タイプはすべてのコンテンツを保存します。Amethyst はここに投稿を送信し、他のユーザーはこれらの relay を使ってあなたのコンテンツを見つけます。1〜3 つの relay を入力してください。個人用 relay、有料 relay、またはパブリック relay が利用できます。</string>
-    <string name="public_notif_section">パブリック Inbox Relay</string>
-    <string name="public_notif_section_explainer_profile">ユーザーはこれらの relay で通知を受け取っています</string>
-    <string name="public_notif_section_explainer">この relay タイプは、あなたの投稿へのすべての返信、コメント、いいね、zap を受信します。有料・無料いずれの relay も使用できます。relay 運営者が設定する制限により、受け取る通知の量が変わる場合があります。たとえば、コメントスパム攻撃を受けている場合、有料 relay でスパムをフィルタリングできます。1〜3 つの relay を入力してください。</string>
-    <string name="private_inbox_section">DM 受信 Relay</string>
-    <string name="private_inbox_section_explainer_profile">ユーザーはこれらの relay で DM を受け取っています</string>
-    <string name="private_inbox_section_explainer">プライベート受信 relay として 1〜3 つの relay を入力してください。他のユーザーはこれらの relay を使ってあなたに DM を送ります。DM 受信 relay は誰からでもメッセージを受け取れますが、ダウンロードはあなた自身のみに許可するものにしてください。おすすめの選択肢:\n - inbox.nostr.wine（有料）\n - auth.nostr1.com（無料）\n - you.nostr1.com（個人用 relay - 有料）</string>
-    <string name="keypackages">KeyPackage</string>
-    <string name="keypackage_section">KeyPackage Relay</string>
-    <string name="keypackage_section_explainer">あなたの MLS KeyPackage が公開されている relay（MIP-00）です。他のユーザーはこれらの KeyPackage を取得して、あなたを Marmot グループチャットに招待します。KeyPackage イベントの書き込みとパブリック読み取りを許可する relay を 1〜3 つ入力してください。</string>
-    <string name="private_outbox_section">プライベートホーム Relay</string>
-    <string name="private_outbox_section_explainer">下書きやアプリ設定など、他のユーザーには見えないイベントを保存する relay を 1〜3 つ入力してください。理想的には、ローカル relay か、各ユーザーのコンテンツをダウンロードする前に認証を要求する relay を使用してください。</string>
-    <string name="connected_section">接続済み Relay</string>
-    <string name="connected_section_description">現在使用中の relay の一覧</string>
-    <string name="search_section">検索 Relay</string>
-    <string name="search_section_explainer">コンテンツやユーザーを検索する際に使用する relay の一覧です。利用可能なオプションがない場合、タグ付けと検索が機能しません。NIP-50 を実装していることを確認してください。</string>
-    <string name="local_section">ローカル Relay</string>
-    <string name="local_section_explainer">このデバイスで動作している relay の一覧です。</string>
-    <string name="send_kind0_to_local_relay_title">プロフィールをローカル relay に転送する</string>
-    <string name="send_kind0_to_local_relay_description">受信したすべてのプロフィール（kind 0）イベントをローカル relay に送信する</string>
-    <string name="trusted_section">信頼済み Relay</string>
-    <string name="trusted_section_explainer">Tor 接続が不要な信頼済み relay</string>
-    <string name="favorite_section">お気に入り Relay フィード</string>
-    <string name="favorite_section_explainer">グローバルフィードを見るためによく訪れる relay</string>
-    <string name="proxy_section">Proxy Relay</string>
-    <string name="proxy_section_explainer">filter.nostr.wine のように、アプリがフィードをダウンロードするために使用するアグリゲーター relay です。これにより outbox モデルが置き換えられ、アプリはリスト内の relay のみに接続するようになります。</string>
-    <string name="broadcast_section">Broadcast Relay</string>
-    <string name="broadcast_section_explainer">sendit.nosflare.com のように、あなたのノートを他のすべての relay にプッシュすることに特化した relay です。Amethyst はあなたが作成するすべての新しいイベントにこの relay を追加します。</string>
-    <string name="indexer_section">インデクサー Relay</string>
-    <string name="indexer_section_explainer">purplepag.es のように、全ユーザーのメタデータと relay リストのホスティングに特化した relay です。Amethyst はこれらの relay を使用して、あなたのリストにないユーザーを検索します。</string>
-    <string name="blocked_section">ブロック済み Relay</string>
-    <string name="blocked_section_explainer">Amethyst はこれらの relay に接続しません</string>
-    <string name="export_relay_settings">Relay 設定をエクスポート</string>
     <string name="git_repo_tab_overview">概要</string>
     <string name="git_repo_section_about">概要</string>
     <string name="git_repo_section_links">リンク</string>
     <string name="git_repo_section_maintainers">メンテナー</string>
     <string name="git_repo_section_topics">トピック</string>
-    <string name="ots_info_title">タイムスタンプ証明</string>
-    <string name="ots_info_description">この投稿が %1$s より前に署名されたことの証明があります。この証明はその日時に Bitcoin ブロックチェーンに刻印されています。</string>
-    <string name="edit_post">投稿を編集</string>
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">下書きノートには返信できません</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">下書きノートを引用することはできません</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">下書きノートにリアクションすることはできません</string>
-    <string name="it_s_not_possible_to_zap_to_a_draft_note">下書きノートに zap することはできません</string>
-    <string name="draft_note">下書きノート</string>
-    <string name="http_status_400">400 Bad Request — サーバーがリクエストを処理できないか、処理しようとしません。</string>
-    <string name="http_status_401">401 Unauthorized — ユーザーが有効な認証情報を持っていません</string>
-    <string name="http_status_402">402 Payment Required — サーバーはリクエストを完了するために支払いを要求しています</string>
-    <string name="http_status_403">403 Forbidden — ユーザーがリクエストを行うためのアクセス権を持っていません</string>
-    <string name="http_status_404">404 Not Found — サーバーがリクエストされたアドレスを見つけられません</string>
-    <string name="http_status_405">405 Method Not Allowed — サーバーはリクエストメソッドをサポートしていますが、対象リソースではサポートしていません</string>
-    <string name="http_status_406">406 Not Acceptable — サーバーがリクエストを満たすコンテンツを見つけられません。</string>
-    <string name="http_status_407">407 Proxy Authentication Required — ユーザーが有効な認証情報を持っていません</string>
-    <string name="http_status_408">408 Request Timeout — サーバーが応答を待ちタイムアウトしました</string>
-    <string name="http_status_409">409 Conflict — リソースとの競合があるためサーバーがリクエストを処理できません</string>
-    <string name="http_status_410">410 Gone — リクエストされたコンテンツはサーバーから完全に削除されており、復元されません</string>
-    <string name="http_status_411">411 Length Required — サーバーが定義されたContent-Lengthを要求するためリクエストを拒否しました</string>
-    <string name="http_status_412">412 Precondition Failed — サーバーがヘッダーフィールドのリクエストの事前条件を満たせません</string>
-    <string name="http_status_413">413 Payload Too Large — リクエストがサーバーの制限を超えているため、サーバーは処理を拒否しています</string>
-    <string name="http_status_414">414 URI Too Long — クライアントがリクエストしたURLがサーバーの処理できる長さを超えています。</string>
-    <string name="http_status_415">415 Unsupported Media Type — リクエストがサーバーのサポートしていないメディア形式を使用しています</string>
-    <string name="http_status_416">416 Range Not Satisfiable — サーバーがリクエストのRangeヘッダーフィールドに示された値を満たせません。</string>
-    <string name="http_status_417">417 Expectation Failed — サーバーがExpectリクエストヘッダーフィールドの要件を満たせません</string>
-    <string name="http_status_426">426 Upgrade Required — クライアントが別のプロトコルにアップグレードしない限り、サーバーは現在のプロトコルでリクエストを処理しません。</string>
-    <string name="http_status_500">500 Internal Server Error — サーバーが予期しないエラーに遭遇し、リクエストを完了できません</string>
-    <string name="http_status_501">501 Not Implemented — サーバーがリクエストを処理できないか、リクエストメソッドを認識しません</string>
-    <string name="http_status_502">502 Bad Gateway — サーバーがゲートウェイとして機能し、ホストから無効なレスポンスを受け取りました</string>
-    <string name="http_status_503">503 Service Unavailable — サーバーが過負荷またはメンテナンス中のためよく発生します</string>
-    <string name="http_status_504">504 Gateway Timeout — サーバーがゲートウェイまたはプロキシとして機能し、レスポンスを待ちタイムアウトしました</string>
-    <string name="http_status_505">505 HTTP Version Not Supported — サーバーがリクエストのHTTPバージョンをサポートしていません</string>
-    <string name="http_status_506">506 Variant Also Negotiates — サーバーの内部設定エラーです</string>
-    <string name="http_status_507">507 Insufficient Storage — サーバーがリクエストを正常に処理するのに十分なストレージを持っていません</string>
-    <string name="http_status_508">508 Loop Detected — サーバーがリクエストの処理中に無限ループを検出しました</string>
-    <string name="http_status_511">511 Network Authentication Required — クライアントはネットワークにアクセスするために認証が必要です</string>
     <string name="media_servers_blossom_section">Blossom サーバー</string>
     <string name="media_servers_blossom_explainer">必要なだけサーバーを追加できます。写真をアップロードする際にどれを使用するかは後で選択できます</string>
-    <string name="add_a_nip96_server">NIP-96 サーバーを追加</string>
-    <string name="add_a_blossom_server">Blossom サーバーを追加</string>
     <string name="torrent_download">ダウンロード</string>
-    <string name="torrent_failure">ファイルを開けませんでした</string>
-    <string name="torrent_no_apps">ファイルを開いてダウンロードするための torrent アプリがインストールされていません。</string>
-    <string name="torrent_no_info">マグネットリンクを生成するための情報がイベントに不足しています</string>
-    <string name="my_lists">マイリスト</string>
-    <string name="feed_group_feeds">フィード</string>
-    <string name="feed_group_hashtags">ハッシュタグ</string>
-    <string name="feed_group_interest_sets">インタレストセット</string>
-    <string name="feed_group_locations">場所</string>
-    <string name="feed_group_communities">コミュニティ</string>
-    <string name="feed_group_lists">リスト</string>
-    <string name="feed_group_dvms">フィードアルゴリズム</string>
-    <string name="follow_list_all_favorite_dvms">すべてのお気に入りフィードアルゴリズム</string>
-    <string name="favorite_dvms_title">お気に入りフィードアルゴリズム</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="private_message">プライベートメッセージ</string>
-    <string name="public_message">パブリックメッセージ</string>
-    <string name="unable_to_share_image">画像を共有できません。後でもう一度お試しください…</string>
-    <string name="unable_to_share_video">動画を共有できません。後でもう一度お試しください…</string>
-    <string name="downloading_video_for_sharing">動画をダウンロード中…</string>
-    <string name="dont_translate_from">翻訳しない言語</string>
-    <string name="dont_translate_from_description">ここに表示されている言語は翻訳されません。言語を選択して削除すると、再び翻訳されるようになります。</string>
-    <string name="translate_to">翻訳先</string>
-    <string name="translate_to_description">コンテンツの翻訳先言語を選択してください。</string>
-    <string name="language_preferences">言語表示の設定</string>
-    <string name="language_preferences_description">翻訳された言語ペアごとに、どの言語を先に表示するかを選択します。</string>
-    <string name="pause">一時停止</string>
-    <string name="play">再生</string>
-    <string name="this_message_will_disappear_in">このメッセージは %1$s 後に消えます</string>
-    <string name="people_list_title">フォローリストのメタデータ</string>
-    <string name="people_list_explainer">フォローリストのメタデータは Nostr 上の誰でも見ることができます。プライベートメンバーのみ暗号化されています。</string>
-    <string name="follow_pack_title">フォローパックのメタデータ</string>
-    <string name="follow_pack_explainer">フォローパックのメタデータは Nostr 上の誰でも見ることができ、新規ユーザー向けのスターターキットとして多くのウェブサイトで頻繁に公開されています。</string>
-    <string name="follow_pack_edit_list_metadata">フォローパックを編集</string>
-    <string name="expand">展開する</string>
-    <string name="retry">再試行</string>
-    <string name="reaction">リアクション</string>
-    <string name="voice_post">音声投稿</string>
-    <string name="voice_reply">音声返信</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="kind_apps">アプリ</string>
-    <string name="kind_app_recommendations">アプリのおすすめ</string>
-    <string name="kind_user_settings">ユーザー設定</string>
-    <string name="kind_audio_header">オーディオヘッダー</string>
-    <string name="kind_audio_track">オーディオトラック</string>
-    <string name="kind_music_track">音楽トラック</string>
-    <string name="kind_music_playlist">音楽プレイリスト</string>
-    <string name="kind_podcast_episode">ポッドキャストエピソード</string>
-    <string name="kind_podcast_metadata">ポッドキャスト番組</string>
-    <string name="kind_authored_podcasts">作成したポッドキャスト</string>
-    <string name="kind_favorite_podcasts">お気に入りのポッドキャスト</string>
-    <string name="kind_badge_awards">バッジ受賞</string>
-    <string name="kind_badge_definitions">バッジ定義</string>
-    <string name="kind_accepted_badge_set">承認済みバッジセット</string>
-    <string name="kind_profile_badges">プロフィールバッジ</string>
-    <string name="kind_blocked_relays">ブロックされた Relays</string>
-    <string name="kind_broadcast_relays">ブロードキャスト Relays</string>
-    <string name="kind_bookmark_list">ブックマークリスト</string>
-    <string name="kind_old_bookmark_list">旧ブックマークリスト</string>
-    <string name="kind_day_appointment">日次予定</string>
-    <string name="kind_calendar">カレンダー</string>
-    <string name="kind_appointment">予定</string>
-    <string name="kind_appt_rsvp">予定RSVP</string>
-    <string name="kind_chess_games">チェスゲーム</string>
-    <string name="kind_chess_auth">チェス認証</string>
-    <string name="kind_favorite_relays">お気に入りrelay</string>
-    <string name="kind_chess_challenges">チェスチャレンジ</string>
-    <string name="kind_chess_game_accept">チェスゲーム承認</string>
-    <string name="kind_chess_move">チェスの手</string>
-    <string name="kind_chess_game_end">チェスゲーム終了</string>
-    <string name="kind_chess_draw_offer">チェス引き分け提案</string>
-    <string name="kind_channel_definition">チャンネル定義</string>
-    <string name="kind_channel_hide_msg">チャンネルメッセージ非表示</string>
-    <string name="kind_channel_list">チャンネルリスト</string>
-    <string name="kind_channel_message">チャンネルメッセージ</string>
-    <string name="kind_channel_metadata">チャンネルメタデータ</string>
-    <string name="kind_channel_mute_user">チャンネルユーザーミュート</string>
-    <string name="kind_dm_file">DMファイル</string>
-    <string name="kind_dm_message">DMメッセージ</string>
-    <string name="kind_dm_relays">DM relay</string>
-    <string name="kind_classifieds">分類広告</string>
-    <string name="kind_comments">コメント</string>
-    <string name="kind_community_def">コミュニティ定義</string>
-    <string name="kind_community_list">コミュニティリスト</string>
-    <string name="kind_community_post">コミュニティ投稿</string>
-    <string name="kind_follow_list">フォローリスト</string>
-    <string name="kind_deletions">削除</string>
-    <string name="kind_drafts">下書き</string>
-    <string name="kind_emoji_packs">絵文字パック</string>
-    <string name="kind_emoji_pack_list">絵文字パックリスト</string>
-    <string name="kind_ephemeral_chat">一時チャット</string>
-    <string name="kind_ephemeral_chatrooms">一時チャットルーム</string>
-    <string name="kind_file_headers">ファイルヘッダー</string>
-    <string name="kind_profile_gallery">プロフィールギャラリー</string>
-    <string name="kind_file_servers">ファイルサーバー</string>
-    <string name="kind_blob_data">Blobデータ</string>
-    <string name="kind_blob_headers">Blobヘッダー</string>
-    <string name="kind_medical_data">医療データ</string>
-    <string name="kind_follow_packs">フォローパック</string>
-    <string name="kind_reposts_16">リポスト（16）</string>
-    <string name="kind_geohash_follows">ジオハッシュフォロー</string>
-    <string name="kind_gift_wraps">GiftWrap</string>
-    <string name="kind_git_reply">Git返信</string>
-    <string name="kind_zap_goals">Zapゴール</string>
-    <string name="kind_hashtag_follows">ハッシュタグフォロー</string>
-    <string name="kind_highlights">ハイライト</string>
-    <string name="kind_http_auth">HTTP認証</string>
-    <string name="kind_index_relay_list">インデックスrelayリスト</string>
-    <string name="kind_adventure_prologue">アドベンチャープロローグ</string>
-    <string name="kind_adventure_scene">アドベンチャーシーン</string>
-    <string name="kind_adventure_reading">アドベンチャー読書</string>
-    <string name="kind_named_bookmarks">名前付きブックマーク</string>
-    <string name="kind_live_chats">ライブチャット</string>
-    <string name="kind_live_streams">ライブストリーム</string>
-    <string name="kind_zaps">Zap</string>
-    <string name="kind_nwc_request">NWCリクエスト</string>
-    <string name="kind_nwc_response">NWCレスポンス</string>
-    <string name="kind_private_zaps">プライベートZap</string>
-    <string name="kind_zap_req">Zapリクエスト</string>
-    <string name="kind_blogs">ブログ</string>
-    <string name="kind_meeting_room">ミーティングルーム</string>
-    <string name="kind_room_presence">ルームプレゼンス</string>
-    <string name="kind_meeting_space">ミーティングスペース</string>
-    <string name="kind_profile">プロフィール</string>
-    <string name="kind_mute_list">ミュートリスト</string>
-    <string name="kind_dvm_status">DVMステータス</string>
-    <string name="kind_dvm_content_req">DVMコンテンツリクエスト</string>
-    <string name="kind_dvm_content_resp">DVMコンテンツレスポンス</string>
-    <string name="kind_dvm_user_req">DVMユーザーリクエスト</string>
-    <string name="kind_dvm_user_resp">DVMユーザーレスポンス</string>
-    <string name="kind_people_lists">ピープルリスト</string>
-    <string name="kind_pictures">画像</string>
-    <string name="kind_workouts">ワークアウト</string>
-    <string name="kind_pins">ピン</string>
-    <string name="kind_zap_poll">Zapポール</string>
-    <string name="kind_poll">投票</string>
-    <string name="kind_poll_response">投票回答</string>
-    <string name="kind_nip04_dms">NIP-04 DM</string>
-    <string name="kind_private_relays">プライベートrelay</string>
-    <string name="kind_proxy_relays">プロキシrelay</string>
-    <string name="kind_public_message">パブリックメッセージ</string>
-    <string name="kind_reactions">リアクション</string>
-    <string name="kind_contact_card">連絡先カード</string>
-    <string name="kind_relay_auth">relay認証</string>
-    <string name="kind_relay_discovery">relay検索</string>
-    <string name="kind_relay_monitor">relayモニターアナウンス</string>
-    <string name="kind_relay_set">relayセット</string>
-    <string name="kind_reports">レポート</string>
-    <string name="kind_reposts">リポスト</string>
-    <string name="kind_user_delete">ユーザー削除</string>
-    <string name="kind_seals">シール</string>
-    <string name="kind_search_relays">検索relay</string>
-    <string name="kind_user_status">ユーザーステータス</string>
-    <string name="kind_notes">ノート</string>
-    <string name="kind_edits">編集</string>
-    <string name="kind_torrents">トレント</string>
-    <string name="kind_torrent_comments">トレントコメント</string>
-    <string name="kind_trusted_relays">信頼済みrelay</string>
-    <string name="kind_trusted_providers">信頼済みプロバイダー</string>
-    <string name="kind_video_repl">動画（Repl）</string>
-    <string name="kind_shorts_repl">ショート（Repl）</string>
-    <string name="kind_video">動画</string>
-    <string name="kind_shorts">ショート</string>
-    <string name="kind_voice_msg">ボイスメッセージ</string>
-    <string name="kind_voice_reply">ボイス返信</string>
-    <string name="kind_web_bookmark">Webブックマーク</string>
-    <string name="uptime">%1$d%%稼働率</string>
-    <string name="namecoin_settings">Namecoin設定</string>
-    <string name="event_sync_title">relay同期</string>
-    <string name="ots_explorer_settings">Bitcoin Explorer（OTS）</string>
-    <string name="events_from_you">あなたからのイベント</string>
-    <string name="events_to_you">あなた宛てのイベント</string>
-    <string name="searchable_events">検索可能なイベント</string>
-    <string name="dms">DM</string>
-    <string name="profiles">プロフィール</string>
-    <string name="relay_settings_lower2">アウトボックスリスト</string>
-    <string name="last_seen">最終確認：%1$s前</string>
-    <string name="last_seen_on_date">最終確認：%1$s（%2$s前）</string>
-    <string name="last_seen_just_now">たった今確認</string>
-    <string name="last_seen_never">未確認</string>
-    <plurals name="duration_minutes">
-        <item quantity="other">%1$d分</item>
-    </plurals>
-    <plurals name="duration_hours">
-        <item quantity="other">%1$d時間</item>
-    </plurals>
-    <plurals name="duration_days">
-        <item quantity="other">%1$d日</item>
-    </plurals>
-    <plurals name="duration_weeks">
-        <item quantity="other">%1$d週間</item>
-    </plurals>
-    <plurals name="duration_months">
-        <item quantity="other">%1$dヶ月</item>
-    </plurals>
-    <plurals name="duration_years">
-        <item quantity="other">%1$d年</item>
-    </plurals>
-    <plurals name="cashu_wallet_subtitle_mints">
-        <item quantity="other">%1$d mint</item>
-    </plurals>
-    <plurals name="cashu_pending_quotes_title">
-        <item quantity="other">%1$d件の保留中の請求書</item>
-    </plurals>
-    <plurals name="cashu_untrusted_mint_title">
-        <item quantity="other">使用していない%1$d個のmintに資金があります</item>
-    </plurals>
-    <string name="cashu_move_coins_done">%1$s sat を %2$s に移動しました。</string>
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
-    <string name="cast_to_device">デバイスにキャスト</string>
-    <string name="cast_stop_casting">キャストを停止</string>
     <!-- HLS multi-resolution video sharing -->
-    <string name="share_hls_video">HLS アップロード</string>
-    <string name="hls_state_uploading_with_label_format">%1$s をアップロード中（%3$d 件中 %2$d 件目）</string>
-    <string name="attestation">認証</string>
-    <string name="attestation_request">認証リクエスト</string>
-    <string name="attestor_recommendation">認証者の推薦</string>
-    <string name="attestor_proficiency">認証者の習熟度</string>
-    <string name="web_bookmarks">ウェブブックマーク</string>
-    <string name="web_bookmark_add_title">ウェブブックマークを追加</string>
-    <string name="web_bookmark_edit_title">ウェブブックマークを編集</string>
     <!-- NIP-75 Zap Goals -->
-    <string name="goal_progress">%2$s sats のゴールに対して %1$s を達成</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="new_goal">新しいゴール</string>
-    <string name="request_to_vanish">消去リクエスト</string>
-    <string name="vanish_request_sent">消去リクエストを送信しました</string>
-    <string name="vanish_history">消去履歴</string>
     <!-- NIP-86 Relay Management -->
-    <string name="relay_management_tab_pubkeys">ユーザー</string>
-    <string name="relay_management_tab_events">イベント</string>
-    <string name="relay_management_tab_kinds">Kind</string>
-    <string name="relay_management_tab_ips">IP</string>
-    <string name="relay_management_tab_settings">設定</string>
-    <string name="ai_writing_setting_title">テキストの改善を提案</string>
-    <string name="ai_writing_setting_description">デバイス上のAIモデルを使用して、テキストの修正やトーンの変更を提案します。</string>
-    <string name="tracked_broadcasts_setting_title">追跡ブロードキャスト</string>
-    <string name="tracked_broadcasts_setting_description">イベントの送信時に追跡ブロードキャスターを使用します。ブロードキャスト中にライブの進捗とrelay別のステータスを表示します。</string>
-    <string name="suggest_workouts_setting_title">ワークアウトの共有を提案する</string>
-    <string name="suggest_workouts_setting_description">Health Connect（Samsung Health、Google Fit、Fitbit、Garminなど）から完了したワークアウトを読み取り、投稿として共有することを提案します。権限は接続時にのみ要求されます。</string>
-    <string name="compose_settings">作成の設定</string>
-    <string name="auto_create_drafts_setting_title">自動的に下書きを作成する</string>
-    <string name="auto_create_drafts_setting_description">入力中または未送信のテキストがある状態でコンポーザーを離れると、下書きイベントを自動的に保存し、プライベートのアウトボックスrelayに送信します。</string>
     <!-- Emoji packs -->
-    <string name="new_emoji_pack">新しい絵文字パック</string>
-    <string name="edit_emoji_pack">絵文字パックを編集する</string>
-    <string name="manage_emoji_packs">マイ絵文字パック</string>
-    <string name="emoji_sets">絵文字</string>
-    <string name="emoji_public_explainer">パブリック絵文字は全員に表示され、このパックが絵文字リストに含まれている場合、リアクションメニューと「:」オートコンプリートピッカーに表示されます。</string>
-    <string name="emoji_private_explainer">プライベート絵文字はrelayに暗号化されて保存され、あなただけに見えます。パブリック絵文字と同様に、リアクションメニューと「:」オートコンプリートに表示されます。</string>
     <!-- NIP-9B community rules composer-side validation. -->
-    <string name="community_rules_violation_kind_size_exceeded">下書きは %1$d バイトです。このコミュニティはこの kind を %2$d バイトまでに制限しています。</string>
-    <string name="community_rules_violation_max_size_exceeded">下書きは %1$d バイトです。このコミュニティはイベントを %2$d バイトまでに制限しています。</string>
-    <string name="community_rules_violation_quota_exceeded">本日、この kind のイベントをすでに %1$d 件投稿しています（上限 %2$d 件）。</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="nowhere_link_card_generic">Nowhere サイト</string>
-    <string name="nowhere_link_card_event">Nowhere イベント</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere 資金調達</string>
-    <string name="nowhere_link_card_store">Nowhere ストア</string>
-    <string name="nowhere_link_card_petition">Nowhere 請願</string>
-    <string name="nowhere_link_card_message">Nowhere メッセージ</string>
-    <string name="nowhere_link_card_drop">Nowhere ドロップ</string>
-    <string name="nowhere_link_card_art">Nowhere アート</string>
-    <string name="nowhere_link_card_forum">Nowhere フォーラム</string>
     <!-- Marmot (MLS) group chats -->
-    <plurals name="marmot_message_count">
-        <item quantity="other">%1$d 件のメッセージ</item>
-    </plurals>
-    <plurals name="marmot_member_count">
-        <item quantity="other">%1$d 人のメンバー</item>
-    </plurals>
-    <string name="marmot_group_info_updated">グループ情報が更新されました</string>
-    <string name="marmot_failed_to_update">更新に失敗しました: %1$s</string>
-    <string name="marmot_failed_to_create_group">グループの作成に失敗しました: %1$s</string>
-    <string name="marmot_failed_to_leave_group">グループの退出に失敗しました: %1$s</string>
-    <string name="marmot_adding_user">%1$s を追加中…</string>
-    <string name="marmot_failed_to_add_user">%1$s の追加に失敗しました: %2$s</string>
-    <string name="marmot_unknown_error">不明なエラー</string>
-    <string name="marmot_member_removed">メンバーが削除されました</string>
-    <string name="marmot_failed_to_remove_member">メンバーの削除に失敗しました: %1$s</string>
-    <string name="marmot_admin_granted">管理者権限が付与されました</string>
-    <string name="marmot_failed_to_grant_admin">管理者権限の付与に失敗しました: %1$s</string>
-    <string name="marmot_admin_revoked">管理者権限が取り消されました</string>
-    <string name="marmot_failed_to_revoke_admin">管理者権限の取り消しに失敗しました: %1$s</string>
-    <string name="marmot_not_a_member">このグループのメンバーではありません</string>
-    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s の受信者の Lightning サービスが利用できません。Lightning アドレス \"%2$s\" から計算されました。エラー: %3$s。サーバーが稼働しているか、Lightning アドレスが正しいかを確認してください</string>
-    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s を解決できませんでした。接続されているか、サーバーが稼働しているか、Lightning アドレス %2$s が正しいかを確認してください。\n\n例外: %3$s</string>
-    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s の請求書取得から JSON を解析中にエラーが発生しました。ユーザーの Lightning 設定を確認してください</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning 請求書を作成できませんでした。%1$s からのメッセージ: %2$s</string>
-    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s から Lightning 請求書を作成できませんでした: 結果の JSON に要素 pr が見つかりませんでした。</string>
     <!-- Buzz workflow run board -->
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
@@ -1308,4 +158,48 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
+    <string name="always_on_notif_channel_description">リアルタイム通知のためにインボックス relay への接続を維持します</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">%1$d 件のインボックス relay に接続中</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">%1$d 件の relay に接続中</item>
+    </plurals>
+    <string name="always_on_notif_connecting">インボックス relay に接続中…</string>
+    <string name="always_on_notif_title">Amethyst 通知有効中</string>
+    <string name="call_ongoing">通話</string>
+    <string name="call_ongoing_description">通話中の通知</string>
+    <string name="call_with">%1$s との通話</string>
+    <string name="call_hangup">切る</string>
+    <string name="reaction">リアクション</string>
+    <string name="boost">ブースト</string>
+    <string name="post">送信</string>
+    <string name="voice_post">音声投稿</string>
+    <string name="voice_reply">音声返信</string>
+    <string name="private_message">プライベートメッセージ</string>
+    <string name="nest_notification_broadcasting">Nest — ライブ中</string>
+    <string name="nest_notification_channel_description">ルームが開いている間オーディオを再生し続けます。</string>
+    <string name="nest_notification_listening">Nest に接続しました</string>
+    <string name="nest_notification_stop">停止</string>
+    <string name="nest_notification_text">タップして戻る。</string>
+    <string name="nest_leave">退出</string>
+    <string name="nest_mute">ミュート</string>
+    <string name="nest_unmute">ミュート解除</string>
+    <string name="call_mute">ミュート</string>
+    <string name="call_unmute">ミュート解除</string>
+    <string name="napplet_cap_identity">ID</string>
+    <string name="napplet_cap_keys">キーボード操作</string>
+    <string name="napplet_cap_relay">relay</string>
+    <string name="napplet_cap_storage">ストレージ</string>
+    <string name="napplet_cap_value">支払い</string>
+    <string name="napplet_cap_resource">ネットワーク</string>
+    <string name="napplet_cap_upload">アップロード</string>
+    <string name="napplet_cap_theme">テーマ</string>
+    <string name="napplet_cap_notify">通知</string>
+    <string name="napplet_cap_inc">メッセージング</string>
+    <string name="muted_button">ミュート中。クリックしてミュート解除</string>
+    <string name="mute_button">音声オン。クリックしてミュート</string>
+    <string name="play">再生</string>
+    <string name="pause">一時停止</string>
 </resources>

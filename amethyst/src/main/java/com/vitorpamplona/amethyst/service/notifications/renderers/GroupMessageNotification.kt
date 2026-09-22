@@ -21,17 +21,20 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_added_to_group
+import com.vitorpamplona.amethyst.commons.resources.app_notification_new_message
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -57,10 +60,24 @@ object GroupMessageNotification {
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: DEFAULT_GROUP_NAME
         val sender = LocalCache.getOrCreateUser(innerEvent.pubKey)
-        val fallbackBody = innerEvent.content.takeIf { it.isNotBlank() } ?: stringRes(context, R.string.app_notification_new_message)
+        val fallbackBody = innerEvent.content.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.app_notification_new_message)
 
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.marmotUri(nostrGroupId, accountNpub)
+        // Withheld when the account has message content turned off — the shortcut it publishes
+        // names the group in the launcher. See [ConversationShortcuts].
+        val conversation =
+            if (account.settings.showMessagesInNotifications.value) {
+                // No iconUrl: a Marmot group's avatar is an encrypted Blossom blob, not a
+                // URL an image loader can take.
+                Conversation(
+                    id = NotificationRoutes.marmotShortcutId(nostrGroupId, accountNpub),
+                    label = groupName,
+                    isGroup = true,
+                )
+            } else {
+                null
+            }
         val nm = context.notificationManager()
 
         NotificationEnricher.enrichAndPost(
@@ -81,6 +98,7 @@ object GroupMessageNotification {
                 uri = uri,
                 applicationContext = context,
                 accountPictureUrl = account.userProfile().profilePicture(),
+                conversation = conversation,
                 replyAction =
                     ReplyAction.Marmot(
                         accountNpub = accountNpub,
@@ -124,7 +142,7 @@ object GroupMessageNotification {
                 id = event.id,
                 senderName = inviter.toBestDisplayName(),
                 pictureUrl = inviter.profilePicture(),
-                messageBody = stringRes(context, R.string.app_notification_added_to_group, groupName),
+                messageBody = loadStringRes(Res.string.app_notification_added_to_group, groupName),
                 time = event.createdAt,
                 uri = uri,
                 applicationContext = context,

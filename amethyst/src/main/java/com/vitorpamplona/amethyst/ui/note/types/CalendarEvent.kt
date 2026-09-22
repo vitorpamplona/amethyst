@@ -36,9 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -155,7 +156,7 @@ private fun CalendarHeader(
         image?.let {
             MyAsyncImage(
                 imageUrl = it,
-                contentDescription = stringRes(R.string.preview_card_image_for, it),
+                contentDescription = stringRes(Res.string.preview_card_image_for, it),
                 contentScale = ContentScale.FillWidth,
                 mainImageModifier = Modifier.fillMaxWidth(),
                 loadedImageModifier = Modifier,

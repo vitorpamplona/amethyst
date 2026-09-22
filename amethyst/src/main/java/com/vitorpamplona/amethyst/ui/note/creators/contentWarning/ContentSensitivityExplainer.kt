@@ -39,12 +39,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_explainer
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.content_warning
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -89,7 +89,7 @@ fun ContentSensitivityExplainer(
             }
 
             Text(
-                text = stringRes(R.string.add_sensitive_content_label),
+                text = stringRes(Res.string.add_sensitive_content_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),

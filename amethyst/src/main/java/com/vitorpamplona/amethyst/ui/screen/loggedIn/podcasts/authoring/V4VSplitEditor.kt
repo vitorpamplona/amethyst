@@ -49,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.podcasts.RecipientDraft
@@ -58,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_add_address
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_editor_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_fee
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_for_value
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_node_pubkey
@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_search_user_hi
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_split_percent
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_type_lnaddress
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_type_node
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_user_no_lnaddress
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_weight
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -114,7 +115,7 @@ fun V4VSplitEditor(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(R.string.podcast_value_for_value),
+                text = stringRes(Res.string.podcast_value_for_value),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -157,8 +158,8 @@ fun V4VSplitEditor(
                     val added = state.addUser(user)
                     if (!added) {
                         accountViewModel.toastManager.toast(
-                            R.string.podcast_value_for_value,
-                            R.string.podcast_value_user_no_lnaddress,
+                            Res.string.podcast_value_for_value,
+                            Res.string.podcast_value_user_no_lnaddress,
                         )
                     }
                     search = ""
@@ -236,7 +237,7 @@ private fun UserRecipientCard(
             UsernameDisplay(user, accountViewModel = accountViewModel)
             val lud = user.lnAddress()
             Text(
-                text = lud ?: stringRes(R.string.podcast_value_user_no_lnaddress),
+                text = lud ?: stringRes(Res.string.podcast_value_user_no_lnaddress),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.grayText,
                 maxLines = 1,

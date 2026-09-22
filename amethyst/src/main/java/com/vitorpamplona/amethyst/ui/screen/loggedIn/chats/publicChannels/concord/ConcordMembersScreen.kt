@@ -56,12 +56,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban
 import com.vitorpamplona.amethyst.commons.resources.concord_members_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_members_make_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove
+import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_confirm
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_message
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_title
@@ -70,9 +74,13 @@ import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_messag
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_none_assignable
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_out_of_reach
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_save
+import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_unban
 import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
 import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -173,7 +181,7 @@ fun ConcordMembersScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(stringRes(R.string.concord_members_title), maxLines = 1)
+                        Text(stringRes(Res.string.concord_members_title), maxLines = 1)
                         state?.metadata?.name?.takeIf { it.isNotBlank() }?.let {
                             Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -181,7 +189,7 @@ fun ConcordMembersScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
             )
@@ -311,12 +319,12 @@ private fun ConcordMemberRow(
             // of this `spacedBy` Row that adds a gap and shifts the button as you tap it.
             Box {
                 IconButton(onClick = { expanded = true }) {
-                    SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.more_options))
+                    SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     if (canToggleAdmin) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(if (isAdmin) R.string.concord_members_remove_admin else R.string.concord_members_make_admin)) },
+                            text = { Text(stringRes(if (isAdmin) Res.string.concord_members_remove_admin else Res.string.concord_members_make_admin)) },
                             onClick = {
                                 accountViewModel.setConcordAdmin(communityId, entry.pubkey, makeAdmin = !isAdmin)
                                 expanded = false
@@ -346,7 +354,7 @@ private fun ConcordMemberRow(
                     }
                     if (canBan) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(if (isBanned) R.string.concord_members_unban else R.string.concord_members_ban)) },
+                            text = { Text(stringRes(if (isBanned) Res.string.concord_members_unban else Res.string.concord_members_ban)) },
                             onClick = {
                                 accountViewModel.setConcordBan(communityId, entry.pubkey, ban = !isBanned)
                                 expanded = false
@@ -423,7 +431,7 @@ private fun ConcordRolesDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.concord_members_roles_title)) },
+        title = { Text(stringRes(Res.string.concord_members_roles_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -455,7 +463,7 @@ private fun ConcordRolesDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }
@@ -476,7 +484,7 @@ private fun ConcordRemoveMemberDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
         },
     )
 }

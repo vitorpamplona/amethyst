@@ -61,14 +61,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_add_recommendation
+import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_recommendation
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_my_recommendations
@@ -112,7 +114,7 @@ fun CashuMintRecommendationsScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -158,7 +160,7 @@ fun CashuMintRecommendationsScreen(
             text = {
                 Text(
                     stringRes(
-                        R.string.cashu_settings_delete_confirm_body,
+                        Res.string.cashu_settings_delete_confirm_body,
                         target.mintUrls().firstOrNull() ?: target.dTag() ?: target.id.take(8),
                     ),
                 )
@@ -173,7 +175,7 @@ fun CashuMintRecommendationsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDelete = null }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

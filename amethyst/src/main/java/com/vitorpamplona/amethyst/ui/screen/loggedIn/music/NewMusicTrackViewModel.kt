@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -424,12 +425,12 @@ class NewMusicTrackViewModel : ViewModel() {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private fun formatUploadErrors(
+    private suspend fun formatUploadErrors(
         errors: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Error>,
         context: Context,
     ): String =
         errors
-            .map { context.getString(it.errorResource, *it.params) }
+            .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()
             .joinToString(".\n")
 

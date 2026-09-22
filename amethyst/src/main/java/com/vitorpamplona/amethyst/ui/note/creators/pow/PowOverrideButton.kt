@@ -39,20 +39,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pow_option_bits
 import com.vitorpamplona.amethyst.commons.resources.pow_option_default_off
+import com.vitorpamplona.amethyst.commons.resources.pow_option_default_on
 import com.vitorpamplona.amethyst.commons.resources.pow_option_off
+import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
@@ -90,7 +92,7 @@ fun PowOverrideButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Manufacturing,
-                    contentDescription = stringRes(R.string.pow_settings_title),
+                    contentDescription = stringRes(Res.string.pow_settings_title),
                     modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
                     tint =
                         if (isActive) {
@@ -124,8 +126,10 @@ fun PowOverrideButton(
                     value = deviceHashesPerSecond()
                 }
 
-            fun eta(difficulty: Int): String? = hashRate?.let { formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, it)) }
+            @Composable
+            fun eta(difficulty: Int): String? = hashRate?.let { formatApproxDuration(PoWEstimator.estimateSeconds(difficulty, it)) }
 
+            @Composable
             fun withEta(
                 label: String,
                 difficulty: Int,
@@ -136,7 +140,7 @@ fun PowOverrideButton(
                     Text(
                         if (defaultDifficulty != null && defaultDifficulty > 0) {
                             withEta(
-                                pluralStringResource(R.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty),
+                                pluralStringRes(Res.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty),
                                 defaultDifficulty,
                             )
                         } else {
@@ -166,7 +170,7 @@ fun PowOverrideButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            withEta(pluralStringResource(R.plurals.pow_option_bits, preset, preset), preset),
+                            withEta(pluralStringRes(Res.plurals.pow_option_bits, preset, preset), preset),
                             fontWeight = if (isOverridden && effectiveDifficulty == preset) FontWeight.Bold else null,
                         )
                     },
