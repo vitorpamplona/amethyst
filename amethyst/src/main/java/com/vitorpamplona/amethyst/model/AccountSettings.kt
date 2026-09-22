@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
@@ -44,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -56,7 +57,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -235,6 +235,14 @@ class AccountSettings(
      * keysets is fine because the derivation includes the keyset id.
      */
     var cashuKeysetCounters: MutableMap<String, Long> = mutableMapOf(),
+    /**
+     * Durable NUT-13 counter store for this account, supplied by the host.
+     *
+     * Defaulted to the failing stand-in rather than an in-memory map: the preview
+     * and test factories below never mint, and a host that does mint must wire a
+     * real store or hear about it on the first reservation.
+     */
+    val cashuCounters: CashuKeysetCounterStore = UnavailableCashuKeysetCounterStore,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -1145,23 +1153,10 @@ class AccountSettings(
     }
 
     /**
-     * NUT-13 keyset counters live in [CashuPreferences], a dedicated
-     * SharedPreferences file with synchronous (`commit = true`) writes.
-     * AccountSettings goes through a 1-second debounce on its own save
-     * path; the cashu counter cannot tolerate that window because the
-     * mint persists signed (keyset, blind_message) pairs the moment it
-     * sees them, so any local lag → "outputs already signed" on retry.
-     * See [CashuPreferences] for the full rationale.
-     */
-    private val cashuPrefs: CashuPreferences by lazy {
-        CashuPreferences.forAccount(keyPair.pubKey.toNpub())
-    }
-
-    /**
      * Reserve [count] consecutive NUT-13 counters for [keysetId],
      * returning the first one. Caller derives `(secret, r)` from
      * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
-     * Persisted synchronously before returning — see [CashuPreferences].
+     * Persisted synchronously before returning — see [CashuKeysetCounterStore].
      *
      * One-time migration: when this keyset has a non-zero value in the
      * legacy [cashuKeysetCounters] map (from a build that persisted
@@ -1174,18 +1169,18 @@ class AccountSettings(
         count: Int,
     ): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.reserveCounters(keysetId, count)
+        return cashuCounters.reserve(keysetId, count)
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
     fun peekCashuCounter(keysetId: String): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.peekCounter(keysetId)
+        return cashuCounters.peek(keysetId)
     }
 
     private fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
-        cashuPrefs.seedCounterIfMissing(keysetId, legacy)
+        cashuCounters.seedIfMissing(keysetId, legacy)
     }
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.UiSettings
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -959,6 +960,7 @@ object LocalPreferences {
                     return@with AccountSettings(
                         keyPair = keyPair,
                         transientAccount = false,
+                        cashuCounters = CashuPreferences.forAccount(keyPair.pubKey.toNpub()),
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
