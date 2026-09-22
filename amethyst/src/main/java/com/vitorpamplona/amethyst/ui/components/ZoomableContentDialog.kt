@@ -523,6 +523,7 @@ private fun RenderImageOrVideo(
                         controllerVisible = controllerVisible,
                         hasBlurhash = content.blurhash != null,
                         isFullscreen = true,
+                        captions = content.captions,
                         accountViewModel = accountViewModel,
                     )
                 }

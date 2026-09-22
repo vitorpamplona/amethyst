@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -47,6 +49,12 @@ fun Event.hasEncryptedContent(): Boolean =
         is SealedRumorEvent -> true
         is GiftWrapEvent -> true
         is LnZapRequestEvent -> isPrivateZap()
+        // Every NIP-51 list keeps its private members as a NIP-44 payload in `content`. The two
+        // base classes cover all ~30 list kinds, present and future, which is the point: naming
+        // them one at a time is how kind 30005 came to print its own ciphertext on screen.
+        // A list with no private members carries an empty `content`, and the guard below skips it.
+        is PrivateTagArrayEvent -> content.isNotEmpty()
+        is PrivateReplaceableTagArrayEvent -> content.isNotEmpty()
         else -> false
     }
 

@@ -225,6 +225,7 @@
 
     <string name="public_chat">Public Chat</string>
     <string name="marmot_group">Marmot Group</string>
+    <string name="marmot_groups_title">Marmot Groups</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.
@@ -1353,6 +1354,9 @@
     <string name="child_safety_search_keywords" translatable="false">legal, safety, abuse, csae, child protection</string>
 
     <string name="danger_zone">Danger Zone</string>
+    <string name="marmot_invite_device_success">This device now receives your Marmot invites.</string>
+    <string name="marmot_invite_device_failure">Failed to publish KeyPackage: %1$s</string>
+    <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_success">Marmot state reset.</string>
     <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>
@@ -2712,6 +2716,10 @@
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
 
     <!-- Marmot (MLS) group chats -->
+    <plurals name="marmot_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
     <plurals name="marmot_message_count">
         <item quantity="one">%1$d msg</item>
         <item quantity="other">%1$d msgs</item>
@@ -2796,4 +2804,39 @@
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="my_fitness">My Fitness</string>
+    <string name="captions_off">Off</string>
+    <string name="captions_unnamed_track">Captions</string>
+    <string name="captions_turn_on">Turn on captions</string>
+    <string name="captions_turn_off">Turn off captions</string>
+    <string name="kind_video_list">Video List</string>
+    <string name="kind_video_collaboration">Video Collaboration</string>
+    <string name="kind_video_subtitles">Video Subtitles</string>
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
+    <string name="video_credit_inspired_by">Inspired by</string>
+    <string name="video_credit_featuring">Featuring</string>
+    <string name="video_credit_references">References</string>
+    <string name="video_credit_audio_from">Audio from</string>
+    <string name="video_credit_accepted">Credit accepted</string>
+    <string name="video_collaboration_accepted_on">Accepted a collaboration credit</string>
+    <string name="video_collaboration_declined_on">Declined a collaboration credit</string>
+    <string name="video_curation_set_private_items">Private list</string>
+    <string name="nip51_list_has_private_members">This list has private members only its author can see</string>
+    <string name="kind_git_authors">Git authors</string>
+    <string name="kind_media_follows">Media follows</string>
+    <string name="kind_good_wiki_authors">Trusted wiki authors</string>
+    <string name="kind_good_wiki_relays">Trusted wiki relays</string>
+    <string name="kind_mute_set_for_kind">Muted for kind %1$s</string>
+    <string name="kind_media_starter_pack">Media starter pack</string>
+    <string name="kind_bookmark_set">Bookmark set</string>
+    <string name="kind_article_curation_set">Article list</string>
+    <string name="kind_picture_curation_set">Picture list</string>
+    <string name="kind_app_curation_set">App list</string>
+    <string name="kind_git_repositories">Git repositories</string>
+    <string name="kind_favorite_algo_feeds">Favorite feeds</string>
+    <string name="kind_interest_set">Interests</string>
+    <string name="kind_simple_groups">Groups</string>
+    <plurals name="video_curation_set_video_count">
+        <item quantity="one">%1$d video</item>
+        <item quantity="other">%1$d videos</item>
+    </plurals>
 </resources>

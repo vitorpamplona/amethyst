@@ -192,6 +192,7 @@ object SearchableKinds {
             39000, // GroupMetadataEvent
             39089, // FollowListEvent
             39092, // MediaStarterPackEvent
+            39307, // TextTrackEvent
             39701, // WebBookmarkEvent
             40002, // StreamMessageV2Event
             40100, // CanvasEvent

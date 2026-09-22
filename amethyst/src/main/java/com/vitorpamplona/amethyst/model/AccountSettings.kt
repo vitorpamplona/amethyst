@@ -410,6 +410,15 @@ class AccountSettings(
         return false
     }
 
+    fun changeCaptionsEnabled(enabled: Boolean): Boolean {
+        if (syncedSettings.videoPlayer.captionsEnabled.value != enabled) {
+            syncedSettings.videoPlayer.captionsEnabled.tryEmit(enabled)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun changeAudioVisualizer(style: VisualizerStyle): Boolean {
         if (syncedSettings.media.audioVisualizer.value != style) {
             syncedSettings.media.audioVisualizer.tryEmit(style)

@@ -32,6 +32,10 @@ class OptionTag(
     companion object {
         const val TAG_NAME = "option"
 
+        // Both fields are required. NIP-88 defines an option as an id "followed by an option
+        // label field", and an option nobody can read is not a choice anyone can make: rendering
+        // it as a blank, tappable row would collect votes for a question the voter never saw.
+        // A poll that ships one is malformed, and the option is dropped rather than shown empty.
         fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty() && tag[2].isNotEmpty()
 
         fun parse(tag: Array<String>): OptionTag? {

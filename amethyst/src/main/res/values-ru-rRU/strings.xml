@@ -51,6 +51,7 @@
     <string name="error_parsing_error_message">Ошибка при анализе сообщения об ошибке</string>
     <string name="profile">Профиль</string>
     <string name="security_filters">Фильтры безопасности</string>
+    <string name="show_less">Скрыть</string>
     <string name="clink_requesting_invoice">Запрос счёта…</string>
     <string name="clink_debit_no_response">Сервис списания не завершил платёж.</string>
     <string name="clink_confirm_pay_amount_via_source">Оплатить %1$s через %2$s?</string>
@@ -117,6 +118,10 @@
     <string name="password_is_required">Требуется пароль</string>
     <string name="key_is_required">Нужно ввести ключ</string>
     <string name="name_is_required">Требуется имя</string>
+    <string name="concord_invite_failed">Не удалось получить приглашение. Возможно, ссылка устарела или недоступна.</string>
+    <string name="concord_invite_links_title">Приглашения</string>
+    <string name="concord_invite_revoked_ok">Ссылка для приглашения отозвана.</string>
+    <string name="concord_channels_empty">Каналов еще нет.</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -1391,4 +1396,5 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
 </resources>

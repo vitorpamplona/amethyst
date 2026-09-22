@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -2012,6 +2013,12 @@ class AccountViewModel(
 
     fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
 
+    fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
+
+    fun setCaptionsEnabled(enabled: Boolean) {
+        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+    }
+
     fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
         launchSigner {
             account.changeVideoPlayerButtonItems(items)
@@ -2553,6 +2560,20 @@ class AccountViewModel(
     }
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
+
+    /**
+     * Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner].
+     *
+     * [maxAgeSeconds] lets a passive caller reuse a recent answer instead of
+     * fanning a REQ across the write set; 0 always asks the relays.
+     */
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner(maxAgeSeconds)
+
+    /** Republishes this device's KeyPackage; true only when a relay accepted it. */
+    suspend fun republishKeyPackage(): Boolean = account.marmot.republishKeyPackageConfirmed()
+
+    /** False for a read-only (pubkey-only) login, which cannot publish at all. */
+    fun canPublish(): Boolean = account.isWriteable()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)

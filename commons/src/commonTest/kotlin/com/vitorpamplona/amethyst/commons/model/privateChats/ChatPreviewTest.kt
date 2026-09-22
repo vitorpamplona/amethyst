@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.privateChats
 
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -67,6 +69,50 @@ class ChatPreviewTest {
     @Test
     fun nip17RumorIsAlreadyPlaintext() {
         assertFalse(nip17Rumor().hasEncryptedContent())
+    }
+
+    // A NIP-51 list keeps its private members as a NIP-44 payload in `content`. This is the real
+    // wire content of a divine.video kind-30005 video list, which used to render on screen as the
+    // base64 blob it is.
+    private val nip44ListContent =
+        "AqQxhO1d0DzuJQtkWdshs3Fvi/1OXp2sYl9rDAykMBOvD06Tg0DLP69/i03iA1SD/RHVp+TEUoG8k+0FUkr7fiEcSyWx9k37o5URbcGsESdMK9d5vAFm9Yjp5tatUuZa2gJG"
+
+    private fun videoList(content: String = nip44ListContent) =
+        VideoCurationSetEvent(
+            id = "vl".padEnd(64, '0'),
+            pubKey = other,
+            createdAt = 1_000,
+            tags = arrayOf(arrayOf("d", "my_vine_list"), arrayOf("title", "My List")),
+            content = content,
+            sig = someSig,
+        )
+
+    private fun muteList(content: String = nip44ListContent) =
+        MuteListEvent(
+            id = "ml".padEnd(64, '0'),
+            pubKey = other,
+            createdAt = 1_000,
+            tags = arrayOf(arrayOf("p", stranger)),
+            content = content,
+            sig = someSig,
+        )
+
+    @Test
+    fun anAddressableListWithPrivateMembersCarriesCiphertext() {
+        assertTrue(videoList().hasEncryptedContent())
+    }
+
+    @Test
+    fun aStandardListWithPrivateMembersCarriesCiphertext() {
+        assertTrue(muteList().hasEncryptedContent())
+    }
+
+    @Test
+    fun anAllPublicListHasNothingToHide() {
+        // No private members means no payload, and an empty string is not ciphertext — saying it
+        // was would hide a perfectly readable list behind a "private" label.
+        assertFalse(videoList(content = "").hasEncryptedContent())
+        assertFalse(muteList(content = "").hasEncryptedContent())
     }
 
     // ---- chatPreviewOf -------------------------------------------------------
