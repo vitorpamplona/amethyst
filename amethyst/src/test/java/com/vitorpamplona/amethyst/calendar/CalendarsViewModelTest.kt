@@ -27,8 +27,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -61,32 +64,29 @@ class CalendarsViewModelTest {
     @After
     fun tearDown() {
         store.clear()
+
+        // `clear()` CANCELS viewModelScope; it does not WAIT for it, and the two are not the same
+        // thing here. Every derived flow is `flowOn(Dispatchers.Default).stateIn(viewModelScope,
+        // ...)`: the upstream runs on the Default pool while stateIn's sharing coroutine lives on
+        // Main. A cancelled upstream therefore finishes on a Default worker and resumes its parent
+        // onto Main — and if `resetMain()` has already run, that resume throws
+        // `IllegalStateException: Dispatchers.Main was accessed when the platform dispatcher was
+        // absent` on a background thread.
+        //
+        // Nothing in THIS suite fails when that happens. The next test in the JVM to call
+        // `runTest` does, with `UncaughtExceptionsBeforeTest` — for a long time that was
+        // `Nip46ConsentInfoBuilderTest`, which is innocent and passes in isolation, which is what
+        // made it so slow to find.
+        //
+        // So: drain the pool while Main is still valid. This is a mitigation, not a proof — there
+        // is no public handle on viewModelScope's Job to join, and a thread pool has no
+        // "everything queued has run" barrier. It closes the window rather than removing it. The
+        // real fix is for the ViewModel to take its dispatcher as a parameter, at which point the
+        // test supplies one it can drain deterministically.
+        runBlocking { withContext(Dispatchers.Default) { yield() } }
+
         Dispatchers.resetMain()
     }
-
-    // KNOWN FLAKE, diagnosed but not fixed here — this suite still loses the race the comment
-    // above describes, roughly one full-module run in three.
-    //
-    // `store.clear()` CANCELS viewModelScope; it does not WAIT for it. A child that completes on
-    // a Default worker resumes onto Dispatchers.Main, and if `resetMain()` has already run that
-    // resume throws `IllegalStateException: Dispatchers.Main was accessed when the platform
-    // dispatcher was absent` on a background thread. Nothing here fails. The next test in the JVM
-    // to call `runTest` fails instead, with `UncaughtExceptionsBeforeTest` — usually
-    // `Nip46ConsentInfoBuilderTest`, which is innocent and passes in isolation, which is what
-    // makes this so slow to track down. Observed on both the Play and Fdroid variants.
-    //
-    // The captured trace, for whoever picks this up:
-    //   DispatchException: Coroutine dispatcher Dispatchers.Main threw an exception,
-    //     context = [..., StandaloneCoroutine{Cancelling}, Dispatchers.Main]
-    //     at ScopeCoroutine.afterCompletion -> JobSupport.continueCompleting
-    //   Caused by: IllegalStateException: Dispatchers.Main was accessed when the platform
-    //     dispatcher was absent and the test dispatcher was unset.
-    //
-    // Fixing it means making cancellation COMPLETE before Main goes away — joining the scope's
-    // children, or driving Main from a TestDispatcher and advancing it in tearDown. The second is
-    // the usual answer but changes when `stateIn`'s sharing coroutine runs, and these tests
-    // currently rely on Unconfined running it eagerly at construction, so it is not a one-liner.
-    // Left to whoever owns the calendar ViewModels rather than guessed at from outside.
 
     private fun newModel(): CalendarsViewModel = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
 
