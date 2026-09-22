@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -1888,6 +1889,25 @@ class Account(
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) = broadcaster.sendMyPublicAndPrivateOutbox(events)
 
     fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
+
+    /**
+     * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
+     * version (same kind, tags and content, so NIP-44 private items stay readable) with a
+     * timestamp newer than the external one, and publishes it so it replaces that version.
+     */
+    suspend fun restoreBackupOver(conflict: ReplaceableBackupConflict) {
+        val saved = conflict.saved
+        val createdAt = maxOf(TimeUtils.now(), conflict.incoming.createdAt + 1)
+        val resigned = signer.sign<Event>(createdAt, saved.kind, saved.tags, saved.content)
+        settings.dismissBackupConflict(conflict)
+        sendMyPublicAndPrivateOutbox(resigned)
+    }
+
+    /** Resolves a [ReplaceableBackupConflict] in favor of the version from the other client. */
+    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) {
+        settings.dismissBackupConflict(conflict)
+        conflict.keepIncoming()
+    }
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

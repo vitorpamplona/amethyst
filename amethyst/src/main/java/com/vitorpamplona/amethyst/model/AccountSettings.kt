@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupDiff
+import com.vitorpamplona.amethyst.commons.model.backups.backupSlot
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
@@ -39,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -51,6 +56,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEve
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -1158,6 +1164,62 @@ class AccountSettings(
     // Backup Lists
     // ----
 
+    /**
+     * Newer versions of backed-up events that came from another client and dropped data the
+     * backup still has, keyed by [ReplaceableBackupConflict.slot]. While a slot is in here its
+     * backup is frozen on the saved version, so the user can still restore it. Not persisted:
+     * after a restart the same newer event is detected again against the same frozen backup.
+     */
+    val backupConflicts = MutableStateFlow<Map<String, ReplaceableBackupConflict>>(emptyMap())
+
+    // Externally signed versions the user explicitly chose to keep over the backup.
+    private val acceptedExternalVersions = ConcurrentSet<HexKey>()
+
+    /**
+     * Decides whether [incoming] may overwrite the [saved] backup. Versions signed by this app
+     * always may. A newer version signed elsewhere that removed items from the saved one is
+     * held back and raised as a [ReplaceableBackupConflict]; [retry] re-runs the caller's
+     * update once the user accepts it.
+     */
+    private fun <T : Event> acceptIntoBackup(
+        saved: T?,
+        incoming: T,
+        retry: () -> Unit,
+    ): Boolean {
+        if (saved?.id == incoming.id) return false
+
+        val slot = backupSlot(incoming)
+        val pending = backupConflicts.value[slot]
+
+        // While a conflict is open, even edits made here are built on top of the external
+        // version, so they are still compared with the version the user may want to restore.
+        val reference = pending?.saved ?: saved?.takeUnless { LocallySignedEvents.contains(incoming.id) }
+
+        if (reference != null && !acceptedExternalVersions.contains(incoming.id)) {
+            val loss = ReplaceableBackupDiff.detectLoss(reference, incoming)
+            if (loss != null) {
+                val conflict =
+                    ReplaceableBackupConflict(reference, incoming, loss) {
+                        acceptedExternalVersions.add(incoming.id)
+                        retry()
+                    }
+                backupConflicts.update { it + (slot to conflict) }
+                return false
+            }
+        }
+
+        if (backupConflicts.value.containsKey(slot)) {
+            backupConflicts.update { it - slot }
+        }
+        return true
+    }
+
+    fun dismissBackupConflict(conflict: ReplaceableBackupConflict) {
+        backupConflicts.update { current ->
+            if (current[conflict.slot] === conflict) current - conflict.slot else current
+        }
+    }
+
     fun updateLocalRelayServers(servers: Set<String>) {
         if (localRelayServers.value != servers) {
             localRelayServers.update { servers }
@@ -1176,8 +1238,7 @@ class AccountSettings(
     fun updateUserMetadata(newMetadata: MetadataEvent?) {
         if (newMetadata == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupUserMetadata?.id != newMetadata.id) {
+        if (acceptIntoBackup(backupUserMetadata, newMetadata) { updateUserMetadata(newMetadata) }) {
             backupUserMetadata = newMetadata
             saveAccountSettings()
         }
@@ -1186,8 +1247,7 @@ class AccountSettings(
     fun updateContactListTo(newContactList: ContactListEvent?) {
         if (newContactList == null || newContactList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList.id) {
+        if (acceptIntoBackup(backupContactList, newContactList) { updateContactListTo(newContactList) }) {
             backupContactList = newContactList
             saveAccountSettings()
         }
@@ -1196,8 +1256,7 @@ class AccountSettings(
     fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
         if (newDMRelayList == null || newDMRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupDMRelayList?.id != newDMRelayList.id) {
+        if (acceptIntoBackup(backupDMRelayList, newDMRelayList) { updateDMRelayList(newDMRelayList) }) {
             backupDMRelayList = newDMRelayList
             saveAccountSettings()
         }
@@ -1206,8 +1265,7 @@ class AccountSettings(
     fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
         if (newKeyPackageRelayList == null || newKeyPackageRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupKeyPackageRelayList?.id != newKeyPackageRelayList.id) {
+        if (acceptIntoBackup(backupKeyPackageRelayList, newKeyPackageRelayList) { updateKeyPackageRelayList(newKeyPackageRelayList) }) {
             backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
@@ -1216,8 +1274,7 @@ class AccountSettings(
     fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
         if (newNIP65RelayList == null || newNIP65RelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
+        if (acceptIntoBackup(backupNIP65RelayList, newNIP65RelayList) { updateNIP65RelayList(newNIP65RelayList) }) {
             backupNIP65RelayList = newNIP65RelayList
             saveAccountSettings()
         }
@@ -1226,7 +1283,7 @@ class AccountSettings(
     fun updateCashuWallet(newWallet: CashuWalletEvent?) {
         if (newWallet == null) return
         // Replaceable: keep the latest by id (id changes on each re-sign).
-        if (backupCashuWallet?.id != newWallet.id) {
+        if (acceptIntoBackup(backupCashuWallet, newWallet) { updateCashuWallet(newWallet) }) {
             backupCashuWallet = newWallet
             saveAccountSettings()
         }
@@ -1242,7 +1299,7 @@ class AccountSettings(
             clearNutzapInfo()
             return
         }
-        if (backupNutzapInfo?.id != newNutzapInfo.id) {
+        if (acceptIntoBackup(backupNutzapInfo, newNutzapInfo) { updateNutzapInfo(newNutzapInfo) }) {
             backupNutzapInfo = newNutzapInfo
             saveAccountSettings()
         }
@@ -1316,8 +1373,7 @@ class AccountSettings(
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
         if (newNIPA3PaymentTargets == null || newNIPA3PaymentTargets.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupNipA3PaymentTargets?.id != newNIPA3PaymentTargets.id) {
+        if (acceptIntoBackup(backupNipA3PaymentTargets, newNIPA3PaymentTargets) { updateNIPA3PaymentTargets(newNIPA3PaymentTargets) }) {
             backupNipA3PaymentTargets = newNIPA3PaymentTargets
             saveAccountSettings()
         }
@@ -1326,8 +1382,7 @@ class AccountSettings(
     fun updateBolt12Offers(newBolt12Offers: Bolt12OfferListEvent?) {
         if (newBolt12Offers == null || newBolt12Offers.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupBolt12Offers?.id != newBolt12Offers.id) {
+        if (acceptIntoBackup(backupBolt12Offers, newBolt12Offers) { updateBolt12Offers(newBolt12Offers) }) {
             backupBolt12Offers = newBolt12Offers
             saveAccountSettings()
         }
@@ -1336,8 +1391,7 @@ class AccountSettings(
     fun updateSearchRelayList(newSearchRelayList: SearchRelayListEvent?) {
         if (newSearchRelayList == null || newSearchRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupSearchRelayList?.id != newSearchRelayList.id) {
+        if (acceptIntoBackup(backupSearchRelayList, newSearchRelayList) { updateSearchRelayList(newSearchRelayList) }) {
             backupSearchRelayList = newSearchRelayList
             saveAccountSettings()
         }
@@ -1346,8 +1400,7 @@ class AccountSettings(
     fun updateIndexRelayList(newIndexRelayList: IndexerRelayListEvent?) {
         if (newIndexRelayList == null || newIndexRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupIndexRelayList?.id != newIndexRelayList.id) {
+        if (acceptIntoBackup(backupIndexRelayList, newIndexRelayList) { updateIndexRelayList(newIndexRelayList) }) {
             backupIndexRelayList = newIndexRelayList
             saveAccountSettings()
         }
@@ -1356,8 +1409,7 @@ class AccountSettings(
     fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
         if (newRelayFeedList == null || newRelayFeedList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupRelayFeedsList?.id != newRelayFeedList.id) {
+        if (acceptIntoBackup(backupRelayFeedsList, newRelayFeedList) { updateRelayFeedList(newRelayFeedList) }) {
             backupRelayFeedsList = newRelayFeedList
             saveAccountSettings()
         }
@@ -1366,8 +1418,7 @@ class AccountSettings(
     fun updateBlockedRelayList(newBlockedRelayList: BlockedRelayListEvent?) {
         if (newBlockedRelayList == null || newBlockedRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupBlockedRelayList?.id != newBlockedRelayList.id) {
+        if (acceptIntoBackup(backupBlockedRelayList, newBlockedRelayList) { updateBlockedRelayList(newBlockedRelayList) }) {
             backupBlockedRelayList = newBlockedRelayList
             saveAccountSettings()
         }
@@ -1376,8 +1427,7 @@ class AccountSettings(
     fun updateTrustedRelayList(newTrustedRelayList: TrustedRelayListEvent?) {
         if (newTrustedRelayList == null || newTrustedRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupTrustedRelayList?.id != newTrustedRelayList.id) {
+        if (acceptIntoBackup(backupTrustedRelayList, newTrustedRelayList) { updateTrustedRelayList(newTrustedRelayList) }) {
             backupTrustedRelayList = newTrustedRelayList
             saveAccountSettings()
         }
@@ -1386,8 +1436,7 @@ class AccountSettings(
     fun updatePrivateHomeRelayList(newPrivateHomeRelayList: PrivateOutboxRelayListEvent?) {
         if (newPrivateHomeRelayList == null || newPrivateHomeRelayList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupPrivateHomeRelayList?.id != newPrivateHomeRelayList.id) {
+        if (acceptIntoBackup(backupPrivateHomeRelayList, newPrivateHomeRelayList) { updatePrivateHomeRelayList(newPrivateHomeRelayList) }) {
             backupPrivateHomeRelayList = newPrivateHomeRelayList
             saveAccountSettings()
         }
@@ -1398,8 +1447,7 @@ class AccountSettings(
     override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
         if (newChannelList == null || newChannelList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupChannelList?.id != newChannelList.id) {
+        if (acceptIntoBackup(backupChannelList, newChannelList) { updateChannelListTo(newChannelList) }) {
             backupChannelList = newChannelList
             saveAccountSettings()
         }
@@ -1408,8 +1456,7 @@ class AccountSettings(
     fun updateGeohashListTo(newGeohashList: GeohashListEvent?) {
         if (newGeohashList == null || newGeohashList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupGeohashList?.id != newGeohashList.id) {
+        if (acceptIntoBackup(backupGeohashList, newGeohashList) { updateGeohashListTo(newGeohashList) }) {
             backupGeohashList = newGeohashList
             saveAccountSettings()
         }
@@ -1418,8 +1465,7 @@ class AccountSettings(
     fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
         if (newHashtagList == null || newHashtagList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupHashtagList?.id != newHashtagList.id) {
+        if (acceptIntoBackup(backupHashtagList, newHashtagList) { updateHashtagListTo(newHashtagList) }) {
             backupHashtagList = newHashtagList
             saveAccountSettings()
         }
@@ -1428,8 +1474,7 @@ class AccountSettings(
     fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
         if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+        if (acceptIntoBackup(backupFavoriteAlgoFeedsList, newFavoriteDvmList) { updateFavoriteAlgoFeedsListTo(newFavoriteDvmList) }) {
             backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
@@ -1438,8 +1483,7 @@ class AccountSettings(
     fun updateCommunityListTo(newCommunityList: CommunityListEvent?) {
         if (newCommunityList == null || newCommunityList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupCommunityList?.id != newCommunityList.id) {
+        if (acceptIntoBackup(backupCommunityList, newCommunityList) { updateCommunityListTo(newCommunityList) }) {
             backupCommunityList = newCommunityList
             saveAccountSettings()
         }
@@ -1450,8 +1494,7 @@ class AccountSettings(
     override fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
         if (newEphemeralChatList == null || newEphemeralChatList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupEphemeralChatList?.id != newEphemeralChatList.id) {
+        if (acceptIntoBackup(backupEphemeralChatList, newEphemeralChatList) { updateEphemeralChatListTo(newEphemeralChatList) }) {
             backupEphemeralChatList = newEphemeralChatList
             saveAccountSettings()
         }
@@ -1464,8 +1507,7 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newRelayGroupList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupRelayGroupList?.id != newRelayGroupList.id) {
+        if (acceptIntoBackup(backupRelayGroupList, newRelayGroupList) { updateRelayGroupListTo(newRelayGroupList) }) {
             backupRelayGroupList = newRelayGroupList
             saveAccountSettings()
         }
@@ -1478,7 +1520,7 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newConcordList == null) return
 
-        if (backupConcordList?.id != newConcordList.id) {
+        if (acceptIntoBackup(backupConcordList, newConcordList) { updateConcordListTo(newConcordList) }) {
             backupConcordList = newConcordList
             saveAccountSettings()
         }
@@ -1487,8 +1529,7 @@ class AccountSettings(
     fun updateTrustProviderListTo(trustProviderList: TrustProviderListEvent?) {
         if (trustProviderList == null || trustProviderList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupTrustProviderList?.id != trustProviderList.id) {
+        if (acceptIntoBackup(backupTrustProviderList, trustProviderList) { updateTrustProviderListTo(trustProviderList) }) {
             backupTrustProviderList = trustProviderList
             saveAccountSettings()
         }
@@ -1497,8 +1538,7 @@ class AccountSettings(
     fun updateMuteList(newMuteList: MuteListEvent?) {
         if (newMuteList == null || newMuteList.tags.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupMuteList?.id != newMuteList.id) {
+        if (acceptIntoBackup(backupMuteList, newMuteList) { updateMuteList(newMuteList) }) {
             backupMuteList = newMuteList
             saveAccountSettings()
         }
@@ -1510,8 +1550,7 @@ class AccountSettings(
     ) {
         if (appSettings == null || appSettings.content.isEmpty()) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupAppSpecificData?.id != appSettings.id) {
+        if (acceptIntoBackup(backupAppSpecificData, appSettings) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
             backupAppSpecificData = appSettings
             syncedSettings.updateFrom(newSyncedSettings)
 

@@ -2829,4 +2829,19 @@
         <item quantity="one">%1$d video</item>
         <item quantity="other">%1$d videos</item>
     </plurals>
+    <string name="backup_conflict_title">Your %1$s changed elsewhere</string>
+    <string name="backup_conflict_explainer">Another app published a newer version of your %1$s (%2$s) and it is missing things this device had saved. Apps that don\'t read the previous version before writing can erase your data by accident.</string>
+    <string name="backup_conflict_missing_items">Missing from the new version:</string>
+    <string name="backup_conflict_private_items_cleared">All private (encrypted) items</string>
+    <string name="backup_conflict_more_items">…and %1$s more</string>
+    <string name="backup_conflict_restore_mine">Restore saved version</string>
+    <string name="backup_conflict_keep_new">Use new version</string>
+    <string name="backup_conflict_decide_later">Decide later</string>
+    <string name="backup_kind_profile">profile</string>
+    <string name="backup_kind_follow_list">follow list</string>
+    <string name="backup_kind_mute_list">mute list</string>
+    <string name="backup_kind_relay_settings">relay settings</string>
+    <string name="backup_kind_app_settings">app settings</string>
+    <string name="backup_kind_wallet">wallet settings</string>
+    <string name="backup_kind_generic_list">list (kind %1$s)</string>
 </resources>

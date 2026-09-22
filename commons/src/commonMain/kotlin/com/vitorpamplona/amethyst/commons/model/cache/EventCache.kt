@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Dao
+import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
@@ -3383,7 +3384,10 @@ open class EventCache :
         justConsume(event, null, false)
     }
 
-    override fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)
+    override fun justConsumeMyOwnEvent(event: Event): Boolean {
+        LocallySignedEvents.mark(event)
+        return justConsumeAndUpdateIndexes(event, null, true)
+    }
 
     fun justConsume(
         event: Event,
