@@ -31,9 +31,11 @@ import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
@@ -50,6 +52,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 
 /** Which of the account's backed-up events a conflict is about. Drives the dialog's wording. */
@@ -166,4 +169,26 @@ object ReplaceableBackupDiff {
         val diffable = incoming as? DiffableEvent<*> ?: return null
         return diffable.diffFrom(saved)?.takeIf { it.removesData() }
     }
+}
+
+object BackupRestore {
+    /**
+     * The tags to re-sign when restoring [saved] over a newer version. Metadata that only
+     * described the old signing is dropped, not the user's data:
+     * - `client`: the app that signs now adds its own (it won't when one is already there);
+     * - `nonce`: NIP-13 proof of work is tied to the old id and would be a false claim;
+     * - `expiration` already in the past: relays would reject or drop the restored version.
+     */
+    fun tagsToResign(
+        saved: Event,
+        now: Long,
+    ): Array<Array<String>> =
+        saved.tags
+            .filterNot { tag ->
+                when (tag.getOrNull(0)) {
+                    ClientTag.TAG_NAME, PoWTag.TAG_NAME -> true
+                    ExpirationTag.TAG_NAME -> ExpirationTag.parse(tag)?.let { it <= now } ?: true
+                    else -> false
+                }
+            }.toTypedArray()
 }

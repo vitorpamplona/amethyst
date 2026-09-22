@@ -218,6 +218,66 @@ class EventDiffTest {
         assertNull(someoneElse.diffFrom(follows))
     }
 
+    // Bookkeeping tags other clients rewrite on every save: never user data.
+    private val olderBookkeeping = arrayOf(arrayOf("client", "Amethyst"), arrayOf("nonce", "123", "20"), arrayOf("expiration", "1000"))
+    private val newerBookkeeping = arrayOf(arrayOf("client", "OtherApp", "31990:abc:def"), arrayOf("nonce", "999", "16"), arrayOf("expiration", "5000"))
+
+    @Test
+    fun clientPowAndExpirationTagsAreIgnored() {
+        val follows = arrayOf(arrayOf("p", alice))
+        val contacts =
+            sign<ContactListEvent>(ContactListEvent.KIND, 200, follows + newerBookkeeping)
+                .diffFrom(sign<ContactListEvent>(ContactListEvent.KIND, 100, follows + olderBookkeeping))
+        assertTrue(assertNotNull(contacts).follows.isEmpty())
+
+        val mutes = arrayOf(arrayOf("word", "spam"))
+        val muteDiff =
+            assertNotNull(
+                sign<MuteListEvent>(MuteListEvent.KIND, 200, mutes + newerBookkeeping)
+                    .diffFrom(sign<MuteListEvent>(MuteListEvent.KIND, 100, mutes + olderBookkeeping)),
+            )
+        assertTrue(muteDiff.publicMutes.isEmpty())
+        assertEquals(ContentChange.NONE, muteDiff.privateItems)
+
+        val relays = arrayOf(arrayOf("r", "wss://a.com/"))
+        val nip65 =
+            sign<AdvertisedRelayListEvent>(AdvertisedRelayListEvent.KIND, 200, relays + newerBookkeeping)
+                .diffFrom(sign<AdvertisedRelayListEvent>(AdvertisedRelayListEvent.KIND, 100, relays + olderBookkeeping))
+        assertTrue(assertNotNull(nip65).relays.isEmpty())
+
+        val blocked = arrayOf(arrayOf("relay", "wss://spam.com/"))
+        val blockedDiff =
+            sign<BlockedRelayListEvent>(BlockedRelayListEvent.KIND, 200, blocked + newerBookkeeping)
+                .diffFrom(sign<BlockedRelayListEvent>(BlockedRelayListEvent.KIND, 100, blocked + olderBookkeeping))
+        assertTrue(assertNotNull(blockedDiff).relays.isEmpty())
+
+        val mints = arrayOf(arrayOf("mint", "https://mint.com", "sat"), arrayOf("pubkey", alice))
+        val nutzap =
+            assertNotNull(
+                sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 200, mints + newerBookkeeping)
+                    .diffFrom(sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 100, mints + olderBookkeeping)),
+            )
+        assertTrue(nutzap.mints.isEmpty() && nutzap.relays.isEmpty())
+        assertNull(nutzap.p2pkPubkey)
+
+        val profile = """{"name":"vitor"}"""
+        val metadata =
+            assertNotNull(
+                sign<MetadataEvent>(MetadataEvent.KIND, 200, newerBookkeeping, profile)
+                    .diffFrom(sign<MetadataEvent>(MetadataEvent.KIND, 100, olderBookkeeping, profile)),
+            )
+        assertFalse(metadata.removesData())
+        assertTrue(metadata.otherFields.isEmpty() && metadata.identityClaims.isEmpty())
+        assertNull(metadata.name)
+    }
+
+    @Test
+    fun droppingOnlyBookkeepingTagsIsNotALoss() {
+        val older = sign<ContactListEvent>(ContactListEvent.KIND, 100, arrayOf(arrayOf("p", alice)) + olderBookkeeping)
+        val newer = sign<ContactListEvent>(ContactListEvent.KIND, 200, arrayOf(arrayOf("p", alice)))
+        assertFalse(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
     @Test
     fun listDiffMatchesByKey() {
         val diff = ListDiff.of(listOf(1 to "a", 2 to "b"), listOf(2 to "B", 3 to "c"), { it.first })

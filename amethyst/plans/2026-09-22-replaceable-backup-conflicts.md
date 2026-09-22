@@ -27,7 +27,11 @@ only surviving copy of the user's data is gone.
    outbox) share `RelayListDiff`; encrypted-only events (Cashu wallet, Concord list, NIP-78
    data) diff their content as a whole.
 
-   `nip01Core/diff/` only holds the containers: `EventDiff` (`removesData()`, `isEmpty()`),
+   Tags an event's parser doesn't read never reach its diff, so bookkeeping other clients
+   rewrite on every save (`client`, NIP-13 `nonce`, NIP-40 `expiration`) is ignored by
+   construction; `EventDiffTest.clientPowAndExpirationTagsAreIgnored` pins it.
+
+   `nip01Core/diff/` only holds the containers: `EventDiff` (`removesData()`),
    `ListDiff<T>` (items matched by an identity key; a matched pair with different details
    is a change, not a removal plus an addition), `ValueChange<T>`, and `ContentChange` for
    NIP-44 private items, which can't be compared item by item without decrypting.
@@ -48,7 +52,9 @@ only surviving copy of the user's data is gone.
    channel ids to names from `LocalCache`. It offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
-     `created_at = max(now, incoming + 1)` and publishes it through
+     `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer
+     adds the current one), the `nonce` (its PoW was for the old id) and an already-past
+     `expiration` (`BackupRestore.tagsToResign`), and publishes it through
      `EventBroadcaster.sendRestoredVersion`: where a normal save of that kind goes, and for
      the user's own relay lists (NIP-65, DM, key package) also to every relay the restored
      list names, since the lossy version may have dropped them from the outbox set.

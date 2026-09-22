@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.backups.BackupRestore
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
@@ -1892,8 +1893,9 @@ class Account(
 
     /**
      * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
-     * version (same kind, tags and content, so NIP-44 private items stay readable) with a
-     * timestamp newer than the current one, and publishes it so it replaces that version.
+     * version (same kind, tags and content, so NIP-44 private items stay readable, minus the
+     * old client, proof-of-work and past expiration tags; see [BackupRestore.tagsToResign])
+     * with a timestamp newer than the current one, and publishes it so it replaces that version.
      *
      * Does nothing if the conflict is stale (already resolved, replaced by a newer one, or
      * dropped because the event was deleted), which also makes a double tap harmless.
@@ -1903,8 +1905,9 @@ class Account(
         var restored = false
         try {
             val saved = conflict.saved
-            val createdAt = maxOf(TimeUtils.now(), conflict.incoming.createdAt + 1)
-            val resigned = signer.sign<Event>(createdAt, saved.kind, saved.tags, saved.content)
+            val now = TimeUtils.now()
+            val createdAt = maxOf(now, conflict.incoming.createdAt + 1)
+            val resigned = signer.sign<Event>(createdAt, saved.kind, BackupRestore.tagsToResign(saved, now), saved.content)
             broadcaster.sendRestoredVersion(resigned)
             restored = true
         } finally {

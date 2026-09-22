@@ -92,4 +92,30 @@ class ReplaceableBackupDiffTest {
         repeat(600) { LocallySignedEvents.mark(sign(10000, 2L + it, arrayOf())) }
         assertFalse(LocallySignedEvents.contains(first.id))
     }
+
+    @Test
+    fun restoreDropsClientPowAndPastExpiration() {
+        val saved =
+            sign(
+                10000,
+                100,
+                arrayOf(
+                    arrayOf("p", alice),
+                    arrayOf("client", "OtherApp"),
+                    arrayOf("nonce", "123", "20"),
+                    arrayOf("expiration", "500"),
+                    arrayOf("word", "spam"),
+                ),
+                "private",
+            )
+        val tags = BackupRestore.tagsToResign(saved, now = 1000)
+        assertEquals(listOf(listOf("p", alice), listOf("word", "spam")), tags.map { it.toList() })
+    }
+
+    @Test
+    fun restoreKeepsAFutureExpiration() {
+        val saved = sign(10000, 100, arrayOf(arrayOf("p", alice), arrayOf("expiration", "5000")))
+        val tags = BackupRestore.tagsToResign(saved, now = 1000)
+        assertEquals(listOf(listOf("p", alice), listOf("expiration", "5000")), tags.map { it.toList() })
+    }
 }
