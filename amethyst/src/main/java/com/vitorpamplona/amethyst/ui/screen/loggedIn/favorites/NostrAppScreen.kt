@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -293,7 +292,7 @@ private fun AccessDialog(
         title = { Text(if (title.isBlank()) stringRes(Res.string.favorite_app_access_title) else title) },
         text = { Text(capsBody + networkBody) },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+            TextButton(onClick = onDismiss) { Text(stringRes(android.R.string.ok)) }
         },
     )
 }

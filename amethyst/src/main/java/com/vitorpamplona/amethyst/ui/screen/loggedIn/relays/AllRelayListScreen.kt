@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -127,6 +128,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
 @Composable
@@ -620,6 +622,7 @@ fun SettingsCategoryWithButton(
 fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     IconButton(onClick = { expanded = true }) {
         Icon(
@@ -639,14 +642,14 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
                     text = stringRes(Res.string.export_as_text),
                 ) {
                     expanded = false
-                    RelayExporter(context).export(collection())
+                    scope.launch { RelayExporter(context).export(collection()) }
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.FolderZip,
                     text = stringRes(Res.string.export_as_zip),
                 ) {
                     expanded = false
-                    RelayZipExporter(context).export(collection())
+                    scope.launch { RelayZipExporter(context).export(collection()) }
                 }
             }
         }

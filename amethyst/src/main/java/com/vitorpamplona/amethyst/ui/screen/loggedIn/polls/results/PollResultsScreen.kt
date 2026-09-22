@@ -64,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -658,7 +657,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
 
         notes.forEach { (res, count) ->
             Text(
-                text = pluralStringResource(res, count, count),
+                text = pluralStringRes(res, count, count),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

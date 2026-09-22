@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -167,9 +166,9 @@ fun TopControlSheet(
                             symbol = MaterialSymbols.Code,
                             label =
                                 if (consoleCount > 0) {
-                                    stringResource(CommonsR.string.browser_console_title, consoleCount)
+                                    stringRes(CommonsR.string.browser_console_title, consoleCount)
                                 } else {
-                                    stringResource(CommonsR.string.browser_console_title_short)
+                                    stringRes(CommonsR.string.browser_console_title_short)
                                 },
                             checked = consoleShowing,
                             onToggle = {

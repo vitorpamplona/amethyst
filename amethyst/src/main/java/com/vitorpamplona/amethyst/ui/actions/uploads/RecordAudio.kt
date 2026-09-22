@@ -38,8 +38,8 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.record_a_message_description
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.components.ToggleableBox
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -71,7 +71,11 @@ fun RecordAudioBox(
         }
     }
 
-    suspend fun startRecording() {
+    // Read in composition: both helpers run from onClick, where neither
+    // string accessor can be called.
+    val recordDescription = stringRes(Res.string.record_a_message_description)
+
+    fun startRecording() {
         if (mediaRecorder.value == null) {
             elapsedSeconds = 0
             mediaRecorder.value = VoiceMessageRecorder()
@@ -79,7 +83,7 @@ fun RecordAudioBox(
         }
     }
 
-    suspend fun stopRecording() {
+    fun stopRecording() {
         val recorder = mediaRecorder.value ?: return
         val result = recorder.stop()
         mediaRecorder.value = null
@@ -89,7 +93,7 @@ fun RecordAudioBox(
             Toast
                 .makeText(
                     context,
-                    loadStringRes(Res.string.record_a_message_description),
+                    recordDescription,
                     Toast.LENGTH_SHORT,
                 ).show()
         }

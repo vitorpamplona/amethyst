@@ -563,7 +563,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    suspend fun fetchTransactions() {
+    fun fetchTransactions() {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -675,7 +675,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    suspend fun sendPayment(bolt11: String) {
+    fun sendPayment(bolt11: String) {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
@@ -712,7 +712,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    suspend fun createInvoice(
+    fun createInvoice(
         amountSats: Long,
         description: String? = null,
     ) {

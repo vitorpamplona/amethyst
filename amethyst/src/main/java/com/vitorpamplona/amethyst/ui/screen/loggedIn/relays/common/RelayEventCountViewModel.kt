@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 data class RelayCountResult(
@@ -36,6 +37,6 @@ data class RelayCountResult(
 }
 
 data class CountFilter(
-    val label: Int,
+    val label: StringResource,
     val filter: Filter,
 )

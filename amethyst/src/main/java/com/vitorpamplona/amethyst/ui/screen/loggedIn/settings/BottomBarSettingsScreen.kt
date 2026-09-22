@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 /** The chat catalog items whose picker row expands to a per-item picker (favorites / joined groups). */
 private val ExpandableItems =
@@ -172,7 +173,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 
-    val expandedCategories = rememberExpandedKeys<Int>()
+    val expandedCategories = rememberExpandedKeys<StringResource>()
     val expandedItems = rememberExpandedKeys<NavBarItem>()
 
     Column(

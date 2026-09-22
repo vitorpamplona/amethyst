@@ -233,7 +233,7 @@ internal fun <T> SegmentedChoiceTile(
     title: StringResource,
     description: StringResource,
     options: List<T>,
-    labelRes: (T) -> Int,
+    labelRes: (T) -> StringResource,
     selected: T,
     onSelect: (T) -> Unit,
     optionTextStyle: (@Composable (T) -> TextStyle)? = null,

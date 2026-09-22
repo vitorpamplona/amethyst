@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -274,8 +273,8 @@ fun RelayAuthSettingsScreen(
                                     }
                                 PolicyRow(
                                     selected = globalPolicy == policy,
-                                    title = stringResource(titleRes),
-                                    description = stringResource(descRes),
+                                    title = stringRes(titleRes),
+                                    description = stringRes(descRes),
                                     // Account, not settings: choosing "never log in" also drops this
                                     // session's grants, and that pairing is the account's rule rather
                                     // than this screen's. See Account.changeDefaultRelayAuthPolicy.
@@ -685,7 +684,7 @@ private fun PurposeChip(kind: AuthPurposeKind) {
         shape = RoundedCornerShape(100.dp),
     ) {
         Text(
-            text = stringResource(relayAuthPurposeLabelRes(kind)),
+            text = stringRes(relayAuthPurposeLabelRes(kind)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),

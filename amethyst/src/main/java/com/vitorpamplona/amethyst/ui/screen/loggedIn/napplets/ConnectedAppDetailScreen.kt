@@ -56,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -150,7 +149,7 @@ fun ConnectedAppDetailScreen(
 ) {
     val capabilityLedger = Amethyst.instance.nappletPermissionLedger
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
-    val untitled = stringResource(CommonsR.string.napplet_untitled)
+    val untitled = stringRes(CommonsR.string.napplet_untitled)
 
     var state by remember { mutableStateOf<ConnectedAppDetailState?>(null) }
     var reload by remember { mutableIntStateOf(0) }
@@ -649,9 +648,9 @@ private fun CapabilityDetailRow(
         )
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(stringResource(capability.labelRes()), style = MaterialTheme.typography.bodyMedium)
+            Text(stringRes(capability.labelRes()), style = MaterialTheme.typography.bodyMedium)
             Text(
-                stringResource(capability.descriptionRes()),
+                stringRes(capability.descriptionRes()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -697,7 +696,7 @@ private fun CapabilityPermissionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(capability.labelRes())) },
+        title = { Text(stringRes(capability.labelRes())) },
         text = {
             Column {
                 GrantOption(
@@ -723,7 +722,7 @@ private fun CapabilityPermissionDialog(
             TextButton(
                 onClick = { onSetGrant(if (selected == GrantState.ASK) null else selected) },
             ) {
-                Text(stringResource(android.R.string.ok))
+                Text(stringRes(android.R.string.ok))
             }
         },
         dismissButton = {

@@ -82,8 +82,9 @@ class VoiceReplyViewModel : ViewModel() {
             onError = { error ->
                 if (::accountViewModel.isInitialized) {
                     accountViewModel.toastManager.toast(
-                        loadStringRes(Res.string.error),
+                        Res.string.error,
                         error.message ?: "Voice anonymization failed",
+                        error,
                     )
                 }
             },
@@ -159,7 +160,7 @@ class VoiceReplyViewModel : ViewModel() {
         uploadJob = null
     }
 
-    private suspend fun deleteVoiceLocalFile() {
+    private fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
                 if (file.deleteOrWarn("VoiceReplyViewModel", "voice file")) {
@@ -171,13 +172,13 @@ class VoiceReplyViewModel : ViewModel() {
         }
     }
 
-    suspend fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
+    fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
 
-    suspend fun selectPreset(preset: VoicePreset) {
+    fun selectPreset(preset: VoicePreset) {
         voiceAnonymization.selectPreset(preset, voiceLocalFile)
     }
 
-    suspend fun sendVoiceReply(onSuccess: () -> Unit) {
+    fun sendVoiceReply(onSuccess: () -> Unit) {
         val note = replyToNote ?: return
         val recording = voiceRecording ?: return
         val fileToUpload = activeFile ?: recording.file
@@ -212,13 +213,12 @@ class VoiceReplyViewModel : ViewModel() {
                     Log.w("VoiceReplyViewModel", "User canceled, or ViewModel cleared", e)
                 } catch (e: Exception) {
                     val appContext = Amethyst.instance.appContext
-                    val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
-                    val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-                        loadStringRes(Res.string.upload_error_voice_message_exception, detail)
-                    }
                     accountViewModel.toastManager.toast(
-                        uploadErrorTitle,
-                        uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName),
+                        loadStringRes(Res.string.upload_error_title),
+                        loadStringRes(
+                            Res.string.upload_error_voice_message_exception,
+                            e.message ?: e.javaClass.simpleName,
+                        ),
                     )
                 } finally {
                     isUploading = false

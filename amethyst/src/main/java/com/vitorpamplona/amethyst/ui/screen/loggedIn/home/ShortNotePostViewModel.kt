@@ -1857,7 +1857,7 @@ open class ShortNotePostViewModel :
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    suspend fun selectVoiceRecording(recording: RecordingResult) {
+    fun selectVoiceRecording(recording: RecordingResult) {
         // Cancel any ongoing processing and delete existing files
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
@@ -1866,7 +1866,7 @@ open class ShortNotePostViewModel :
         voiceMetadata = null
     }
 
-    suspend fun getVoicePreviewMetadata(): AudioMeta? =
+    fun getVoicePreviewMetadata(): AudioMeta? =
         voiceRecording?.let { recording ->
             AudioMeta(
                 url = "", // Empty URL for preview (local file will be used)
@@ -1876,11 +1876,11 @@ open class ShortNotePostViewModel :
             )
         }
 
-    suspend fun selectPreset(preset: VoicePreset) {
+    fun selectPreset(preset: VoicePreset) {
         voiceAnonymization.selectPreset(preset, voiceLocalFile)
     }
 
-    suspend fun removeVoiceMessage() {
+    fun removeVoiceMessage() {
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
@@ -1891,7 +1891,7 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
     }
 
-    private suspend fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
+    private fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
         toDelete?.let { file ->
             try {
                 if (file.delete()) {

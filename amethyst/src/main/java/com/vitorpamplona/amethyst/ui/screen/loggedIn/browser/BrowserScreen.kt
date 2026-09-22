@@ -64,7 +64,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -348,7 +347,7 @@ private fun OmniBar(
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            placeholder = { Text(stringResource(CommonsR.string.browser_address_hint)) },
+            placeholder = { Text(stringRes(CommonsR.string.browser_address_hint)) },
             keyboardOptions =
                 KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
@@ -404,7 +403,7 @@ private fun SuggestionGrid(
         highlighted: Boolean,
     ) {
         if (rows.isEmpty()) return
-        item(key = "h-$keyPrefix") { SectionHeader(stringResource(title)) }
+        item(key = "h-$keyPrefix") { SectionHeader(stringRes(title)) }
         items(rows, key = { "$keyPrefix:" + it.url }) { suggestion ->
             SuggestionRow(
                 suggestion = suggestion,
