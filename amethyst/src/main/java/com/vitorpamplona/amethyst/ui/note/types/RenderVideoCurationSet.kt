@@ -84,20 +84,25 @@ fun RenderVideoCurationSet(
 
     // Decryption needs the signer and only succeeds for the list's owner, so it runs off the
     // composition and simply yields nothing for everyone else.
+    //
+    // Null means "we did not read the content": not the owner, or the decrypt failed. An empty
+    // list means we read it and it holds nothing. The two have to stay apart, because a list whose
+    // encrypted content decrypts to `[]` is an empty list, not a private one — divine.video
+    // publishes exactly that for a list a user created and never added to.
     val privateItems by
-        produceState(initialValue = emptyList<BookmarkIdTag>(), noteEvent) {
+        produceState<List<BookmarkIdTag>?>(initialValue = null, noteEvent) {
             if (noteEvent.pubKey != accountViewModel.account.signer.pubKey) return@produceState
             value =
                 try {
-                    noteEvent.privateItems(accountViewModel.account.signer) ?: emptyList()
+                    noteEvent.privateItems(accountViewModel.account.signer)
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     Log.w("RenderVideoCurationSet", "Cannot decrypt private items of ${noteEvent.id}", e)
-                    emptyList()
+                    null
                 }
         }
 
-    val items = remember(publicItems, privateItems) { publicItems + privateItems }
+    val items = remember(publicItems, privateItems) { publicItems + (privateItems ?: emptyList()) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -122,10 +127,10 @@ fun RenderVideoCurationSet(
         }
 
         // An empty strip has two very different causes. Encrypted content we could not read means
-        // the members are there and private; no content at all means the list is simply empty, and
-        // calling that "Private list" would be a lie — to its own author most of all, who can read
-        // everything in it.
-        val membersAreHidden = items.isEmpty() && noteEvent.content.isNotBlank()
+        // the members may be there and private; content we did read, or no content at all, means
+        // the list is simply empty. Calling that "Private list" would be a lie — to its own author
+        // most of all, who just decrypted it and found nothing in it.
+        val membersAreHidden = items.isEmpty() && noteEvent.content.isNotBlank() && privateItems == null
 
         Text(
             text =
