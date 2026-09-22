@@ -293,18 +293,43 @@ class SnoParserAcceptanceTest {
     }
 
     @Test
-    fun aVertexBeyondTheBoundIsRefused() {
-        // Amethyst's own rule, and a deliberate divergence: §1.8 puts the bound on
-        // publishers and lets readers repair instead, which neither reference
-        // implementation does either way.
-        val result = SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[65,2,1]]"))
-        assertTrue(result is SnoResult.Invalid)
-        assertEquals("bound", result.rule)
+    fun aVertexBeyondTheGridGrowsItRatherThanFailing() {
+        // §1.8 puts the position bound on publishers — a vertex further than 64
+        // model units from the origin is theirs not to write — and gives a
+        // reader the choice: "A reader MAY reject such a payload and MAY
+        // instead repair it by growing the extent." Both references repair, so
+        // this does too, and the repair is visible in the extent.
+        val payload = SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[65,2,1]]")).payloadOrNull()
+        assertNotNull(payload)
+        assertEquals(65, payload.extent, "the extent should have grown past MAX_EXTENT to hold the vertex")
+        assertEquals(65 * SnoPayload.TICKS_PER_UNIT, payload.tickAt(3, 0), "and the coordinate should be untouched")
     }
 
     @Test
     fun aVertexExactlyAtTheBoundIsAccepted() {
         assertNotNull(SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[64,2,1]]")).payloadOrNull())
+    }
+
+    @Test
+    fun aVertexPastWhatTheLatticeHoldsIsStillRefused() {
+        // The one bound left is the lattice's own: a position is a total tick
+        // count in an Int, and past Int.MAX_VALUE ticks there is no coordinate
+        // to repair, only one that would wrap.
+        val justInside = SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[17895697,2,1]]")).payloadOrNull()
+        assertNotNull(justInside)
+        assertEquals(17895697 * SnoPayload.TICKS_PER_UNIT, justInside.tickAt(3, 0))
+
+        val justOutside = SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[17895698,2,1]]"))
+        assertTrue(justOutside is SnoResult.Invalid)
+        assertEquals("bound", justOutside.rule)
+    }
+
+    @Test
+    fun aWholeTooLargeForALongIsRefusedRatherThanRounded() {
+        // A JSON integer has no width. One past a Long would come back as a
+        // Double through a lazier reader and land somewhere near the origin.
+        val result = SnoParser.parse(payload(vertices = "[[0,0,0],[2,0,0],[1,0,2],[99999999999999999999,2,1]]"))
+        assertTrue(result is SnoResult.Invalid)
     }
 
     private fun payload(

@@ -34,12 +34,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.sno_avatar_default
+import com.vitorpamplona.amethyst.commons.resources.sno_avatar_default_details
 import com.vitorpamplona.amethyst.commons.resources.sno_avatar_title
 import com.vitorpamplona.amethyst.commons.resources.sno_avatar_unpaid
 import com.vitorpamplona.amethyst.commons.resources.sno_object_details
+import com.vitorpamplona.amethyst.commons.resources.sno_object_scale
+import com.vitorpamplona.amethyst.commons.sno.SnoDefaultAvatar
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.quartz.cyberspace.CyberspaceScale
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
 import org.jetbrains.compose.resources.stringResource
 
@@ -83,6 +88,59 @@ fun SnoAvatarCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            // An avatar's `unit` is what it was priced on (§8.10 pays for reach
+            // as well as detail), so it is the one card where the scale is not
+            // only informative but the reason the work came out as it did.
+            Text(
+                text = stringResource(Res.string.sno_object_scale, CyberspaceScale.describeUnit(payload.unit)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * The avatar of someone who has not published a shape.
+ *
+ * §8.10 makes a `kind 11333` with empty content the default avatar: no
+ * geometry, no work owed, and what everyone is until they adopt something.
+ * Drawing nothing for it is correct and unhelpful — the note disappears out of
+ * the feed, which reads as a fault — so it is drawn as the wireframe
+ * icosahedron the reference puts in its place, which is also a shape nobody
+ * could mistake for one somebody made.
+ */
+@Composable
+fun SnoAvatarDefaultCard(eventId: String) {
+    Row(
+        modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SnoThumbnail(
+            payload = SnoDefaultAvatar.payload,
+            eventId = eventId,
+            size = AVATAR_THUMBNAIL_SIZE,
+            contentDescription = stringResource(Res.string.sno_avatar_default),
+        )
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(Res.string.sno_avatar_default),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(Res.string.sno_avatar_default_details),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

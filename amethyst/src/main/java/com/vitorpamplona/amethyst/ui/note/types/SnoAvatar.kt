@@ -33,8 +33,11 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarCard
+import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarDefaultCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarUnpaidCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
 
 private val VIEWER_HEIGHT = 360.dp
@@ -44,40 +47,57 @@ private val VIEWER_HEIGHT = 360.dp
  *
  * §8.10 gates the drawing rather than the parsing: an avatar that has not paid
  * for its reach and its detail, or whose content cannot be read, MUST NOT be
- * drawn. Empty content is the default avatar and owes no work, so there is
- * nothing to show for it either.
+ * drawn.
+ *
+ * Empty content is the default avatar: it owes no work, and it is what every
+ * identity is until it adopts a shape. Drawing nothing for it is correct and
+ * unhelpful — the note disappears out of the feed, which reads as a fault — so
+ * it gets the wireframe icosahedron the reference puts in its place.
  */
 @Composable
-fun RenderSnoAvatar(baseNote: Note) {
+fun RenderSnoAvatar(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
     val noteEvent = baseNote.event as? SnoAvatarEvent ?: return
-    if (noteEvent.isDefaultAvatar()) return
-
-    // One parse: pricing an avatar reads its payload, and payment() hands that
-    // back, so nothing here parses the same content twice on the way to a frame.
-    val shape: SnoPayload? = remember(noteEvent) { noteEvent.payment().let { if (it.ok) it.payload else null } }
-
-    if (shape == null) {
-        SnoAvatarUnpaidCard()
+    if (noteEvent.isDefaultAvatar()) {
+        SnoAvatarDefaultCard(noteEvent.id)
         return
     }
 
-    var turning by remember(noteEvent) { mutableStateOf(false) }
+    // One parse: pricing an avatar reads its payload, and payment() hands that
+    // back, so nothing here parses the same content twice on the way to a frame.
+    // The price cannot change with the palette — §8.10 charges for reach and
+    // detail and never for colour — but whether the payload reads at all can,
+    // so the verdict is taken again with whichever palette arrives.
+    val first = remember(noteEvent) { noteEvent.payment() }
 
-    SnoAvatarCard(
-        payload = shape,
-        eventId = noteEvent.id,
-        name = noteEvent.nameTag(),
-        onClick = { turning = true },
-    )
+    WithSnoPalette(first.payload?.paletteRef ?: SnoPaletteRef.BuiltIn, accountViewModel) { palette ->
+        val payment = remember(noteEvent, palette) { if (palette == null) first else noteEvent.payment(palette) }
+        val shape: SnoPayload? = if (payment.ok) payment.payload else null
 
-    if (turning) {
-        Dialog(onDismissRequest = { turning = false }) {
-            SnoObjectViewer(
+        if (shape == null) {
+            SnoAvatarUnpaidCard()
+        } else {
+            var turning by remember(noteEvent) { mutableStateOf(false) }
+
+            SnoAvatarCard(
                 payload = shape,
                 eventId = noteEvent.id,
-                contentDescription = noteEvent.nameTag() ?: shape.name.ifBlank { null },
-                modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
+                name = noteEvent.nameTag(),
+                onClick = { turning = true },
             )
+
+            if (turning) {
+                Dialog(onDismissRequest = { turning = false }) {
+                    SnoObjectViewer(
+                        payload = shape,
+                        eventId = noteEvent.id,
+                        contentDescription = noteEvent.nameTag() ?: shape.name.ifBlank { null },
+                        modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
+                    )
+                }
+            }
         }
     }
 }

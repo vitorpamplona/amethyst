@@ -1071,11 +1071,11 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is BirdDetectionEvent) {
                     RenderBirdDetection(baseNote)
                 } else if (noteEvent is SnoObjectEvent) {
-                    RenderSnoObject(baseNote)
+                    RenderSnoObject(baseNote, accountViewModel)
                 } else if (noteEvent is SnoAvatarEvent) {
-                    RenderSnoAvatar(baseNote)
+                    RenderSnoAvatar(baseNote, accountViewModel)
                 } else if (noteEvent is SnoShardEvent) {
-                    RenderSnoShard(baseNote)
+                    RenderSnoShard(baseNote, accountViewModel)
                 } else if (noteEvent is Ps1SaveEvent) {
                     RenderPs1Save(baseNote)
                 } else if (noteEvent is GeocacheListingEvent) {

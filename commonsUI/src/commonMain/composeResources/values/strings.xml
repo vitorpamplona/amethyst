@@ -3087,4 +3087,9 @@
     <string name="sno_avatar_unpaid">This avatar has not paid for its size, so it is not drawn</string>
     <string name="sno_light_on">Lit; tap to draw the object flat</string>
     <string name="sno_light_off">Flat; tap to light the object</string>
+    <string name="sno_object_scale">1 unit = %1$s</string>
+    <string name="sno_shard_dataspace">Hidden in dataspace · %1$s</string>
+    <string name="sno_shard_ideaspace">Hidden in ideaspace · %1$s</string>
+    <string name="sno_avatar_default">Default avatar</string>
+    <string name="sno_avatar_default_details">No shape published, so everyone sees this one</string>
 </resources>

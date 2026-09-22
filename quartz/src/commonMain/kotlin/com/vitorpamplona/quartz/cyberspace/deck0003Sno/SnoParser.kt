@@ -32,6 +32,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlin.math.roundToInt
 
 /** What [SnoParser] made of a payload. */
@@ -124,27 +125,32 @@ object SnoParser {
         // before it can be assembled. Absent ticks means every position is whole.
         val ticks = expandTicks(root["ticks"], vertices.size) ?: return SnoResult.Invalid("7", "ticks do not expand to one remainder per vertex")
 
-        // Rule 6, and the position bound this reader adds (see MAX_TICKS_FROM_ORIGIN).
+        // Rule 6. §1.8 puts the position bound on publishers — "a publisher MUST
+        // NOT write a vertex further than 64 model units from the origin" — and
+        // lets a reader either reject such a payload or "repair it by growing
+        // the extent". Both references repair: `sno-core`'s `fromPayload` does
+        // not check a position at all and lets `neededExtent` grow past its own
+        // `MAX_EXTENT`, and `sno-reference.py` does not check either. So this
+        // repairs too, under rule 9 below, and the only bound left here is the
+        // one the lattice itself imposes (see MAX_TICKS_FROM_ORIGIN).
         val positions = IntArray(vertices.size * 3)
         for (i in 0 until vertices.size) {
             val triple = vertices[i] as? JsonArray ?: return SnoResult.Invalid("6", "vertex $i is not an array")
             if (triple.size != 3) return SnoResult.Invalid("6", "vertex $i is not three integers")
             for (axis in 0..2) {
-                val whole = triple[axis].asIntOrNull() ?: return SnoResult.Invalid("6", "vertex $i is not three integers")
-                // Range-checked rather than `abs`-checked, because abs(Int.MIN_VALUE)
-                // is itself negative: a vertex of -2147483648 would pass the bound,
-                // overflow `* 120` to 0, and parse as a silently rewritten coordinate.
-                if (whole > SnoPayload.MAX_EXTENT || whole < -SnoPayload.MAX_EXTENT) {
-                    return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
-                }
+                // Read and multiplied as a Long, because the product is what has
+                // to fit: a whole of Int.MIN_VALUE would otherwise overflow `*
+                // 120` to 0 and parse as a silently rewritten coordinate, and
+                // `abs` would not catch it either, being its own negative there.
+                val whole = triple[axis].asLongOrNull() ?: return SnoResult.Invalid("6", "vertex $i is not three integers")
                 val total = whole * SnoPayload.TICKS_PER_UNIT + ticks[i * 3 + axis]
                 if (total > SnoPayload.MAX_TICKS_FROM_ORIGIN || total < -SnoPayload.MAX_TICKS_FROM_ORIGIN) {
-                    return SnoResult.Invalid("bound", "vertex $i lies beyond ${SnoPayload.MAX_EXTENT} units from the origin")
+                    return SnoResult.Invalid("bound", "vertex $i lies past what the lattice can hold exactly")
                 }
                 // §2: a `v: 1` payload has +Z away from the viewer, so its Z is
                 // negated on read, which renders the object exactly as its author
                 // built it. A `v: 2` payload is read as written.
-                positions[i * 3 + axis] = if (axis == 2 && version == 1) -total else total
+                positions[i * 3 + axis] = (if (axis == 2 && version == 1) -total else total).toInt()
             }
         }
 
@@ -206,7 +212,11 @@ object SnoParser {
         // Rule 9. `extent` is repaired rather than validated: out of range becomes
         // the default, then it grows to contain the data. The data wins and the
         // hint is corrected, so an object is never refused for disagreeing with
-        // its own extent (§1.8).
+        // its own extent (§1.8) — and, since rule 6 no longer turns away a
+        // vertex past 64 units, this is also where such a vertex is repaired.
+        // The grown extent may therefore exceed MAX_EXTENT, exactly as the
+        // reference's `neededExtent` does; MAX_EXTENT bounds what a payload may
+        // *declare*, not what its geometry may need.
         val declared = root["extent"].asIntOrNull()
         val repaired = if (declared != null && declared >= SnoPayload.MIN_EXTENT && declared <= SnoPayload.MAX_EXTENT) declared else SnoPayload.DEFAULT_EXTENT
         val extent = grownExtent(repaired, positions)
@@ -413,6 +423,17 @@ object SnoParser {
                 raw
             }
         return (clamped * 255.0).roundToInt()
+    }
+
+    /**
+     * A JSON integer as a Long, or null when the token is not one — including a
+     * whole number too large for a Long, which is not a coordinate anybody can
+     * hold and is rejected the same way a string would be.
+     */
+    private fun JsonElement?.asLongOrNull(): Long? {
+        val primitive = this as? JsonPrimitive ?: return null
+        if (primitive.isString) return null
+        return primitive.longOrNull
     }
 
     private fun JsonElement?.asIntOrNull(): Int? {

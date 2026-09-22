@@ -49,7 +49,11 @@ class SnoPayload(
     val name: String,
     /** Scale exponent: one model unit is `2^unit` of the application's base unit (§1.6). */
     val unit: Int,
-    /** Grid half-width in model units, repaired and grown to contain the data (§1.8). */
+    /**
+     * Grid half-width in model units, repaired and grown to contain the data
+     * (§1.8). A declared extent is only honoured inside `1..`[MAX_EXTENT]; the
+     * grown one has no ceiling, because the geometry is what it is.
+     */
     val extent: Int,
     val mode: SnoMode,
     /** Three total-tick coordinates per vertex: X, Y, Z. */
@@ -91,20 +95,25 @@ class SnoPayload(
         /**
          * The farthest a vertex may lie from the origin on any axis, in ticks.
          *
-         * DECK-0003 §1.8 states this bound as an obligation on publishers and
-         * lets a reader "reject such a payload" or "repair it by growing the
-         * extent"; §8's third open question admits that leaving it off readers
-         * is unsafe as a general rule, since "a payload of 512 vertices at 2^50
-         * units is valid under this text and will produce a grid no renderer
-         * wants". Neither reference implementation bounds it — ONOSENDAI grows
-         * the extent without a ceiling, and `sno-reference.py` does not check.
+         * This is a representation limit and not a rule of the format. §1.8
+         * puts the position bound on publishers — "a publisher MUST NOT write a
+         * vertex further than `64` model units (`7680` ticks) from the origin
+         * on any axis" — and offers a reader two ways to answer one that does:
+         * "A reader MAY reject such a payload and MAY instead repair it by
+         * growing the extent." Both references repair. `sno-core`'s
+         * `fromPayload` never looks at a position's magnitude and lets
+         * `neededExtent` grow the extent past its own `MAX_EXTENT`, and
+         * `sno-reference.py` does not check either. So Amethyst repairs, and an
+         * object that reaches past the grid is drawn rather than refused; what
+         * is left here is only the point at which the lattice stops being able
+         * to say where a vertex is.
          *
-         * Amethyst rejects, which is the deliberate divergence, because it
-         * draws strangers' events in a feed and because `whole * 120` overflows
-         * an Int well before 2^50 units, so the bound is a representation limit
-         * here and not only a matter of taste. Nothing on the network is near
-         * it: the widest object published so far reaches 8 units.
+         * That point is `Int.MAX_VALUE` ticks, about 17.9 million model units,
+         * because a position is a total tick count in an Int — the exact
+         * integer §1.2 requires every weld, comparison and hash to run on. Past
+         * it there is no coordinate to repair, only one that would wrap, so
+         * that is a rejection rather than a judgement about size.
          */
-        const val MAX_TICKS_FROM_ORIGIN = MAX_EXTENT * TICKS_PER_UNIT
+        const val MAX_TICKS_FROM_ORIGIN = Int.MAX_VALUE.toLong()
     }
 }

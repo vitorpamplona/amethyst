@@ -35,11 +35,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.sno_object_details
+import com.vitorpamplona.amethyst.commons.resources.sno_object_scale
 import com.vitorpamplona.amethyst.commons.resources.sno_object_title
 import com.vitorpamplona.amethyst.commons.resources.sno_object_unreadable
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoThumbnail
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.quartz.cyberspace.CyberspaceScale
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
 import org.jetbrains.compose.resources.stringResource
 
@@ -48,14 +50,25 @@ private val THUMBNAIL_SIZE = 96.dp
 /**
  * A Simple Nostr Object in a feed or a thread (DECK-0003 kind 33331).
  *
- * The object is the event, so there is nothing to fetch and nothing to expand:
- * the card draws what it already has. Tapping opens it where it can be turned.
+ * The geometry is the event, so there is nothing to fetch and nothing to
+ * expand: the card draws what it already has. Tapping opens it where it can be
+ * turned.
+ *
+ * The scale line is not decoration. §1.6's `unit` is the only field separating
+ * two objects with byte-identical geometry, and at `0` and `40` those two are a
+ * molecule and a mountain; a card that prints the vertex count for both has
+ * said nothing about the difference. [CyberspaceScale] turns the exponent into
+ * a length.
+ *
+ * @param footnote one more line under the scale, for something the container
+ *   knows and the payload does not — a shard's place, say.
  */
 @Composable
 fun SnoObjectCard(
     payload: SnoPayload,
     eventId: String,
     onClick: (() -> Unit)? = null,
+    footnote: String? = null,
 ) {
     val modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp)
 
@@ -86,6 +99,22 @@ fun SnoObjectCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Text(
+                text = stringResource(Res.string.sno_object_scale, CyberspaceScale.describeUnit(payload.unit)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            footnote?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

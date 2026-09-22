@@ -31,11 +31,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.sno_shard_dataspace
+import com.vitorpamplona.amethyst.commons.resources.sno_shard_ideaspace
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectUnreadableCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
+import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoResult
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import org.jetbrains.compose.resources.stringResource
 
 private val VIEWER_HEIGHT = 360.dp
 
@@ -50,7 +58,10 @@ private val VIEWER_HEIGHT = 360.dp
  * a renderer.
  */
 @Composable
-fun RenderSnoShard(baseNote: Note) {
+fun RenderSnoShard(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
     val noteEvent = baseNote.event as? SnoShardEvent ?: return
 
     // A shard whose geometry is still inside its bag is not a broken payload
@@ -58,29 +69,64 @@ fun RenderSnoShard(baseNote: Note) {
     // draw. Both 3330s reachable on a relay today are this.
     if (noteEvent.isSealed()) return
 
-    val parsed = remember(noteEvent) { noteEvent.shard() }
+    val first = remember(noteEvent) { noteEvent.shard() }
+    val place = placeOf(noteEvent)
 
-    when (parsed) {
-        is SnoResult.Invalid -> SnoObjectUnreadableCard(parsed.rule)
-        is SnoResult.Valid -> {
-            var turning by remember(noteEvent) { mutableStateOf(false) }
+    WithSnoPalette(first.payloadOrNull()?.paletteRef ?: SnoPaletteRef.BuiltIn, accountViewModel) { palette ->
+        val parsed = remember(noteEvent, palette) { if (palette == null) first else noteEvent.shard(palette) }
 
-            SnoObjectCard(
-                payload = parsed.payload,
-                eventId = noteEvent.id,
-                onClick = { turning = true },
-            )
+        when (parsed) {
+            is SnoResult.Invalid -> SnoObjectUnreadableCard(parsed.rule)
+            is SnoResult.Valid -> {
+                var turning by remember(noteEvent) { mutableStateOf(false) }
 
-            if (turning) {
-                Dialog(onDismissRequest = { turning = false }) {
-                    SnoObjectViewer(
-                        payload = parsed.payload,
-                        eventId = noteEvent.id,
-                        contentDescription = parsed.payload.name.ifBlank { null },
-                        modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
-                    )
+                SnoObjectCard(
+                    payload = parsed.payload,
+                    eventId = noteEvent.id,
+                    onClick = { turning = true },
+                    footnote = place,
+                )
+
+                if (turning) {
+                    Dialog(onDismissRequest = { turning = false }) {
+                        SnoObjectViewer(
+                            payload = parsed.payload,
+                            eventId = noteEvent.id,
+                            contentDescription = parsed.payload.name.ifBlank { null },
+                            modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/**
+ * Where this shard says it is, in the little a client with no world can say.
+ *
+ * §7.6 lets an item carry a `C` tag holding its exact coordinate, "which lets a
+ * client render it at a point rather than somewhere in the region". Amethyst has
+ * no region and no point to render it at, but the tag still carries one thing a
+ * reader understands on its own: the plane, which says whether the shard was
+ * hidden at a place on Earth or at one with no physical counterpart (§2.4). The
+ * coordinate itself is abbreviated beside it — enough to tell two shards apart,
+ * and the whole of it is in the event for a client that can go there. See
+ * [CyberspaceCoordinate] for why the axes are not decoded.
+ *
+ * Null when there is no `C` tag, which §7.6 allows: such an item "is located no
+ * more precisely than the region".
+ */
+@Composable
+private fun placeOf(noteEvent: SnoShardEvent): String? {
+    val coordinate = noteEvent.coordinate() ?: return null
+    val plane = CyberspaceCoordinate.planeOf(coordinate) ?: return null
+    val short = coordinate.take(SHORT_COORDINATE) + "\u2026" + coordinate.takeLast(SHORT_COORDINATE)
+    return when (plane) {
+        CyberspacePlane.DATASPACE -> stringResource(Res.string.sno_shard_dataspace, short)
+        CyberspacePlane.IDEASPACE -> stringResource(Res.string.sno_shard_ideaspace, short)
+    }
+}
+
+/** How much of a 32-byte coordinate to show at each end. */
+private const val SHORT_COORDINATE = 6

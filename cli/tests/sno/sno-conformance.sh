@@ -16,8 +16,9 @@
 #                          through `amy sno work` and `avatar_work()`.
 #   3. Avatar payment    — synthesised events through `amy sno verify` and
 #                          `verify_avatar_work()`.
-#   4. Reader divergence — the two places we knowingly differ from the §1.9
-#                          arbiter, pinned so neither can drift quietly.
+#   4. Reader divergence — where we knowingly differ from the §1.9 arbiter,
+#                          and one place we used to and no longer do, pinned so
+#                          neither can drift quietly.
 #
 # Divergences we already know about are asserted as divergences, not ignored:
 # a reader that silently stopped diverging would be just as interesting as one
@@ -247,10 +248,11 @@ check_verify "verify-legacy-kind" "$(avatar_event 33331 16 16 "$SHAPE")" not-an-
 
 # ---- 4. the two places our reader knowingly differs ------------------------
 
-banner "4. reader divergence — pinned, not ignored"
+banner "4. reader divergence and agreement — pinned, not ignored"
 
-# These are not in the deck's rejection table, so section 1 never sees them.
-# Both are deliberate and documented; a change in either direction is news.
+# None of these are in the deck's rejection table, so section 1 never sees
+# them. Each is deliberate and documented; a change in either direction is
+# news, including a divergence that quietly reappears after being repealed.
 
 check_verdict() {  # label, payload, expected-amy-valid, expected-ref-valid, note
   local label="$1" payload="$2" want_ours="$3" want_theirs="$4" note="$5"
@@ -275,12 +277,21 @@ check_verdict() {  # label, payload, expected-amy-valid, expected-ref-valid, not
 TRIPLES='{"v":2,"name":"legacy","unit":0,"mode":"solid","vertices":[[0,0,0],[2,0,0],[1,0,2],[1,2,1]],"colors":[[1,0.15,0.15],[0,1,0],[0,0,1],[1,1,1]],"faces":[[0,1,2]]}'
 check_verdict "divergence-v2-triples" "$TRIPLES" true false "we read the legacy colour cohort; the arbiter refuses it"
 
-# D5. A vertex past 64 units. §1.8 puts that bound on publishers only and lets
-# a reader repair instead; §8's third open question admits leaving it off
-# readers is unsafe. Neither reference bounds it. We draw strangers' events in
-# a feed, and whole*120 overflows an Int long before the text's limit.
+# D5, repealed. A vertex past 64 units. §1.8 puts that bound on publishers only
+# and gives a reader the choice — "MAY reject such a payload and MAY instead
+# repair it by growing the extent" — and neither reference bounds it: both grow
+# the extent. Amethyst rejected, which made it the only reader that refused an
+# object the rest of the network drew, so it repairs now and this is pinned as
+# agreement. A reader that started refusing again would be news.
 FAR='{"v":2,"name":"far","unit":0,"mode":"solid","vertices":[[0,0,0],[2,0,0],[1,0,2],[9999,2,1]],"colors":[238,235,239,225],"faces":[[0,1,2]]}'
-check_verdict "divergence-position-bound" "$FAR" false true "we refuse an unbounded vertex; the arbiter accepts it"
+check_verdict "agreement-position-repair" "$FAR" true true "both repair a vertex past the grid rather than refusing it"
+
+# D5b. What is left of that bound: the lattice itself. A position is a total
+# tick count in an Int, so past Int.MAX_VALUE ticks — 17,895,697 units — there
+# is no coordinate to repair, only one that would wrap. The reference keeps its
+# positions in a double and carries this one fine, which is the divergence.
+WRAP='{"v":2,"name":"wrap","unit":0,"mode":"solid","vertices":[[0,0,0],[2,0,0],[1,0,2],[17895698,2,1]],"colors":[238,235,239,225],"faces":[[0,1,2]]}'
+check_verdict "divergence-lattice-limit" "$WRAP" false true "past what an Int lattice holds we refuse; the arbiter keeps it in a float"
 
 print_summary
 

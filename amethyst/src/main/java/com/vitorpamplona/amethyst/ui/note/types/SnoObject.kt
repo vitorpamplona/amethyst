@@ -34,7 +34,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectUnreadableCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoResult
 
 private val VIEWER_HEIGHT = 360.dp
@@ -42,35 +44,51 @@ private val VIEWER_HEIGHT = 360.dp
 /**
  * Entry for a Simple Nostr Object (DECK-0003 kind 33331).
  *
- * The geometry travels in the event's content, so the card is drawn from what
- * the note already carries: no fetch, no decode of an external asset, and no
- * network access at all. A payload that fails §1.9 is not drawn — the deck
- * requires that — and the rule it broke is shown instead of nothing.
+ * The geometry travels in the event's content, so the object itself is drawn
+ * from what the note already carries. The one thing that can be elsewhere is
+ * its palette: §1.3a lets `colors` index a palette another event holds, and
+ * [WithSnoPalette] fetches that one. Until it arrives the object is drawn
+ * against the built-in, which is what §1.3b says an unresolved reference means.
+ *
+ * A payload that fails §1.9 is not drawn — the deck requires that — and the
+ * rule it broke is shown instead of nothing.
  */
 @Composable
-fun RenderSnoObject(baseNote: Note) {
+fun RenderSnoObject(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
     val noteEvent = baseNote.event as? SnoObjectEvent ?: return
-    val parsed = remember(noteEvent) { noteEvent.sno() }
+    // Parsed once against the built-in to learn which palette it wants, then
+    // again with that palette once it is in hand. The second parse can fail
+    // where the first did not — an index of 238 is fine against 256 entries and
+    // out of range against a five-colour moment — and that is the object being
+    // wrong rather than the palette.
+    val first = remember(noteEvent) { noteEvent.sno() }
 
-    when (parsed) {
-        is SnoResult.Invalid -> SnoObjectUnreadableCard(parsed.rule)
-        is SnoResult.Valid -> {
-            var turning by remember(noteEvent) { mutableStateOf(false) }
+    WithSnoPalette(first.payloadOrNull()?.paletteRef ?: SnoPaletteRef.BuiltIn, accountViewModel) { palette ->
+        val parsed = remember(noteEvent, palette) { if (palette == null) first else noteEvent.sno(palette) }
 
-            SnoObjectCard(
-                payload = parsed.payload,
-                eventId = noteEvent.id,
-                onClick = { turning = true },
-            )
+        when (parsed) {
+            is SnoResult.Invalid -> SnoObjectUnreadableCard(parsed.rule)
+            is SnoResult.Valid -> {
+                var turning by remember(noteEvent) { mutableStateOf(false) }
 
-            if (turning) {
-                Dialog(onDismissRequest = { turning = false }) {
-                    SnoObjectViewer(
-                        payload = parsed.payload,
-                        eventId = noteEvent.id,
-                        contentDescription = parsed.payload.name.ifBlank { null },
-                        modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
-                    )
+                SnoObjectCard(
+                    payload = parsed.payload,
+                    eventId = noteEvent.id,
+                    onClick = { turning = true },
+                )
+
+                if (turning) {
+                    Dialog(onDismissRequest = { turning = false }) {
+                        SnoObjectViewer(
+                            payload = parsed.payload,
+                            eventId = noteEvent.id,
+                            contentDescription = parsed.payload.name.ifBlank { null },
+                            modifier = Modifier.fillMaxWidth().height(VIEWER_HEIGHT),
+                        )
+                    }
                 }
             }
         }

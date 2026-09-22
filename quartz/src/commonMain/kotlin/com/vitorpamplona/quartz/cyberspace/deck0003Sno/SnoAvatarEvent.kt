@@ -58,7 +58,7 @@ class SnoAvatarEvent(
     /** True when this identity asked for the default avatar, which owes no work. */
     fun isDefaultAvatar(): Boolean = content.isBlank()
 
-    fun sno(): SnoResult = SnoParser.parse(content)
+    fun sno(fetchedPalette: SnoPalette? = null): SnoResult = SnoParser.parse(content, fetchedPalette)
 
     /** The `name` tag: the shape's name for humans. */
     fun nameTag(): String? = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
@@ -79,14 +79,14 @@ class SnoAvatarEvent(
      * committed 30 and an id carrying 20 gives 20, which clears 16 while
      * failing the second condition outright.
      */
-    fun payment(): SnoAvatarPayment {
+    fun payment(fetchedPalette: SnoPalette? = null): SnoAvatarPayment {
         val zeros = PoWRankEvaluator.calculatePowRankOf(id)
         if (isDefaultAvatar()) {
             return SnoAvatarPayment(true, 0, null, zeros, SnoAvatarPayment.Reason.DEFAULT_AVATAR)
         }
 
         val payload =
-            sno().payloadOrNull()
+            sno(fetchedPalette).payloadOrNull()
                 ?: return SnoAvatarPayment(false, 0, null, zeros, SnoAvatarPayment.Reason.NOT_AN_AVATAR)
 
         val required = SnoAvatarWork.required(payload)

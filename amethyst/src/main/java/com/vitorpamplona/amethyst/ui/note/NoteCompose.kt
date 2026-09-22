@@ -1374,15 +1374,15 @@ private fun RenderNoteRow(
         }
 
         is SnoObjectEvent -> {
-            RenderSnoObject(baseNote)
+            RenderSnoObject(baseNote, accountViewModel)
         }
 
         is SnoAvatarEvent -> {
-            RenderSnoAvatar(baseNote)
+            RenderSnoAvatar(baseNote, accountViewModel)
         }
 
         is SnoShardEvent -> {
-            RenderSnoShard(baseNote)
+            RenderSnoShard(baseNote, accountViewModel)
         }
 
         is ChessGameEvent -> {

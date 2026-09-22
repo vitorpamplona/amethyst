@@ -36,9 +36,15 @@ import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
  * A Simple Nostr Object to draw, addressed by the event that carried it.
  *
  * [cacheKey] is what Coil's memory cache keys on, so it has to name everything
- * that changes the pixels: the event, the view and the size. The payload itself
- * is not part of the key because an addressable object republished under the
- * same `d` arrives as a new event id.
+ * that changes the pixels: the event, the view, the size — and the colours.
+ *
+ * The geometry needs no part in the key, because an addressable object
+ * republished under the same `d` arrives as a new event id. The colours are not
+ * like that. DECK-0003 §1.3a lets `colors` index a palette held in *another*
+ * event, and until that event is fetched the object is drawn against the
+ * built-in (§1.3b), so one event id legitimately produces two different
+ * pictures within a second of each other. Keyed on the id alone, the first
+ * would be served from memory forever and the fetch would buy nothing.
  */
 @Stable
 data class SnoObjectToRender(
@@ -49,7 +55,17 @@ data class SnoObjectToRender(
     val pitchDegrees: Float = SnoRasterizer.DEFAULT_PITCH_DEGREES,
     val background: Int = 0,
 ) {
-    val cacheKey: String get() = "sno:$eventId:$size:$yawDegrees:$pitchDegrees:$background"
+    val cacheKey: String get() = "sno:$eventId:$size:$yawDegrees:$pitchDegrees:$background:${colourSignature()}"
+
+    /**
+     * A stand-in for the resolved palette: the colours themselves, hashed.
+     *
+     * The palette reference cannot serve instead, because what changes is not
+     * which palette was named but whether it has arrived yet, and the payload
+     * carries only the name. The colours are already resolved to ARGB by the
+     * parser, so they are the thing that actually differs.
+     */
+    private fun colourSignature(): Int = 31 * payload.colors.contentHashCode() + (payload.faceColors?.contentHashCode() ?: 0)
 }
 
 /**

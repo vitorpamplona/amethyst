@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
+import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -85,6 +87,17 @@ class SnoShardEvent(
      * this class has no bag to check it against, so it only reports the claim.
      */
     fun coordinate(): String? = tags.firstOrNull { it.size > 1 && it[0] == "C" }?.get(1)
+
+    /**
+     * The plane the claimed coordinate lies in, or null when there is no `C`
+     * tag or it is not a coordinate.
+     *
+     * One bit of §2.2, and the only part of a coordinate a client with no world
+     * can turn into something a reader understands: whether the shard was
+     * hidden at a place on Earth or at one that has no physical counterpart.
+     * See [CyberspaceCoordinate] for why it stops there.
+     */
+    fun plane(): CyberspacePlane? = coordinate()?.let { CyberspaceCoordinate.planeOf(it) }
 
     companion object {
         const val KIND = 3330
