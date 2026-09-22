@@ -69,15 +69,33 @@ class EncryptedAppendLog(
     private class LogState(
         val entries: MutableList<String>,
         val seen: MutableSet<String>,
-        var segments: Int,
+        /** False when the file has no header yet: it is new, or still in the old format. */
+        var headed: Boolean,
+        /** Byte length of the part that has already been folded; the loose run starts here. */
+        var foldedLength: Long,
+        /** Segments appended since the last fold. */
+        var looseSegments: Int,
+        /** Entries carried by those segments. */
+        var looseEntries: Int,
     )
 
     private val logs = mutableMapOf<String, LogState>()
 
     private fun stateFor(file: File): LogState =
         logs.getOrPut(file.absolutePath) {
-            val (entries, segments) = decodeFile(file)
-            LogState(entries.toMutableList(), entries.toMutableSet(), segments)
+            val (entries, headed) = decodeFile(file)
+            // Everything already on disk counts as folded. Whatever loose
+            // segments a previous session left behind stay where they are —
+            // re-folding them would re-encrypt bytes that are already encrypted,
+            // which is the cost this whole design exists to avoid.
+            LogState(
+                entries = entries.toMutableList(),
+                seen = entries.toMutableSet(),
+                headed = headed,
+                foldedLength = if (headed) file.length() else 0L,
+                looseSegments = 0,
+                looseEntries = 0,
+            )
         }
 
     /** Every entry in [file], oldest first. */
@@ -98,17 +116,59 @@ class EncryptedAppendLog(
         state.entries.add(entry)
         state.seen.add(entry)
 
-        // Either there is no header to append after (a file that does not
-        // exist yet, or one still in the old format), or too many loose
-        // segments have piled up to keep reads cheap. A rewrite fixes both,
-        // and is what lays the header down.
-        if (state.segments == UNSEGMENTED || state.segments >= compactAfterSegments) {
+        // No header to append after — a file that does not exist yet, or one
+        // still in the old format. A rewrite lays one down.
+        if (!state.headed) {
             rewrite(file, state.entries.toList())
             return
         }
 
+        appendSegment(file, listOf(entry))
+        state.looseSegments += 1
+        state.looseEntries += 1
+
+        if (state.looseSegments >= compactAfterSegments) foldLooseTail(file, state)
+    }
+
+    /**
+     * Collapse the loose run into one segment, re-encrypting only that run.
+     *
+     * The prefix is copied across as ciphertext, byte for byte. That is the
+     * point: folding exists to bound how many segments a read has to open, and
+     * re-encrypting the whole log to achieve it would cost more than the
+     * segments ever did — on a hardware-backed cipher, enough to stall a send
+     * for seconds once a conversation is long enough.
+     *
+     * Written through a temp file and renamed, so a crash mid-fold leaves the
+     * previous log intact. Truncating in place and appending afterwards would
+     * be cheaper and would lose every loose entry if the process died in
+     * between.
+     */
+    private fun foldLooseTail(
+        file: File,
+        state: LogState,
+    ) {
+        if (state.looseEntries == 0) return
+        val prefix = file.readBytes().copyOfRange(0, state.foldedLength.toInt())
+        val folded = encrypt(encodeEntries(state.entries.takeLast(state.looseEntries)))
+
+        val out = ByteArray(prefix.size + 4 + folded.size)
+        prefix.copyInto(out, 0)
+        lengthPrefix(folded.size).copyInto(out, prefix.size)
+        folded.copyInto(out, prefix.size + 4)
+        atomicWrite(file, out)
+
+        state.foldedLength = out.size.toLong()
+        state.looseSegments = 0
+        state.looseEntries = 0
+    }
+
+    private fun appendSegment(
+        file: File,
+        entries: List<String>,
+    ) {
         file.parentFile?.mkdirs()
-        val segment = encrypt(encodeEntries(listOf(entry)))
+        val segment = encrypt(encodeEntries(entries))
         FileOutputStream(file, true).use { out ->
             out.write(lengthPrefix(segment.size))
             out.write(segment)
@@ -116,7 +176,6 @@ class EncryptedAppendLog(
             // message the UI has already shown as sent.
             out.fd.sync()
         }
-        state.segments += 1
     }
 
     /** Replace the whole log with [entries], as a single segment. */
@@ -133,12 +192,18 @@ class EncryptedAppendLog(
         segment.copyInto(out, MAGIC.size + 4)
         atomicWrite(file, out)
 
-        val state = logs.getOrPut(file.absolutePath) { LogState(mutableListOf(), mutableSetOf(), 1) }
+        val state =
+            logs.getOrPut(file.absolutePath) {
+                LogState(mutableListOf(), mutableSetOf(), headed = true, foldedLength = 0L, looseSegments = 0, looseEntries = 0)
+            }
         state.entries.clear()
         state.entries.addAll(entries)
         state.seen.clear()
         state.seen.addAll(entries)
-        state.segments = 1
+        state.headed = true
+        state.foldedLength = out.size.toLong()
+        state.looseSegments = 0
+        state.looseEntries = 0
     }
 
     /** Drop the in-memory cache for [file]; call when the file is deleted. */
@@ -146,22 +211,21 @@ class EncryptedAppendLog(
         logs.remove(file.absolutePath)
     }
 
-    /** Every entry in [file], and how many segments they came from. */
-    private fun decodeFile(file: File): Pair<List<String>, Int> {
+    /** Every entry in [file], and whether the file already carries a header. */
+    private fun decodeFile(file: File): Pair<List<String>, Boolean> {
         // A file that does not exist yet has no header, so the first append has
         // to write one rather than tack a bare segment onto nothing.
-        if (!file.exists()) return emptyList<String>() to UNSEGMENTED
+        if (!file.exists()) return emptyList<String>() to false
         val bytes = file.readBytes()
 
         if (!bytes.startsWithMagic()) {
             // The older format: the file is one encrypted blob and nothing else.
-            val plain = decrypt(bytes) ?: return emptyList<String>() to UNSEGMENTED
-            return decodeEntries(plain) to UNSEGMENTED
+            val plain = decrypt(bytes) ?: return emptyList<String>() to false
+            return decodeEntries(plain) to false
         }
 
         val result = ArrayList<String>()
         var offset = MAGIC.size
-        var segments = 0
         while (offset + 4 <= bytes.size) {
             val encLen = readInt(bytes, offset)
             offset += 4
@@ -172,10 +236,9 @@ class EncryptedAppendLog(
             if (encLen <= 0 || offset + encLen > bytes.size) break
             val plain = decrypt(bytes.copyOfRange(offset, offset + encLen))
             offset += encLen
-            segments += 1
             if (plain != null) result.addAll(decodeEntries(plain))
         }
-        return result to segments.coerceAtLeast(1)
+        return result to true
     }
 
     private fun encodeEntries(entries: List<String>): ByteArray {
@@ -257,13 +320,6 @@ class EncryptedAppendLog(
     companion object {
         /** Marks the segmented format; a file without it predates it. */
         private val MAGIC = "MRMTLOG2".encodeToByteArray()
-
-        /**
-         * Segment count standing for "this file has no header yet" — either it
-         * does not exist, or it was written by the original whole-blob format.
-         * The next append rewrites it rather than appending into nothing.
-         */
-        private const val UNSEGMENTED = -1
 
         private const val COMPACT_AFTER_SEGMENTS = 200
 

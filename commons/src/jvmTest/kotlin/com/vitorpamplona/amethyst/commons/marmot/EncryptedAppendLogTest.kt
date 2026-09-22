@@ -104,9 +104,34 @@ class EncryptedAppendLogTest {
         written.forEach { log.append(file, it) }
 
         assertContentEquals(written, cipher().readAll(file))
-        // Four appends per compaction, so the file can never carry 20 segments'
-        // worth of framing — it is the bound on read cost that matters here.
+        // Folding every four appends leaves ~5 segments rather than 20, which is
+        // the bound on read cost that matters here.
         assertTrue(file.length() < 20 * SEGMENT_OVERHEAD_CEILING, "log should have been compacted, was ${file.length()} bytes")
+    }
+
+    @Test
+    fun `a fold re-encrypts only the loose run, never the prefix`() {
+        val file = tempFile()
+        val log = cipher(compactAfter = 4)
+
+        // The first append lays the header down; the next four are the loose run
+        // that the fourth of them collapses.
+        (1..5).forEach { log.append(file, "first-run-$it") }
+        val afterFirstFold = file.readBytes()
+
+        (1..4).forEach { log.append(file, "second-run-$it") }
+        val afterSecondFold = file.readBytes()
+
+        // The bytes the first fold produced must survive verbatim. If they were
+        // re-encrypted they would differ, since the stand-in cipher — like
+        // AES-GCM — uses a fresh nonce per call. This is the property that keeps
+        // a send from paying for the whole conversation.
+        assertContentEquals(
+            afterFirstFold.toList(),
+            afterSecondFold.copyOfRange(0, afterFirstFold.size).toList(),
+            "folding the tail must copy the already-folded prefix as ciphertext",
+        )
+        assertContentEquals((1..5).map { "first-run-$it" } + (1..4).map { "second-run-$it" }, cipher().readAll(file))
     }
 
     @Test

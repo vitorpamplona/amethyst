@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.preferences
 
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import com.vitorpamplona.quartz.utils.Log
@@ -29,6 +30,7 @@ import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
 class KeyStoreEncryption {
@@ -67,7 +69,43 @@ class KeyStoreEncryption {
 
     private fun loadOrCreateKey(): SecretKey {
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
-        return existingKey?.secretKey ?: createKey()
+        return (existingKey?.secretKey ?: createKey()).also { logSecurityLevel(it) }
+    }
+
+    /**
+     * Say once, per process, where this key actually lives.
+     *
+     * It decides the cost of everything encrypted at rest here, and it is not
+     * knowable from the code: [createKeyStrongBoxIfAvailable] is tried first, so
+     * a device with a secure element gets one, and `getEntry` then returns
+     * whatever that device created — possibly years ago, under different code.
+     *
+     * The difference is not small. A secure element runs AES-GCM at roughly
+     * 68 KB/s (1 MiB in ~15s on a Pixel 8), against tens of MB/s for the TEE.
+     * Anything bulk that shows up slow on one device and fine on another is
+     * explained by this line.
+     */
+    private fun logSecurityLevel(key: SecretKey) {
+        try {
+            val factory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEY_STORE)
+            val info = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+            val level =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    when (info.securityLevel) {
+                        KeyProperties.SECURITY_LEVEL_STRONGBOX -> "STRONGBOX (bulk crypto here is ~68 KB/s)"
+                        KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> "TEE"
+                        KeyProperties.SECURITY_LEVEL_SOFTWARE -> "SOFTWARE"
+                        else -> "UNKNOWN(${info.securityLevel})"
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    if (info.isInsideSecureHardware) "SECURE_HARDWARE (TEE or StrongBox)" else "SOFTWARE"
+                }
+            Log.i(TAG) { "$KEY_ALIAS security level: $level" }
+        } catch (e: Exception) {
+            // Purely diagnostic — never let it interfere with having a key.
+            Log.d(TAG) { "Could not determine the security level of $KEY_ALIAS: ${e.message}" }
+        }
     }
 
     private fun createKeyStrongBoxIfAvailable(): SecretKey? =
