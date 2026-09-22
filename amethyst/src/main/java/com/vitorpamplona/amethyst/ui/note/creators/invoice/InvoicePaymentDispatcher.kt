@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.commons.resources.clink_confirm_payment_title
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
@@ -64,6 +63,7 @@ fun InvoicePaymentDispatcher(
     onError: (String) -> Unit,
     onSuccess: () -> Unit = {},
 ) {
+    val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     if (bolt11 == null) return
     val context = LocalContext.current
 
@@ -110,7 +110,7 @@ fun InvoicePaymentDispatcher(
                         } else {
                             onError(
                                 response?.failureDetail()
-                                    ?: loadStringRes(Res.string.clink_debit_no_response),
+                                    ?: clinkDebitNoResponseStr,
                             )
                         }
                     }

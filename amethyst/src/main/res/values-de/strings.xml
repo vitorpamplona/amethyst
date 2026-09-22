@@ -2294,4 +2294,10 @@
     <string name="call_ongoing_description">Benachrichtigung über laufenden Anruf</string>
     <string name="call_with">Anruf mit %1$s</string>
     <string name="call_hangup">Auflegen</string>
+    <string name="reaction">Reaktion</string>
+    <string name="boost">Boost</string>
+    <string name="post">Beitrag</string>
+    <string name="voice_post">Sprachbeitrag</string>
+    <string name="voice_reply">Sprachantwort</string>
+    <string name="private_message">Private Nachricht</string>
 </resources>

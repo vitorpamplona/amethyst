@@ -172,4 +172,9 @@
     <string name="call_ongoing_description">Notification d'appel en cours</string>
     <string name="call_with">Appel avec %1$s</string>
     <string name="call_hangup">Raccrocher</string>
+    <string name="reaction">Réaction</string>
+    <string name="post">Envoyer</string>
+    <string name="voice_post">Message vocal</string>
+    <string name="voice_reply">Réponse vocale</string>
+    <string name="private_message">Message privé</string>
 </resources>

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity
@@ -45,10 +44,10 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_cap_upload
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_upload_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_value
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_value_desc
+import org.jetbrains.compose.resources.StringResource
 
 /** Localized display name for a capability, shared by the consent dialog and the permissions screen. */
-@StringRes
-fun NappletCapability.labelRes(): Int =
+fun NappletCapability.labelRes(): StringResource =
     when (this) {
         NappletCapability.IDENTITY -> Res.string.napplet_cap_identity
         NappletCapability.KEYS -> Res.string.napplet_cap_keys
@@ -64,8 +63,7 @@ fun NappletCapability.labelRes(): Int =
     }
 
 /** Localized one-line description of what a capability lets a napplet do. */
-@StringRes
-fun NappletCapability.descriptionRes(): Int =
+fun NappletCapability.descriptionRes(): StringResource =
     when (this) {
         NappletCapability.IDENTITY -> Res.string.napplet_cap_identity_desc
         NappletCapability.KEYS -> Res.string.napplet_cap_keys_desc

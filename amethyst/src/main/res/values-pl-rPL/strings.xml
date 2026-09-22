@@ -315,4 +315,39 @@
     </plurals>
     <string name="pow_mining_title">Wydobywanie dowodu wykonania pracy</string>
     <string name="pow_notification_cancel_all">Anuluj</string>
+    <string name="pow_time_left">◆ %1$s pozostało</string>
+    <string name="pow_time_left_soon">w każdej chwili</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d sekundę</item>
+        <item quantity="few">%1$d sekund</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekund</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minutę</item>
+        <item quantity="few">%1$d minut</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d godzina</item>
+        <item quantity="few">%1$d godzin</item>
+        <item quantity="many">%1$d godzin</item>
+        <item quantity="other">%1$d godzin</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dzień</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="many">%1$d dni</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <string name="reaction">Reakcję</string>
+    <string name="boost">Powtórz</string>
+    <string name="post">Wyślij</string>
+    <string name="voice_post">Wiadomość głosowa</string>
+    <string name="voice_reply">Odpowiedź głosowa</string>
+    <string name="pow_kind_report">Zgłoś</string>
+    <string name="private_message">Wiadomość prywatna</string>
+    <string name="pow_kind_chat_message">Wiadomość Czatu</string>
 </resources>

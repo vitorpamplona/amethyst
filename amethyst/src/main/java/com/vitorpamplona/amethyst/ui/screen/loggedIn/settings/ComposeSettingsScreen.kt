@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -97,7 +96,7 @@ import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
-import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
+import com.vitorpamplona.amethyst.service.pow.loadApproxDuration
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.pow.POW_PRESETS
@@ -245,7 +244,7 @@ private fun PowTimeEstimate(difficulty: Int) {
     val estimate by
         produceState<String?>(initialValue = null, difficulty) {
             val rate = deviceHashesPerSecond()
-            value = formatApproxDuration(PoWEstimator.estimateSeconds(difficulty, rate))
+            value = loadApproxDuration(PoWEstimator.estimateSeconds(difficulty, rate))
         }
 
     estimate?.let {
@@ -290,8 +289,7 @@ private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {
     }
 }
 
-@StringRes
-private fun PoWCategory.titleRes(): Int =
+private fun PoWCategory.titleRes(): StringResource =
     when (this) {
         PoWCategory.SHORT_NOTES -> Res.string.pow_category_short_notes
         PoWCategory.COMMENTS -> Res.string.pow_category_comments
@@ -305,8 +303,7 @@ private fun PoWCategory.titleRes(): Int =
         PoWCategory.OTHER_PUBLIC -> Res.string.pow_category_other_public
     }
 
-@StringRes
-private fun PoWCategory.descriptionRes(): Int =
+private fun PoWCategory.descriptionRes(): StringResource =
     when (this) {
         PoWCategory.SHORT_NOTES -> Res.string.pow_category_short_notes_explainer
         PoWCategory.COMMENTS -> Res.string.pow_category_comments_explainer

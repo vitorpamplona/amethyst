@@ -2889,4 +2889,10 @@
     <string name="call_ongoing_description">进行中的通话通知</string>
     <string name="call_with">和 %1$s 的通话</string>
     <string name="call_hangup">挂断</string>
+    <string name="reaction">回应</string>
+    <string name="boost">提升</string>
+    <string name="post">发布</string>
+    <string name="voice_post">语音帖子</string>
+    <string name="voice_reply">语音回复</string>
+    <string name="private_message">私信</string>
 </resources>

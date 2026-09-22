@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
@@ -295,7 +296,7 @@ private fun AccessDialog(
     )
 }
 
-private fun noticeResId(notice: String): Int? =
+private fun noticeResId(notice: String): StringResource? =
     when (notice) {
         NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
         NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded

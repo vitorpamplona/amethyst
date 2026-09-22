@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.content.Context
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -306,16 +305,14 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
 
 // Compact labels for the connectivity segmented rows — "Unmetered WiFi" does not fit a 3-up
 // segment, so it collapses to "Wi-Fi"; the others are already short.
-@StringRes
-private fun ConnectivityType.shortLabelRes(): Int =
+private fun ConnectivityType.shortLabelRes(): StringResource =
     when (this) {
         ConnectivityType.ALWAYS -> Res.string.connectivity_type_always
         ConnectivityType.WIFI_ONLY -> Res.string.connectivity_type_unmetered_wifi_only_short
         ConnectivityType.NEVER -> Res.string.connectivity_type_never
     }
 
-@StringRes
-private fun FontFamilyType.shortLabelRes(): Int =
+private fun FontFamilyType.shortLabelRes(): StringResource =
     when (this) {
         FontFamilyType.SYSTEM -> Res.string.font_family_system_short
         FontFamilyType.SANS_SERIF -> Res.string.font_family_sans_serif_short
@@ -323,8 +320,7 @@ private fun FontFamilyType.shortLabelRes(): Int =
         FontFamilyType.MONOSPACE -> Res.string.font_family_monospace_short
     }
 
-@StringRes
-private fun FeatureSetType.shortLabelRes(): Int =
+private fun FeatureSetType.shortLabelRes(): StringResource =
     when (this) {
         FeatureSetType.COMPLETE -> Res.string.ui_feature_set_type_complete_short
         FeatureSetType.SIMPLIFIED -> Res.string.ui_feature_set_type_simplified_short

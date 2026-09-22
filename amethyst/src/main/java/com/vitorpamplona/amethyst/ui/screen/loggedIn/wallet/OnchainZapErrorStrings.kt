@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
@@ -40,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_stage_publishing
 import com.vitorpamplona.amethyst.commons.resources.onchain_stage_signing
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Maps the machine-readable [OnchainZapSendResult.Failure] coming out of the
@@ -66,8 +66,7 @@ suspend fun OnchainZapSendResult.Failure.userMessage(): String {
  */
 fun OnchainZapSendResult.Failure.technicalDetail(): String? = if (error.causeIsUserFacing) cause?.message else null
 
-@StringRes
-private fun OnchainZapSendError.messageRes(): Int =
+private fun OnchainZapSendError.messageRes(): StringResource =
     when (this) {
         OnchainZapSendError.BACKEND_NOT_CONFIGURED -> Res.string.onchain_send_error_backend_not_configured
         OnchainZapSendError.LOAD_UTXOS_FAILED -> Res.string.onchain_send_error_load_utxos
@@ -78,8 +77,7 @@ private fun OnchainZapSendError.messageRes(): Int =
         OnchainZapSendError.RECEIPT_PUBLISH_FAILED -> Res.string.onchain_send_error_publish_receipt
     }
 
-@StringRes
-fun OnchainZapSendStage.labelRes(): Int =
+fun OnchainZapSendStage.labelRes(): StringResource =
     when (this) {
         OnchainZapSendStage.LOADING_UTXOS -> Res.string.onchain_stage_loading_utxos
         OnchainZapSendStage.BUILDING -> Res.string.onchain_stage_building

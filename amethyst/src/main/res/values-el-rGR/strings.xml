@@ -173,4 +173,10 @@
     <string name="call_ongoing_description">Ειδοποίηση ενεργής κλήσης</string>
     <string name="call_with">Κλήση με %1$s</string>
     <string name="call_hangup">Κλείσιμο</string>
+    <string name="reaction">Αντίδραση</string>
+    <string name="boost">Προώθηση</string>
+    <string name="post">Δημοσίευση</string>
+    <string name="voice_post">Φωνητική ανάρτηση</string>
+    <string name="voice_reply">Φωνητική απάντηση</string>
+    <string name="private_message">Ιδιωτικό Μήνυμα</string>
 </resources>

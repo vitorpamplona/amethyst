@@ -21,10 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -54,15 +50,7 @@ fun DisplayOts(
         note,
         accountViewModel,
         whenConfirmed = { unixtimestamp ->
-            val context = LocalContext.current
-            val timeStr by remember(unixtimestamp) {
-                mutableStateOf(
-                    timeAgoNoDot(
-                        unixtimestamp,
-                        context = context,
-                    ),
-                )
-            }
+            val timeStr = timeAgoNoDot(unixtimestamp)
 
             HeaderPill(
                 symbol = MaterialSymbols.OpenTimestamps,

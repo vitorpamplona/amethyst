@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.content.Intent
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -366,8 +365,7 @@ private fun ScreenTimeSection(week: UsageSummary) {
     }
 }
 
-@StringRes
-private fun subsystemLabel(subsystem: String): Int =
+private fun subsystemLabel(subsystem: String): StringResource =
     when (subsystem) {
         "relay" -> Res.string.resource_usage_subsystem_relay
         "image" -> Res.string.resource_usage_subsystem_image

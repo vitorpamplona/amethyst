@@ -312,4 +312,39 @@
     </plurals>
     <string name="pow_mining_title">Těžení proof of work</string>
     <string name="pow_notification_cancel_all">Zrušit</string>
+    <string name="pow_time_left">≈ %1$s zbývá</string>
+    <string name="pow_time_left_soon">každou chvíli</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="few">%1$d sekundy</item>
+        <item quantity="many">%1$d sekundy</item>
+        <item quantity="other">%1$d sekund</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minuty</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodiny</item>
+        <item quantity="other">%1$d hodin</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dne</item>
+        <item quantity="other">%1$d dní</item>
+    </plurals>
+    <string name="reaction">Reakce</string>
+    <string name="boost">Zvýšení</string>
+    <string name="post">Publikovat</string>
+    <string name="voice_post">Hlasový příspěvek</string>
+    <string name="voice_reply">Hlasová odpověď</string>
+    <string name="pow_kind_report">Nahlášení</string>
+    <string name="private_message">Soukromá zpráva</string>
+    <string name="pow_kind_chat_message">Chatová zpráva</string>
 </resources>

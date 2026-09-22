@@ -24,6 +24,8 @@ import android.content.Context
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.d
 import com.vitorpamplona.amethyst.commons.resources.duration_days
@@ -86,23 +88,69 @@ private val monthFormatter = LocaleAwareFormatter(MONTH_SKELETON)
 private val yearNoDayFormatter = LocaleAwareFormatter(YEAR_NO_DAY_SKELETON)
 
 /**
- * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
- * granularity from how far away the timestamp is:
- *   - same day → time only (locale + system 12/24-hr aware via [DateFormat.getTimeFormat])
- *   - same year → "Jan 5, 14:32" / "5 Jan 14:32" / "Jan 5, 2:32 PM" (locale + system aware)
- *   - older    → "Jan 5, 2024" / "5 Jan 2024" (locale aware)
+ * The handful of unit labels the relative formatters splice into their output.
  *
- * Used by [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] when the user
- * taps the relative timestamp to reveal the absolute one.
+ * Resolved once in composition so the formatters themselves can stay ordinary
+ * functions. [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] builds its text
+ * inside a `derivedStateOf`, which is not a composable scope, so a @Composable
+ * formatter could not be called from there at all.
  */
+@Immutable
+class TimeAgoLabels(
+    val never: String,
+    val now: String,
+    val minutes: String,
+    val hours: String,
+    val days: String,
+)
+
 @Composable
-fun timeAbsolute(
+fun rememberTimeAgoLabels(
+    seconds: StringResource = Res.string.now,
+    minutes: StringResource = Res.string.m,
+    hours: StringResource = Res.string.h,
+    days: StringResource = Res.string.d,
+): TimeAgoLabels {
+    val neverStr = stringRes(Res.string.never)
+    val nowStr = stringRes(seconds)
+    val minStr = stringRes(minutes)
+    val hourStr = stringRes(hours)
+    val dayStr = stringRes(days)
+    return remember(neverStr, nowStr, minStr, hourStr, dayStr) {
+        TimeAgoLabels(neverStr, nowStr, minStr, hourStr, dayStr)
+    }
+}
+
+/** Plain-function core of [timeAgo], callable outside composition. */
+fun timeAgoWith(
     time: Long?,
-    context: Context,
+    labels: TimeAgoLabels,
     prefix: String = " • ",
 ): String {
     if (time == null) return " "
-    if (time == 0L) return prefix + stringRes(Res.string.never)
+    if (time == 0L) return prefix + labels.never
+
+    val timeDifference = TimeUtils.now() - time
+
+    return when {
+        timeDifference > TimeUtils.ONE_YEAR -> prefix + yearFormatter.get().format(time * 1000)
+        timeDifference > TimeUtils.ONE_MONTH -> prefix + monthFormatter.get().format(time * 1000)
+        timeDifference > TimeUtils.ONE_DAY -> prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + labels.days
+        timeDifference > TimeUtils.ONE_HOUR -> prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + labels.hours
+        timeDifference > TimeUtils.ONE_MINUTE -> prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + labels.minutes
+        else -> prefix + labels.now
+    }
+}
+
+/** Plain-function core of [timeAbsolute], callable outside composition. */
+fun timeAbsoluteWith(
+    time: Long?,
+    context: Context,
+    never: String,
+    prefix: String = " • ",
+): String {
+    if (time == null) return " "
+    if (time == 0L) return prefix + never
 
     val timeMs = time * 1000
     val now = Calendar.getInstance()
@@ -120,6 +168,23 @@ fun timeAbsolute(
     }
 }
 
+/**
+ * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
+ * granularity from how far away the timestamp is:
+ *   - same day → time only (locale + system 12/24-hr aware via [DateFormat.getTimeFormat])
+ *   - same year → "Jan 5, 14:32" / "5 Jan 14:32" / "Jan 5, 2:32 PM" (locale + system aware)
+ *   - older    → "Jan 5, 2024" / "5 Jan 2024" (locale aware)
+ *
+ * Used by [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] when the user
+ * taps the relative timestamp to reveal the absolute one.
+ */
+@Composable
+fun timeAbsolute(
+    time: Long?,
+    context: Context,
+    prefix: String = " • ",
+): String = timeAbsoluteWith(time, context, stringRes(Res.string.never), prefix)
+
 @Composable
 fun timeAbsoluteNoDot(
     time: Long?,
@@ -134,38 +199,7 @@ fun timeAgo(
     minutes: StringResource = Res.string.m,
     hours: StringResource = Res.string.h,
     days: StringResource = Res.string.d,
-): String {
-    if (time == null) return " "
-    if (time == 0L) return prefix + stringRes(Res.string.never)
-
-    val timeDifference = TimeUtils.now() - time
-
-    return when {
-        timeDifference > TimeUtils.ONE_YEAR -> {
-            prefix + yearFormatter.get().format(time * 1000)
-        }
-
-        timeDifference > TimeUtils.ONE_MONTH -> {
-            prefix + monthFormatter.get().format(time * 1000)
-        }
-
-        timeDifference > TimeUtils.ONE_DAY -> {
-            prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(days)
-        }
-
-        timeDifference > TimeUtils.ONE_HOUR -> {
-            prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(hours)
-        }
-
-        timeDifference > TimeUtils.ONE_MINUTE -> {
-            prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(minutes)
-        }
-
-        else -> {
-            prefix + stringRes(seconds)
-        }
-    }
-}
+): String = timeAgoWith(time, rememberTimeAgoLabels(seconds, minutes, hours, days), prefix)
 
 @Composable
 fun timeAgoNoDot(time: Long?): String {

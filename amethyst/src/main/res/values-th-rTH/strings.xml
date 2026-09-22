@@ -170,4 +170,10 @@
     <string name="call_ongoing_description">การแจ้งเตือนการโทรที่กำลังดำเนินอยู่</string>
     <string name="call_with">โทรกับ %1$s</string>
     <string name="call_hangup">วางสาย</string>
+    <string name="reaction">ปฏิกิริยา</string>
+    <string name="boost">แชร์</string>
+    <string name="post">โพสต์</string>
+    <string name="voice_post">โพสต์เสียง</string>
+    <string name="voice_reply">ตอบกลับด้วยเสียง</string>
+    <string name="private_message">ข้อความส่วนตัว</string>
 </resources>

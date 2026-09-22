@@ -118,7 +118,6 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_subtitle_que
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -416,6 +415,7 @@ private fun ScheduledPostCardExpandedPanel(
     onPublishNow: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val scheduledPostsEventIdCopiedStr = stringRes(Res.string.scheduled_posts_event_id_copied)
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -459,7 +459,7 @@ private fun ScheduledPostCardExpandedPanel(
                                     Toast
                                         .makeText(
                                             context,
-                                            loadStringRes(Res.string.scheduled_posts_event_id_copied),
+                                            scheduledPostsEventIdCopiedStr,
                                             Toast.LENGTH_SHORT,
                                         ).show()
                                 },

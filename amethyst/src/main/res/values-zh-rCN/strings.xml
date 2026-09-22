@@ -246,4 +246,27 @@
     </plurals>
     <string name="pow_mining_title">挖掘工作证明</string>
     <string name="pow_notification_cancel_all">取消</string>
+    <string name="pow_time_left">剩余约 %1$s</string>
+    <string name="pow_time_left_soon">很快</string>
+    <string name="pow_estimate_instant">&lt;1 秒</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="other">%1$d 秒</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="other">%1$d 小时</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <string name="reaction">回应</string>
+    <string name="boost">提升</string>
+    <string name="post">帖子</string>
+    <string name="voice_post">语音帖子</string>
+    <string name="voice_reply">语音回复</string>
+    <string name="pow_kind_report">举报</string>
+    <string name="private_message">私信</string>
+    <string name="pow_kind_chat_message">聊天消息</string>
 </resources>

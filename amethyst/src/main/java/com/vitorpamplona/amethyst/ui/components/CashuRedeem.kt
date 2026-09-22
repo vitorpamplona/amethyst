@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
 import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
@@ -163,6 +162,8 @@ fun CashuPreviewNew(
     melt: (CashuToken, Context, (String, String) -> Unit) -> Unit,
     toast: (String, String) -> Unit,
 ) {
+    val cashuStr = stringRes(Res.string.cashu)
+    val cashuNoWalletFoundStr = stringRes(Res.string.cashu_no_wallet_found)
     val context = LocalContext.current
 
     PaymentCard(
@@ -241,7 +242,7 @@ fun CashuPreviewNew(
                         context.startActivity(intent)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        toast(loadStringRes(Res.string.cashu), loadStringRes(Res.string.cashu_no_wallet_found))
+                        toast(cashuStr, cashuNoWalletFoundStr)
                     }
                 },
                 shape = ButtonBorder,

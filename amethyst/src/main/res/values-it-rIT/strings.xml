@@ -171,4 +171,9 @@
     <string name="call_ongoing_description">Notifica di chiamata in corso</string>
     <string name="call_with">Chiamata con %1$s</string>
     <string name="call_hangup">Riaggancia</string>
+    <string name="reaction">Reazione</string>
+    <string name="boost">Condividi</string>
+    <string name="voice_post">Post vocale</string>
+    <string name="voice_reply">Risposta vocale</string>
+    <string name="private_message">Messaggio privato</string>
 </resources>

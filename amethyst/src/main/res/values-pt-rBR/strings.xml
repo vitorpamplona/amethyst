@@ -292,4 +292,31 @@
     </plurals>
     <string name="pow_mining_title">Minerando prova de trabalho</string>
     <string name="pow_notification_cancel_all">Cancelar</string>
+    <string name="pow_time_left">≈ %1$s restante</string>
+    <string name="pow_time_left_soon">a qualquer momento</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d segundo</item>
+        <item quantity="other">%1$d segundos</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
+    <string name="reaction">Reação</string>
+    <string name="boost">Impulsionar</string>
+    <string name="post">Salvar</string>
+    <string name="voice_post">Post de voz</string>
+    <string name="voice_reply">Resposta em voz</string>
+    <string name="pow_kind_report">Denúncia</string>
+    <string name="private_message">Mensagem Privada</string>
+    <string name="pow_kind_chat_message">Mensagem de chat</string>
 </resources>

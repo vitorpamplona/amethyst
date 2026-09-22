@@ -44,7 +44,8 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -78,7 +79,8 @@ fun PodcastEpisodeListItem(
     val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
 
     val context = LocalContext.current
-    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, prefix = "") }
+    val timeLabels = rememberTimeAgoLabels()
+    val dateStr = remember(noteEvent, timeLabels) { timeAgoWith(noteEvent.createdAt, timeLabels, prefix = "") }
     val seasonEpisodeLabel =
         when {
             season != null && episodeNumber != null -> stringRes(Res.string.podcast_season_episode, season, episodeNumber)

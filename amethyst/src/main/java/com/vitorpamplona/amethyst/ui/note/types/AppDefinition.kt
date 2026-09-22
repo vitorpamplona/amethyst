@@ -648,7 +648,7 @@ private fun kindLabel(kind: Int): String =
         stringRes(Res.string.app_definition_kind_app)
     } else {
         val resId = kindDisplayName(kind)
-        if (resId != -1) stringRes(resId) else (KindNames.nameFor(kind) ?: "k$kind")
+        if (resId != null) stringRes(resId) else (KindNames.nameFor(kind) ?: "k$kind")
     }
 
 private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12

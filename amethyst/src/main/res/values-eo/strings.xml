@@ -66,4 +66,10 @@
     <string name="call_ongoing_description">Sciigo pri daŭranta alvoko</string>
     <string name="call_with">Alvoko kun %1$s</string>
     <string name="call_hangup">Malkonekti</string>
+    <string name="reaction">Reago</string>
+    <string name="boost">Plifortigi</string>
+    <string name="post">Afiŝi</string>
+    <string name="voice_post">Voĉa Afiŝo</string>
+    <string name="voice_reply">Voĉa Respondo</string>
+    <string name="private_message">Privata Mesaĝo</string>
 </resources>

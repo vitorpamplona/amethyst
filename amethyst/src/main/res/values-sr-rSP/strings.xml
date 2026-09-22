@@ -173,4 +173,9 @@
     <string name="call_ongoing_description">Obaveštenje o aktivnom pozivu</string>
     <string name="call_with">Poziv sa %1$s</string>
     <string name="call_hangup">Prekini poziv</string>
+    <string name="reaction">Reakcija</string>
+    <string name="post">Objavi</string>
+    <string name="voice_post">Glasovna objava</string>
+    <string name="voice_reply">Glasovni odgovor</string>
+    <string name="private_message">Privatna poruka</string>
 </resources>

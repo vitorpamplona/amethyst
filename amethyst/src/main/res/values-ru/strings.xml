@@ -2571,4 +2571,10 @@
     <string name="call_ongoing_description">Уведомление о текущем звонке</string>
     <string name="call_with">Звонок с %1$s</string>
     <string name="call_hangup">Завершить</string>
+    <string name="reaction">Реакция</string>
+    <string name="boost">Продвинуть</string>
+    <string name="post">Отправить</string>
+    <string name="voice_post">Голосовая публикация</string>
+    <string name="voice_reply">Голосовой ответ</string>
+    <string name="private_message">Личное сообщение</string>
 </resources>

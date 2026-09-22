@@ -87,7 +87,6 @@ import com.vitorpamplona.amethyst.commons.resources.poll_is_closed_explainer
 import com.vitorpamplona.amethyst.commons.resources.poll_unable_to_vote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.zaps
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -533,6 +532,7 @@ fun ZapVote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val errorDialogZapErrorStr = stringRes(Res.string.error_dialog_zap_error)
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
     var wantsToZap by remember { mutableStateOf(false) }
@@ -603,7 +603,7 @@ fun ZapVote(
                                         val payable = it.first()
                                         payViaIntent(payable.invoice, context, { }) { error ->
                                             zappingProgress = 0f
-                                            showErrorMessageDialog = StringToastMsg(loadStringRes(Res.string.error_dialog_zap_error), error)
+                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
                                         }
                                     } else {
                                         val uid = Uuid.random().toString()
@@ -644,7 +644,7 @@ fun ZapVote(
                         val payable = it.first()
                         payViaIntent(payable.invoice, context, { }) { error ->
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(loadStringRes(Res.string.error_dialog_zap_error), error)
+                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
                         }
                     } else {
                         val uid = Uuid.random().toString()

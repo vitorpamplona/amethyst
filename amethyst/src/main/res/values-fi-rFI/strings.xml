@@ -174,4 +174,10 @@
     <string name="call_ongoing_description">Käynnissä olevan puhelun ilmoitus</string>
     <string name="call_with">Puhelu: %1$s</string>
     <string name="call_hangup">Lopeta puhelu</string>
+    <string name="reaction">Reaktio</string>
+    <string name="boost">Tehosta</string>
+    <string name="post">Lähetä</string>
+    <string name="voice_post">Äänijulkaisu</string>
+    <string name="voice_reply">Äänivastaus</string>
+    <string name="private_message">Yksityinen viesti</string>
 </resources>

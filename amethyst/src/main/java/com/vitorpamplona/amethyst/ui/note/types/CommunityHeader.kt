@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
@@ -539,6 +538,8 @@ fun ShareCommunityButton(
     note: AddressableNote,
     nav: INav,
 ) {
+    val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
+    val quickActionShareStr = stringRes(Res.string.quick_action_share)
     val actContext = LocalContext.current
 
     FilledTonalIconButton(
@@ -553,12 +554,12 @@ fun ShareCommunityButton(
                     )
                     putExtra(
                         Intent.EXTRA_TITLE,
-                        loadStringRes(Res.string.quick_action_share_browser_link),
+                        quickActionShareBrowserLinkStr,
                     )
                 }
 
             val shareIntent =
-                Intent.createChooser(sendIntent, loadStringRes(Res.string.quick_action_share))
+                Intent.createChooser(sendIntent, quickActionShareStr)
             actContext.startActivity(shareIntent)
         },
     ) {

@@ -159,6 +159,7 @@ fun MarmotGroupInfoScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val marmotEnableEncryptedMediaNeedsServerStr = stringRes(Res.string.marmot_enable_encrypted_media_needs_server)
     val chatroom =
         remember(nostrGroupId) {
             accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
@@ -342,7 +343,7 @@ fun MarmotGroupInfoScreen(
                                         Toast
                                             .makeText(
                                                 context,
-                                                loadStringRes(Res.string.marmot_enable_encrypted_media_needs_server),
+                                                marmotEnableEncryptedMediaNeedsServerStr,
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                         return@Button
@@ -465,7 +466,7 @@ fun MarmotGroupInfoScreen(
                 onAdd = { user ->
                     isAdding = true
                     isAddError = false
-                    addStatus = loadStringRes(Res.string.marmot_adding_user, user.toBestDisplayName())
+                    addStatus = stringRes(Res.string.marmot_adding_user, user.toBestDisplayName())
                     val targetPubkey = user.pubkeyHex
                     val targetName = user.toBestDisplayName()
                     scope.launch(Dispatchers.IO) {

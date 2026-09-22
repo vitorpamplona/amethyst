@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -276,6 +275,7 @@ private fun LogoutButton(
     acc: AccountInfo,
     accountSessionManager: AccountSessionManager,
 ) {
+    val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
     var logoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     if (logoutDialog) {
@@ -335,7 +335,7 @@ private fun LogoutButton(
                                     confirmedCount,
                                 )
                             } else {
-                                loadStringRes(Res.string.scheduled_posts_logout_toast_zero)
+                                scheduledPostsLogoutToastZeroStr
                             }
                         android.widget.Toast
                             .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)

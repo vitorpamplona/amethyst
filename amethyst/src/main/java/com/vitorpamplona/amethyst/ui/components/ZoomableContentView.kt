@@ -981,6 +981,8 @@ fun ShareMediaAction(
     content: BaseMediaContent? = null,
     accountViewModel: AccountViewModel,
 ) {
+    val mediaDownloadHasStartedToastStr = stringRes(Res.string.media_download_has_started_toast)
+    val downloadingVideoForSharingStr = stringRes(Res.string.downloading_video_for_sharing)
     // Track if video is downloading - hoisted here to block menu dismiss during download
     val isDownloadingVideo = remember { mutableStateOf(false) }
 
@@ -1012,7 +1014,7 @@ fun ShareMediaAction(
                             Toast
                                 .makeText(
                                     appContext,
-                                    loadStringRes(Res.string.media_download_has_started_toast),
+                                    mediaDownloadHasStartedToastStr,
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             onDismiss()
@@ -1072,7 +1074,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        Toast.makeText(context, loadStringRes(Res.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, downloadingVideoForSharingStr, Toast.LENGTH_SHORT).show()
                                         accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
@@ -1291,6 +1293,8 @@ private fun verifyHash(content: MediaUrlContent): Boolean? {
 
 @Composable
 private fun HashVerificationSymbol(verifiedHash: Boolean) {
+    val hashVerificationPassedStr = stringRes(Res.string.hash_verification_passed)
+    val hashVerificationFailedStr = stringRes(Res.string.hash_verification_failed)
     val localContext = LocalContext.current
     val openDialogMsg = remember { mutableStateOf<String?>(null) }
 
@@ -1307,7 +1311,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = loadStringRes(Res.string.hash_verification_passed)
+                openDialogMsg.value = hashVerificationPassedStr
             },
         ) {
             Icon(
@@ -1321,7 +1325,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = loadStringRes(Res.string.hash_verification_failed)
+                openDialogMsg.value = hashVerificationFailedStr
             },
         ) {
             Icon(

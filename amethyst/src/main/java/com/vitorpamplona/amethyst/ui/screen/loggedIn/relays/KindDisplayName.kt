@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
-import android.content.Context
-import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.attestation
 import com.vitorpamplona.amethyst.commons.resources.attestation_request
@@ -176,6 +175,8 @@ import com.vitorpamplona.amethyst.commons.resources.kind_zap_goals
 import com.vitorpamplona.amethyst.commons.resources.kind_zap_poll
 import com.vitorpamplona.amethyst.commons.resources.kind_zap_req
 import com.vitorpamplona.amethyst.commons.resources.kind_zaps
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -332,11 +333,11 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import org.jetbrains.compose.resources.StringResource
 
-/** Returns the `@StringRes` id for the translated kind name, or -1 if unknown. */
+/** Returns the catalog entry for the translated kind name, or null if unknown. */
 @Suppress("DEPRECATION")
-@StringRes
-fun kindDisplayName(kind: Int): Int =
+fun kindDisplayName(kind: Int): StringResource? =
     when (kind) {
         AcceptedBadgeSetEvent.KIND -> Res.string.kind_accepted_badge_set
         AdvertisedRelayListEvent.KIND -> Res.string.kind_outbox_relays
@@ -493,17 +494,21 @@ fun kindDisplayName(kind: Int): Int =
         WakeUpEvent.KIND -> Res.string.kind_wake
         WebBookmarkEvent.KIND -> Res.string.kind_web_bookmark
         WikiNoteEvent.KIND -> Res.string.kind_wiki
-        else -> -1
+        else -> null
     }
 
 /**
- * Returns the translated display name for [kind] using Android string resources when available,
+ * Returns the translated display name for [kind] from the shared string catalog when available,
  * falling back to the English name from [KindNames], then to "k<number>".
  */
-fun kindNameFor(
-    context: Context,
-    kind: Int,
-): String {
-    val resId = kindDisplayName(kind)
-    return if (resId != -1) context.getString(resId) else (KindNames.nameFor(kind) ?: "k$kind")
+suspend fun kindNameFor(kind: Int): String {
+    val res = kindDisplayName(kind)
+    return if (res != null) loadStringRes(res) else (KindNames.nameFor(kind) ?: "k$kind")
+}
+
+/** Composition-side twin of [kindNameFor], for labels rendered straight into the UI. */
+@Composable
+fun kindName(kind: Int): String {
+    val res = kindDisplayName(kind)
+    return if (res != null) stringRes(res) else (KindNames.nameFor(kind) ?: "k$kind")
 }

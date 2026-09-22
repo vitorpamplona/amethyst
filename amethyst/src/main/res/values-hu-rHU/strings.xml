@@ -295,4 +295,31 @@
     </plurals>
     <string name="pow_mining_title">„Munkabizonyítás” bányászata</string>
     <string name="pow_notification_cancel_all">Mégse</string>
+    <string name="pow_time_left">≈ %1$s van hátra</string>
+    <string name="pow_time_left_soon">mostmár bármelyik pillanatban</string>
+    <string name="pow_estimate_instant">&lt;1 mp</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d mp</item>
+        <item quantity="other">%1$d mp</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d perc</item>
+        <item quantity="other">%1$d perc</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d óra</item>
+        <item quantity="other">%1$d óra</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d nap</item>
+        <item quantity="other">%1$d nap</item>
+    </plurals>
+    <string name="reaction">Reakció</string>
+    <string name="boost">Megtolás</string>
+    <string name="post">Közzététel</string>
+    <string name="voice_post">Hangos bejegyzés</string>
+    <string name="voice_reply">Hangos válasz</string>
+    <string name="pow_kind_report">Jelentés</string>
+    <string name="private_message">Privát üzenet</string>
+    <string name="pow_kind_chat_message">Csevegési üzenet</string>
 </resources>

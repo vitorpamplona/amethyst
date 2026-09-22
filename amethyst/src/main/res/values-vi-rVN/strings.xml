@@ -170,4 +170,9 @@
     <string name="call_ongoing_description">Thông báo cuộc gọi đang diễn ra</string>
     <string name="call_with">Cuộc gọi với %1$s</string>
     <string name="call_hangup">Cúp máy</string>
+    <string name="reaction">Phản ứng</string>
+    <string name="post">Đăng</string>
+    <string name="voice_post">Bài đăng giọng nói</string>
+    <string name="voice_reply">Trả lời giọng nói</string>
+    <string name="private_message">Tin nhắn Riêng tư</string>
 </resources>

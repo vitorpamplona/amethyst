@@ -171,4 +171,10 @@
     <string name="call_ongoing_description">通話中の通知</string>
     <string name="call_with">%1$s との通話</string>
     <string name="call_hangup">切る</string>
+    <string name="reaction">リアクション</string>
+    <string name="boost">ブースト</string>
+    <string name="post">送信</string>
+    <string name="voice_post">音声投稿</string>
+    <string name="voice_reply">音声返信</string>
+    <string name="private_message">プライベートメッセージ</string>
 </resources>

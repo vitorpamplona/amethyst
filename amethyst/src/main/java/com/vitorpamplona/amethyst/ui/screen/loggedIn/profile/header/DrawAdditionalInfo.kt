@@ -96,6 +96,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -380,7 +381,7 @@ fun getIdentityClaimIcon(identity: IdentityClaimTag): Int =
         else -> R.drawable.github
     }
 
-fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
+fun getIdentityClaimDescription(identity: IdentityClaimTag): StringResource =
     when (identity) {
         is TwitterIdentity -> Res.string.twitter
         is TelegramIdentity -> Res.string.telegram

@@ -177,4 +177,10 @@
     <string name="call_ongoing_description">Notiekošā zvana paziņojums</string>
     <string name="call_with">Zvans ar %1$s</string>
     <string name="call_hangup">Beigt zvanu</string>
+    <string name="reaction">Reakcija</string>
+    <string name="boost">Pastiprināt</string>
+    <string name="post">Ieraksts</string>
+    <string name="voice_post">Balss ziņa</string>
+    <string name="voice_reply">Balss atbilde</string>
+    <string name="private_message">Privāta ziņa</string>
 </resources>

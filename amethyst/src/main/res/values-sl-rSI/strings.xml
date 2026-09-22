@@ -309,4 +309,39 @@
     </plurals>
     <string name="pow_mining_title">Rudarjenje dokaza o delu (PoW)</string>
     <string name="pow_notification_cancel_all">Prekliči</string>
+    <string name="pow_time_left">≈ %1$s še ostane</string>
+    <string name="pow_time_left_soon">Vsak čas bo</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="two">%1$d sekundi</item>
+        <item quantity="few">%1$d sekunde</item>
+        <item quantity="other">%1$d sekund</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="two">%1$d minuti</item>
+        <item quantity="few">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d ura</item>
+        <item quantity="two">%1$d uri</item>
+        <item quantity="few">%1$d ure</item>
+        <item quantity="other">%1$d ur</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dan</item>
+        <item quantity="two">%1$d dneva</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <string name="reaction">Odziv</string>
+    <string name="boost">Pošlji naprej</string>
+    <string name="post">Pošlji</string>
+    <string name="voice_post">Glasovna objava</string>
+    <string name="voice_reply">Zvočni odgovor</string>
+    <string name="pow_kind_report">Prijavi</string>
+    <string name="private_message">Zasebno sporočilo</string>
+    <string name="pow_kind_chat_message">Sporočilo klepeta</string>
 </resources>

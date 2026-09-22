@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.pow
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.pow_estimate_days
 import com.vitorpamplona.amethyst.commons.resources.pow_estimate_hours
@@ -118,5 +120,41 @@ suspend fun loadTimeLeft(
         loadStringRes(Res.string.pow_time_left, loadApproxDuration(remaining))
     } else {
         loadStringRes(Res.string.pow_time_left_soon)
+    }
+}
+
+/**
+ * Android-resource twin of [formatApproxDuration]; see [powKindLabelResId] for why
+ * the mining notification cannot read from the Compose catalog.
+ */
+fun formatApproxDuration(
+    context: Context,
+    seconds: Double,
+): String {
+    fun quantity(
+        id: Int,
+        count: Long,
+    ) = pluralStringRes(context, id, count.toInt(), count.toInt())
+
+    return when {
+        seconds < 1.0 -> stringRes(context, R.string.pow_estimate_instant)
+        seconds < 90.0 -> quantity(R.plurals.pow_estimate_seconds, seconds.roundToLong())
+        seconds < 90.0 * 60.0 -> quantity(R.plurals.pow_estimate_minutes, (seconds / 60.0).roundToLong())
+        seconds < 48.0 * 3600.0 -> quantity(R.plurals.pow_estimate_hours, (seconds / 3600.0).roundToLong())
+        else -> quantity(R.plurals.pow_estimate_days, (seconds / 86400.0).roundToLong())
+    }
+}
+
+/** Android-resource twin of [formatTimeLeft]. */
+fun formatTimeLeft(
+    context: Context,
+    expectedSec: Double,
+    elapsedSec: Long,
+): String {
+    val remaining = expectedSec - elapsedSec
+    return if (remaining > 1.0) {
+        stringRes(context, R.string.pow_time_left, formatApproxDuration(context, remaining))
+    } else {
+        stringRes(context, R.string.pow_time_left_soon)
     }
 }

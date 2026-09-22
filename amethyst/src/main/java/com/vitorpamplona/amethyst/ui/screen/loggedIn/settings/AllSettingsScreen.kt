@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Preview
 @Composable
@@ -114,11 +115,15 @@ fun AllSettingsScreen(
             )
         }
 
+    // stringRes reads from composition, so every label the filter could touch is
+    // resolved up front and handed over as a plain map lookup. That keeps
+    // filterSettings itself Compose-free and unit-testable.
+    val labels = rememberCatalogLabels(catalog)
     val filtered =
         filterSettings(
             catalog = catalog,
             query = query,
-            stringLookup = { loadStringRes(it) },
+            stringLookup = { labels[it].orEmpty() },
         )
 
     Scaffold(
@@ -280,4 +285,18 @@ private fun ResetMarmotStateDialog(
             }
         },
     )
+}
+
+/** Resolves every title and keyword string in [catalog] so the filter can run outside composition. */
+@Composable
+private fun rememberCatalogLabels(catalog: List<SettingsCategory>): Map<StringResource, String> {
+    val out = mutableMapOf<StringResource, String>()
+    catalog.forEach { category ->
+        out[category.titleRes] = stringRes(category.titleRes)
+        category.entries.forEach { entry ->
+            out[entry.titleRes] = stringRes(entry.titleRes)
+            entry.keywordsRes?.let { out[it] = stringRes(it) }
+        }
+    }
+    return out
 }

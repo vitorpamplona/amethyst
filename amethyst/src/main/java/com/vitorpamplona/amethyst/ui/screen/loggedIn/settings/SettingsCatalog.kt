@@ -73,7 +73,7 @@ private fun String.searchWords(): List<String> = lowercase().split(SEARCH_DELIMI
 fun filterSettings(
     catalog: List<SettingsCategory>,
     query: String,
-    stringLookup: (Int) -> String,
+    stringLookup: (StringResource) -> String,
 ): List<SettingsCategory> {
     val terms = query.searchWords()
     if (terms.isEmpty()) return catalog

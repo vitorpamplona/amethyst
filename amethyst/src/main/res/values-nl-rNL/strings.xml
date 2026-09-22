@@ -289,4 +289,31 @@
     </plurals>
     <string name="pow_mining_title">Proof of work minen</string>
     <string name="pow_notification_cancel_all">Annuleren</string>
+    <string name="pow_time_left">≈ %1$s resterend</string>
+    <string name="pow_time_left_soon">elk moment nu</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d seconde</item>
+        <item quantity="other">%1$d seconden</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minuut</item>
+        <item quantity="other">%1$d minuten</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d uur</item>
+        <item quantity="other">%1$d uur</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagen</item>
+    </plurals>
+    <string name="reaction">Reactie</string>
+    <string name="boost">Boost</string>
+    <string name="post">Plaatsen</string>
+    <string name="voice_post">Spraakbericht</string>
+    <string name="voice_reply">Spraakreactie</string>
+    <string name="pow_kind_report">Melding</string>
+    <string name="private_message">Privébericht</string>
+    <string name="pow_kind_chat_message">Chatbericht</string>
 </resources>

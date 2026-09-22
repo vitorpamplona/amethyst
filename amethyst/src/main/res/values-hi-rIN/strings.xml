@@ -295,4 +295,31 @@
     </plurals>
     <string name="pow_mining_title">श्रमप्रमाण खनन</string>
     <string name="pow_notification_cancel_all">निरस्त</string>
+    <string name="pow_time_left">लगभग %1$s शेष</string>
+    <string name="pow_time_left_soon">अब किसी भी क्षण</string>
+    <string name="pow_estimate_instant">१ से॰ से न्यून</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d सेकण्ड</item>
+        <item quantity="other">%1$d सेकण्ड</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d मिनुट</item>
+        <item quantity="other">%1$d मिनुट</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d घण्टा</item>
+        <item quantity="other">%1$d घण्टे</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d दिन</item>
+        <item quantity="other">%1$d दिन</item>
+    </plurals>
+    <string name="reaction">प्रतिक्रिया</string>
+    <string name="boost">उद्धरण</string>
+    <string name="post">पत्र प्रकाशन</string>
+    <string name="voice_post">ध्वनि सन्देश</string>
+    <string name="voice_reply">ध्वनि उत्तर</string>
+    <string name="pow_kind_report">वृत्तान्त</string>
+    <string name="private_message">निजी सन्देश</string>
+    <string name="pow_kind_chat_message">चर्चा सन्देश</string>
 </resources>

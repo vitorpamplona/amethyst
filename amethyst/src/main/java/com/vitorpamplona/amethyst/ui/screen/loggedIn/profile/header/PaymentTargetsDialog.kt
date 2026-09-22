@@ -79,6 +79,7 @@ fun PaymentTargetsDialog(
     /** Returns true when it handled the target with an in-app wallet. */
     payInApp: ((PaymentTarget) -> Boolean)? = null,
 ) {
+    val noPaymentAppFoundStr = stringRes(Res.string.no_payment_app_found)
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboard.current
@@ -122,7 +123,7 @@ fun PaymentTargetsDialog(
                                 // wipe whatever the wallet app already had open.
                                 runCatching { uriHandler.openUri(paymentTargetUri(target)) }
                                     .onSuccess { onDismiss() }
-                                    .onFailure { errorMessage = loadStringRes(Res.string.no_payment_app_found) }
+                                    .onFailure { errorMessage = noPaymentAppFoundStr }
                             }
                         },
                     )

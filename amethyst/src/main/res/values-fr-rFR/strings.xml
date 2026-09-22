@@ -188,4 +188,20 @@
     <string name="call_ongoing_description">Notification d'appel en cours</string>
     <string name="call_with">Appel avec %1$s</string>
     <string name="call_hangup">Raccrocher</string>
+    <string name="pow_time_left_soon">à tout moment maintenant</string>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d heure</item>
+        <item quantity="other">%1$d heures</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+    <string name="reaction">Réaction</string>
+    <string name="boost">Boost</string>
+    <string name="post">Envoyer</string>
+    <string name="voice_post">Message vocal</string>
+    <string name="voice_reply">Réponse vocale</string>
+    <string name="pow_kind_report">Signaler</string>
+    <string name="private_message">Message privé</string>
 </resources>

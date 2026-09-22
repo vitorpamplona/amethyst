@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -48,6 +47,8 @@ fun ShareChatButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
+    val quickActionShareStr = stringRes(Res.string.quick_action_share)
     val context = LocalContext.current
 
     FilledTonalButton(
@@ -61,13 +62,13 @@ fun ShareChatButton(
                     action = Intent.ACTION_SEND
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, njumpLink(channel.toNEvent()))
-                    putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.quick_action_share_browser_link))
+                    putExtra(Intent.EXTRA_TITLE, quickActionShareBrowserLinkStr)
                 }
 
             val shareIntent =
                 Intent.createChooser(
                     sendIntent,
-                    loadStringRes(Res.string.quick_action_share),
+                    quickActionShareStr,
                 )
 
             context.startActivity(shareIntent)

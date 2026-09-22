@@ -172,4 +172,10 @@
     <string name="call_ongoing_description">진행 중인 통화 알림</string>
     <string name="call_with">%1$s와(과) 통화</string>
     <string name="call_hangup">전화 끊기</string>
+    <string name="reaction">반응</string>
+    <string name="boost">부스트</string>
+    <string name="post">게시</string>
+    <string name="voice_post">음성 게시물</string>
+    <string name="voice_reply">음성 답글</string>
+    <string name="private_message">비공개 메시지</string>
 </resources>

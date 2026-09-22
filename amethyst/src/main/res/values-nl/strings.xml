@@ -2320,4 +2320,10 @@
     <string name="call_ongoing_description">Lopende oproep</string>
     <string name="call_with">Bellen met %1$s</string>
     <string name="call_hangup">Ophangen</string>
+    <string name="reaction">Reactie</string>
+    <string name="boost">Boost</string>
+    <string name="post">Verzenden</string>
+    <string name="voice_post">Spraakbericht</string>
+    <string name="voice_reply">Spraakreactie</string>
+    <string name="private_message">Privébericht</string>
 </resources>

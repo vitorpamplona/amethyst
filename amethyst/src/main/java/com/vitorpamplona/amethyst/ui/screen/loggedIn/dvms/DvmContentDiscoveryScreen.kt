@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -376,6 +375,7 @@ fun DvmPaymentActions(
     nav: INav,
     onStatusUpdate: (String) -> Unit,
 ) {
+    val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     val status = latestStatus.status() ?: return
 
     if (status.code != "payment-required") return
@@ -399,7 +399,7 @@ fun DvmPaymentActions(
                                 thankYou
                             } else {
                                 response?.error?.takeIf { it.isNotBlank() }
-                                    ?: loadStringRes(Res.string.clink_debit_no_response)
+                                    ?: clinkDebitNoResponseStr
                             },
                         )
                     }
@@ -416,7 +416,7 @@ fun DvmPaymentActions(
                         onResponse = { response ->
                             onStatusUpdate(
                                 response.nwcFailureDetail()?.let { detail ->
-                                    loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
+                                    stringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
                                 } ?: thankYou,
                             )
                         },

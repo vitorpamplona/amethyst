@@ -129,6 +129,7 @@ fun PowOverrideButton(
             @Composable
             fun eta(difficulty: Int): String? = hashRate?.let { formatApproxDuration(PoWEstimator.estimateSeconds(difficulty, it)) }
 
+            @Composable
             fun withEta(
                 label: String,
                 difficulty: Int,

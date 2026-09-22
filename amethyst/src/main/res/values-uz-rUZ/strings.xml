@@ -173,4 +173,9 @@
     <string name="call_ongoing_description">Davom etayotgan qo'ng'iroq bildirishномаsi</string>
     <string name="call_with">%1$s bilan qo'ng'iroq</string>
     <string name="call_hangup">Tugatish</string>
+    <string name="reaction">Reaksiya</string>
+    <string name="boost">Targʻib qilish</string>
+    <string name="voice_post">Ovozli post</string>
+    <string name="voice_reply">Ovozli javob</string>
+    <string name="private_message">Shaxsiy Xabar</string>
 </resources>

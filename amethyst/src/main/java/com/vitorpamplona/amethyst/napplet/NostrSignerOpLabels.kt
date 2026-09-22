@@ -51,7 +51,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 /** Human-readable label for a [NostrSignerOp]. */
 suspend fun NostrSignerOp.label(context: Context): String =
     when (this) {
-        is NostrSignerOp.SignKind -> loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(context, kind), kind)
+        is NostrSignerOp.SignKind -> loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
         NostrSignerOp.Encrypt -> loadStringRes(Res.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> loadStringRes(Res.string.napplet_op_decrypt)
         is NostrSignerOp.DecryptFrom -> loadStringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))

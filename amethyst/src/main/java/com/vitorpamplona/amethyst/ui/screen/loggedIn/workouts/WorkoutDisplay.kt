@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import org.jetbrains.compose.resources.StringResource
 import kotlin.math.abs
 import kotlin.math.round
 
@@ -120,7 +121,7 @@ fun ExerciseType?.symbol(): MaterialSymbol =
         null -> MaterialSymbols.DirectionsRun
     }
 
-fun ExerciseType.labelRes(): Int =
+fun ExerciseType.labelRes(): StringResource =
     when (this) {
         ExerciseType.RUNNING -> Res.string.exercise_running
         ExerciseType.WALKING -> Res.string.exercise_walking

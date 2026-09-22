@@ -66,4 +66,10 @@
     <string name="call_ongoing_description">நடைமுறையில் உள்ள அழைப்பு அறிவிப்பு</string>
     <string name="call_with">%1$s உடன் அழைப்பு</string>
     <string name="call_hangup">அழைப்பு துண்டி</string>
+    <string name="reaction">எதிர்வினை</string>
+    <string name="boost">உயர்த்து</string>
+    <string name="post">பதிவு</string>
+    <string name="voice_post">குரல் இடுகை</string>
+    <string name="voice_reply">குரல் பதில்</string>
+    <string name="private_message">தனிப்பட்ட செய்தி</string>
 </resources>

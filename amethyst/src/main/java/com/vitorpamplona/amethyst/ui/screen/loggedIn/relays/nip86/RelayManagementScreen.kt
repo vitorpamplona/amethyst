@@ -941,7 +941,7 @@ private fun KindEntryCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val nameResId = kindDisplayName(kind)
-            val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "")
+            val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
                 "Kind $kind: $name",

@@ -42,7 +42,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_season
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -75,7 +76,8 @@ fun PodcastTrailerListItem(
         }
 
     val context = LocalContext.current
-    val dateStr = remember(noteEvent) { timeAgo(noteEvent.createdAt, prefix = "") }
+    val timeLabels = rememberTimeAgoLabels()
+    val dateStr = remember(noteEvent, timeLabels) { timeAgoWith(noteEvent.createdAt, timeLabels, prefix = "") }
 
     Column(
         modifier =

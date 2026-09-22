@@ -172,4 +172,10 @@
     <string name="call_ongoing_description">Notificação de chamada em andamento</string>
     <string name="call_with">Chamada com %1$s</string>
     <string name="call_hangup">Desligar</string>
+    <string name="reaction">Reação</string>
+    <string name="boost">Impulsionar</string>
+    <string name="post">Salvar</string>
+    <string name="voice_post">Post de voz</string>
+    <string name="voice_reply">Resposta em voz</string>
+    <string name="private_message">Mensagem Privada</string>
 </resources>

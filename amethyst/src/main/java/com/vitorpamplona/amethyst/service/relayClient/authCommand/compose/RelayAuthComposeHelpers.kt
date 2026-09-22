@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_send_dm
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_thread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Loads [pubkey] from the local cache, get-or-creating (and subscribing) if absent, then hands the
@@ -67,7 +68,7 @@ internal fun LoadRelayAuthUser(
  * deciding right now ("It won't serve … to readers it can't identify"); these caption a past login in
  * the settings log, where a full sentence per row would be the wall of text this screen just lost.
  */
-internal fun relayAuthPurposeLabelRes(kind: AuthPurposeKind): Int =
+internal fun relayAuthPurposeLabelRes(kind: AuthPurposeKind): StringResource =
     when (kind) {
         AuthPurposeKind.SEND_DM -> Res.string.relay_auth_purpose_send_dm
         AuthPurposeKind.NOTIFY_INBOX -> Res.string.relay_auth_purpose_notify_inbox

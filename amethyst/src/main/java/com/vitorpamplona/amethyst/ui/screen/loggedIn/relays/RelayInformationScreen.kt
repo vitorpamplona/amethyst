@@ -64,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -212,7 +211,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.map
-import org.jetbrains.compose.resources.stringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -484,7 +482,7 @@ val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, Re
 @Composable
 fun KindChip(kind: Int) {
     val nameResId = kindDisplayName(kind)
-    val name = if (nameResId != -1) stringResource(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
+    val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
     val (bg, fg) =
         when (kind) {
             in posts -> {

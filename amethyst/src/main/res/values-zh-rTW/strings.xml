@@ -171,4 +171,10 @@
     <string name="call_ongoing_description">進行中的通話通知</string>
     <string name="call_with">與 %1$s 通話</string>
     <string name="call_hangup">掛斷</string>
+    <string name="reaction">回應</string>
+    <string name="boost">提升</string>
+    <string name="post">發佈</string>
+    <string name="voice_post">語音貼文</string>
+    <string name="voice_reply">語音回覆</string>
+    <string name="private_message">私人訊息</string>
 </resources>

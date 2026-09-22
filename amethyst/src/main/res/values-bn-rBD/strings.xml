@@ -174,4 +174,10 @@
     <string name="call_ongoing_description">চলমান কলের বিজ্ঞপ্তি</string>
     <string name="call_with">%1$s-এর সাথে কল</string>
     <string name="call_hangup">রাখুন</string>
+    <string name="reaction">প্রতিক্রিয়া</string>
+    <string name="boost">বুস্ট</string>
+    <string name="post">পেশ করুন</string>
+    <string name="voice_post">ভয়েস পোস্ট</string>
+    <string name="voice_reply">ভয়েস রিপ্লাই</string>
+    <string name="private_message">ব্যক্তিগত বার্তা</string>
 </resources>

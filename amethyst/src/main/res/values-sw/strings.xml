@@ -174,4 +174,10 @@
     <string name="call_ongoing_description">Arifa ya simu inayoendelea</string>
     <string name="call_with">Simu na %1$s</string>
     <string name="call_hangup">Kata simu</string>
+    <string name="reaction">Mwitikio</string>
+    <string name="boost">Kuongeza</string>
+    <string name="post">Tuma</string>
+    <string name="voice_post">Chapisho la Sauti</string>
+    <string name="voice_reply">Jibu la Sauti</string>
+    <string name="private_message">Ujumbe wa Siri</string>
 </resources>

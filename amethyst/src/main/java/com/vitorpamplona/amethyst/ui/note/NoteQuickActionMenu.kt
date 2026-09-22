@@ -284,6 +284,8 @@ fun CardBody(
     showReportDialog: MutableState<Boolean>,
     onWantsToEditDraft: () -> Unit,
 ) {
+    val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
+    val quickActionShareStr = stringRes(Res.string.quick_action_share)
     val context = LocalContext.current
     val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
     val clipboardManager = LocalClipboard.current
@@ -497,14 +499,14 @@ fun CardBody(
                             )
                             putExtra(
                                 Intent.EXTRA_TITLE,
-                                loadStringRes(Res.string.quick_action_share_browser_link),
+                                quickActionShareBrowserLinkStr,
                             )
                         }
 
                     val shareIntent =
                         Intent.createChooser(
                             sendIntent,
-                            loadStringRes(Res.string.quick_action_share),
+                            quickActionShareStr,
                         )
                     context.startActivity(shareIntent)
                     onDismiss()

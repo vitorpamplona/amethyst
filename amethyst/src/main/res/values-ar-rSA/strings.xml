@@ -181,4 +181,10 @@
     <string name="call_ongoing_description">إشعار المكالمة الجارية</string>
     <string name="call_with">مكالمة مع %1$s</string>
     <string name="call_hangup">إنهاء المكالمة</string>
+    <string name="reaction">تفاعل</string>
+    <string name="boost">تعزيز</string>
+    <string name="post">نشر</string>
+    <string name="voice_post">منشور صوتي</string>
+    <string name="voice_reply">رد صوتي</string>
+    <string name="private_message">رسالة خاصة</string>
 </resources>

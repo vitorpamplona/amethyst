@@ -81,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_secti
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -110,6 +109,7 @@ fun BlossomImportScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val blossomImportBusyStr = stringRes(Res.string.blossom_import_busy)
     val vm: BlossomImportViewModel = viewModel()
     vm.init(accountViewModel)
 
@@ -254,7 +254,7 @@ fun BlossomImportScreen(
                                     is ImportStart.Started -> nav.popBack()
                                     ImportStart.Busy ->
                                         Toast
-                                            .makeText(context, loadStringRes(Res.string.blossom_import_busy), Toast.LENGTH_LONG)
+                                            .makeText(context, blossomImportBusyStr, Toast.LENGTH_LONG)
                                             .show()
                                     ImportStart.Empty -> {}
                                 }

@@ -292,4 +292,31 @@
     </plurals>
     <string name="pow_mining_title">Minar bevis på arbete</string>
     <string name="pow_notification_cancel_all">Avbryt</string>
+    <string name="pow_time_left">≈ %1$s kvar</string>
+    <string name="pow_time_left_soon">när som helst nu</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d sekund</item>
+        <item quantity="other">%1$d sekunder</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d minut</item>
+        <item quantity="other">%1$d minuter</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d timme</item>
+        <item quantity="other">%1$d timmar</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <string name="reaction">Reaktion</string>
+    <string name="boost">Boosta</string>
+    <string name="post">Dela</string>
+    <string name="voice_post">Röstinlägg</string>
+    <string name="voice_reply">Röstsvar</string>
+    <string name="pow_kind_report">Rapport</string>
+    <string name="private_message">Privat meddelande</string>
+    <string name="pow_kind_chat_message">Chattmeddelande</string>
 </resources>

@@ -2887,4 +2887,10 @@
     <string name="call_ongoing_description">Notificación de llamada en curso</string>
     <string name="call_with">Llamada con %1$s</string>
     <string name="call_hangup">Colgar</string>
+    <string name="reaction">Reacción</string>
+    <string name="boost">Impulsar</string>
+    <string name="post">Enviar</string>
+    <string name="voice_post">Publicación de voz</string>
+    <string name="voice_reply">Respuesta de voz</string>
+    <string name="private_message">Mensaje privado</string>
 </resources>

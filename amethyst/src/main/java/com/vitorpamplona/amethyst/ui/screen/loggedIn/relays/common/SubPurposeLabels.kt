@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_purpose_your_wallet
 import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.route_discover
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The one place a [SubPurpose] becomes words, shared by the relay screens and the always-on
@@ -92,7 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.route_notifications
  * New strings exist only for the handful of jobs the app never had to name before.
  */
 object SubPurposeLabels {
-    fun labelOf(purpose: SubPurpose): Int =
+    fun labelOf(purpose: SubPurpose): StringResource =
         when (purpose) {
             // account — always on
             SubPurpose.ACCOUNT_DATA -> Res.string.relay_purpose_your_account
@@ -153,7 +154,7 @@ object SubPurposeLabels {
      * and `NOTIFICATIONS` mentions the follows-wide probe because
      * `AccountNotificationsEoseFromRandomRelaysManager` subscribes to every follows relay.
      */
-    fun explainerOf(purpose: SubPurpose): Int? =
+    fun explainerOf(purpose: SubPurpose): StringResource? =
         when (purpose) {
             SubPurpose.NOTIFICATIONS -> Res.string.relay_explain_notifications
             SubPurpose.DIRECT_MESSAGES -> Res.string.relay_explain_direct_messages

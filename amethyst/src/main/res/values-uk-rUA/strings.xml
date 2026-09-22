@@ -177,4 +177,10 @@
     <string name="call_ongoing_description">Сповіщення про поточний дзвінок</string>
     <string name="call_with">Дзвінок з %1$s</string>
     <string name="call_hangup">Завершити</string>
+    <string name="reaction">Реакція</string>
+    <string name="boost">Просувати</string>
+    <string name="post">Надіслати</string>
+    <string name="voice_post">Голосова публікація</string>
+    <string name="voice_reply">Голосова відповідь</string>
+    <string name="private_message">Приватне повідомлення</string>
 </resources>

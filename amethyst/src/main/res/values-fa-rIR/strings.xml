@@ -173,4 +173,10 @@
     <string name="call_ongoing_description">اعلان تماس در جریان</string>
     <string name="call_with">تماس با %1$s</string>
     <string name="call_hangup">قطع تماس</string>
+    <string name="reaction">واکنش</string>
+    <string name="boost">بازنشر</string>
+    <string name="post">ارسال</string>
+    <string name="voice_post">پست صوتی</string>
+    <string name="voice_reply">پاسخ صوتی</string>
+    <string name="private_message">پیام خصوصی</string>
 </resources>
