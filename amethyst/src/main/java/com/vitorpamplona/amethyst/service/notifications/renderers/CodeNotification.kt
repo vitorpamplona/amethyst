@@ -169,9 +169,9 @@ object CodeNotification {
      */
     private fun titleForStatusOnTarget(
         rootId: String?,
-        pr: Int,
-        patch: Int,
-        issue: Int,
+        pr: StringResource,
+        patch: StringResource,
+        issue: StringResource,
         fallback: StringResource,
     ): Int {
         val targetKind = rootId?.let { LocalCache.getNoteIfExists(it)?.event?.kind } ?: return fallback

@@ -36,14 +36,15 @@ import com.vitorpamplona.amethyst.commons.resources.tor_when_needed
 import com.vitorpamplona.amethyst.commons.resources.tor_when_needed_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import org.jetbrains.compose.resources.StringResource
 
 // Re-export shared types so existing Android imports continue to work
 // The canonical types now live in commons/commonMain
 @Suppress("unused")
 private const val RE_EXPORTS = 0
 
-// Android-specific resource ID mappings for TorType
-val TorType.resourceId: Int
+// Catalog keys for TorType (shared types live in commons/commonMain)
+val TorType.resourceId: StringResource
     get() =
         when (this) {
             TorType.OFF -> Res.string.tor_off
@@ -51,8 +52,8 @@ val TorType.resourceId: Int
             TorType.EXTERNAL -> Res.string.tor_external
         }
 
-// Android-specific resource ID mappings for TorPresetType
-val TorPresetType.resourceId: Int
+// Catalog keys for TorPresetType
+val TorPresetType.resourceId: StringResource
     get() =
         when (this) {
             TorPresetType.ONLY_WHEN_NEEDED -> Res.string.tor_when_needed
@@ -62,7 +63,7 @@ val TorPresetType.resourceId: Int
             TorPresetType.CUSTOM -> Res.string.tor_custom
         }
 
-val TorPresetType.explainerId: Int
+val TorPresetType.explainerId: StringResource
     get() =
         when (this) {
             TorPresetType.ONLY_WHEN_NEEDED -> Res.string.tor_when_needed_explainer

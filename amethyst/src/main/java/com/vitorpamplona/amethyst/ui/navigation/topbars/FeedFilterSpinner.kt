@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -458,7 +459,7 @@ fun RenderOption(
 }
 
 private enum class FeedGroup(
-    @param:androidx.annotation.StringRes val labelRes: Int,
+    val labelRes: StringResource,
 ) {
     FEEDS(Res.string.feed_group_feeds),
     RELAYS(Res.string.feed_group_relays),
