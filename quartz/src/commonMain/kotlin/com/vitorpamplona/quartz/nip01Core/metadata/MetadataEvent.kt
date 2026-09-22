@@ -94,7 +94,8 @@ class MetadataEvent(
             lud06 = text(before.lud06, after.lud06),
             lud16 = text(before.lud16, after.lud16),
             clinkOffer = text(before.clinkOffer, after.clinkOffer),
-            bot = ValueChange.of(before.bot, after.bot),
+            // "bot": false is the default: dropping it loses nothing, so only `true` counts.
+            bot = ValueChange.of(before.bot?.takeIf { it }, after.bot?.takeIf { it }),
             birthday =
                 ValueChange.of(before.birthday, after.birthday) { b, a ->
                     b.year == a.year && b.month == a.month && b.day == a.day

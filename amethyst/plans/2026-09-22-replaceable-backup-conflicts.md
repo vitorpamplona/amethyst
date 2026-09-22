@@ -42,6 +42,12 @@ only surviving copy of the user's data is gone.
 
    If nothing was dropped, the other app evidently built on the previous version, and the
    backup is updated silently as before.
+
+   Wiped versions (no tags, empty app data, a mints-less nutzap info) reach the guard too,
+   so wiping everything is questioned like any other loss. An empty version only becomes
+   the backup when this app signed it or the user kept it. The guard runs under a lock
+   shared with the resolutions, and a version older than an open conflict's incoming can
+   never replace or clear it (e.g. the retry of an accept that a newer change overtook).
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
    Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
@@ -80,12 +86,14 @@ only surviving copy of the user's data is gone.
    The screen offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
-     `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer
+     `created_at = max(now, incoming + 1)` (capped at 15 minutes ahead; a far-future
+     external version is answered at "now"), dropping the old `client` tag (so the signer
      adds the current one), the `nonce` (its PoW was for the old id) and an already-past
      `expiration` (`BackupRestore.tagsToResign`), and publishes it through
      `EventBroadcaster.sendRestoredVersion`: where a normal save of that kind goes, and for
-     the user's own relay lists (NIP-65, DM, key package) also to every relay the restored
-     list names, since the lossy version may have dropped them from the outbox set.
+     the user's own relay lists (NIP-65, DM, key package) and nutzap info also to every
+     relay the restored list names, since the lossy version may have dropped them from the
+     outbox set; profiles, like their normal saves, go everywhere.
    - **Use new version** — `Account.acceptExternalVersion` whitelists that id and re-runs
      the original update, so the backup moves forward.
 

@@ -1906,7 +1906,10 @@ class Account(
         try {
             val saved = conflict.saved
             val now = TimeUtils.now()
-            val createdAt = maxOf(now, conflict.incoming.createdAt + 1)
+            // Newer than the version it replaces, but never far in the future: relays reject
+            // those, and later edits signed at "now" would lose to it. A far-future external
+            // version can't be outranked safely; the restore then goes out at "now".
+            val createdAt = (conflict.incoming.createdAt + 1).takeIf { it <= now + maxRestoreFutureSeconds }?.coerceAtLeast(now) ?: now
             val resigned = signer.sign<Event>(createdAt, saved.kind, BackupRestore.tagsToResign(saved, now), saved.content)
             broadcaster.sendRestoredVersion(resigned)
             restored = true
@@ -1914,6 +1917,8 @@ class Account(
             settings.finishRestoringSavedVersion(conflict, token, restored)
         }
     }
+
+    private val maxRestoreFutureSeconds = 15 * 60L
 
     /** Resolves a [ReplaceableBackupConflict] in favor of the current version. No-op when stale. */
     fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.keepIncomingVersion(conflict)

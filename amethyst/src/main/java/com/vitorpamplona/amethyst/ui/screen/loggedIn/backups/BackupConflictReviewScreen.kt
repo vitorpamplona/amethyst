@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -170,9 +171,18 @@ fun BackupConflictReviewScreen(
     val conflicts by settings.backupConflicts.collectAsStateWithLifecycle()
     val conflict = conflicts[slot]
 
-    // Resolved from here or elsewhere: nothing left to review.
+    // The only way out after a decision: resolving (from here or elsewhere) removes the
+    // conflict, and this pops the screen exactly once. The buttons don't pop themselves,
+    // which would pop a second screen, and a stale conflict (replaced by a newer one) is
+    // simply shown in its place.
+    val popped = remember { mutableStateOf(false) }
     if (conflict == null) {
-        LaunchedEffect(Unit) { nav.popBack() }
+        LaunchedEffect(Unit) {
+            if (!popped.value) {
+                popped.value = true
+                nav.popBack()
+            }
+        }
         return
     }
 
@@ -180,14 +190,8 @@ fun BackupConflictReviewScreen(
         conflict = conflict,
         accountViewModel = accountViewModel,
         nav = nav,
-        onRestore = {
-            accountViewModel.launchSigner { accountViewModel.account.restoreBackupOver(conflict) }
-            nav.popBack()
-        },
-        onKeepNew = {
-            accountViewModel.account.acceptExternalVersion(conflict)
-            nav.popBack()
-        },
+        onRestore = { accountViewModel.launchSigner { accountViewModel.account.restoreBackupOver(conflict) } },
+        onKeepNew = { accountViewModel.account.acceptExternalVersion(conflict) },
     )
 }
 
@@ -327,8 +331,8 @@ internal fun eventTitle(conflict: ReplaceableBackupConflict): String = stringRes
 private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, String> =
     when (val diff = conflict.diff) {
         is ContactListDiff -> {
-            val saved = (conflict.saved as? ContactListEvent)?.followCount() ?: 0
-            val new = (conflict.incoming as? ContactListEvent)?.followCount() ?: 0
+            val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
+            val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
             stringRes(R.string.backup_action_keep_count, new.toString()) to stringRes(R.string.backup_action_restore_count, saved.toString())
         }
         is MuteListDiff -> {

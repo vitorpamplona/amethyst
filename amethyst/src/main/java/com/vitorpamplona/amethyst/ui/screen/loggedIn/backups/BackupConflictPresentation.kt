@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.Birthday
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
@@ -62,6 +63,66 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDif
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 
 private const val MAX_VALUE_LENGTH = 80
+
+/** Follows counted the way [ContactListDiff] matches them: valid keys, one per pubkey. */
+internal fun ContactListEvent.uniqueFollowCount() = follows().mapTo(HashSet()) { it.pubKey }.size
+
+/** Items lost, gained and changed in a conflict, counting encrypted content as one item. */
+@Immutable
+class ConflictCounts(
+    val removed: Int,
+    val added: Int,
+    val changed: Int,
+)
+
+private fun ContentChange.asCounts() =
+    ConflictCounts(
+        removed = if (this == ContentChange.CLEARED) 1 else 0,
+        added = if (this == ContentChange.ADDED) 1 else 0,
+        changed = if (this == ContentChange.CHANGED) 1 else 0,
+    )
+
+private operator fun ConflictCounts.plus(other: ConflictCounts) = ConflictCounts(removed + other.removed, added + other.added, changed + other.changed)
+
+private fun ListDiff<*>.asCounts() = ConflictCounts(removed.size, added.size, changed.size)
+
+private fun ValueChange<*>?.asCounts() =
+    when {
+        this == null -> ConflictCounts(0, 0, 0)
+        after == null -> ConflictCounts(1, 0, 0)
+        before == null -> ConflictCounts(0, 1, 0)
+        else -> ConflictCounts(0, 0, 1)
+    }
+
+/**
+ * The counts straight from a diff's own lists, without building display items: what the
+ * Home cards need, however large the conflict.
+ */
+fun countsOf(diff: EventDiff): ConflictCounts =
+    when (diff) {
+        is MetadataDiff ->
+            listOf(diff.name, diff.displayName, diff.picture, diff.banner, diff.website, diff.about, diff.pronouns, diff.nip05, diff.lud06, diff.lud16, diff.clinkOffer, diff.bot, diff.birthday)
+                .fold(diff.otherFields.asCounts() + diff.identityClaims.asCounts()) { acc, change -> acc + change.asCounts() }
+        is ContactListDiff -> diff.follows.asCounts()
+        is MuteListDiff -> diff.publicMutes.asCounts() + diff.privateItems.asCounts()
+        is AdvertisedRelayListDiff -> diff.relays.asCounts()
+        is RelayListDiff -> diff.relays.asCounts() + diff.privateRelays.asCounts()
+        is ChannelListDiff -> diff.channels.asCounts() + diff.privateItems.asCounts()
+        is CommunityListDiff -> diff.communities.asCounts() + diff.privateItems.asCounts()
+        is HashtagListDiff -> diff.hashtags.asCounts() + diff.privateItems.asCounts()
+        is GeohashListDiff -> diff.geohashes.asCounts() + diff.privateItems.asCounts()
+        is FavoriteAlgoFeedsListDiff -> diff.feeds.asCounts() + diff.privateItems.asCounts()
+        is EphemeralChatListDiff -> diff.rooms.asCounts() + diff.privateItems.asCounts()
+        is SimpleGroupListDiff -> diff.groups.asCounts() + diff.privateItems.asCounts()
+        is TrustProviderListDiff -> diff.providers.asCounts() + diff.privateItems.asCounts()
+        is NutzapInfoDiff -> diff.mints.asCounts() + diff.relays.asCounts() + diff.p2pkPubkey.asCounts()
+        is PaymentTargetsDiff -> diff.targets.asCounts()
+        is Bolt12OfferListDiff -> diff.offers.asCounts()
+        is CashuWalletDiff -> diff.wallet.asCounts()
+        is ConcordCommunityListDiff -> diff.communities.asCounts()
+        is AppSpecificDataDiff -> diff.data.asCounts()
+        else -> ConflictCounts(0, 0, 0)
+    }
 
 /**
  * One entry of a conflict, typed by what it points to so the review screen can load it from

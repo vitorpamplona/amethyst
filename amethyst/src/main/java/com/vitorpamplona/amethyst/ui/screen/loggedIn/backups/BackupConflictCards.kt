@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -122,24 +123,6 @@ fun BackupConflictCards(
     }
 }
 
-/** Items lost, gained and changed, counting encrypted content as one item. */
-private class ConflictCounts(
-    val removed: Int,
-    val added: Int,
-    val changed: Int,
-)
-
-@Composable
-private fun countsOf(conflict: ReplaceableBackupConflict): ConflictCounts {
-    val presentation = presentationOf(conflict.diff)
-    val content = presentation.content
-    return ConflictCounts(
-        removed = presentation.removedCount + if (content == ContentChange.CLEARED) 1 else 0,
-        added = presentation.addedCount + if (content == ContentChange.ADDED) 1 else 0,
-        changed = presentation.changedCount + if (content == ContentChange.CHANGED) 1 else 0,
-    )
-}
-
 /** A headline that says what happened, in the event's own terms. */
 @Composable
 private fun headlineOf(
@@ -217,7 +200,7 @@ private fun LeadConflictCard(
     onClick: () -> Unit,
 ) {
     val tones = conflictTones()
-    val counts = countsOf(conflict)
+    val counts = remember(conflict) { countsOf(conflict.diff) }
     Surface(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
@@ -245,8 +228,8 @@ private fun LeadConflictCard(
             }
             val diff = conflict.diff
             if (diff is ContactListDiff) {
-                val saved = (conflict.saved as? ContactListEvent)?.followCount() ?: 0
-                val new = (conflict.incoming as? ContactListEvent)?.followCount() ?: 0
+                val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
+                val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(saved.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     SplitBar(
@@ -283,7 +266,7 @@ private fun ConflictPill(
     onClick: () -> Unit,
 ) {
     val tones = conflictTones()
-    val counts = countsOf(conflict)
+    val counts = remember(conflict) { countsOf(conflict.diff) }
     Surface(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),

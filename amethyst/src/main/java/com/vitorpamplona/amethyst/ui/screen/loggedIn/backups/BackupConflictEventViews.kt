@@ -158,8 +158,8 @@ private fun LazyListScope.followListItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val saved = (conflict.saved as? ContactListEvent)?.followCount() ?: 0
-    val new = (conflict.incoming as? ContactListEvent)?.followCount() ?: 0
+    val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
+    val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
     val dropped = diff.follows.removed.size
     val gained = diff.follows.added.size
     val edited = diff.follows.changed.size

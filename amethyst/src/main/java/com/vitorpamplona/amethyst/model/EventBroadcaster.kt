@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -376,7 +377,8 @@ class EventBroadcaster(
      * Publishes a re-signed backup that replaces a lossy version from another app. It goes
      * where a normal save of that event goes; lists of the user's own relays (NIP-65, DM,
      * key package) and the wallet go everywhere, and also to every relay the restored list
-     * names, since the lossy version may have removed them from the outbox set.
+     * names, since the lossy version may have removed them from the outbox set. Profiles and
+     * nutzap info go everywhere too, like their normal saves.
      */
     fun sendRestoredVersion(event: Event) {
         when (event) {
@@ -384,6 +386,10 @@ class EventBroadcaster(
             is ChatMessageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
             is KeyPackageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
             is CashuWalletEvent -> sendLiterallyEverywhere(event)
+            // Profiles and nutzap info are normally saved everywhere so others can find them;
+            // the restore must reach the same relays or they keep serving the lossy version.
+            is MetadataEvent -> sendLiterallyEverywhere(event)
+            is NutzapInfoEvent -> sendEverywhereAnd(event, event.relays().toSet())
             else -> sendMyPublicAndPrivateOutbox(event)
         }
     }

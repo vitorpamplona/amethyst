@@ -171,6 +171,15 @@ class EventDiffTest {
     }
 
     @Test
+    fun droppingTheDefaultBotFlagIsNotALoss() {
+        val older = sign<MetadataEvent>(MetadataEvent.KIND, 100, arrayOf(), """{"name":"vitor","bot":false}""")
+        val newer = sign<MetadataEvent>(MetadataEvent.KIND, 200, arrayOf(), """{"name":"vitor"}""")
+        val diff = assertNotNull(newer.diffFrom(older))
+        assertNull(diff.bot)
+        assertFalse(diff.removesData())
+    }
+
+    @Test
     fun groupsDiffGroupTagsIncludingRenames() {
         val older = sign<SimpleGroupListEvent>(SimpleGroupListEvent.KIND, 100, arrayOf(arrayOf("group", "abc", "wss://g.com", "Friends"), arrayOf("group", "xyz", "wss://g.com")))
         val newer = sign<SimpleGroupListEvent>(SimpleGroupListEvent.KIND, 200, arrayOf(arrayOf("group", "abc", "wss://g.com", "Family")))
