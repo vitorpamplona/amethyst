@@ -81,6 +81,7 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoDiff
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataDiff
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 
@@ -171,6 +172,7 @@ private fun headlineOf(
             is Bolt12OfferListDiff -> plural(R.plurals.backup_card_offers_removed, diff.offers.removed.size)
             is CashuWalletDiff -> encryptedHeadline(R.string.backup_card_wallet_emptied, R.string.backup_card_wallet_rewritten, diff.wallet)
             is ConcordCommunityListDiff -> encryptedHeadline(R.string.backup_card_concord_emptied, R.string.backup_card_concord_rewritten, diff.communities)
+            is AppSpecificDataDiff -> stringRes(R.string.backup_card_app_settings)
             else -> null
         }
     // A headline counting removed items reads wrong when only encrypted items were lost.
@@ -232,7 +234,7 @@ private fun LeadConflictCard(
                     Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.removed)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(headlineOf(conflict, counts), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(headlineOf(conflict, counts), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Text(
                         stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt, LocalContext.current)),
                         style = MaterialTheme.typography.labelMedium,
@@ -297,7 +299,7 @@ private fun ConflictPill(
             Box(Modifier.size(32.dp).clip(CircleShape).background(tones.changedContainer()), contentAlignment = Alignment.Center) {
                 Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
             }
-            Text(headlineOf(conflict, counts), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(headlineOf(conflict, counts), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (counts.removed > 0) StatusTag("−" + counts.removed, tones.removed)
         }
     }

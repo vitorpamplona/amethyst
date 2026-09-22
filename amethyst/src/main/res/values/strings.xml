@@ -3037,6 +3037,7 @@
         <item quantity="one">%1$d BOLT12 offer removed</item>
         <item quantity="other">%1$d BOLT12 offers removed</item>
     </plurals>
+    <string name="backup_card_app_settings">Your Amethyst synced app settings changed in another app that is not Amethyst. This can create problems.</string>
     <string name="backup_card_nutzap_key_replaced">Your nutzap key was replaced</string>
     <string name="backup_card_nutzap_key_removed">Your nutzap key was removed</string>
     <string name="backup_card_wallet_emptied">Your Cashu wallet was emptied</string>
