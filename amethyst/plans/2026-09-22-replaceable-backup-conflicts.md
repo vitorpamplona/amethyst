@@ -67,7 +67,15 @@ only surviving copy of the user's data is gone.
    cards, then inline field diffs with images as thumbnails; NIP-65 reach numbers ("people
    find your posts on 2 of 3 relays") over outbox and inbox lanes; nutzap info a key swap
    drawn as color fingerprints with a warning, then mints; groups a tile per group, faded
-   when you'd leave it. Other events use the generic removed / added / changed sections.
+   when you'd leave it. The other lists (`BackupConflictListViews.kt`) get their own too:
+   each relay list framed by what it is for (DM, key-package, search, indexer, relay-feed,
+   private-outbox and trusted relays as "N of M" reach over per-relay rows; blocked relays
+   as an "N unblocked" warning with allowed / newly blocked / still blocked), public
+   chats, communities, favorite feeds and ephemeral rooms as tiles loaded from relays and
+   faded when you'd leave them, hashtags and places as a pill cloud, trust providers as a
+   per-service before/after table, payment targets and BOLT12 offers as cards, and the
+   encrypted-only Cashu wallet and Concord list as one explained panel. Only NIP-78 app
+   settings still uses the generic removed / added / changed sections.
    Buttons are worded per event ("Keep 120" / "Restore 523", "Re-mute 37", "Rejoin 3").
    The screen offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags

@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -78,14 +79,22 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
 
 /** A row of the review list, flattened so hundreds of entries scroll lazily. */
 @Immutable
@@ -333,9 +342,32 @@ private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, Stri
                 if (removed > 0) stringRes(R.string.backup_action_rejoin, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
         }
         is MetadataDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_profile)
-        is AdvertisedRelayListDiff, is RelayListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
+        is RelayListDiff ->
+            if (conflict.eventType == BackupEventType.BLOCKED_RELAYS && diff.relays.removed.isNotEmpty()) {
+                stringRes(R.string.backup_conflict_keep_new) to
+                    stringRes(
+                        R.string.backup_action_block_again,
+                        diff.relays.removed.size
+                            .toString(),
+                    )
+            } else {
+                stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
+            }
+        is AdvertisedRelayListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
+        is ChannelListDiff -> rejoinLabels(diff.channels.removed.size)
+        is CommunityListDiff -> rejoinLabels(diff.communities.removed.size)
+        is EphemeralChatListDiff -> rejoinLabels(diff.rooms.removed.size)
+        is FavoriteAlgoFeedsListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_feeds)
+        is HashtagListDiff, is GeohashListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_topics)
+        is TrustProviderListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_providers)
+        is CashuWalletDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_wallet)
         else -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_conflict_restore_mine)
     }
+
+@Composable
+private fun rejoinLabels(removed: Int): Pair<String, String> =
+    stringRes(R.string.backup_conflict_keep_new) to
+        if (removed > 0) stringRes(R.string.backup_action_rejoin, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
 
 /** When the other app changed it, and what the event is for. */
 @Composable

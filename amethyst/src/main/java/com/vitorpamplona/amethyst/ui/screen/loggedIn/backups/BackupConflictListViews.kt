@@ -1,0 +1,919 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.channels
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+
+/**
+ * Per-event layouts for the account's other lists: each relay list framed by what it is
+ * for (who can reach you, what gets unblocked…), joined spaces as tiles, followed topics
+ * as a pill cloud, trust providers as a per-service table, payment targets and offers as
+ * cards, and the encrypted-only events as a single explained panel. Returns false when
+ * [conflict] has no layout here, so the caller falls back to the generic one.
+ */
+internal fun LazyListScope.listDiffItems(
+    conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+): Boolean {
+    when (val diff = conflict.diff) {
+        is RelayListDiff -> relayListItems(diff, conflict, nav)
+        is ChannelListDiff -> publicChatItems(diff, conflict, accountViewModel, nav)
+        is CommunityListDiff -> communityItems(diff, conflict, accountViewModel, nav)
+        is EphemeralChatListDiff -> ephemeralRoomItems(diff, conflict, nav)
+        is FavoriteAlgoFeedsListDiff -> favoriteFeedItems(diff, conflict, accountViewModel, nav)
+        is HashtagListDiff -> topicItems(diff.hashtags, (conflict.saved as? HashtagListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false)
+        is GeohashListDiff -> topicItems(diff.geohashes, (conflict.saved as? GeohashListEvent)?.publicGeohashes().orEmpty(), diff.privateItems, isPlace = true)
+        is TrustProviderListDiff -> trustProviderItems(diff, conflict, accountViewModel, nav)
+        is PaymentTargetsDiff -> paymentTargetItems(diff, conflict)
+        is Bolt12OfferListDiff -> offerItems(diff, conflict)
+        is CashuWalletDiff -> encryptedOnlyItems(MaterialSymbols.AccountBalanceWallet, diff.wallet, R.string.backup_review_wallet_body)
+        is ConcordCommunityListDiff -> encryptedOnlyItems(MaterialSymbols.Groups, diff.communities, R.string.backup_review_concord_body)
+        else -> return false
+    }
+    return true
+}
+
+private val Pad = Modifier.padding(horizontal = 16.dp)
+
+/** Fate of an item between the saved version and the new one. */
+internal enum class ItemFate { KEPT, DROPPED, ADDED, CHANGED }
+
+/**
+ * The saved items in their order, each marked kept or dropped (or changed), then the new
+ * ones: the full picture of a list, not just its differences.
+ */
+private fun <T, K> fates(
+    saved: List<T>,
+    diff: ListDiff<T>,
+    key: (T) -> K,
+): List<Pair<T, ItemFate>> {
+    val removed = diff.removed.mapTo(HashSet(), key)
+    val changed = diff.changed.associateBy { key(it.after) }
+    val seen = HashSet<K>()
+    val result = mutableListOf<Pair<T, ItemFate>>()
+    saved.forEach { item ->
+        val k = key(item)
+        if (!seen.add(k)) return@forEach
+        when (k) {
+            in removed -> result.add(item to ItemFate.DROPPED)
+            in changed -> result.add(changed.getValue(k).after to ItemFate.CHANGED)
+            else -> result.add(item to ItemFate.KEPT)
+        }
+    }
+    diff.added.forEach { result.add(it to ItemFate.ADDED) }
+    return result
+}
+
+@Composable
+private fun fateColor(fate: ItemFate): Color {
+    val tones = conflictTones()
+    return when (fate) {
+        ItemFate.KEPT -> MaterialTheme.colorScheme.onSurface
+        ItemFate.DROPPED -> tones.removed
+        ItemFate.ADDED -> tones.added
+        ItemFate.CHANGED -> tones.changed
+    }
+}
+
+private fun <T> LazyListScope.countTiles(
+    items: List<Pair<T, ItemFate>>,
+    removedCaption: Int,
+    addedCaption: Int,
+) {
+    item(key = "count-tiles", contentType = "tiles") {
+        val tones = conflictTones()
+        Row(Pad.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile(items.count { it.second == ItemFate.DROPPED }.toString(), stringRes(removedCaption), tones.removed, Modifier.weight(1f))
+            StatTile(items.count { it.second == ItemFate.ADDED }.toString(), stringRes(addedCaption), tones.added, Modifier.weight(1f))
+            StatTile(items.count { it.second == ItemFate.KEPT || it.second == ItemFate.CHANGED }.toString(), stringRes(R.string.backup_review_kept), tones.kept, Modifier.weight(1f))
+        }
+    }
+}
+
+private fun LazyListScope.privateItemsCard(change: ContentChange) {
+    if (change == ContentChange.NONE) return
+    item(key = "private-items", contentType = "private") { PrivateItemsCard(change, Pad.padding(top = 18.dp)) }
+}
+
+// ---------------------------------------------------------------------------------------
+// Relay lists, framed by what each one is for.
+// ---------------------------------------------------------------------------------------
+
+/** How a relay list is presented: the reach it gives, or the protection it takes away. */
+private class RelayFraming(
+    val icon: MaterialSymbol,
+    val headline: Int,
+    val explainer: Int,
+    val keptTag: Int,
+    val droppedTag: Int = R.string.backup_review_dropped_tag,
+    val lossIsWarning: Boolean = false,
+)
+
+private fun framingOf(type: BackupEventType): RelayFraming =
+    when (type) {
+        BackupEventType.DM_RELAYS -> RelayFraming(MaterialSymbols.Mail, R.string.backup_review_reach_dms, R.string.backup_review_reach_dms_explainer, R.string.backup_review_receiving_tag)
+        BackupEventType.KEY_PACKAGE_RELAYS -> RelayFraming(MaterialSymbols.Key, R.string.backup_review_reach_key_packages, R.string.backup_review_reach_key_packages_explainer, R.string.backup_review_listed_tag)
+        BackupEventType.SEARCH_RELAYS -> RelayFraming(MaterialSymbols.Search, R.string.backup_review_reach_search, R.string.backup_review_reach_search_explainer, R.string.backup_review_searching_tag)
+        BackupEventType.INDEXER_RELAYS -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_reach_indexers, R.string.backup_review_reach_indexers_explainer, R.string.backup_review_listed_tag)
+        BackupEventType.RELAY_FEEDS -> RelayFraming(MaterialSymbols.CellTower, R.string.backup_review_reach_relay_feeds, R.string.backup_review_reach_relay_feeds_explainer, R.string.backup_review_listed_tag)
+        BackupEventType.PRIVATE_OUTBOX_RELAYS -> RelayFraming(MaterialSymbols.Lock, R.string.backup_review_reach_private_outbox, R.string.backup_review_reach_private_outbox_explainer, R.string.backup_review_storing_tag)
+        BackupEventType.TRUSTED_RELAYS -> RelayFraming(MaterialSymbols.Shield, R.string.backup_review_reach_trusted, R.string.backup_review_reach_trusted_explainer, R.string.backup_review_trusted_tag, R.string.backup_review_untrusted_tag, lossIsWarning = true)
+        else -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_reach_generic, R.string.backup_review_reach_generic_explainer, R.string.backup_review_listed_tag)
+    }
+
+private fun savedRelaysOf(event: Event): List<NormalizedRelayUrl> =
+    when (event) {
+        is ChatMessageRelayListEvent -> event.relays()
+        is KeyPackageRelayListEvent -> event.relays()
+        is SearchRelayListEvent -> event.publicRelays()
+        is IndexerRelayListEvent -> event.publicRelays()
+        is RelayFeedsListEvent -> event.publicRelays()
+        is BlockedRelayListEvent -> event.publicRelays()
+        is TrustedRelayListEvent -> event.publicRelays()
+        is PrivateOutboxRelayListEvent -> event.publicRelays()
+        else -> emptyList()
+    }
+
+private fun LazyListScope.relayListItems(
+    diff: RelayListDiff,
+    conflict: ReplaceableBackupConflict,
+    nav: INav,
+) {
+    val rows = fates(savedRelaysOf(conflict.saved), diff.relays) { it }
+    if (conflict.eventType == BackupEventType.BLOCKED_RELAYS) {
+        blockedRelayItems(rows, nav)
+    } else {
+        val framing = framingOf(conflict.eventType)
+        val had = rows.count { it.second != ItemFate.ADDED }
+        val kept = rows.count { it.second == ItemFate.KEPT }
+        item(key = "relay-hero", contentType = "hero") {
+            val tones = conflictTones()
+            val color = if (framing.lossIsWarning) tones.changed else tones.removed
+            TintedPanel(color.copy(alpha = 0.12f), Pad.padding(top = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(color.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                        Icon(symbol = framing.icon, contentDescription = null, tint = color)
+                    }
+                    Column {
+                        Text(stringRes(framing.headline), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.placeholderText)
+                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(kept.toString(), fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = if (kept < had) color else tones.added)
+                            Text(stringRes(R.string.backup_review_of_relays, had.toString()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.padding(bottom = 6.dp))
+                        }
+                        Text(stringRes(framing.explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                    }
+                }
+            }
+        }
+        items(rows, key = { "relay-" + it.first.url }, contentType = { "relay-row" }) { (url, fate) ->
+            RelayFateRow(url, fate, framing, nav)
+        }
+    }
+    privateItemsCard(diff.privateRelays)
+}
+
+@Composable
+private fun RelayFateRow(
+    url: NormalizedRelayUrl,
+    fate: ItemFate,
+    framing: RelayFraming,
+    nav: INav,
+) {
+    val color = fateColor(fate)
+    val tag =
+        when (fate) {
+            ItemFate.KEPT -> framing.keptTag
+            ItemFate.DROPPED -> framing.droppedTag
+            ItemFate.ADDED -> R.string.backup_review_new_tag
+            ItemFate.CHANGED -> R.string.backup_review_demoted_tag
+        }
+    Row(
+        Pad
+            .padding(top = 6.dp)
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable { nav.nav(Route.RelayInfo(url.url)) }
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(symbol = framing.icon, contentDescription = null, tint = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.size(20.dp))
+        Text(
+            url.url.removePrefix("wss://").removeSuffix("/"),
+            modifier = Modifier.weight(1f),
+            color = color,
+            textDecoration = if (fate == ItemFate.DROPPED) TextDecoration.LineThrough else null,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        StatusTag(stringRes(tag), if (fate == ItemFate.KEPT) MaterialTheme.colorScheme.placeholderText else color)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+private fun LazyListScope.blockedRelayItems(
+    rows: List<Pair<NormalizedRelayUrl, ItemFate>>,
+    nav: INav,
+) {
+    val unblocked = rows.filter { it.second == ItemFate.DROPPED }.map { it.first }
+    val stillBlocked = rows.filter { it.second == ItemFate.KEPT || it.second == ItemFate.CHANGED }.map { it.first }
+    val newlyBlocked = rows.filter { it.second == ItemFate.ADDED }.map { it.first }
+
+    item(key = "blocked-hero", contentType = "hero") {
+        val tones = conflictTones()
+        TintedPanel(tones.changedContainer(), Pad.padding(top = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(symbol = MaterialSymbols.LockOpen, contentDescription = null, tint = tones.changed, modifier = Modifier.size(44.dp))
+                Column {
+                    Text(stringRes(R.string.backup_review_unblocked, unblocked.size.toString()), fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = tones.changed)
+                    Text(stringRes(R.string.backup_review_unblocked_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                }
+            }
+        }
+    }
+    if (unblocked.isNotEmpty()) {
+        item(key = "unblocked-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_review_no_longer_blocked), Pad.padding(top = 18.dp)) }
+        items(unblocked, key = { "unblocked-" + it.url }, contentType = { "relay-row" }) { url ->
+            val tones = conflictTones()
+            Row(
+                Pad
+                    .padding(top = 6.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, tones.changed.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable { nav.nav(Route.RelayInfo(url.url)) }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(Modifier.size(36.dp).clip(CircleShape).border(2.dp, tones.changed, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(symbol = MaterialSymbols.LockOpen, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
+                }
+                Text(url.url.removePrefix("wss://").removeSuffix("/"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                StatusTag(stringRes(R.string.backup_review_allowed_tag), tones.changed)
+            }
+        }
+    }
+    if (newlyBlocked.isNotEmpty()) {
+        item(key = "newly-blocked-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_review_newly_blocked), Pad.padding(top = 18.dp)) }
+        items(newlyBlocked, key = { "newly-blocked-" + it.url }, contentType = { "relay-row" }) { url ->
+            RelayFateRow(url, ItemFate.ADDED, framingOf(BackupEventType.BLOCKED_RELAYS), nav)
+        }
+    }
+    if (stillBlocked.isNotEmpty()) {
+        item(key = "still-blocked", contentType = "chips") {
+            Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionCaption(stringRes(R.string.backup_review_still_blocked))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    stillBlocked.forEach { url ->
+                        Row(
+                            Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
+                                .clickable { nav.nav(Route.RelayInfo(url.url)) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Icon(symbol = MaterialSymbols.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.size(16.dp))
+                            Text(url.url.removePrefix("wss://").removeSuffix("/"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Joined spaces: public chats, communities, ephemeral rooms and favorite feeds as tiles.
+// ---------------------------------------------------------------------------------------
+
+/** One space tile: its picture, name and subtitle are loaded by [content]. */
+private fun <T> LazyListScope.spaceGrid(
+    keyPrefix: String,
+    items: List<Pair<T, ItemFate>>,
+    key: (T) -> String,
+    content: @Composable (T, ItemFate, Modifier) -> Unit,
+) {
+    countTiles(items, R.string.backup_review_would_leave, R.string.backup_review_joined)
+    items(items.chunked(2), key = { keyPrefix + key(it.first().first) }, contentType = { "space-row" }) { row ->
+        Row(Pad.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            row.forEach { (item, fate) -> content(item, fate, Modifier.weight(1f)) }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun SpaceTile(
+    name: String,
+    subtitle: String,
+    robot: String,
+    picture: String?,
+    fate: ItemFate,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier,
+    onClick: (() -> Unit)?,
+) {
+    val tones = conflictTones()
+    Box(
+        modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(14.dp),
+    ) {
+        Column(Modifier.alpha(if (fate == ItemFate.DROPPED) 0.45f else 1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            RobohashFallbackAsyncImage(
+                robot = robot,
+                model = picture,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp).clip(CircleShape),
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            )
+            Column {
+                Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.placeholderText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        val tag =
+            when (fate) {
+                ItemFate.DROPPED -> R.string.backup_review_left_tag to tones.removed
+                ItemFate.ADDED -> R.string.backup_review_new_tag to tones.added
+                ItemFate.CHANGED -> R.string.backup_review_moved_tag to tones.changed
+                ItemFate.KEPT -> null
+            }
+        tag?.let { (res, color) -> StatusTag(stringRes(res), color, Modifier.align(Alignment.TopEnd)) }
+    }
+}
+
+private fun LazyListScope.publicChatItems(
+    diff: ChannelListDiff,
+    conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val saved = (conflict.saved as? ChannelListEvent)?.tags?.channels().orEmpty()
+    spaceGrid("chat-", fates(saved, diff.channels) { it.eventId }, { it.eventId }) { tag, fate, modifier ->
+        LoadPublicChatChannel(tag.eventId, accountViewModel) { channel ->
+            // Subscribes to the channel's metadata on relays and recomposes when it arrives.
+            val state by observeChannel(channel, accountViewModel)
+            val current = state?.channel ?: channel
+            SpaceTile(
+                name = current.toBestDisplayName(),
+                subtitle = stringRes(R.string.backup_type_public_chats),
+                robot = tag.eventId,
+                picture = channel.profilePicture(),
+                fate = fate,
+                accountViewModel = accountViewModel,
+                modifier = modifier,
+                onClick = { nav.nav(routeFor(channel)) },
+            )
+        }
+    }
+    privateItemsCard(diff.privateItems)
+}
+
+private fun LazyListScope.communityItems(
+    diff: CommunityListDiff,
+    conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val saved = (conflict.saved as? CommunityListEvent)?.publicCommunities().orEmpty()
+    spaceGrid("community-", fates(saved, diff.communities) { it.address }, { it.address.toValue() }) { tag, fate, modifier ->
+        AddressableSpaceTile(tag.address, fate, accountViewModel, modifier) { nav.nav(Route.Community(tag.address)) }
+    }
+    privateItemsCard(diff.privateItems)
+}
+
+private fun LazyListScope.favoriteFeedItems(
+    diff: FavoriteAlgoFeedsListDiff,
+    conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val saved = (conflict.saved as? FavoriteAlgoFeedsListEvent)?.publicFavoriteAlgoFeeds().orEmpty()
+    spaceGrid("feed-", fates(saved, diff.feeds) { it.address }, { it.address.toValue() }) { bookmark, fate, modifier ->
+        AddressableSpaceTile(bookmark.address, fate, accountViewModel, modifier) {
+            nav.nav { accountViewModel.getAddressableNoteIfExists(bookmark.address)?.let { routeFor(it, accountViewModel.account) } }
+        }
+    }
+    privateItemsCard(diff.privateItems)
+}
+
+/** A community or feed tile: loads the definition event from relays for its name and picture. */
+@Composable
+private fun AddressableSpaceTile(
+    address: Address,
+    fate: ItemFate,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    LoadAddressableNote(address, accountViewModel) { note ->
+        val event =
+            if (note != null) {
+                val state by observeNote(note, accountViewModel)
+                state.note.event
+            } else {
+                null
+            }
+        val (name, picture) =
+            when (event) {
+                is CommunityDefinitionEvent -> event.name() to event.image()?.imageUrl
+                is AppDefinitionEvent -> event.appMetaData().let { (it?.name ?: it?.displayName) to (it?.picture ?: it?.image) }
+                else -> null to null
+            }
+        SpaceTile(
+            name = name ?: address.dTag.ifBlank { address.toValue().toShortDisplay() },
+            subtitle = stringRes(if (address.kind == AppDefinitionEvent.KIND) R.string.backup_review_feed else R.string.backup_type_communities),
+            robot = address.toValue(),
+            picture = picture,
+            fate = fate,
+            accountViewModel = accountViewModel,
+            modifier = modifier,
+            onClick = onClick,
+        )
+    }
+}
+
+private fun LazyListScope.ephemeralRoomItems(
+    diff: EphemeralChatListDiff,
+    conflict: ReplaceableBackupConflict,
+    nav: INav,
+) {
+    val saved = (conflict.saved as? EphemeralChatListEvent)?.publicRooms().orEmpty()
+    val rooms = fates(saved, diff.rooms) { it }
+    countTiles(rooms, R.string.backup_review_would_leave, R.string.backup_review_joined)
+    items(rooms, key = { "room-" + it.first.toKey() }, contentType = { "room-row" }) { (room, fate) -> RoomRow(room, fate, nav) }
+    privateItemsCard(diff.privateItems)
+}
+
+@Composable
+private fun RoomRow(
+    room: RoomId,
+    fate: ItemFate,
+    nav: INav,
+) {
+    val color = fateColor(fate)
+    Row(
+        Pad
+            .padding(top = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable { nav.nav(routeFor(room)) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Text("#", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = color)
+        }
+        Column(Modifier.weight(1f).alpha(if (fate == ItemFate.DROPPED) 0.55f else 1f)) {
+            Text(room.id, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                room.relayUrl.url
+                    .removePrefix("wss://")
+                    .removeSuffix("/"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        when (fate) {
+            ItemFate.DROPPED -> StatusTag(stringRes(R.string.backup_review_left_tag), color)
+            ItemFate.ADDED -> StatusTag(stringRes(R.string.backup_review_new_tag), color)
+            else -> {}
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Followed hashtags and places: a pill cloud of what stays, goes and arrives.
+// ---------------------------------------------------------------------------------------
+
+@OptIn(ExperimentalLayoutApi::class)
+private fun LazyListScope.topicItems(
+    diff: ListDiff<String>,
+    saved: List<String>,
+    privateItems: ContentChange,
+    isPlace: Boolean,
+) {
+    val topics = fates(saved, diff) { it.lowercase() }
+    countTiles(topics, if (isPlace) R.string.backup_review_places_gone else R.string.backup_review_topics_gone, R.string.backup_review_new_count_caption)
+    item(key = "topic-cloud", contentType = "cloud") {
+        val tones = conflictTones()
+        Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SectionCaption(stringRes(if (isPlace) R.string.backup_review_places_you_follow else R.string.backup_review_hashtags_you_follow))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                topics.forEach { (topic, fate) ->
+                    val color = fateColor(fate)
+                    val shape = RoundedCornerShape(16.dp)
+                    Row(
+                        Modifier
+                            .clip(shape)
+                            .background(
+                                when (fate) {
+                                    ItemFate.KEPT -> MaterialTheme.colorScheme.surfaceContainer
+                                    else -> color.copy(alpha = 0.12f)
+                                },
+                            ).then(if (fate == ItemFate.DROPPED) Modifier.border(1.dp, tones.removed.copy(alpha = 0.5f), shape) else Modifier)
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (isPlace) Icon(symbol = MaterialSymbols.LocationOn, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                        Text(
+                            if (isPlace) topic else "#$topic",
+                            color = color,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            textDecoration = if (fate == ItemFate.DROPPED) TextDecoration.LineThrough else null,
+                        )
+                    }
+                }
+            }
+        }
+    }
+    privateItemsCard(privateItems)
+}
+
+// ---------------------------------------------------------------------------------------
+// Trust providers: one row per service, who provided it before and who does now.
+// ---------------------------------------------------------------------------------------
+
+private class ServiceRow(
+    val service: String,
+    val before: HexKey?,
+    val after: HexKey?,
+)
+
+private fun LazyListScope.trustProviderItems(
+    diff: TrustProviderListDiff,
+    conflict: ReplaceableBackupConflict,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val before = (conflict.saved as? TrustProviderListEvent)?.serviceProviders().orEmpty().associate { it.service.type to it.pubkey }
+    val after = (conflict.incoming as? TrustProviderListEvent)?.serviceProviders().orEmpty().associate { it.service.type to it.pubkey }
+    val rows = (before.keys + after.keys).distinct().map { ServiceRow(it, before[it], after[it]) }
+    val affected = rows.count { it.before != it.after }
+
+    item(key = "trust-hero", contentType = "hero") {
+        val tones = conflictTones()
+        TintedPanel(MaterialTheme.colorScheme.surfaceContainer, Pad.padding(top = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tones.changedContainer()), contentAlignment = Alignment.Center) {
+                    Icon(symbol = MaterialSymbols.Group, contentDescription = null, tint = tones.changed)
+                }
+                Column {
+                    Text(stringRes(R.string.backup_review_services_changed, affected.toString(), rows.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(stringRes(R.string.backup_review_services_changed_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                }
+            }
+        }
+    }
+    item(key = "trust-header", contentType = "table-header") {
+        Row(Pad.padding(top = 16.dp, bottom = 4.dp).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(R.string.backup_review_service, R.string.backup_review_saved, R.string.backup_review_new).forEachIndexed { index, res ->
+                Text(stringRes(res).uppercase(), Modifier.weight(if (index == 0) 1.1f else 1f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.placeholderText)
+            }
+        }
+    }
+    items(rows, key = { "service-" + it.service }, contentType = { "service-row" }) { row -> ServiceTableRow(row, accountViewModel, nav) }
+    item(key = "trust-note", contentType = "note") {
+        val tones = conflictTones()
+        Row(
+            Pad
+                .padding(top = 14.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(tones.changedContainer())
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(symbol = MaterialSymbols.Warning, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
+            Text(stringRes(R.string.backup_review_trust_warning), style = MaterialTheme.typography.bodySmall, color = tones.changed)
+        }
+    }
+    privateItemsCard(diff.privateItems)
+}
+
+@Composable
+private fun ServiceTableRow(
+    row: ServiceRow,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val tones = conflictTones()
+    val tint =
+        when {
+            row.before == row.after -> MaterialTheme.colorScheme.surfaceContainer
+            row.after == null -> tones.removedContainer()
+            row.before == null -> tones.addedContainer()
+            else -> tones.changedContainer()
+        }
+    Row(
+        Pad
+            .padding(top = 6.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(tint)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(serviceLabel(row.service), Modifier.weight(1.1f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 2)
+        ProviderCell(row.before, struck = row.before != row.after, color = tones.removed, accountViewModel = accountViewModel, nav = nav, modifier = Modifier.weight(1f))
+        ProviderCell(row.after, struck = false, color = if (row.before == row.after) MaterialTheme.colorScheme.onSurface else tones.added, accountViewModel = accountViewModel, nav = nav, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun serviceLabel(type: String): String =
+    when (type) {
+        "rank" -> stringRes(R.string.backup_review_service_rank)
+        "followers" -> stringRes(R.string.backup_review_service_followers)
+        "t" -> stringRes(R.string.backup_review_service_topics)
+        else -> type.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
+
+@Composable
+private fun ProviderCell(
+    pubKey: HexKey?,
+    struck: Boolean,
+    color: Color,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier,
+) {
+    if (pubKey == null) {
+        Text("—", modifier, color = MaterialTheme.colorScheme.placeholderText)
+        return
+    }
+    LoadUser(pubKey, accountViewModel) { user ->
+        Row(
+            modifier.clip(RoundedCornerShape(8.dp)).clickable { nav.nav(Route.Profile(pubKey)) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            RobohashFallbackAsyncImage(
+                robot = pubKey,
+                model = user?.profilePicture(),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp).clip(CircleShape),
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            )
+            ProvideTextStyle(MaterialTheme.typography.labelMedium.copy(color = if (struck) color else MaterialTheme.colorScheme.onSurface, textDecoration = if (struck) TextDecoration.LineThrough else null)) {
+                if (user != null) {
+                    UsernameDisplay(user, fontWeight = FontWeight.Medium, textColor = if (struck) color else Color.Unspecified, accountViewModel = accountViewModel)
+                } else {
+                    Text(pubKey.toShortDisplay(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Payment targets and BOLT12 offers: the ways people pay you, as cards.
+// ---------------------------------------------------------------------------------------
+
+private fun LazyListScope.paymentTargetItems(
+    diff: PaymentTargetsDiff,
+    conflict: ReplaceableBackupConflict,
+) {
+    val saved = (conflict.saved as? PaymentTargetsEvent)?.paymentTargets().orEmpty()
+    val targets = fates(saved, diff.targets) { it }
+    moneyHero(targets.count { it.second == ItemFate.DROPPED }, R.string.backup_review_payment_targets_gone)
+    items(targets, key = { "target-" + it.first.type + ":" + it.first.authority }, contentType = { "money-row" }) { (target, fate) -> PaymentTargetRow(target, fate) }
+}
+
+private fun LazyListScope.offerItems(
+    diff: Bolt12OfferListDiff,
+    conflict: ReplaceableBackupConflict,
+) {
+    val saved = (conflict.saved as? Bolt12OfferListEvent)?.offers().orEmpty()
+    val offers = fates(saved, diff.offers) { it }
+    moneyHero(offers.count { it.second == ItemFate.DROPPED }, R.string.backup_review_offers_gone)
+    items(offers, key = { "offer-" + it.first }, contentType = { "money-row" }) { (offer, fate) ->
+        MoneyRow(stringRes(R.string.backup_review_offer), offer.toShortDisplay(prefixSize = 4), fate)
+    }
+}
+
+private fun LazyListScope.moneyHero(
+    dropped: Int,
+    headline: Int,
+) {
+    item(key = "money-hero", contentType = "hero") {
+        val tones = conflictTones()
+        val color = if (dropped > 0) tones.removed else tones.added
+        TintedPanel(color.copy(alpha = 0.12f), Pad.padding(top = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(color.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                    Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, tint = color)
+                }
+                Column {
+                    Text(stringRes(headline, dropped.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = color)
+                    Text(stringRes(R.string.backup_review_payments_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentTargetRow(
+    target: PaymentTarget,
+    fate: ItemFate,
+) = MoneyRow(target.type.replaceFirstChar { it.uppercase() }, target.authority, fate)
+
+@Composable
+private fun MoneyRow(
+    kind: String,
+    value: String,
+    fate: ItemFate,
+) {
+    val color = fateColor(fate)
+    Row(
+        Pad
+            .padding(top = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest), contentAlignment = Alignment.Center) {
+            Text(kind.take(1), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.placeholderText)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(kind, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.placeholderText)
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color,
+                textDecoration = if (fate == ItemFate.DROPPED) TextDecoration.LineThrough else null,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        when (fate) {
+            ItemFate.DROPPED -> StatusTag(stringRes(R.string.backup_review_dropped_tag), color)
+            ItemFate.ADDED -> StatusTag(stringRes(R.string.backup_review_new_tag), color)
+            else -> {}
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Encrypted-only events (Cashu wallet, Concord list): one explained panel.
+// ---------------------------------------------------------------------------------------
+
+private fun LazyListScope.encryptedOnlyItems(
+    icon: MaterialSymbol,
+    change: ContentChange,
+    body: Int,
+) {
+    item(key = "encrypted-hero", contentType = "hero") {
+        val tones = conflictTones()
+        val (color, headline) =
+            when (change) {
+                ContentChange.CLEARED -> tones.removed to R.string.backup_review_encrypted_cleared
+                ContentChange.ADDED -> tones.added to R.string.backup_review_encrypted_added
+                else -> tones.changed to R.string.backup_review_encrypted_changed
+            }
+        Column(Pad.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            TintedPanel(color.copy(alpha = 0.12f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Icon(symbol = icon, contentDescription = null, tint = color, modifier = Modifier.size(44.dp))
+                    Text(stringRes(headline), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = color)
+                }
+            }
+            PrivateItemsCard(change)
+            Text(stringRes(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.placeholderText)
+        }
+    }
+}

@@ -132,7 +132,7 @@ internal fun LazyListScope.eventDiffItems(
         is AdvertisedRelayListDiff -> nip65Items(conflict, nav)
         is NutzapInfoDiff -> nutzapItems(diff, conflict, presentation, accountViewModel, nav)
         is SimpleGroupListDiff -> groupItems(diff, conflict)
-        else -> genericDiffItems(buildRows(presentation), accountViewModel, nav)
+        else -> if (!listDiffItems(conflict, accountViewModel, nav)) genericDiffItems(buildRows(presentation), accountViewModel, nav)
     }
 }
 
@@ -511,7 +511,7 @@ private fun StruckPill(
 }
 
 @Composable
-private fun PrivateItemsCard(
+internal fun PrivateItemsCard(
     change: ContentChange,
     modifier: Modifier = Modifier,
 ) {
