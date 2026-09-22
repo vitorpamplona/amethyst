@@ -26,7 +26,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Prereqs:
-#   - a docker daemon, and `docker pull ghcr.io/cordn-msg/cordn:latest`
+#   - a running docker daemon (start it if `docker info` fails), and
+#     `docker pull ghcr.io/cordn-msg/cordn:latest`
 #   - ./gradlew :cli:installDist :geode:installDist
 #
 # Usage:
@@ -73,6 +74,13 @@ trap cleanup EXIT
 for f in "$AMY" "$GEODE"; do
     [ -x "$f" ] || { echo "missing $f — run ./gradlew :cli:installDist :geode:installDist"; exit 2; }
 done
+# Two different problems that used to produce the same message. A dead daemon
+# and an unpulled image both fail `docker image inspect`, and telling someone
+# to pull an image they cannot pull sends them the wrong way.
+docker info >/dev/null 2>&1 || {
+    echo "the docker daemon is not reachable — start it (e.g. 'sudo dockerd &' or 'systemctl start docker') and retry"
+    exit 2
+}
 docker image inspect "$IMAGE" >/dev/null 2>&1 || {
     echo "missing $IMAGE — pull it by hand, and read the licence note at the top of this file first"
     exit 2
