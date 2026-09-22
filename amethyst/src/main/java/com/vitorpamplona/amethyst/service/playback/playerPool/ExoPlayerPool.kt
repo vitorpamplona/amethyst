@@ -166,7 +166,18 @@ class ExoPlayerPool(
      */
     private fun ensureDecoderHeadroom() {
         while (liveDecoders.get() >= poolSize) {
-            if (!evictOldestWarm() && !evictOldestWarmElsewhere()) return
+            if (!evictOldestWarm() && !evictOldestWarmElsewhere()) {
+                // Every visible post gets a player, so this is not a refusal — the acquire below
+                // proceeds and the count goes over budget. It can only happen when the warm cache
+                // is already empty because every pooled player is checked out, i.e. more videos are
+                // on screen at once than the device's decoder advertises instances for. The next
+                // MediaCodec.start() may then fail with NO_MEMORY and surface as "Can't play this
+                // video", so leave a line saying why rather than letting it look like a bad stream.
+                Log.w(PLAYBACK_DIAG_TAG) {
+                    "DECODERS over budget: ${liveDecoders.get()} live / $poolSize, nothing warm left to reclaim"
+                }
+                return
+            }
         }
     }
 
