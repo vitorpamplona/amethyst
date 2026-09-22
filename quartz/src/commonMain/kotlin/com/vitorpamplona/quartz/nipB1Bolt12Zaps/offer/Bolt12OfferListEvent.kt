@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -56,6 +57,8 @@ class Bolt12OfferListEvent(
 
     /** The first valid offer, or null when the list carries none. */
     fun firstOffer(): String? = tags.firstNotNullOfOrNull(OfferTag::parse)
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? = OfferTag.parse(tag)?.let { DiffEntry.Bolt12Offer(it) } ?: super.diffEntry(tag)
 
     companion object {
         const val KIND = 10058

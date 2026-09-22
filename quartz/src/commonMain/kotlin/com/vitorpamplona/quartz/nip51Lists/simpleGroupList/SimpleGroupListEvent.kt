@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -41,6 +42,8 @@ class SimpleGroupListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun publicGroups() = tags.mapNotNull(GroupTag::parse)
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? = GroupTag.parse(tag)?.let { DiffEntry.RelayGroup(it.groupId, it.relayUrl, it.name) } ?: super.diffEntry(tag)
 
     suspend fun privateGroups(signer: NostrSigner) = privateTags(signer)?.mapNotNull(GroupTag::parse)
 

@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntries
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
+import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.EventKSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -63,6 +67,37 @@ open class Event(
      * addition to lowercase `p` for the direct-reply author.
      */
     open fun notifies(userHex: HexKey): Boolean = PTag.isNotifying(tags, userHex)
+
+    /**
+     * Turns one of this event's tags into a [DiffEntry] for [diffFrom], or null to leave the
+     * tag out of diffs. Subclasses override it for tags whose meaning is specific to their
+     * kind and fall back to `super` for the common ones.
+     */
+    open fun diffEntry(tag: Array<String>): DiffEntry? = DiffEntries.fromTag(tag)
+
+    /**
+     * Everything this event holds, as [DiffEntry]s. Defaults to its tags; subclasses whose
+     * content is structured (kind:0 profiles) add the content's fields here too.
+     */
+    open fun diffEntries(): List<DiffEntry> = tags.mapNotNull { diffEntry(it) }
+
+    /**
+     * How the content changed since [older], beyond what [diffEntries] already covers.
+     * Subclasses whose content is already expressed as entries, or is meaningless, return
+     * [ContentChange.NONE].
+     */
+    open fun diffContent(older: Event): ContentChange = ContentChange.between(older.content, content)
+
+    /**
+     * Compares this event with an [older] version of itself (same kind and author) and
+     * reports what was removed, added and changed, in the typed [DiffEntry] vocabulary so
+     * it can be shown to the user. Null when [older] isn't a version of the same event kind
+     * and author. Callers comparing addressables must pass versions of the same address.
+     */
+    fun diffFrom(older: Event): EventDiff? {
+        if (older.kind != kind || older.pubKey != pubKey) return null
+        return EventDiff.compute(kind, older.diffEntries(), diffEntries(), diffContent(older), isContentEncoded())
+    }
 
     fun toJson(): String = OptimizedJsonMapper.toJson(this)
 

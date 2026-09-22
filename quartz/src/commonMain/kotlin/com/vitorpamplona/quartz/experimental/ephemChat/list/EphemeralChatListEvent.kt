@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -47,6 +48,8 @@ class EphemeralChatListEvent(
     fun publicRooms() = tags.rooms()
 
     fun publicRoomSet() = tags.roomSet()
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? = RoomIdTag.parse(tag)?.let { DiffEntry.ChatRoom(it.id, it.relayUrl.url) } ?: super.diffEntry(tag)
 
     companion object {
         const val KIND = 10023

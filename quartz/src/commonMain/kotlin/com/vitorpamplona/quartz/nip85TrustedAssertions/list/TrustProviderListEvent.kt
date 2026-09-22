@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -44,6 +45,10 @@ class TrustProviderListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun serviceProviders() = tags.serviceProviders()
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? =
+        ServiceProviderTag.parse(tag)?.let { DiffEntry.TrustProvider(it.service.toValue(), it.pubkey, it.relayUrl.url) }
+            ?: super.diffEntry(tag)
 
     companion object {
         const val KIND = 10040

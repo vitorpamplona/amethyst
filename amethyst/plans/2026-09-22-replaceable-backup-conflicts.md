@@ -16,27 +16,38 @@ only surviving copy of the user's data is gone.
    ids of replaceable/addressable events passing through `justConsumeMyOwnEvent`, the
    choke point for every local publish and for the backup restore at startup. It is a
    bounded LRU (500 ids): only the latest versions of each list matter.
-2. **Only question lossy external rewrites.** `AccountSettings.acceptIntoBackup` guards
-   every `update*` backup method. A newer version that was not signed here is diffed by
-   `ReplaceableBackupDiff.diff` against the backup into a `BackupDiff`: the
-   `BackupEventType` (profile, follow list, mute list, each relay list, wallet…) plus
-   removed / added / changed `BackupEntry`s, each typed (`BackupEntryType`: person, relay,
-   hashtag, word, thread, profile field, mint, trust provider…) so the UI can label them.
-   It only counts as a loss when something was removed:
-   - tags matched by name + value (a new relay hint or petname is an edit, not a loss;
-     `alt`/`client`/`d`/`expiration` are ignored);
-   - kind 0: any filled profile field that is now missing or blank;
-   - kind 3: content ignored (deprecated relay map);
-   - everything else: content that went from non-blank to blank (private items wiped).
+2. **Events diff themselves.** `Event.diffFrom(older)` (quartz, `nip01Core/diff/`)
+   compares two versions of the same event and returns an `EventDiff`: removed / added /
+   changed `DiffEntry`s plus a `ContentChange` for content not already expressed as
+   entries (the NIP-44 private items of lists). `DiffEntry` is a sealed vocabulary
+   (`Person`, `Relay` with read/write, `Hashtag`, `Word`, `Geohash`, `EventRef`,
+   `AddressRef`, `ProfileField`, `RelayGroup`, `ChatRoom`, `TrustProvider`, `Mint`,
+   `NutzapKey`, `PaymentTarget`, `Bolt12Offer`, `OtherTag`), each with a stable identity
+   `key`: same key in both versions but unequal entries is a change (new relay marker,
+   petname, edited bio), not a removal plus an addition.
+
+   Each event owns its mapping through two hooks: `diffEntry(tag)` (default handles
+   `p`/`t`/`word`/`g`/`r`/`relay`/`e`/`a`, skips `alt`/`client`/`d`/`expiration`) and
+   `diffContent(older)`. Overrides: `MetadataEvent` (JSON fields → `ProfileField`, no
+   content change), `ContactListEvent` (ignores the deprecated relay-map content),
+   `SimpleGroupListEvent`, `EphemeralChatListEvent`, `TrustProviderListEvent`,
+   `NutzapInfoEvent`, `PaymentTargetsEvent`, `Bolt12OfferListEvent`.
+3. **Only question lossy external rewrites.** `AccountSettings.acceptIntoBackup` guards
+   every `update*` backup method. A newer version that was not signed here goes through
+   `ReplaceableBackupDiff.detectLoss` (commons), which keeps the `EventDiff` only when
+   `removesData()`: an entry was removed or the private content was cleared.
 
    If nothing was dropped, the other app evidently built on the previous version, and the
    backup is updated silently as before.
-3. **Freeze and ask.** On a loss, the backup keeps the saved version and a
+4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
    `BackupConflictDialog` (shown from `LoggedInPage`) is specific to the event: it names it
    ("Your mute list changed in another app"), says what that event is for, and lists what
    was removed, added and changed, grouped by entry type (people by display name, relays
-   with their read/write marker, profile fields old → new…). It offers:
+   with their read/write marker, profile fields old → new…). Rendering is an exhaustive
+   `when` over `DiffEntry`, so a new entry type can't be forgotten by the UI; the group
+   label also depends on the event (an `e` tag is a muted thread in a mute list and a
+   joined chat in a public chat list). It offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)` and publishes it.

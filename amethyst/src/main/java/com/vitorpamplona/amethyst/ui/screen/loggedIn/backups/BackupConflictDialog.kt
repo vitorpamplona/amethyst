@@ -43,10 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.backups.BackupDiff
-import com.vitorpamplona.amethyst.commons.model.backups.BackupEntry
-import com.vitorpamplona.amethyst.commons.model.backups.BackupEntryChange
-import com.vitorpamplona.amethyst.commons.model.backups.BackupEntryType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -56,6 +52,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
+import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 
 private const val MAX_ITEMS_PER_GROUP = 6
 private const val MAX_VALUE_LENGTH = 80
@@ -99,21 +99,22 @@ private fun BackupConflictDialog(
 ) {
     val context = LocalContext.current
     val diff = conflict.diff
+    val eventType = conflict.eventType
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(diff.eventType)))) },
+        title = { Text(stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(eventType)))) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    text = stringRes(eventTypeExplainer(diff.eventType)),
+                    text = stringRes(eventTypeExplainer(eventType)),
                     style = MaterialTheme.typography.bodySmall,
                     fontStyle = FontStyle.Italic,
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(stringRes(R.string.backup_conflict_intro, timeAbsolute(conflict.incoming.createdAt, context)))
 
-                DiffDetails(diff)
+                DiffDetails(diff, eventType)
 
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -135,36 +136,47 @@ private fun BackupConflictDialog(
 }
 
 @Composable
-private fun DiffDetails(diff: BackupDiff) {
-    if (diff.removed.isNotEmpty() || diff.privateItemsCleared) {
+private fun DiffDetails(
+    diff: EventDiff,
+    eventType: BackupEventType,
+) {
+    if (diff.removed.isNotEmpty() || diff.content == ContentChange.CLEARED) {
         SectionHeader(
             stringRes(R.string.backup_conflict_removed, diff.removed.size.toString()),
             MaterialTheme.colorScheme.error,
         )
-        if (diff.privateItemsCleared) {
-            Text("• " + stringRes(R.string.backup_conflict_private_cleared))
+        if (diff.content == ContentChange.CLEARED) {
+            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_cleared else R.string.backup_conflict_content_cleared)
         }
-        EntryGroups(diff.removed)
+        EntryGroups(diff.removed, eventType)
     }
 
-    if (diff.added.isNotEmpty()) {
+    if (diff.added.isNotEmpty() || diff.content == ContentChange.ADDED) {
         SectionHeader(
             stringRes(R.string.backup_conflict_added, diff.added.size.toString()),
             MaterialTheme.colorScheme.primary,
         )
-        EntryGroups(diff.added)
+        if (diff.content == ContentChange.ADDED) {
+            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_added else R.string.backup_conflict_content_added)
+        }
+        EntryGroups(diff.added, eventType)
     }
 
-    if (diff.changed.isNotEmpty() || diff.privateItemsChanged) {
+    if (diff.changed.isNotEmpty() || diff.content == ContentChange.CHANGED) {
         SectionHeader(
             stringRes(R.string.backup_conflict_changed, diff.changed.size.toString()),
             MaterialTheme.colorScheme.tertiary,
         )
-        if (diff.privateItemsChanged) {
-            Text("• " + stringRes(R.string.backup_conflict_private_changed))
+        if (diff.content == ContentChange.CHANGED) {
+            ContentNote(if (diff.contentEncrypted) R.string.backup_conflict_private_changed else R.string.backup_conflict_content_changed)
         }
-        ChangeGroups(diff.changed)
+        ChangeGroups(diff.changed, eventType)
     }
+}
+
+@Composable
+private fun ContentNote(textRes: Int) {
+    Text("• " + stringRes(textRes), modifier = Modifier.padding(start = 8.dp))
 }
 
 @Composable
@@ -177,9 +189,9 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun GroupLabel(type: BackupEntryType) {
+private fun GroupLabel(labelRes: Int) {
     Text(
-        text = stringRes(entryTypeName(type)),
+        text = stringRes(labelRes),
         style = MaterialTheme.typography.labelMedium,
         modifier = Modifier.padding(top = 6.dp),
     )
@@ -207,61 +219,105 @@ private fun MoreItems(count: Int) {
 }
 
 @Composable
-private fun EntryGroups(entries: List<BackupEntry>) {
-    entries.groupBy { it.type }.forEach { (type, group) ->
-        GroupLabel(type)
+private fun EntryGroups(
+    entries: List<DiffEntry>,
+    eventType: BackupEventType,
+) {
+    entries.groupBy { groupLabel(it, eventType) }.forEach { (label, group) ->
+        GroupLabel(label)
         group.take(MAX_ITEMS_PER_GROUP).forEach { Item(describe(it)) }
         MoreItems(group.size - MAX_ITEMS_PER_GROUP)
     }
 }
 
 @Composable
-private fun ChangeGroups(changes: List<BackupEntryChange>) {
-    changes.groupBy { it.before.type }.forEach { (type, group) ->
-        GroupLabel(type)
+private fun ChangeGroups(
+    changes: List<DiffChange>,
+    eventType: BackupEventType,
+) {
+    changes.groupBy { groupLabel(it.before, eventType) }.forEach { (label, group) ->
+        GroupLabel(label)
         group.take(MAX_ITEMS_PER_GROUP).forEach { Item(describe(it)) }
         MoreItems(group.size - MAX_ITEMS_PER_GROUP)
     }
 }
 
+/** One line per changed entry: what it is, then its details before → after. */
 @Composable
-private fun describe(change: BackupEntryChange): String {
+private fun describe(change: DiffChange): String {
     val before = change.before
     val after = change.after
-    return when (before.type) {
-        BackupEntryType.PROFILE_FIELD ->
-            profileFieldName(before.value) + ": " + clip(before.detail) + " → " + clip(after.detail)
-        BackupEntryType.RELAY ->
-            before.value + ": " + relayMarker(before.detail) + " → " + relayMarker(after.detail)
-        else -> entryName(before) + ": " + clip(before.detail) + " → " + clip(after.detail)
+    return when {
+        before is DiffEntry.ProfileField && after is DiffEntry.ProfileField ->
+            profileFieldName(before.name) + ": " + clip(before.value) + " → " + clip(after.value)
+        before is DiffEntry.Relay && after is DiffEntry.Relay ->
+            before.url + ": " + relayMarker(before) + " → " + relayMarker(after)
+        before is DiffEntry.Person && after is DiffEntry.Person ->
+            personName(before.pubKey) + ": " + listOfNotNull(before.petName, before.relayHint).joinToString() +
+                " → " + listOfNotNull(after.petName, after.relayHint).joinToString()
+        before is DiffEntry.Mint && after is DiffEntry.Mint ->
+            before.url + ": " + before.units.joinToString() + " → " + after.units.joinToString()
+        before is DiffEntry.RelayGroup && after is DiffEntry.RelayGroup ->
+            (before.name ?: before.groupId) + " → " + (after.name ?: after.groupId)
+        else -> describe(before) + " → " + describe(after)
     }
 }
 
+/** One line per entry, resolving people and chats to their names when this device knows them. */
 @Composable
-private fun describe(entry: BackupEntry): String =
-    when (entry.type) {
-        BackupEntryType.PROFILE_FIELD -> profileFieldName(entry.value) + ": " + clip(entry.detail)
-        BackupEntryType.RELAY -> entry.value + " (" + relayMarker(entry.detail) + ")"
-        BackupEntryType.TRUST_PROVIDER -> (entry.detail ?: "") + ": " + personName(entry.value)
-        BackupEntryType.PAYMENT_TARGET, BackupEntryType.OTHER ->
-            if (entry.detail != null) entry.value + ": " + clip(entry.detail) else clip(entry.value)
-        BackupEntryType.CHAT_ROOM ->
-            if (entry.detail != null) entry.value + " @ " + entry.detail else entry.value
-        else -> entryName(entry)
+private fun describe(entry: DiffEntry): String =
+    when (entry) {
+        is DiffEntry.ProfileField -> profileFieldName(entry.name) + ": " + clip(entry.value)
+        is DiffEntry.Person -> personName(entry.pubKey) + (entry.petName?.let { " ($it)" } ?: "")
+        is DiffEntry.Hashtag -> "#" + entry.hashtag
+        is DiffEntry.Word -> "\"" + entry.word + "\""
+        is DiffEntry.Geohash -> entry.geohash
+        is DiffEntry.Relay -> entry.url + " (" + relayMarker(entry) + ")"
+        is DiffEntry.EventRef ->
+            LocalCache.getPublicChatChannelIfExists(entry.eventId)?.toBestDisplayName() ?: entry.eventId.toShortDisplay()
+        is DiffEntry.AddressRef -> Address.parse(entry.address)?.dTag?.ifBlank { null } ?: entry.address.toShortDisplay()
+        is DiffEntry.RelayGroup -> entry.name ?: entry.groupId
+        is DiffEntry.ChatRoom -> entry.roomId + " @ " + entry.relay
+        is DiffEntry.TrustProvider -> entry.service.substringAfter(':') + ": " + personName(entry.pubKey)
+        is DiffEntry.Mint -> entry.url
+        is DiffEntry.NutzapKey -> entry.pubKey.toShortDisplay()
+        is DiffEntry.PaymentTarget -> entry.type + ": " + clip(entry.authority)
+        is DiffEntry.Bolt12Offer -> entry.offer.toShortDisplay()
+        is DiffEntry.OtherTag -> entry.name + ": " + clip(entry.value)
     }
 
-private fun entryName(entry: BackupEntry): String =
-    when (entry.type) {
-        BackupEntryType.PERSON, BackupEntryType.NUTZAP_KEY -> personName(entry.value)
-        BackupEntryType.HASHTAG -> "#" + entry.value
-        BackupEntryType.WORD -> "\"" + entry.value + "\""
-        BackupEntryType.PUBLIC_CHAT ->
-            LocalCache.getPublicChatChannelIfExists(entry.value)?.toBestDisplayName() ?: entry.value.toShortDisplay()
-        BackupEntryType.COMMUNITY, BackupEntryType.ALGO_FEED, BackupEntryType.ADDRESS ->
-            Address.parse(entry.value)?.dTag?.ifBlank { null } ?: entry.value.toShortDisplay()
-        BackupEntryType.RELAY_GROUP -> entry.detail ?: entry.value
-        BackupEntryType.THREAD, BackupEntryType.EVENT, BackupEntryType.OFFER -> entry.value.toShortDisplay()
-        else -> clip(entry.value)
+/** Which group an entry is listed under. The same tag means different things in different lists. */
+private fun groupLabel(
+    entry: DiffEntry,
+    eventType: BackupEventType,
+): Int =
+    when (entry) {
+        is DiffEntry.ProfileField -> R.string.backup_entry_profile_field
+        is DiffEntry.Person -> R.string.backup_entry_person
+        is DiffEntry.Hashtag -> R.string.backup_entry_hashtag
+        is DiffEntry.Word -> R.string.backup_entry_word
+        is DiffEntry.Geohash -> R.string.backup_entry_location
+        is DiffEntry.Relay -> R.string.backup_entry_relay
+        is DiffEntry.EventRef ->
+            when (eventType) {
+                BackupEventType.MUTE_LIST -> R.string.backup_entry_thread
+                BackupEventType.PUBLIC_CHATS -> R.string.backup_entry_public_chat
+                else -> R.string.backup_entry_event
+            }
+        is DiffEntry.AddressRef ->
+            when (eventType) {
+                BackupEventType.COMMUNITIES -> R.string.backup_entry_community
+                BackupEventType.FAVORITE_ALGO_FEEDS -> R.string.backup_entry_algo_feed
+                else -> R.string.backup_entry_address
+            }
+        is DiffEntry.RelayGroup -> R.string.backup_entry_relay_group
+        is DiffEntry.ChatRoom -> R.string.backup_entry_chat_room
+        is DiffEntry.TrustProvider -> R.string.backup_entry_trust_provider
+        is DiffEntry.Mint -> R.string.backup_entry_mint
+        is DiffEntry.NutzapKey -> R.string.backup_entry_nutzap_key
+        is DiffEntry.PaymentTarget -> R.string.backup_entry_payment_target
+        is DiffEntry.Bolt12Offer -> R.string.backup_entry_offer
+        is DiffEntry.OtherTag -> R.string.backup_entry_other
     }
 
 private fun personName(pubkey: String): String = LocalCache.getUserIfExists(pubkey)?.toBestDisplayName() ?: pubkey.toShortDisplay()
@@ -273,10 +329,10 @@ private fun clip(text: String?): String {
 }
 
 @Composable
-private fun relayMarker(marker: String?): String =
-    when (marker) {
-        "read" -> stringRes(R.string.backup_conflict_relay_read_only)
-        "write" -> stringRes(R.string.backup_conflict_relay_write_only)
+private fun relayMarker(relay: DiffEntry.Relay): String =
+    when {
+        relay.read && !relay.write -> stringRes(R.string.backup_conflict_relay_read_only)
+        relay.write && !relay.read -> stringRes(R.string.backup_conflict_relay_write_only)
         else -> stringRes(R.string.backup_conflict_relay_read_write)
     }
 
@@ -296,30 +352,6 @@ private fun profileFieldName(field: String): String =
         "birthday" -> stringRes(R.string.backup_profile_field_birthday)
         "bot" -> stringRes(R.string.backup_profile_field_bot)
         else -> field
-    }
-
-private fun entryTypeName(type: BackupEntryType): Int =
-    when (type) {
-        BackupEntryType.PROFILE_FIELD -> R.string.backup_entry_profile_field
-        BackupEntryType.PERSON -> R.string.backup_entry_person
-        BackupEntryType.HASHTAG -> R.string.backup_entry_hashtag
-        BackupEntryType.WORD -> R.string.backup_entry_word
-        BackupEntryType.THREAD -> R.string.backup_entry_thread
-        BackupEntryType.PUBLIC_CHAT -> R.string.backup_entry_public_chat
-        BackupEntryType.COMMUNITY -> R.string.backup_entry_community
-        BackupEntryType.ALGO_FEED -> R.string.backup_entry_algo_feed
-        BackupEntryType.LOCATION -> R.string.backup_entry_location
-        BackupEntryType.RELAY -> R.string.backup_entry_relay
-        BackupEntryType.RELAY_GROUP -> R.string.backup_entry_relay_group
-        BackupEntryType.CHAT_ROOM -> R.string.backup_entry_chat_room
-        BackupEntryType.TRUST_PROVIDER -> R.string.backup_entry_trust_provider
-        BackupEntryType.MINT -> R.string.backup_entry_mint
-        BackupEntryType.NUTZAP_KEY -> R.string.backup_entry_nutzap_key
-        BackupEntryType.PAYMENT_TARGET -> R.string.backup_entry_payment_target
-        BackupEntryType.OFFER -> R.string.backup_entry_offer
-        BackupEntryType.EVENT -> R.string.backup_entry_event
-        BackupEntryType.ADDRESS -> R.string.backup_entry_address
-        BackupEntryType.OTHER -> R.string.backup_entry_other
     }
 
 private fun eventTypeName(type: BackupEventType): Int =

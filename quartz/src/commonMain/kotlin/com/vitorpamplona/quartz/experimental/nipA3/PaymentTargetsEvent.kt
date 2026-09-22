@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.experimental.nipA3
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -35,6 +36,8 @@ class PaymentTargetsEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun paymentTargets(): List<PaymentTarget> = tags.mapNotNull { PaymentTargetTag.parse(it) }
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? = PaymentTargetTag.parse(tag)?.let { DiffEntry.PaymentTarget(it.type, it.authority) } ?: super.diffEntry(tag)
 
     companion object {
         const val KIND = 10133

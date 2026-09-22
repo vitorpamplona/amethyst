@@ -25,9 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
+import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapPubkeyTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -44,6 +46,12 @@ class NutzapInfoEvent(
     fun relays() = tags.relays()
 
     fun p2pkPubkey() = tags.p2pkPubkey()
+
+    override fun diffEntry(tag: Array<String>): DiffEntry? {
+        NutzapMintTag.parse(tag)?.let { return DiffEntry.Mint(it.mintUrl, it.units) }
+        NutzapPubkeyTag.parse(tag)?.let { return DiffEntry.NutzapKey(it) }
+        return super.diffEntry(tag)
+    }
 
     companion object {
         const val KIND = 10019

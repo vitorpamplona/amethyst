@@ -22,10 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffEntry
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
@@ -103,6 +106,24 @@ class MetadataEvent(
     }
 
     override fun indexableSeparator() = " "
+
+    /**
+     * Profile fields live in the JSON content, so they become [DiffEntry.ProfileField]s.
+     * Tags that only mirror a content field are left out to not count them twice.
+     */
+    override fun diffEntries(): List<DiffEntry> {
+        val fields =
+            contactMetadataJson()?.mapNotNull { (name, value) ->
+                val text = if (value is JsonPrimitive) value.content else value.toString()
+                if (text.isBlank() || text == "null") null else DiffEntry.ProfileField(name, text)
+            } ?: emptyList()
+        val fieldNames = fields.mapTo(HashSet()) { it.name }
+        val tagEntries = super.diffEntries().filterNot { it is DiffEntry.OtherTag && it.name in fieldNames }
+        return fields + tagEntries
+    }
+
+    /** The content is already fully represented by [diffEntries]. */
+    override fun diffContent(older: Event) = ContentChange.NONE
 
     fun contactMetadataJson() =
         if (content.isBlank()) {

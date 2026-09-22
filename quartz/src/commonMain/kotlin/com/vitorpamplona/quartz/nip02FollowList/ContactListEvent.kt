@@ -23,8 +23,10 @@ package com.vitorpamplona.quartz.nip02FollowList
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -48,6 +50,9 @@ class ContactListEvent(
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(ContactTag::parseKey)
+
+    /** The content is a deprecated relay map that many clients drop on purpose. */
+    override fun diffContent(older: Event) = ContentChange.NONE
 
     /**
      * Returns a list of p-tags that are verified as hex keys.
