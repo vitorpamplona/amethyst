@@ -4179,12 +4179,6 @@
     <string name="nest_hush_local_restore">Przywróć mówcę</string>
     <string name="nest_leave">Wyjdź</string>
     <string name="nest_leave_host_close_failed">Nie udało się oznaczyć pokoju jako zamkniętego. Wychodzę mimo to — pokój zostanie automatycznie zamknięty.</string>
-    <plurals name="nest_listener_count">
-        <item quantity="one">%1$d słuchacz</item>
-        <item quantity="few">%1$d słuchaczy</item>
-        <item quantity="many"></item>
-        <item quantity="other">%1$d słuchacze</item>
-    </plurals>
     <string name="nest_lower_hand">Opuść rękę</string>
     <string name="nest_mic_mute">Wycisz mikrofon</string>
     <string name="nest_mic_unmute">Włącz mikrofon</string>
@@ -4713,7 +4707,7 @@
     <string name="reactions_settings">Ustawienia reakcji</string>
     <string name="read_from_relay">Odczytaj z Transmitera</string>
     <string name="read_from_relay_description">Ilość w bajtach, która została otrzymana z tego transmitera, w tym filtry i wydarzenia</string>
-    <string name="read_only_user">"Tylko do odczytu"</string>
+    <string name="read_only_user">Tylko do odczytu</string>
     <string name="record_a_message_description">Kliknij i przytrzymaj aby nagrać wiadomość</string>
     <plurals name="relay_auth_also_holding_back">
         <item quantity="one">Trzyma również %1$d inną rzecz.</item>

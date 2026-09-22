@@ -159,6 +159,7 @@
          because android:label on the manifest entry can only reference @string/. -->
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Inaweka miunganisho kwenye relays za inbox yako hai kwa arifa za wakati halisi</string>
     <plurals name="always_on_notif_connected">
         <item quantity="one">Imeunganishwa na relay %1$d ya kikasha</item>

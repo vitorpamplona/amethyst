@@ -259,6 +259,7 @@
     <string name="health_connect_rationale_activity_label">Health Connect és Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
+    <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Aktív kapcsolatot tart fenn a beérkező üzenetek átjátszóival a valós idejű értesítések érdekében</string>
     <plurals name="always_on_notif_connected">
         <item quantity="one">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
