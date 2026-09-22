@@ -44,12 +44,18 @@ only surviving copy of the user's data is gone.
    backup is updated silently as before.
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
-   `BackupConflictDialog` (shown from `LoggedInPage`) is specific to the event: it names it
-   ("Your mute list changed in another app"), says what that event is for, and lists what
-   was removed, added and changed, grouped by entry type (people by display name, relays
-   with their read/write marker, profile fields old → new…). The dialog maps each diff
-   class to labelled groups from its typed objects (`when (diff)`), resolving pubkeys and
-   channel ids to names from `LocalCache`. It offers:
+   `BackupConflictDialog` (shown from `AppNavigation`, so it can navigate) is a short
+   summary specific to the event: it names it ("Your mute list changed in another app"),
+   says what that event is for, and counts what was removed, added and changed per entry
+   type. **Review changes** opens `Route.BackupConflictReview(slot)`
+   (`BackupConflictReviewScreen`): a `LazyColumn` of every entry, so lists with hundreds of
+   items scroll lazily. Entries are typed (`ReviewItem`, built per diff class in
+   `BackupConflictPresentation.kt`) and rendered with the app's loaders, which subscribe to
+   relays and recompose when data arrives: people (`LoadUser` + `UsernameDisplay`, tap →
+   profile), muted threads (`LoadNote` + `NoteCompose`), communities and feeds
+   (`LoadAddressableNote` + `NoteCompose`), public chats (`observeChannel`, tap → chat),
+   ephemeral rooms (tap → room) and relays (tap → relay info). The dialog hides while the
+   review screen is open (`AccountSettings.reviewingBackupConflict`). Both offer:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
      `created_at = max(now, incoming + 1)`, dropping the old `client` tag (so the signer

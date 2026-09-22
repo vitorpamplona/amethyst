@@ -2837,9 +2837,9 @@
     <string name="backup_conflict_private_cleared">All private (encrypted) items were removed.</string>
     <string name="backup_conflict_private_changed">Private (encrypted) items also changed. They can\'t be compared here.</string>
     <string name="backup_conflict_private_added">Private (encrypted) items were added.</string>
-    <string name="backup_conflict_more_items">…and %1$s more</string>
     <string name="backup_conflict_restore_explainer">Restoring brings back what was removed and drops what the other app added or changed.</string>
     <string name="backup_conflict_restore_mine">Restore saved version</string>
+    <string name="backup_conflict_review">Review changes</string>
     <string name="backup_conflict_keep_new">Use new version</string>
     <string name="backup_conflict_decide_later">Decide later</string>
     <string name="backup_conflict_relay_read_only">read only</string>

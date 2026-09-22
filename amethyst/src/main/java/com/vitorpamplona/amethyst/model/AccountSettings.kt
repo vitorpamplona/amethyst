@@ -1181,6 +1181,9 @@ class AccountSettings(
      */
     val snoozedBackupConflicts = MutableStateFlow<Set<String>>(emptySet())
 
+    /** The slot whose review screen is open, so the conflict dialog doesn't cover it. */
+    val reviewingBackupConflict = MutableStateFlow<String?>(null)
+
     // Re-runs the update that raised each open conflict, once the user keeps the new version.
     private val backupConflictRetries = ConcurrentHashMap<String, () -> Unit>()
 

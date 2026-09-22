@@ -829,6 +829,10 @@ sealed class Route {
         val replyTo: HexKey? = null,
     ) : Route()
 
+    @Serializable data class BackupConflictReview(
+        val slot: String,
+    ) : Route()
+
     @Serializable data class RelayInfo(
         val url: String,
     ) : Route()

@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
@@ -130,9 +129,6 @@ fun LoggedInPage(
         accountViewModel = accountViewModel,
         accountSessionManager = accountSessionManager,
     )
-
-    // Asks before another client's lossy rewrite of a backed-up list/profile becomes permanent.
-    BackupConflictDialog(accountViewModel)
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
