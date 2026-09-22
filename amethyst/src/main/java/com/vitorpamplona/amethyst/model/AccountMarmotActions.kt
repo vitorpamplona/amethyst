@@ -31,9 +31,11 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -68,6 +70,9 @@ enum class LatestKeyPackageOwner {
 class AccountMarmotActions(
     private val account: Account,
 ) {
+    /** Last (timestamp, answer) from [latestKeyPackageOwner], for passive callers. */
+    private var lastOwnerCheck: Pair<Long, LatestKeyPackageOwner>? = null
+
     /**
      * Resolve the relay set for a Marmot group. Prefer the relays carried in
      * the MLS GroupContext metadata so every member converges on the same
@@ -435,10 +440,19 @@ class AccountMarmotActions(
      * NIP-65 write set and our legacy kind:10051 with the inviter's outbox, and
      * the first two are exactly [keyPackagePublishRelays].
      */
-    suspend fun latestKeyPackageOwner(): LatestKeyPackageOwner {
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner {
         val manager = account.marmotManager ?: return LatestKeyPackageOwner.NONE
         val relays = keyPackagePublishRelays()
         if (relays.isEmpty()) return LatestKeyPackageOwner.NONE
+
+        // A passive caller (the groups-screen banner) may reuse a recent answer.
+        // Without this, every entry to that screen fanned a REQ out across the
+        // whole write set — and the thing it asks about only changes when
+        // another device publishes, which is rare enough to cache.
+        val cached = lastOwnerCheck
+        if (maxAgeSeconds > 0 && cached != null && TimeUtils.now() - cached.first <= maxAgeSeconds) {
+            return cached.second
+        }
 
         val latest =
             KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
@@ -448,7 +462,36 @@ class AccountMarmotActions(
         Log.d("MarmotDbg") {
             "latestKeyPackageOwner: newest KeyPackage id=${latest.id.take(8)}… createdAt=${latest.createdAt} mine=$mine"
         }
-        return if (mine) LatestKeyPackageOwner.THIS_DEVICE else LatestKeyPackageOwner.OTHER_DEVICE
+        val owner = if (mine) LatestKeyPackageOwner.THIS_DEVICE else LatestKeyPackageOwner.OTHER_DEVICE
+        lastOwnerCheck = TimeUtils.now() to owner
+        return owner
+    }
+
+    /**
+     * The user-initiated republish behind the invite-device banner and the
+     * settings row. Returns whether a relay actually accepted the KeyPackage.
+     *
+     * Deliberately not [publishMarmotKeyPackage]. That one is the best-effort
+     * startup path: it early-returns in silence for a read-only account or an
+     * empty relay set and then hands the event to a fire-and-forget
+     * `client.publish`, so a caller reporting the outcome to someone watching
+     * would call every one of those failures a success.
+     */
+    suspend fun republishKeyPackageConfirmed(): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!account.isWriteable()) return false
+        val relays = keyPackagePublishRelays()
+        if (relays.isEmpty()) return false
+
+        val event = manager.generateKeyPackageEvent(relays.toList())
+        account.cache.justConsumeMyOwnEvent(event)
+        val accepted = account.client.publishAndConfirm(event, relays)
+        Log.d("MarmotDbg") {
+            "republishKeyPackageConfirmed: id=${event.id.take(8)}… accepted=$accepted on ${relays.size} relay(s)"
+        }
+        // The answer we just changed; a stale cache would keep the banner up.
+        lastOwnerCheck = if (accepted) TimeUtils.now() to LatestKeyPackageOwner.THIS_DEVICE else null
+        return accepted
     }
 
     /**

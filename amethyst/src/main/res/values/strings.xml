@@ -1352,6 +1352,7 @@
     <string name="marmot_invite_device_search_keywords" translatable="false">mls, marmot, keypackage, key package, invite, device, group chat</string>
     <string name="marmot_invite_device_success">This device now receives your Marmot invites.</string>
     <string name="marmot_invite_device_failure">Failed to publish KeyPackage: %1$s</string>
+    <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_success">Marmot state reset.</string>
     <string name="reset_marmot_failure">Failed to reset Marmot state: %1$s</string>

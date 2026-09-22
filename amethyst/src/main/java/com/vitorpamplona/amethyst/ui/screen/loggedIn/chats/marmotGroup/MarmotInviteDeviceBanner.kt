@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,12 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
+ * How long a passive owner check may reuse its previous answer. What it reports
+ * only changes when another device publishes, which no user does often.
+ */
+private const val OWNER_CHECK_MAX_AGE_SECONDS = 15L * 60L
+
+/**
  * Warns, on the Marmot groups screen, that another install of this account is
  * the one receiving its invites.
  *
@@ -82,13 +89,25 @@ fun MarmotInviteDeviceBanner(
     modifier: Modifier = Modifier,
 ) {
     var owner by remember { mutableStateOf<LatestKeyPackageOwner?>(null) }
-    var dismissed by remember { mutableStateOf(false) }
+    // Saveable: a rotation is not a decision to un-dismiss a warning the user
+    // has already read and waved away.
+    var dismissed by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // A read-only login cannot publish at all, so the only action this banner
+    // offers is impossible for it. Better to say nothing than to offer a button
+    // that silently does nothing.
+    val canPublish = accountViewModel.canPublish()
 
     LaunchedEffect(Unit) {
+        if (!canPublish) return@LaunchedEffect
         try {
-            owner = withContext(Dispatchers.IO) { accountViewModel.latestKeyPackageOwner() }
+            owner =
+                withContext(Dispatchers.IO) {
+                    // Passive check: reuse a recent answer rather than fanning a
+                    // REQ across the whole write set on every entry to this screen.
+                    accountViewModel.latestKeyPackageOwner(maxAgeSeconds = OWNER_CHECK_MAX_AGE_SECONDS)
+                }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -143,16 +162,24 @@ fun MarmotInviteDeviceBanner(
             ) {
                 TextButton(
                     onClick = {
-                        // Hidden optimistically: the publish makes this device the
-                        // newest KeyPackage, so re-asking the relays to learn what
-                        // we just did would only add a round trip.
+                        // Hidden optimistically, but only *stays* hidden once a
+                        // relay has accepted: `republishKeyPackage` waits for the
+                        // OK, so a rejection, a read-only account or an empty relay
+                        // set come back false instead of being reported as the
+                        // success they are not.
                         owner = LatestKeyPackageOwner.THIS_DEVICE
                         scope.launch(Dispatchers.IO) {
                             val successMessage = stringRes(context, R.string.marmot_invite_device_success)
+                            val rejectedMessage = stringRes(context, R.string.marmot_invite_device_rejected)
                             try {
-                                accountViewModel.publishMarmotKeyPackage()
+                                val accepted = accountViewModel.republishKeyPackage()
                                 launch(Dispatchers.Main) {
-                                    Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                                    if (accepted) {
+                                        Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, rejectedMessage, Toast.LENGTH_LONG).show()
+                                        owner = LatestKeyPackageOwner.OTHER_DEVICE
+                                    }
                                 }
                             } catch (e: Exception) {
                                 val failureMessage =

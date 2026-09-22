@@ -185,10 +185,15 @@ fun AllSettingsScreen(
                 showInviteDeviceDialog = false
                 scope.launch(Dispatchers.IO) {
                     val successMessage = stringRes(context, R.string.marmot_invite_device_success)
+                    val rejectedMessage = stringRes(context, R.string.marmot_invite_device_rejected)
                     try {
-                        accountViewModel.publishMarmotKeyPackage()
+                        // Waits for a relay OK. The fire-and-forget publish this
+                        // replaced reported success for a read-only account, an
+                        // empty relay set and an outright rejection alike.
+                        val accepted = accountViewModel.republishKeyPackage()
                         launch(Dispatchers.Main) {
-                            Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                            val message = if (accepted) successMessage else rejectedMessage
+                            Toast.makeText(context, message, if (accepted) Toast.LENGTH_SHORT else Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
                         val failureMessage =

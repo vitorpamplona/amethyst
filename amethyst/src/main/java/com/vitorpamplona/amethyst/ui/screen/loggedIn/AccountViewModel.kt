@@ -2505,8 +2505,19 @@ class AccountViewModel(
 
     suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
 
-    /** Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner]. */
-    suspend fun latestKeyPackageOwner(): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner()
+    /**
+     * Which install currently owns this account's Marmot invites. See [LatestKeyPackageOwner].
+     *
+     * [maxAgeSeconds] lets a passive caller reuse a recent answer instead of
+     * fanning a REQ across the write set; 0 always asks the relays.
+     */
+    suspend fun latestKeyPackageOwner(maxAgeSeconds: Long = 0L): LatestKeyPackageOwner = account.marmot.latestKeyPackageOwner(maxAgeSeconds)
+
+    /** Republishes this device's KeyPackage; true only when a relay accepted it. */
+    suspend fun republishKeyPackage(): Boolean = account.marmot.republishKeyPackageConfirmed()
+
+    /** False for a read-only (pubkey-only) login, which cannot publish at all. */
+    fun canPublish(): Boolean = account.isWriteable()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)

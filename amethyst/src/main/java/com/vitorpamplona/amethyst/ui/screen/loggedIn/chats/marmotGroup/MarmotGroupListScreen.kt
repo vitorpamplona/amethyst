@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests_count
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -305,17 +305,31 @@ fun MarmotGroupListItem(
             newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
             previewEvent == null -> stringRes(Res.string.marmot_preview_no_text)
             previewEvent.kind == MarmotAppEvent.KIND_SYSTEM -> stringRes(Res.string.marmot_preview_group_updated)
-            hasMip04Media(previewEvent) || hasEncryptedMediaV2(previewEvent) -> stringRes(Res.string.marmot_preview_media)
+            // Text first: an attachment usually carries a caption, and showing
+            // "Attachment" over the words the sender actually wrote would be a
+            // step back from the raw `content` this replaced.
             previewEvent.content.isNotBlank() -> previewEvent.content
+            hasMip04Media(previewEvent) || hasEncryptedMediaV2(previewEvent) -> stringRes(Res.string.marmot_preview_media)
             else -> stringRes(Res.string.marmot_preview_no_text)
         }
-    // Only a genuinely known name earns the prefix: `toBestDisplayName` would
-    // fall back to a hex stub, and "a1b2c3d4: hi" is noise, not attribution.
-    val senderName =
+    // Only a genuinely known name earns the prefix: `bestName` returns null
+    // without metadata, and "a1b2c3d4: hi" is noise, not attribution.
+    //
+    // Read through `observeUserInfo`, not `metadataOrNull()`: the latter is a
+    // plain StateFlow.value read, so a kind:0 arriving after the row composed
+    // would never reach it — and nothing would have asked for that kind:0
+    // either. This both subscribes and recomposes when it lands.
+    val senderUser =
         previewEvent
             ?.pubKey
             ?.takeIf { it != myPubKey }
-            ?.let { accountViewModel.getUserIfExists(it)?.metadataOrNull()?.bestName() }
+            ?.let { accountViewModel.getUserIfExists(it) }
+    val senderName =
+        if (senderUser != null) {
+            observeUserInfo(senderUser, accountViewModel).value?.info?.bestName()
+        } else {
+            null
+        }
     val previewText =
         // A system caption already names its actor, so prefixing one would say it twice.
         if (senderName != null && previewEvent?.kind != MarmotAppEvent.KIND_SYSTEM) {
