@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntr
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
 import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
+import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventSlot
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
@@ -268,11 +270,13 @@ object LocalPreferences {
                 Amethyst.instance.appContext.filesDir
                     .toOkioPath()
             },
-            migrations = { npub -> listOf(followListMigration(npub)) },
+            migrations = { npub -> listOf(followListMigration(npub), latestEventMigration(npub)) },
         )
     }
 
     private fun followListStore(npub: String) = TopNavFollowListStore(accountStores.getDataStore(npub))
+
+    private fun latestEventStore(npub: String) = LatestEventCacheStore(accountStores.getDataStore(npub))
 
     private fun followListMigration(npub: String) =
         CopyOnceMigration("migrated.followLists") {
@@ -282,6 +286,17 @@ object LocalPreferences {
                 // own infix `to` on Preferences.Key, which would build a
                 // Preferences.Pair instead of the kotlin Pair toMap() needs.
                 FollowListSlot.entries
+                    .mapNotNull { slot ->
+                        legacy.getString(slot.prefKey, null)?.let { Pair(slot.key, it) }
+                    }.toMap()
+            }
+        }
+
+    private fun latestEventMigration(npub: String) =
+        CopyOnceMigration("migrated.latestEvents") {
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                LatestEventSlot.entries
                     .mapNotNull { slot ->
                         legacy.getString(slot.prefKey, null)?.let { Pair(slot.key, it) }
                     }.toMap()
@@ -591,8 +606,6 @@ object LocalPreferences {
                     // Remove legacy key after migration
                     remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
 
-                    putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
-
                     // The undecided conflicts themselves, not just the backups they hold back.
                     // Without these the card vanishes on the next launch and the user never
                     // answers the question the backup is still waiting on.
@@ -603,39 +616,11 @@ object LocalPreferences {
                         putString(PrefKeys.OPEN_BACKUP_CONFLICTS, BackupConflictStorage.encode(openConflicts))
                     }
 
-                    putOrRemove(PrefKeys.LATEST_USER_METADATA, settings.backupUserMetadata)
-                    putOrRemove(PrefKeys.LATEST_DM_RELAY_LIST, settings.backupDMRelayList)
-                    putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
-                    putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
-                    putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupRelayFeedsList)
-                    putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
-                    putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
-
                     if (settings.localRelayServers.value.isNotEmpty()) {
                         putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers.value)
                     } else {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
-
-                    putOrRemove(PrefKeys.LATEST_MUTE_LIST, settings.backupMuteList)
-                    putOrRemove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, settings.backupPrivateHomeRelayList)
-                    putOrRemove(PrefKeys.LATEST_APP_SPECIFIC_DATA, settings.backupAppSpecificData)
-
-                    putOrRemove(PrefKeys.LATEST_CHANNEL_LIST, settings.backupChannelList)
-                    putOrRemove(PrefKeys.LATEST_COMMUNITY_LIST, settings.backupCommunityList)
-                    putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupHashtagList)
-                    putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
-                    putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
-                    putOrRemove(PrefKeys.LATEST_CONCORD_LIST, settings.backupConcordList)
-                    putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
-                    putOrRemove(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, settings.backupKeyPackageRelayList)
-                    putOrRemove(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, settings.backupFavoriteAlgoFeedsList)
-                    putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
-                    putOrRemove(PrefKeys.LATEST_BOLT12_OFFERS, settings.backupBolt12Offers)
-                    putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
-                    putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
 
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
@@ -687,6 +672,36 @@ object LocalPreferences {
                     )
                 }
             }
+            latestEventStore(settings.keyPair.pubKey.toNpub()).saveAll(
+                mapOf(
+                    LatestEventSlot.CONTACT_LIST to settings.backupContactList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.USER_METADATA to settings.backupUserMetadata?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.DM_RELAY_LIST to settings.backupDMRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.NIP65_RELAY_LIST to settings.backupNIP65RelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.SEARCH_RELAY_LIST to settings.backupSearchRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.INDEX_RELAY_LIST to settings.backupIndexRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.RELAY_FEEDS_LIST to settings.backupRelayFeedsList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.BLOCKED_RELAY_LIST to settings.backupBlockedRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.TRUSTED_RELAY_LIST to settings.backupTrustedRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.MUTE_LIST to settings.backupMuteList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.PRIVATE_HOME_RELAY_LIST to settings.backupPrivateHomeRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.APP_SPECIFIC_DATA to settings.backupAppSpecificData?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CHANNEL_LIST to settings.backupChannelList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.COMMUNITY_LIST to settings.backupCommunityList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.HASHTAG_LIST to settings.backupHashtagList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.GEOHASH_LIST to settings.backupGeohashList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.EPHEMERAL_LIST to settings.backupEphemeralChatList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.RELAY_GROUP_LIST to settings.backupRelayGroupList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CONCORD_LIST to settings.backupConcordList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.TRUST_PROVIDER_LIST to settings.backupTrustProviderList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.KEY_PACKAGE_RELAY_LIST to settings.backupKeyPackageRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST to settings.backupFavoriteAlgoFeedsList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.PAYMENT_TARGETS to settings.backupNipA3PaymentTargets?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.BOLT12_OFFERS to settings.backupBolt12Offers?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CASHU_WALLET to settings.backupCashuWallet?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.NUTZAP_INFO to settings.backupNutzapInfo?.let { OptimizedJsonMapper.toJson(it) },
+                ),
+            )
             followListStore(settings.keyPair.pubKey.toNpub()).saveAll(
                 mapOf(
                     FollowListSlot.HOME to settings.defaultHomeFollowList.value,
@@ -865,32 +880,33 @@ object LocalPreferences {
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val openBackupConflictsStr = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null)
-                    val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
-                    val latestContactListStr = getString(PrefKeys.LATEST_CONTACT_LIST, null)
-                    val latestDmRelayListStr = getString(PrefKeys.LATEST_DM_RELAY_LIST, null)
-                    val latestNip65RelayListStr = getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)
-                    val latestSearchRelayListStr = getString(PrefKeys.LATEST_SEARCH_RELAY_LIST, null)
-                    val latestIndexRelayListStr = getString(PrefKeys.LATEST_INDEX_RELAY_LIST, null)
-                    val latestRelayFeedsListStr = getString(PrefKeys.LATEST_RELAY_FEEDS_LIST, null)
-                    val latestBlockedRelayListStr = getString(PrefKeys.LATEST_BLOCKED_RELAY_LIST, null)
-                    val latestTrustedRelayListStr = getString(PrefKeys.LATEST_TRUSTED_RELAY_LIST, null)
-                    val latestMuteListStr = getString(PrefKeys.LATEST_MUTE_LIST, null)
-                    val latestPrivateHomeRelayListStr = getString(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, null)
-                    val latestAppSpecificDataStr = getString(PrefKeys.LATEST_APP_SPECIFIC_DATA, null)
-                    val latestChannelListStr = getString(PrefKeys.LATEST_CHANNEL_LIST, null)
-                    val latestCommunityListStr = getString(PrefKeys.LATEST_COMMUNITY_LIST, null)
-                    val latestHashtagListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
-                    val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
-                    val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
-                    val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
-                    val latestConcordListStr = getString(PrefKeys.LATEST_CONCORD_LIST, null)
-                    val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
-                    val latestKeyPackageRelayListStr = getString(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, null)
-                    val latestFavoriteAlgoFeedsListStr = getString(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, null)
-                    val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
-                    val latestBolt12OffersStr = getString(PrefKeys.LATEST_BOLT12_OFFERS, null)
-                    val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
-                    val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
+                    val latestEvents = latestEventStore(keyPair.pubKey.toNpub()).load()
+                    val latestUserMetadataStr = latestEvents[LatestEventSlot.USER_METADATA]
+                    val latestContactListStr = latestEvents[LatestEventSlot.CONTACT_LIST]
+                    val latestDmRelayListStr = latestEvents[LatestEventSlot.DM_RELAY_LIST]
+                    val latestNip65RelayListStr = latestEvents[LatestEventSlot.NIP65_RELAY_LIST]
+                    val latestSearchRelayListStr = latestEvents[LatestEventSlot.SEARCH_RELAY_LIST]
+                    val latestIndexRelayListStr = latestEvents[LatestEventSlot.INDEX_RELAY_LIST]
+                    val latestRelayFeedsListStr = latestEvents[LatestEventSlot.RELAY_FEEDS_LIST]
+                    val latestBlockedRelayListStr = latestEvents[LatestEventSlot.BLOCKED_RELAY_LIST]
+                    val latestTrustedRelayListStr = latestEvents[LatestEventSlot.TRUSTED_RELAY_LIST]
+                    val latestMuteListStr = latestEvents[LatestEventSlot.MUTE_LIST]
+                    val latestPrivateHomeRelayListStr = latestEvents[LatestEventSlot.PRIVATE_HOME_RELAY_LIST]
+                    val latestAppSpecificDataStr = latestEvents[LatestEventSlot.APP_SPECIFIC_DATA]
+                    val latestChannelListStr = latestEvents[LatestEventSlot.CHANNEL_LIST]
+                    val latestCommunityListStr = latestEvents[LatestEventSlot.COMMUNITY_LIST]
+                    val latestHashtagListStr = latestEvents[LatestEventSlot.HASHTAG_LIST]
+                    val latestGeohashListStr = latestEvents[LatestEventSlot.GEOHASH_LIST]
+                    val latestEphemeralListStr = latestEvents[LatestEventSlot.EPHEMERAL_LIST]
+                    val latestRelayGroupListStr = latestEvents[LatestEventSlot.RELAY_GROUP_LIST]
+                    val latestConcordListStr = latestEvents[LatestEventSlot.CONCORD_LIST]
+                    val latestTrustProviderListStr = latestEvents[LatestEventSlot.TRUST_PROVIDER_LIST]
+                    val latestKeyPackageRelayListStr = latestEvents[LatestEventSlot.KEY_PACKAGE_RELAY_LIST]
+                    val latestFavoriteAlgoFeedsListStr = latestEvents[LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST]
+                    val latestPaymentTargetsStr = latestEvents[LatestEventSlot.PAYMENT_TARGETS]
+                    val latestBolt12OffersStr = latestEvents[LatestEventSlot.BOLT12_OFFERS]
+                    val latestCashuWalletStr = latestEvents[LatestEventSlot.CASHU_WALLET]
+                    val latestNutzapInfoStr = latestEvents[LatestEventSlot.NUTZAP_INFO]
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
