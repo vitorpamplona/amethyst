@@ -62,6 +62,7 @@ class LocalBlossomCacheRedirectSafetyTest {
     private fun chain(
         request: Request,
         sent: MutableList<Request>,
+        statusFor: (Request) -> Int = { 200 },
         refuse: (Request) -> Boolean = { false },
     ): Interceptor.Chain =
         Proxy.newProxyInstance(
@@ -74,12 +75,13 @@ class LocalBlossomCacheRedirectSafetyTest {
                     val proceeded = args[0] as Request
                     sent.add(proceeded)
                     if (refuse(proceeded)) throw ConnectException("Connection refused")
+                    val status = statusFor(proceeded)
                     Response
                         .Builder()
                         .request(proceeded)
                         .protocol(Protocol.HTTP_1_1)
-                        .code(200)
-                        .message("OK")
+                        .code(status)
+                        .message(if (status == 200) "OK" else "Not Found")
                         .body("".toResponseBody(null))
                         .build()
                 }
@@ -242,5 +244,52 @@ class LocalBlossomCacheRedirectSafetyTest {
         }
         assertEquals(1, reports)
         assertTrue(sent.single().url.host == "127.0.0.1")
+    }
+
+    @Test
+    fun aCacheMissFallsBackToTheOrigin() {
+        var reports = 0
+        val sent = mutableListOf<Request>()
+
+        val response =
+            LocalBlossomCacheRedirectInterceptor(onUnreachable = { reports++ }) { true }
+                .intercept(
+                    chain(media().build(), sent, statusFor = { if (it.url.host == "127.0.0.1") 404 else 200 }),
+                )
+
+        // The blob still arrives: the cache is an optimisation, never a gate.
+        assertEquals(200, response.code)
+        assertEquals(origin, response.request.url.toString())
+        assertEquals(listOf(bridged, origin), sent.map { it.url.toString() })
+        // The cache answered, so it is alive — the bridge must not be switched off.
+        assertEquals(0, reports)
+        response.close()
+    }
+
+    @Test
+    fun aCacheErrorFallsBackToTheOriginToo() {
+        val sent = mutableListOf<Request>()
+
+        val response =
+            LocalBlossomCacheRedirectInterceptor { true }
+                .intercept(
+                    chain(media().build(), sent, statusFor = { if (it.url.host == "127.0.0.1") 500 else 200 }),
+                )
+
+        assertEquals(200, response.code)
+        assertEquals(listOf(bridged, origin), sent.map { it.url.toString() })
+        response.close()
+    }
+
+    @Test
+    fun aServedBlobIsNotRefetchedFromTheOrigin() {
+        val sent = mutableListOf<Request>()
+
+        val response = LocalBlossomCacheRedirectInterceptor { true }.intercept(chain(media().build(), sent))
+
+        assertEquals(200, response.code)
+        // A hit must cost exactly one request, to the cache.
+        assertEquals(listOf(bridged), sent.map { it.url.toString() })
+        response.close()
     }
 }

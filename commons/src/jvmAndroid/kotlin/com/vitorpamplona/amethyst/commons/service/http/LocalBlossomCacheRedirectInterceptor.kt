@@ -92,17 +92,31 @@ class LocalBlossomCacheRedirectInterceptor(
 
         keyCache?.get(request.url.toString())?.let { keyCache.add(rewritten.toString(), it) }
 
-        return try {
-            chain.proceed(
-                request
-                    .newBuilder()
-                    .url(rewritten)
-                    .build(),
-            )
-        } catch (e: ConnectException) {
-            onUnreachable()
-            chain.proceed(request)
-        }
+        val bridged =
+            try {
+                chain.proceed(
+                    request
+                        .newBuilder()
+                        .url(rewritten)
+                        .build(),
+                )
+            } catch (e: ConnectException) {
+                onUnreachable()
+                return chain.proceed(request)
+            }
+
+        if (bridged.isSuccessful) return bridged
+
+        // The cache answered, but not with the blob: it does not hold it and could not fetch it
+        // from `xs` either (not every cache implements that, and the one that does can be offline,
+        // still warming, or rate-limited). A miss is the ordinary state of a cache and must never
+        // be worse than having no cache at all, so the origin is asked directly — without this the
+        // 404 reached the caller and the image, video or encrypted file simply failed to load.
+        //
+        // Not reported through [onUnreachable]: the cache is alive and answering, so switching the
+        // bridge off would be the wrong conclusion.
+        bridged.close()
+        return chain.proceed(request)
     }
 
     private fun isLocalCache(url: HttpUrl): Boolean = url.port == LOCAL_CACHE_PORT && (url.host == LOCAL_CACHE_HOST || url.host.equals("localhost", ignoreCase = true))
