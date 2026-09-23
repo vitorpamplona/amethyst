@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
 import android.text.format.DateUtils
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 
 /** Builds the pre-filled composer route for a detected workout. Shared by the

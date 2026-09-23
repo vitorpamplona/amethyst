@@ -30,14 +30,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByGeohashes
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsByMutedAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.workouts.filterWorkoutsGlobal
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 

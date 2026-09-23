@@ -43,7 +43,7 @@ import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.captions_off
 import com.vitorpamplona.amethyst.commons.resources.captions_unnamed_track
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.Locale

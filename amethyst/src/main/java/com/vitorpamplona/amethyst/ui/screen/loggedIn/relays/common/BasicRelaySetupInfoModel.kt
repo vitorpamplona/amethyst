@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.relays.ui.CountFilter
+import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.private_inbox_section
 import com.vitorpamplona.amethyst.commons.resources.private_inbox_section_explainer_profile
@@ -40,13 +41,12 @@ import com.vitorpamplona.amethyst.commons.resources.public_home_section
 import com.vitorpamplona.amethyst.commons.resources.public_home_section_explainer_profile
 import com.vitorpamplona.amethyst.commons.resources.public_notif_section
 import com.vitorpamplona.amethyst.commons.resources.public_notif_section_explainer_profile
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.launch
 
 @Composable

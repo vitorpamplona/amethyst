@@ -94,13 +94,15 @@ import com.vitorpamplona.amethyst.commons.resources.new_community_rules_section
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
-import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
@@ -108,8 +110,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.RelayTag

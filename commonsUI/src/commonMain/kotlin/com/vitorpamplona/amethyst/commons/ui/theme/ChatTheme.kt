@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,17 +48,6 @@ val ChatBubbleShapeThemMiddle = RoundedCornerShape(6.dp, 6.dp, 6.dp, 6.dp)
 val ChatBubbleShapeThemBottom = RoundedCornerShape(6.dp, 6.dp, 18.dp, 18.dp)
 
 // Chat bubble modifiers
-val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
-val ChatPaddingInnerQuoteModifier = Modifier
-val ChatPaddingModifier =
-    Modifier
-        .fillMaxWidth(1f)
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 3.dp,
-            bottom = 3.dp,
-        )
 
 // Message bubble internal padding
 val MessageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 7.dp, bottom = 6.dp)

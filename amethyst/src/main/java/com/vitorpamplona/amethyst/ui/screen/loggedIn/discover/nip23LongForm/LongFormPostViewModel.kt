@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
@@ -48,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -69,11 +73,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments

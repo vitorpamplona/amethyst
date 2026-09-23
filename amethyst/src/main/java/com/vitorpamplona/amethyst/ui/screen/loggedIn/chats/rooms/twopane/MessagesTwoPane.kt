@@ -35,20 +35,20 @@ import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
+import com.vitorpamplona.amethyst.commons.chats.ui.ChannelFabColumn
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
 @Composable
 fun MessagesTwoPane(

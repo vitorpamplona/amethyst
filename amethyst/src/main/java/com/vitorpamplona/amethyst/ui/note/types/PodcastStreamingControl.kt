@@ -56,10 +56,10 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_rate
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_stream_requires_wallet
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_streamed_total
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastStreamingAccrual
 import com.vitorpamplona.quartz.podcasts.PodcastValue
 import kotlinx.coroutines.delay

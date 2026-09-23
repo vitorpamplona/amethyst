@@ -48,21 +48,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.commons.viewmodels.LiveStreamTopZappersViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import java.math.BigDecimal
 
 /**

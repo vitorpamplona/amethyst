@@ -25,8 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 
 /**
  * Reserves the visual space the [AppBottomBar] occupies on root tab entries so a

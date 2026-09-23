@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
-import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent

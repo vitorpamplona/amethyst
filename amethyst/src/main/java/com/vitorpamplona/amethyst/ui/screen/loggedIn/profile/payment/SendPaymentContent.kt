@@ -91,14 +91,14 @@ import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
 import com.vitorpamplona.amethyst.commons.resources.send_payment_no_methods
 import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_section
 import com.vitorpamplona.amethyst.commons.resources.send_payment_try_again
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -108,7 +108,7 @@ import androidx.compose.material3.Icon as M3Icon
 
 /**
  * The payment rails the profile Send Payment screen can drive. [routeKey] is
- * the stable string used in [com.vitorpamplona.amethyst.ui.navigation.routes.Route.SendPayment]
+ * the stable string used in [com.vitorpamplona.amethyst.commons.model.navigation.Route.SendPayment]
  * to preselect a rail when navigating from a specific profile chip.
  */
 enum class ProfilePaymentMethod(

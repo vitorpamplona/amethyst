@@ -42,8 +42,8 @@ import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_explainer
 import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_field
 import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * NIP-32: lets the user tag any post with a hashtag by publishing a kind 1985 label

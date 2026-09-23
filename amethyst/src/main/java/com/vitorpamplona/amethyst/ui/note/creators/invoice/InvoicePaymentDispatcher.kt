@@ -39,11 +39,11 @@ import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import kotlinx.coroutines.launch
 

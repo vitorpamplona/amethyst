@@ -32,13 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.theme.Size34dp
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 @Composable

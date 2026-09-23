@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relays.ui.CountFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 

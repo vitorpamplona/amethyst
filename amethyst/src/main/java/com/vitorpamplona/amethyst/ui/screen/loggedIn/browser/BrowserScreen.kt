@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
@@ -98,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -106,9 +109,6 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription

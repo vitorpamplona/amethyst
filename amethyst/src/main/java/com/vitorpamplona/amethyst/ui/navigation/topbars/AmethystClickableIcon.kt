@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.navigation.topbars
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.commons.ui.note.AmethystIcon
+import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.debugState
-import com.vitorpamplona.amethyst.ui.note.AmethystIcon
-import com.vitorpamplona.amethyst.ui.theme.Size40dp
 
 @Composable
 fun AmethystClickableIcon() {

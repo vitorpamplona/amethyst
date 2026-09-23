@@ -30,8 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.zaps
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relays.ui.rememberRelayDragState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.blocked_section
 import com.vitorpamplona.amethyst.commons.resources.blocked_section_explainer
@@ -83,12 +84,18 @@ import com.vitorpamplona.amethyst.commons.resources.search_section
 import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.trusted_section
 import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
-import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
-import com.vitorpamplona.amethyst.ui.components.M3ActionRow
-import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
@@ -98,7 +105,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
@@ -122,12 +128,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 

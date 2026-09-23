@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.channel
 
-import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFromUserFilterSubAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelPublicFilterSubAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 

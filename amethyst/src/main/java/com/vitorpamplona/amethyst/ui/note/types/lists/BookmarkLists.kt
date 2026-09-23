@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_article_curation_set
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_list
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_set
 import com.vitorpamplona.amethyst.commons.resources.kind_picture_curation_set
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent

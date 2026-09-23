@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_body
 import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_title
 import com.vitorpamplona.amethyst.commons.resources.tor_continue_without_for_session
 import com.vitorpamplona.amethyst.commons.resources.tor_keep_waiting
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Sticky alert that appears when Tor has been stuck connecting longer than

@@ -57,9 +57,9 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_publish
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_rejected
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_success
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

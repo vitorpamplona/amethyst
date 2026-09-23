@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
+import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_back
@@ -31,8 +33,6 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 
 @Composable
 fun DisplayFollowUnfollowButton(

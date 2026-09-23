@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 

@@ -48,13 +48,16 @@ import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.kind_comments
 import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
-import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)

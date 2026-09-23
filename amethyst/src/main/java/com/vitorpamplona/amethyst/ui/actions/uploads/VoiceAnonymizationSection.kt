@@ -35,9 +35,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.voice_anonymize_description
 import com.vitorpamplona.amethyst.commons.resources.voice_anonymize_title
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 
 @Composable
 fun VoiceAnonymizationSection(

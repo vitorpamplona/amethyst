@@ -33,9 +33,10 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
 import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

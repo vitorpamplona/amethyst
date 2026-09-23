@@ -45,18 +45,20 @@ import com.vitorpamplona.amethyst.commons.resources.zap_split_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ZapSplitIcon
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlin.math.round
 
 @Composable

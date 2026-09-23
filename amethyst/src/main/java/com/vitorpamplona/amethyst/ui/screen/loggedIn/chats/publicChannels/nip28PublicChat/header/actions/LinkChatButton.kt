@@ -35,11 +35,11 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun LinkChatButton(

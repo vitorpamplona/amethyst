@@ -44,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionChoice
+import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionPicker
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_footer
@@ -56,14 +59,13 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers

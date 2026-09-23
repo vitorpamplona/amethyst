@@ -45,12 +45,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_join
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -60,8 +62,6 @@ import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
@@ -235,8 +235,7 @@ private fun NestJoinCardContent(
                                 modifier = Modifier.padding(end = 4.dp),
                                 onClick = { hex ->
                                     nav.nav(
-                                        com.vitorpamplona.amethyst.ui.navigation.routes.Route
-                                            .Profile(hex),
+                                        Route.Profile(hex),
                                     )
                                 },
                             )

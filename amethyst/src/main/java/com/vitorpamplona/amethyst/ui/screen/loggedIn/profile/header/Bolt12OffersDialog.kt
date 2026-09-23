@@ -60,15 +60,15 @@ import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
-import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.payViaBolt12Intent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import kotlinx.coroutines.launch
 
 @Composable

@@ -52,8 +52,8 @@ import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
-import com.vitorpamplona.amethyst.ui.theme.isLight
-import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
+import com.vitorpamplona.amethyst.commons.ui.theme.onBackgroundColorFilter
 
 @Composable
 fun RobohashAsyncImage(

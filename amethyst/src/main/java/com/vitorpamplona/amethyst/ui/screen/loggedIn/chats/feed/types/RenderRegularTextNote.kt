@@ -32,14 +32,14 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.types.appendMissingImetaUrls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
-import com.vitorpamplona.amethyst.ui.stringRes
 
 // Jumbo sizes step down as the emoji count grows so up to three still fit a line.
 private val JumboEmojiSingle = 50.sp

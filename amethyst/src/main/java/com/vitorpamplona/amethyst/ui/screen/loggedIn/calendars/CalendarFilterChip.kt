@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_filter_all
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_no_calendars
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_sheet_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Top-bar affordance that scopes the appointments feed to a single kind-31924 calendar's

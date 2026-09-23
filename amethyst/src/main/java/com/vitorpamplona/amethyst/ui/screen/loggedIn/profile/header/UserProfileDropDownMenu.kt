@@ -44,14 +44,14 @@ import com.vitorpamplona.amethyst.commons.resources.report_malware
 import com.vitorpamplona.amethyst.commons.resources.report_nudity_porn
 import com.vitorpamplona.amethyst.commons.resources.report_spam_scam
 import com.vitorpamplona.amethyst.commons.resources.unblock_user
-import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
-import com.vitorpamplona.amethyst.ui.components.M3ActionRow
-import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.launch
 

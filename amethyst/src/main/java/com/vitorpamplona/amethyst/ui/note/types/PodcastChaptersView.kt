@@ -47,10 +47,10 @@ import com.vitorpamplona.amethyst.commons.podcasts.PodcastRemoteContent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_chapters_count
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
-import com.vitorpamplona.amethyst.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastChapter
 import com.vitorpamplona.quartz.podcasts.PodcastChapters
 

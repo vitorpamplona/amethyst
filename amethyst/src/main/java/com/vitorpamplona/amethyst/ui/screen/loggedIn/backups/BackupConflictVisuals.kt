@@ -45,9 +45,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.quartz.utils.Hex
 
 /** The three meanings every conflict visual uses: lost, gained, edited. Theme-aware. */

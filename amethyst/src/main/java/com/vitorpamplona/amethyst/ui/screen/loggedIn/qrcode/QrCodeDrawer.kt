@@ -47,7 +47,7 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.google.zxing.qrcode.encoder.ByteMatrix
 import com.google.zxing.qrcode.encoder.Encoder
 import com.google.zxing.qrcode.encoder.QRCode
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import kotlin.math.min
 
 /**

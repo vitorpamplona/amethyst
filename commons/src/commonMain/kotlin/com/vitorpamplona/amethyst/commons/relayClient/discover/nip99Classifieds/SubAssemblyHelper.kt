@@ -29,13 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByGeohash
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip99Classifieds.filterClassifiedsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

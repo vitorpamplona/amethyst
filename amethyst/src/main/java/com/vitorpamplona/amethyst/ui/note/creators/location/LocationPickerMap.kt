@@ -35,7 +35,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.vitorpamplona.amethyst.ui.theme.isLight
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener

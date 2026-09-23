@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountKey
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap

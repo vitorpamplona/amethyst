@@ -57,14 +57,14 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_qr_hint_nostr
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_hint_web
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_mode_nostr
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_mode_web
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.KeepScreenBrightAndAwake
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
-import com.vitorpamplona.amethyst.ui.stringRes
 
 // A cap, not a fixed size: QrCodeDrawer's own quiet zone (QR_QUIET_ZONE_MODULES in QrCodeDrawer.kt) is a
 // fixed pixel count subtracted from raw size.width, so its share of the tile grows as density

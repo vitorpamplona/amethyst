@@ -52,9 +52,11 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
@@ -66,8 +68,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header.LiveActivitiesChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike

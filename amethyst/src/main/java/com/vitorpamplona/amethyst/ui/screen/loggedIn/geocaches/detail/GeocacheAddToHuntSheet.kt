@@ -56,8 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_already_on
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_new
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_none_yet
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
