@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.backups.BackupRestore
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -1888,6 +1890,40 @@ class Account(
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) = broadcaster.sendMyPublicAndPrivateOutbox(events)
 
     fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
+
+    /**
+     * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
+     * version (same kind, tags and content, so NIP-44 private items stay readable, minus the
+     * old client, proof-of-work and past expiration tags; see [BackupRestore.tagsToResign])
+     * with a timestamp newer than the current one, and publishes it so it replaces that version.
+     *
+     * Does nothing if the conflict is stale (already resolved, replaced by a newer one, or
+     * dropped because the event was deleted), which also makes a double tap harmless.
+     */
+    suspend fun restoreBackupOver(conflict: ReplaceableBackupConflict) {
+        val token = settings.backupGuard.startRestoring(conflict) ?: return
+        var restored = false
+        try {
+            val saved = conflict.saved
+            val now = TimeUtils.now()
+            // Newer than the version it replaces, but never far in the future: relays reject
+            // those, and later edits signed at "now" would lose to it. A far-future external
+            // version can't be outranked safely, and a restore signed at "now" would lose to it
+            // everywhere, so it isn't sent: the conflict reopens and only keeping it works.
+            val createdAt = (conflict.incoming.createdAt + 1).coerceAtLeast(now)
+            if (createdAt > now + maxRestoreFutureSeconds) return
+            val resigned = signer.sign<Event>(createdAt, saved.kind, BackupRestore.tagsToResign(saved, now), saved.content)
+            broadcaster.sendRestoredVersion(resigned)
+            restored = true
+        } finally {
+            settings.backupGuard.finishRestoring(conflict, token, restored)
+        }
+    }
+
+    private val maxRestoreFutureSeconds = 15 * 60L
+
+    /** Resolves a [ReplaceableBackupConflict] in favor of the current version. No-op when stale. */
+    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.backupGuard.keepIncoming(conflict)
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

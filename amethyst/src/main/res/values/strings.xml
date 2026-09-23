@@ -677,4 +677,322 @@
     <string name="mute_button">Sound on. Click to mute</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
+    <string name="backup_conflict_title">You changed your %1$s in another app</string>
+    <string name="backup_conflict_removed">Removed (%1$s)</string>
+    <string name="backup_conflict_added">Added (%1$s)</string>
+    <string name="backup_conflict_changed">Changed (%1$s)</string>
+    <string name="backup_conflict_private_cleared">You removed all private (encrypted) items.</string>
+    <string name="backup_conflict_private_changed">You also changed private (encrypted) items. They can\'t be compared here.</string>
+    <string name="backup_conflict_private_added">You added private (encrypted) items.</string>
+    <string name="backup_conflict_restore_mine">Restore saved version</string>
+    <string name="backup_review_saved">On this device</string>
+    <string name="backup_review_new">New version</string>
+    <string name="backup_review_not_set">Not set</string>
+    <string name="backup_conflict_count_removed">%1$s removed</string>
+    <string name="backup_conflict_count_added">%1$s added</string>
+    <string name="backup_conflict_count_changed">%1$s changed</string>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">You unfollowed %1$d person</item>
+        <item quantity="other">You unfollowed %1$d people</item>
+    </plurals>
+    <string name="backup_card_accept">Accept</string>
+    <string name="backup_review_title_updated">%1$s updated</string>
+    <string name="backup_review_title_cleared">%1$s cleared</string>
+    <string name="backup_review_changed_by_other_app">Changed in another app · %1$s</string>
+    <string name="backup_action_keep_count">Keep %1$s</string>
+    <string name="backup_action_restore_count">Restore %1$s</string>
+    <string name="backup_action_remute">Re-mute %1$s</string>
+    <string name="backup_action_rejoin">Rejoin %1$s</string>
+    <string name="backup_action_restore_profile">Restore profile</string>
+    <string name="backup_action_restore_relays">Restore relays</string>
+    <string name="backup_review_kept_count">%1$s kept</string>
+    <string name="backup_review_dropped_count">%1$s dropped</string>
+    <string name="backup_review_new_count">%1$s new</string>
+    <string name="backup_review_tab_dropped">Dropped · %1$s</string>
+    <string name="backup_review_tab_new">New · %1$s</string>
+    <string name="backup_review_tab_edited">Edited · %1$s</string>
+    <string name="backup_review_search_people">Search %1$s people</string>
+    <string name="backup_review_nothing_here">Nothing here</string>
+    <string name="backup_review_unmuted">%1$s unmuted</string>
+    <string name="backup_review_unmuted_explainer">These can reach your feeds again</string>
+    <string name="backup_review_newly_muted">%1$s newly muted</string>
+    <string name="backup_review_words_and_hashtags">Words &amp; hashtags</string>
+    <string name="backup_review_names_and_more">%1$s and %2$s more</string>
+    <string name="backup_review_private_wiped_title">You removed all private items</string>
+    <string name="backup_review_private_wiped_body">They\'re encrypted, so only you can see what they were. Restoring brings them all back.</string>
+    <string name="backup_review_private_added_title">You made items private</string>
+    <string name="backup_review_private_added_body">They\'re encrypted now, which is likely where the public items above went.</string>
+    <string name="backup_review_private_changed_title">You changed private items</string>
+    <string name="backup_review_private_changed_body">They\'re encrypted, so they can\'t be compared here.</string>
+    <string name="backup_review_gone">Gone</string>
+    <string name="backup_review_new_tag">New</string>
+    <string name="backup_review_dropped_tag">Dropped</string>
+    <string name="backup_review_demoted_tag">Moved</string>
+    <string name="backup_review_units_tag">Units</string>
+    <string name="backup_review_left_tag">Left</string>
+    <string name="backup_review_renamed_tag">Renamed</string>
+    <string name="backup_review_outbox">Outbox</string>
+    <string name="backup_review_outbox_explainer">where you publish</string>
+    <string name="backup_review_inbox">Inbox</string>
+    <string name="backup_review_inbox_explainer">where others reach you</string>
+    <string name="backup_review_key_replaced">Receiving key replaced</string>
+    <string name="backup_review_key_removed">Receiving key removed</string>
+    <string name="backup_review_key_warning">Nutzaps will be locked to this new key. If this device doesn\'t have it, you may not be able to redeem them here.</string>
+    <string name="backup_review_left">left</string>
+    <string name="backup_review_joined">joined</string>
+    <string name="backup_review_renamed">renamed</string>
+    <string name="backup_review_was_named">was “%1$s”</string>
+    <string name="backup_action_block_again">Block %1$s again</string>
+    <string name="backup_action_restore_feeds">Restore feeds</string>
+    <string name="backup_action_restore_topics">Restore topics</string>
+    <string name="backup_action_restore_places">Restore places</string>
+    <string name="backup_action_restore_providers">Restore providers</string>
+    <string name="backup_action_restore_wallet">Restore wallet</string>
+    <string name="backup_review_kept">kept</string>
+    <string name="backup_review_receiving_tag">Receiving</string>
+    <string name="backup_review_listed_tag">Listed</string>
+    <string name="backup_review_searching_tag">Searching</string>
+    <string name="backup_review_storing_tag">Storing</string>
+    <string name="backup_review_trusted_tag">Trusted</string>
+    <string name="backup_review_untrusted_tag">Untrusted</string>
+    <string name="backup_review_unblocked">%1$s unblocked</string>
+    <string name="backup_review_unblocked_explainer">Amethyst will connect to them again</string>
+    <string name="backup_review_no_longer_blocked">No longer blocked</string>
+    <string name="backup_review_newly_blocked">Newly blocked</string>
+    <string name="backup_review_still_blocked">Still blocked</string>
+    <string name="backup_review_allowed_tag">Allowed</string>
+    <string name="backup_review_moved_tag">Moved</string>
+    <string name="backup_review_feed">Feed</string>
+    <string name="backup_review_topics_gone">topics gone</string>
+    <string name="backup_review_places_gone">places gone</string>
+    <string name="backup_review_new_count_caption">new</string>
+    <string name="backup_review_hashtags_you_follow">Hashtags you follow</string>
+    <string name="backup_review_places_you_follow">Places you follow</string>
+    <string name="backup_review_services_changed">%1$s of %2$s services changed</string>
+    <string name="backup_review_services_changed_explainer">They now come from someone else, or no one</string>
+    <string name="backup_review_service">Service</string>
+    <string name="backup_review_service_rank">Rank</string>
+    <string name="backup_review_service_followers">Followers</string>
+    <string name="backup_review_service_topics">Topics</string>
+    <string name="backup_review_trust_warning">Ranks, follower counts and spam filtering you see come from these providers.</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">%1$d way to pay you removed</item>
+        <item quantity="other">%1$d ways to pay you removed</item>
+    </plurals>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d offer removed</item>
+        <item quantity="other">%1$d offers removed</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">People paying you only see what\'s in this list.</string>
+    <string name="backup_review_offer">BOLT12 offer</string>
+    <string name="backup_review_encrypted_cleared">You emptied it</string>
+    <string name="backup_review_encrypted_added">You created it</string>
+    <string name="backup_review_encrypted_changed">You changed it</string>
+    <string name="backup_review_wallet_body">Your wallet\'s mints and keys are encrypted to you, so they can\'t be compared item by item here. Restoring puts back exactly what this device saved.</string>
+    <string name="backup_review_concord_body">Your Concord communities are encrypted to you, so they can\'t be compared here. Restoring puts back exactly what this device saved.</string>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">You unmuted %1$d thing</item>
+        <item quantity="other">You unmuted %1$d things</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">You removed %1$d profile field</item>
+        <item quantity="other">You removed %1$d profile fields</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">You removed %1$d public relay</item>
+        <item quantity="other">You removed %1$d public relays</item>
+    </plurals>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">You removed %1$d DM relay</item>
+        <item quantity="other">You removed %1$d DM relays</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">You removed %1$d group-chat key relay</item>
+        <item quantity="other">You removed %1$d group-chat key relays</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">You removed %1$d search relay</item>
+        <item quantity="other">You removed %1$d search relays</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">You removed %1$d indexer relay</item>
+        <item quantity="other">You removed %1$d indexer relays</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">You removed %1$d relay feed</item>
+        <item quantity="other">You removed %1$d relay feeds</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">You removed %1$d private relay</item>
+        <item quantity="other">You removed %1$d private relays</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">You stopped trusting %1$d relay</item>
+        <item quantity="other">You stopped trusting %1$d relays</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">You unblocked %1$d relay</item>
+        <item quantity="other">You unblocked %1$d relays</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">You left %1$d public chat</item>
+        <item quantity="other">You left %1$d public chats</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">You left %1$d community</item>
+        <item quantity="other">You left %1$d communities</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">You left %1$d chat room</item>
+        <item quantity="other">You left %1$d chat rooms</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">You left %1$d group</item>
+        <item quantity="other">You left %1$d groups</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">You removed %1$d favorite feed</item>
+        <item quantity="other">You removed %1$d favorite feeds</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">You unfollowed %1$d hashtag</item>
+        <item quantity="other">You unfollowed %1$d hashtags</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">You unfollowed %1$d place</item>
+        <item quantity="other">You unfollowed %1$d places</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">You changed the provider of %1$d trust service</item>
+        <item quantity="other">You changed the provider of %1$d trust services</item>
+    </plurals>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">You removed %1$d nutzap mint</item>
+        <item quantity="other">You removed %1$d nutzap mints</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">You removed %1$d way to get paid</item>
+        <item quantity="other">You removed %1$d ways to get paid</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">You removed %1$d BOLT12 offer</item>
+        <item quantity="other">You removed %1$d BOLT12 offers</item>
+    </plurals>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s and added %2$d</item>
+        <item quantity="other">%1$s and added %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s and followed %2$d</item>
+        <item quantity="other">%1$s and followed %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s and muted %2$d</item>
+        <item quantity="other">%1$s and muted %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s and joined %2$d</item>
+        <item quantity="other">%1$s and joined %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s and blocked %2$d</item>
+        <item quantity="other">%1$s and blocked %2$d</item>
+    </plurals>
+    <string name="backup_card_app_settings">Your Amethyst synced app settings changed in another app that is not Amethyst. This can create problems.</string>
+    <string name="backup_card_nutzap_key_replaced">You replaced your nutzap key</string>
+    <string name="backup_card_nutzap_key_removed">You removed your nutzap key</string>
+    <string name="backup_card_wallet_emptied">You emptied your Cashu wallet</string>
+    <string name="backup_card_wallet_rewritten">You changed your Cashu wallet</string>
+    <string name="backup_card_concord_emptied">You emptied your Concord list</string>
+    <string name="backup_card_concord_rewritten">You changed your Concord list</string>
+    <string name="backup_conflict_keep_new">Use new version</string>
+    <string name="backup_conflict_relay_read_only">read only</string>
+    <string name="backup_conflict_relay_write_only">write only</string>
+    <string name="backup_conflict_relay_read_write">read and write</string>
+    <string name="backup_type_profile">profile</string>
+    <string name="backup_type_profile_explainer">Your name, picture, bio and payment addresses, as everyone sees them.</string>
+    <string name="backup_type_follow_list">follow list</string>
+    <string name="backup_type_follow_list_explainer">Decides whose posts appear in your home feed.</string>
+    <string name="backup_type_mute_list">mute list</string>
+    <string name="backup_type_mute_list_explainer">Hides people, words, hashtags and threads from everything you see.</string>
+    <string name="backup_type_outbox_inbox_relays">public relay list</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">Tells everyone where to find your posts and where to send you replies and mentions.</string>
+    <string name="backup_type_dm_relays">DM relay list</string>
+    <string name="backup_type_dm_relays_explainer">Where others deliver your private messages.</string>
+    <string name="backup_type_key_package_relays">group-chat key relays</string>
+    <string name="backup_type_key_package_relays_explainer">Where others find the keys to add you to encrypted group chats.</string>
+    <string name="backup_type_search_relays">search relay list</string>
+    <string name="backup_type_search_relays_explainer">The relays used when you search.</string>
+    <string name="backup_type_indexer_relays">indexer relay list</string>
+    <string name="backup_type_indexer_relays_explainer">The relays used to find other people\'s profiles and relay lists.</string>
+    <string name="backup_type_relay_feeds">favorite relay feeds</string>
+    <string name="backup_type_relay_feeds_explainer">The relays you browse as feeds.</string>
+    <string name="backup_type_blocked_relays">blocked relay list</string>
+    <string name="backup_type_blocked_relays_explainer">Relays this app never connects to.</string>
+    <string name="backup_type_trusted_relays">trusted relay list</string>
+    <string name="backup_type_trusted_relays_explainer">Relays you trust to connect to without asking.</string>
+    <string name="backup_type_private_outbox_relays">private relay list</string>
+    <string name="backup_type_private_outbox_relays_explainer">Where your drafts and private data are stored.</string>
+    <string name="backup_type_app_settings">synced app settings</string>
+    <string name="backup_type_app_settings_explainer">Amethyst settings synced across your devices. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_public_chats">public chat list</string>
+    <string name="backup_type_public_chats_explainer">The public chats you joined.</string>
+    <string name="backup_type_communities">community list</string>
+    <string name="backup_type_communities_explainer">The communities you joined.</string>
+    <string name="backup_type_hashtags">followed hashtags</string>
+    <string name="backup_type_hashtags_explainer">Hashtags whose posts appear in your feeds.</string>
+    <string name="backup_type_geohashes">followed locations</string>
+    <string name="backup_type_geohashes_explainer">Locations whose posts appear in your feeds.</string>
+    <string name="backup_type_favorite_algo_feeds">favorite feeds list</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">The algorithmic feeds you saved.</string>
+    <string name="backup_type_ephemeral_chats">ephemeral chat list</string>
+    <string name="backup_type_ephemeral_chats_explainer">The ephemeral chat rooms you joined.</string>
+    <string name="backup_type_relay_groups">group list</string>
+    <string name="backup_type_relay_groups_explainer">The relay-based groups you joined.</string>
+    <string name="backup_type_concord_communities">Concord community list</string>
+    <string name="backup_type_concord_communities_explainer">The Concord communities you joined. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_trust_providers">trust provider list</string>
+    <string name="backup_type_trust_providers_explainer">The services you trust to rank and verify people for you.</string>
+    <string name="backup_type_cashu_wallet">Cashu wallet</string>
+    <string name="backup_type_cashu_wallet_explainer">Your ecash wallet settings and mints. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_nutzap_info">nutzap receiving settings</string>
+    <string name="backup_type_nutzap_info_explainer">The mints and key others use to send you nutzaps.</string>
+    <string name="backup_type_payment_targets">payment addresses</string>
+    <string name="backup_type_payment_targets_explainer">The ways other people can pay you.</string>
+    <string name="backup_type_bolt12_offers">BOLT12 offers</string>
+    <string name="backup_type_bolt12_offers_explainer">The lightning offers others use to pay you.</string>
+    <string name="backup_type_other">list</string>
+    <string name="backup_type_other_explainer">A list saved on this device.</string>
+    <string name="backup_entry_profile_field">Profile fields</string>
+    <string name="backup_entry_person">People</string>
+    <string name="backup_entry_hashtag">Hashtags</string>
+    <string name="backup_entry_word">Words</string>
+    <string name="backup_entry_thread">Threads</string>
+    <string name="backup_entry_public_chat">Public chats</string>
+    <string name="backup_entry_community">Communities</string>
+    <string name="backup_entry_algo_feed">Feeds</string>
+    <string name="backup_entry_location">Locations</string>
+    <string name="backup_entry_relay">Relays</string>
+    <string name="backup_entry_relay_group">Groups</string>
+    <string name="backup_entry_chat_room">Chat rooms</string>
+    <string name="backup_entry_trust_provider">Trust providers</string>
+    <string name="backup_entry_mint">Mints</string>
+    <string name="backup_entry_nutzap_key">Nutzap keys</string>
+    <string name="backup_entry_payment_target">Payment addresses</string>
+    <string name="backup_entry_offer">Offers</string>
+    <string name="backup_entry_identity_claim">Linked identities</string>
+    <string name="backup_entry_other">Other entries</string>
+    <string name="backup_profile_field_name">Username</string>
+    <string name="backup_profile_field_display_name">Display name</string>
+    <string name="backup_profile_field_about">About</string>
+    <string name="backup_profile_field_picture">Picture</string>
+    <string name="backup_profile_field_banner">Banner</string>
+    <string name="backup_profile_field_website">Website</string>
+    <string name="backup_profile_field_nip05">Nostr address</string>
+    <string name="backup_profile_field_lud16">Lightning address</string>
+    <string name="backup_profile_field_lud06">LNURL</string>
+    <string name="backup_profile_field_pronouns">Pronouns</string>
+    <string name="backup_profile_field_birthday">Birthday</string>
+    <string name="backup_profile_field_clink_offer">CLINK offer</string>
+    <string name="backup_profile_field_bot">Bot flag</string>
 </resources>

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -49,6 +51,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -367,6 +371,35 @@ class EventBroadcaster(
             account.client.publish(it, account.outboxRelays.flow.value)
             account.cache.justConsumeMyOwnEvent(it)
         }
+    }
+
+    /**
+     * Publishes a re-signed backup that replaces a lossy version from another app. It goes
+     * where a normal save of that event goes; lists of the user's own relays (NIP-65, DM,
+     * key package) and the wallet go everywhere, and also to every relay the restored list
+     * names, since the lossy version may have removed them from the outbox set. Profiles and
+     * nutzap info go everywhere too, like their normal saves.
+     */
+    fun sendRestoredVersion(event: Event) {
+        when (event) {
+            is AdvertisedRelayListEvent -> sendEverywhereAnd(event, event.relays().mapTo(mutableSetOf()) { it.relayUrl })
+            is ChatMessageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
+            is KeyPackageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
+            is CashuWalletEvent -> sendLiterallyEverywhere(event)
+            // Profiles and nutzap info are normally saved everywhere so others can find them;
+            // the restore must reach the same relays or they keep serving the lossy version.
+            is MetadataEvent -> sendLiterallyEverywhere(event)
+            is NutzapInfoEvent -> sendEverywhereAnd(event, event.relays().toSet())
+            else -> sendMyPublicAndPrivateOutbox(event)
+        }
+    }
+
+    private fun sendEverywhereAnd(
+        event: Event,
+        extraRelays: Set<NormalizedRelayUrl>,
+    ) {
+        account.client.publish(event, account.followPlusAllMineWithIndex.flow.value + account.client.availableRelaysFlow().value + extraRelays)
+        account.cache.justConsumeMyOwnEvent(event)
     }
 
     fun sendLiterallyEverywhere(event: Event) {

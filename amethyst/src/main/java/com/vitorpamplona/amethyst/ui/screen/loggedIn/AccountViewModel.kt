@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -1662,6 +1663,12 @@ class AccountViewModel(
             direct()
         }
     }
+
+    /**
+     * Keeps another app's version of a backed-up list. Off the main thread: it waits for the
+     * backup guard's lock, which the backup collectors hold while diffing large lists.
+     */
+    fun acceptExternalBackupVersion(conflict: ReplaceableBackupConflict) = viewModelScope.launch(Dispatchers.IO) { account.acceptExternalVersion(conflict) }
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {

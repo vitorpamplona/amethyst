@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nip51Lists.geohashList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -45,7 +48,16 @@ class GeohashListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<GeohashListDiff> {
+    override fun diffFrom(older: Event): GeohashListDiff? {
+        if (older !is GeohashListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return GeohashListDiff(
+            ListDiff.of(older.publicGeohashes(), publicGeohashes(), { it.lowercase() }),
+            privateItemsChangeFrom(older),
+        )
+    }
+
     fun publicGeohashes() = tags.geohashList()
 
     suspend fun decryptPrivateGeohashes(signer: NostrSigner) = privateTags(signer)?.geohashList()

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -40,6 +41,12 @@ abstract class PrivateTagArrayEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     override fun isContentEncoded() = true
+
+    /**
+     * How the NIP-44 encrypted private items changed since [older]. They can't be compared
+     * item by item without decrypting, so only as a whole.
+     */
+    fun privateItemsChangeFrom(older: PrivateTagArrayEvent) = ContentChange.between(older.content, content)
 
     suspend fun decrypt(signer: NostrSigner): TagArray {
         if (signer.pubKey != pubKey) throw SignerExceptions.UnauthorizedDecryptionException()

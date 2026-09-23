@@ -111,11 +111,26 @@ class AppSpecificState(
                 getAppSpecificDataFlow().collect {
                     try {
                         Log.d("AccountRegisterObservers") { "Updating AppSpecificData for ${signer.pubKey}" }
-                        (it.note.event as? AppSpecificDataEvent)?.let {
-                            val decrypted = signer.decrypt(it.content, it.pubKey)
+                        (it.note.event as? AppSpecificDataEvent)?.let { event ->
+                            // A blob another app emptied has nothing to decrypt, so it used to die
+                            // in the catch below — yet an empty version is exactly the wipe the
+                            // backup guard exists to question, and [AccountSettings] already
+                            // accepts one (`isEmpty`). Without this it never got there: the guard
+                            // was never called, no conflict was raised, and the NIP-78 card could
+                            // not appear for the case it was written for.
+                            //
+                            // The settings handed over are never merged — updateAppSpecificData
+                            // returns before that whenever the content is empty — so defaults
+                            // here cannot overwrite the real ones.
+                            if (event.content.isBlank()) {
+                                settings.updateAppSpecificData(event, AccountSyncedSettingsInternal())
+                                return@let
+                            }
+
+                            val decrypted = signer.decrypt(event.content, event.pubKey)
                             try {
                                 val syncedSettings = JsonMapper.fromJson<AccountSyncedSettingsInternal>(decrypted)
-                                settings.updateAppSpecificData(it, syncedSettings)
+                                settings.updateAppSpecificData(event, syncedSettings)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e
                                 Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences", e)

@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,6 +38,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -52,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
@@ -73,6 +79,8 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -88,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -395,7 +404,9 @@ fun HomeFeeds(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
-                onEmpty = { HomeFeedEmpty(onRefresh) },
+                onEmpty = { WithBackupConflicts(accountViewModel, nav) { HomeFeedEmpty(onRefresh) } },
+                onError = { WithBackupConflicts(accountViewModel, nav) { FeedError(it, onRefresh) } },
+                onLoading = { WithBackupConflicts(accountViewModel, nav) { LoadingFeed() } },
             )
         }
     }
@@ -428,11 +439,30 @@ fun FeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val backupConflicts by accountViewModel.account.settings.backupConflicts
+        .collectAsStateWithLifecycle()
+
+    // The list keeps its position anchored to the first visible post, so cards that appear
+    // while the feed sits at the top would be inserted just above the screen. Only then (not
+    // when the user has scrolled down) bring them into view.
+    val hasConflicts = backupConflicts.isNotEmpty()
+    val atTop by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
+    val cardsAppearedAtTop = remember(hasConflicts) { hasConflicts && atTop }
+    LaunchedEffect(cardsAppearedAtTop) {
+        if (cardsAppearedAtTop) listState.scrollToItem(0)
+    }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
+        // Only while a conflict is open, so the list's first item (and with it how the
+        // scroll position anchors when new posts arrive) is unchanged the rest of the time.
+        if (hasConflicts) {
+            item(key = "backupConflicts", contentType = "backupConflicts") {
+                BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel::acceptExternalBackupVersion)
+            }
+        }
         if (liveSection != null) {
             item {
                 DisplayLiveBubbles(liveSection, accountViewModel, nav)
@@ -511,6 +541,43 @@ fun HomeFeedEmptyPreview() {
     ThemeComparisonRow(
         toPreview = { HomeFeedEmpty {} },
     )
+}
+
+/**
+ * The backup-conflict cards above a feed that has no posts to show yet, so an empty or
+ * still-loading Home doesn't hide the question. They get at most half the screen and scroll
+ * there if there are many.
+ */
+@Composable
+private fun WithBackupConflicts(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    content: @Composable () -> Unit,
+) {
+    val backupConflicts by accountViewModel.account.settings.backupConflicts
+        .collectAsStateWithLifecycle()
+    if (backupConflicts.isEmpty()) {
+        content()
+        return
+    }
+    val padding = rememberFeedContentPadding(FeedPadding)
+    val layoutDirection = LocalLayoutDirection.current
+    Column(Modifier.fillMaxSize()) {
+        BackupConflictCards(
+            backupConflicts,
+            nav,
+            onAccept = accountViewModel::acceptExternalBackupVersion,
+            Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = padding.calculateStartPadding(layoutDirection),
+                    top = padding.calculateTopPadding(),
+                    end = padding.calculateEndPadding(layoutDirection),
+                ),
+        )
+        Box(Modifier.weight(1f)) { content() }
+    }
 }
 
 @Composable
