@@ -35,8 +35,9 @@ only surviving copy of the user's data is gone.
    `ListDiff<T>` (items matched by an identity key; a matched pair with different details
    is a change, not a removal plus an addition), `ValueChange<T>`, and `ContentChange` for
    NIP-44 private items, which can't be compared item by item without decrypting.
-3. **Only question lossy external rewrites.** `AccountSettings.acceptIntoBackup` guards
-   every `update*` backup method. A newer version that was not signed here goes through
+3. **Only question lossy external rewrites.** `BackupConflictGuard` (commons,
+   `model/backups/`, tested in `BackupConflictGuardTest`) guards every `update*` backup
+   method of `AccountSettings`, which owns one as `backupGuard`. A newer version that was not signed here goes through
    `ReplaceableBackupDiff.detectLoss` (commons), which asks the event for its diff and
    keeps it only when `removesData()`.
 
@@ -49,13 +50,18 @@ only surviving copy of the user's data is gone.
    shared with the resolutions, and a version older than an open conflict's incoming can
    never replace or clear it (e.g. the retry of an accept that a newer change overtook).
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
-   `ReplaceableBackupConflict` is published on `AccountSettings.backupConflicts`.
+   `ReplaceableBackupConflict` is published on `BackupConflictGuard.conflicts`.
    Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
    next to the key-backup nudge): "Your mute list changed in another app" with a
    "12 removed · 3 added" summary. Cards can't be dismissed; they stay until the user
    decides. The most recent conflict gets a lead card with an event-specific headline
    ("3 relays were unblocked", "Your follow list shrank" with its bar); the others collapse
-   into slim pills. Tapping one opens `Route.BackupConflictReview(slot)`
+   into slim pills. At most two pills show; more open conflicts sit behind an "N more lists
+   changed" toggle that expands into a capped, scrollable area, since the cards float over
+   the feed instead of scrolling with it. List headlines lead with what was lost and add
+   what was added to the same list, worded per list ("12 follows were dropped, and 40 were
+   added", "You'd leave 2 groups, and join 1", "3 relays were unblocked, and 1 newly
+   blocked"). Tapping one opens `Route.BackupConflictReview(slot)`
    (`BackupConflictReviewScreen`): a `LazyColumn` of every entry, so lists with hundreds of
    items scroll lazily. Entries are typed (`ReviewItem`, built per diff class in
    `BackupConflictPresentation.kt`) and rendered with the app's loaders, which subscribe to
@@ -112,8 +118,12 @@ only surviving copy of the user's data is gone.
    silently clear the conflict. They move the conflict's `incoming` forward but keep the
    external version as its `cause` (the screen shows that date).
 
-Conflicts are not persisted: the frozen backup is reloaded on start, the newer relay
-version replaces it in `LocalCache`, and the same conflict is detected again.
+Open conflicts are persisted with the backups (`BackupConflictStorage`, as the saved,
+incoming and cause events) and re-seeded on load through `BackupConflictGuard.restore`. The
+diff is recomputed, so a version the other app has since fixed stops being a conflict. A
+restored conflict has no retry closure until its version arrives again; keeping it rebuilds
+the update from the event's type (`AccountSettings.reapplyBackup`), except NIP-78, which
+lands on the next delivery.
 
 ## Known limits / follow-ups
 

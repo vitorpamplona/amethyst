@@ -1901,7 +1901,7 @@ class Account(
      * dropped because the event was deleted), which also makes a double tap harmless.
      */
     suspend fun restoreBackupOver(conflict: ReplaceableBackupConflict) {
-        val token = settings.startRestoringSavedVersion(conflict) ?: return
+        val token = settings.backupGuard.startRestoring(conflict) ?: return
         var restored = false
         try {
             val saved = conflict.saved
@@ -1914,14 +1914,14 @@ class Account(
             broadcaster.sendRestoredVersion(resigned)
             restored = true
         } finally {
-            settings.finishRestoringSavedVersion(conflict, token, restored)
+            settings.backupGuard.finishRestoring(conflict, token, restored)
         }
     }
 
     private val maxRestoreFutureSeconds = 15 * 60L
 
     /** Resolves a [ReplaceableBackupConflict] in favor of the current version. No-op when stale. */
-    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.keepIncomingVersion(conflict)
+    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.backupGuard.keepIncoming(conflict)
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

@@ -23,10 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
-import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
-import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
-import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupDiff
-import com.vitorpamplona.amethyst.commons.model.backups.backupSlot
+import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictGuard
 import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
@@ -44,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -97,7 +93,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
-import java.util.concurrent.ConcurrentHashMap
 
 val DefaultSignerPermissions =
     listOf(
@@ -1167,124 +1162,28 @@ class AccountSettings(
     // ----
 
     /**
-     * Newer versions of backed-up events that came from another client and dropped data the
-     * backup still has, keyed by [ReplaceableBackupConflict.slot]. While a slot is in here its
-     * backup is frozen on the saved version, so the user can still restore it. Not persisted:
-     * after a restart the same newer event is detected again against the same frozen backup.
-     * Home shows a card for each until the user keeps the new version or restores the saved one.
+     * Holds back external rewrites that dropped data from a backup, see [BackupConflictGuard].
+     * Home shows a card for each open conflict until the user keeps the new version or
+     * restores the saved one. Open conflicts are saved with the backups they hold back.
      */
-    val backupConflicts = MutableStateFlow<Map<String, ReplaceableBackupConflict>>(emptyMap())
+    val backupGuard =
+        BackupConflictGuard(
+            onChange = { saveAccountSettings() },
+            reapply = { reapplyBackup(it) },
+        )
 
-    // Re-runs the update that raised each open conflict, once the user keeps the new version.
-    private val backupConflictRetries = ConcurrentHashMap<String, () -> Unit>()
+    val backupConflicts get() = backupGuard.conflicts
 
-    // Versions whose conflict is being resolved (accepted or restored). They must not raise
-    // the same conflict again while the resolution is in flight.
-    private val resolvingBackupVersions = ConcurrentSet<HexKey>()
-
-    // Externally signed versions the user explicitly chose to keep over the backup.
-    private val acceptedExternalVersions = ConcurrentSet<HexKey>()
-
-    // Serializes the conflict bookkeeping: the backup collectors run on IO threads while
-    // the user resolves conflicts from the UI thread.
-    private val backupConflictLock = Any()
-
-    /**
-     * Decides whether [incoming] may overwrite the [saved] backup. Versions signed by this app
-     * always may. A newer version signed elsewhere that removed items from the saved one is
-     * held back and raised as a [ReplaceableBackupConflict]; [retry] re-runs the caller's
-     * update once the user keeps it.
-     *
-     * An [isEmpty] version (a wiped list) always reaches the diff, so wiping everything is
-     * questioned like any other loss; it only becomes the backup when this app signed it or
-     * the user chose to keep it.
-     */
-    private fun <T : Event> acceptIntoBackup(
-        saved: T?,
-        incoming: T,
-        isEmpty: Boolean = false,
-        retry: () -> Unit,
-    ): Boolean =
-        synchronized(backupConflictLock) {
-            if (saved?.id == incoming.id) return@synchronized false
-            if (resolvingBackupVersions.contains(incoming.id)) return@synchronized false
-
-            val slot = backupSlot(incoming)
-            val pending = backupConflicts.value[slot]
-
-            if (pending != null) {
-                // The same version re-emitted by the cache: the open conflict already describes it.
-                // Its retry is refreshed too: a conflict restored from storage carries none
-                // until the version it is about comes round again.
-                if (pending.incoming.id == incoming.id) {
-                    backupConflictRetries[slot] = retry
-                    return@synchronized false
-                }
-                // An older version (e.g. the retry of a just-accepted conflict that a newer
-                // external change overtook) must never replace or clear the newer question.
-                if (incoming.createdAt < pending.incoming.createdAt) return@synchronized false
-            }
-
-            val isLocal = LocallySignedEvents.contains(incoming.id)
-            val accepted = acceptedExternalVersions.contains(incoming.id)
-
-            // While a conflict is open, even edits made here are built on top of the external
-            // version, so they are still compared with the version the user may want to restore.
-            val reference = pending?.saved ?: saved?.takeUnless { isLocal }
-
-            if (reference != null && !accepted) {
-                val diff = ReplaceableBackupDiff.detectLoss(reference, incoming)
-                if (diff != null) {
-                    // A local edit keeps the external change as the conflict's cause.
-                    val cause = if (isLocal && pending != null) pending.cause else incoming
-                    val conflict = ReplaceableBackupConflict(reference, incoming, cause, diff)
-                    backupConflictRetries[slot] = retry
-                    backupConflicts.update { it + (slot to conflict) }
-                    saveAccountSettings()
-                    return@synchronized false
-                }
-            }
-
-            dropBackupConflict(slot)
-            // A wipe from elsewhere that lost nothing (e.g. the backup was empty too) doesn't
-            // become the backup; one signed here or explicitly kept does.
-            !isEmpty || isLocal || accepted
-        }
-
-    private fun dropBackupConflict(slot: String) {
-        if (backupConflicts.value.containsKey(slot)) {
-            backupConflicts.update { it - slot }
-            saveAccountSettings()
-        }
-        backupConflictRetries.remove(slot)
-    }
-
-    /**
-     * Re-seeds the open conflicts read back from storage.
-     *
-     * A conflict outlives the process that raised it: it is the user's undecided question, and
-     * the whole point of holding the backup back is that nobody answered it yet. Their [diff]
-     * is recomputed rather than stored, so a version that no longer removes anything — the
-     * other app put it back — quietly stops being a conflict.
-     */
-    fun restoreBackupConflicts(saved: List<Triple<Event, Event, Event>>) {
-        if (saved.isEmpty()) return
-        val restored =
-            saved.mapNotNull { (savedEvent, incoming, cause) ->
-                val diff = ReplaceableBackupDiff.detectLoss(savedEvent, incoming) ?: return@mapNotNull null
-                val conflict = ReplaceableBackupConflict(savedEvent, incoming, cause, diff)
-                conflict.slot to conflict
-            }
-        if (restored.isNotEmpty()) backupConflicts.update { it + restored }
-    }
+    /** Re-seeds the open conflicts read back from storage, see [BackupConflictGuard.restore]. */
+    fun restoreBackupConflicts(saved: List<Triple<Event, Event, Event>>) = backupGuard.restore(saved)
 
     /** The open conflicts, as the three events storage needs to rebuild each one. */
-    fun openBackupConflicts(): List<Triple<Event, Event, Event>> = backupConflicts.value.values.map { Triple(it.saved, it.incoming, it.cause) }
+    fun openBackupConflicts(): List<Triple<Event, Event, Event>> = backupGuard.open()
 
     /**
      * Re-runs the update that a restored conflict no longer carries.
      *
-     * [backupConflictRetries] holds closures, so it cannot be written to disk; a conflict read
+     * The guard's retries are closures, so they cannot be written to disk; a conflict read
      * back after a restart has none until its version happens to arrive again. Keeping the new
      * version must work regardless, and every update is the same shape — hand the event to the
      * function that owns its slot — so the slot can be recovered from the event's own type.
@@ -1318,89 +1217,10 @@ class AccountSettings(
             is MuteListEvent -> updateMuteList(incoming)
             // NIP-78 is deliberately absent: its update also takes the decrypted
             // AccountSyncedSettingsInternal, which only the caller can produce. Keeping that
-            // version still works — [keepIncomingVersion] records the id in
-            // [acceptedExternalVersions] first, so the next delivery walks into the backup
+            // version still works — [BackupConflictGuard.keepIncoming] records the id as accepted
+            // first, so the next delivery walks into the backup
             // unchallenged — it just lands when the event next arrives rather than right now.
             else -> Unit
-        }
-    }
-
-    /**
-     * Removes [conflict] if it is still the open conflict of its slot. Returns false when it
-     * was already resolved or replaced by a newer one, so callers never act on a stale conflict.
-     */
-    private fun claimBackupConflict(conflict: ReplaceableBackupConflict): (() -> Unit)? =
-        synchronized(backupConflictLock) {
-            claimBackupConflictLocked(conflict)
-        }
-
-    private fun claimBackupConflictLocked(conflict: ReplaceableBackupConflict): (() -> Unit)? {
-        var claimed = false
-        backupConflicts.update { current ->
-            claimed = current[conflict.slot] === conflict
-            if (claimed) current - conflict.slot else current
-        }
-        if (!claimed) return null
-        saveAccountSettings()
-        // A conflict restored from storage has no closure to re-run: rebuild it from the event.
-        // Falling back to {} instead would clear the card and quietly keep the old backup.
-        return backupConflictRetries.remove(conflict.slot) ?: { reapplyBackup(conflict.incoming) }
-    }
-
-    /** Keeps the new version: the backup moves forward to [ReplaceableBackupConflict.incoming]. */
-    fun keepIncomingVersion(conflict: ReplaceableBackupConflict) {
-        val retry =
-            synchronized(backupConflictLock) {
-                val claimed = claimBackupConflictLocked(conflict) ?: return
-                acceptedExternalVersions.add(conflict.incoming.id)
-                claimed
-            }
-        // Outside the lock: the retry re-enters acceptIntoBackup, which takes it again.
-        retry()
-    }
-
-    /**
-     * Starts restoring the saved version: claims [conflict] and stops its incoming version
-     * from raising it again while the saved one is re-signed. Returns null when the conflict
-     * is stale (already resolved, replaced or dropped); otherwise a token to hand back to
-     * [finishRestoringSavedVersion].
-     */
-    fun startRestoringSavedVersion(conflict: ReplaceableBackupConflict): (() -> Unit)? =
-        synchronized(backupConflictLock) {
-            val retry = claimBackupConflictLocked(conflict) ?: return@synchronized null
-            resolvingBackupVersions.add(conflict.incoming.id)
-            retry
-        }
-
-    /**
-     * Ends a restore. On failure the conflict is reopened so the user can try again, unless
-     * something else (a newer change, a deletion) took the slot meanwhile.
-     */
-    fun finishRestoringSavedVersion(
-        conflict: ReplaceableBackupConflict,
-        token: () -> Unit,
-        restored: Boolean,
-    ) {
-        synchronized(backupConflictLock) {
-            finishRestoringLocked(conflict, token, restored)
-        }
-    }
-
-    private fun finishRestoringLocked(
-        conflict: ReplaceableBackupConflict,
-        token: () -> Unit,
-        restored: Boolean,
-    ) {
-        resolvingBackupVersions.remove(conflict.incoming.id)
-        if (restored) return
-        var reopened = false
-        backupConflicts.update { current ->
-            reopened = !current.containsKey(conflict.slot)
-            if (reopened) current + (conflict.slot to conflict) else current
-        }
-        if (reopened) {
-            backupConflictRetries[conflict.slot] = token
-            saveAccountSettings()
         }
     }
 
@@ -1422,7 +1242,7 @@ class AccountSettings(
     fun updateUserMetadata(newMetadata: MetadataEvent?) {
         if (newMetadata == null) return
 
-        if (acceptIntoBackup(backupUserMetadata, newMetadata) { updateUserMetadata(newMetadata) }) {
+        if (backupGuard.accept(backupUserMetadata, newMetadata) { updateUserMetadata(newMetadata) }) {
             backupUserMetadata = newMetadata
             saveAccountSettings()
         }
@@ -1431,7 +1251,7 @@ class AccountSettings(
     fun updateContactListTo(newContactList: ContactListEvent?) {
         if (newContactList == null) return
 
-        if (acceptIntoBackup(backupContactList, newContactList, isEmpty = newContactList.tags.isEmpty()) { updateContactListTo(newContactList) }) {
+        if (backupGuard.accept(backupContactList, newContactList, isEmpty = newContactList.tags.isEmpty()) { updateContactListTo(newContactList) }) {
             backupContactList = newContactList
             saveAccountSettings()
         }
@@ -1440,7 +1260,7 @@ class AccountSettings(
     fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
         if (newDMRelayList == null) return
 
-        if (acceptIntoBackup(backupDMRelayList, newDMRelayList, isEmpty = newDMRelayList.tags.isEmpty()) { updateDMRelayList(newDMRelayList) }) {
+        if (backupGuard.accept(backupDMRelayList, newDMRelayList, isEmpty = newDMRelayList.tags.isEmpty()) { updateDMRelayList(newDMRelayList) }) {
             backupDMRelayList = newDMRelayList
             saveAccountSettings()
         }
@@ -1449,7 +1269,7 @@ class AccountSettings(
     fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
         if (newKeyPackageRelayList == null) return
 
-        if (acceptIntoBackup(backupKeyPackageRelayList, newKeyPackageRelayList, isEmpty = newKeyPackageRelayList.tags.isEmpty()) { updateKeyPackageRelayList(newKeyPackageRelayList) }) {
+        if (backupGuard.accept(backupKeyPackageRelayList, newKeyPackageRelayList, isEmpty = newKeyPackageRelayList.tags.isEmpty()) { updateKeyPackageRelayList(newKeyPackageRelayList) }) {
             backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
@@ -1458,7 +1278,7 @@ class AccountSettings(
     fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
         if (newNIP65RelayList == null) return
 
-        if (acceptIntoBackup(backupNIP65RelayList, newNIP65RelayList, isEmpty = newNIP65RelayList.tags.isEmpty()) { updateNIP65RelayList(newNIP65RelayList) }) {
+        if (backupGuard.accept(backupNIP65RelayList, newNIP65RelayList, isEmpty = newNIP65RelayList.tags.isEmpty()) { updateNIP65RelayList(newNIP65RelayList) }) {
             backupNIP65RelayList = newNIP65RelayList
             saveAccountSettings()
         }
@@ -1467,7 +1287,7 @@ class AccountSettings(
     fun updateCashuWallet(newWallet: CashuWalletEvent?) {
         if (newWallet == null) return
         // Replaceable: keep the latest by id (id changes on each re-sign).
-        if (acceptIntoBackup(backupCashuWallet, newWallet) { updateCashuWallet(newWallet) }) {
+        if (backupGuard.accept(backupCashuWallet, newWallet) { updateCashuWallet(newWallet) }) {
             backupCashuWallet = newWallet
             saveAccountSettings()
         }
@@ -1477,7 +1297,7 @@ class AccountSettings(
         if (newNutzapInfo == null) return
         // The guard runs first, so another app wiping the nutzap info is questioned like any
         // other lossy rewrite instead of silently clearing the backup.
-        if (!acceptIntoBackup(backupNutzapInfo, newNutzapInfo) { updateNutzapInfo(newNutzapInfo) }) return
+        if (!backupGuard.accept(backupNutzapInfo, newNutzapInfo) { updateNutzapInfo(newNutzapInfo) }) return
         // A mints-less kind:10019 is the "stop receiving nutzaps" tombstone
         // (an empty replacement carrying only an `alt` tag). Don't restore it
         // on next launch — backing it up would undo clearNutzapInfo() once the
@@ -1498,7 +1318,7 @@ class AccountSettings(
      */
     fun clearCashuWallet() {
         // A deleted wallet must not be restorable from an open conflict.
-        dropBackupConflict(backupSlotOf(CashuWalletEvent.KIND))
+        backupGuard.drop(backupSlotOf(CashuWalletEvent.KIND))
         if (backupCashuWallet != null) {
             backupCashuWallet = null
             saveAccountSettings()
@@ -1507,7 +1327,7 @@ class AccountSettings(
 
     /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
     fun clearNutzapInfo() {
-        dropBackupConflict(backupSlotOf(NutzapInfoEvent.KIND))
+        backupGuard.drop(backupSlotOf(NutzapInfoEvent.KIND))
         if (backupNutzapInfo != null) {
             backupNutzapInfo = null
             saveAccountSettings()
@@ -1561,7 +1381,7 @@ class AccountSettings(
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
         if (newNIPA3PaymentTargets == null) return
 
-        if (acceptIntoBackup(backupNipA3PaymentTargets, newNIPA3PaymentTargets, isEmpty = newNIPA3PaymentTargets.tags.isEmpty()) { updateNIPA3PaymentTargets(newNIPA3PaymentTargets) }) {
+        if (backupGuard.accept(backupNipA3PaymentTargets, newNIPA3PaymentTargets, isEmpty = newNIPA3PaymentTargets.tags.isEmpty()) { updateNIPA3PaymentTargets(newNIPA3PaymentTargets) }) {
             backupNipA3PaymentTargets = newNIPA3PaymentTargets
             saveAccountSettings()
         }
@@ -1570,7 +1390,7 @@ class AccountSettings(
     fun updateBolt12Offers(newBolt12Offers: Bolt12OfferListEvent?) {
         if (newBolt12Offers == null) return
 
-        if (acceptIntoBackup(backupBolt12Offers, newBolt12Offers, isEmpty = newBolt12Offers.tags.isEmpty()) { updateBolt12Offers(newBolt12Offers) }) {
+        if (backupGuard.accept(backupBolt12Offers, newBolt12Offers, isEmpty = newBolt12Offers.tags.isEmpty()) { updateBolt12Offers(newBolt12Offers) }) {
             backupBolt12Offers = newBolt12Offers
             saveAccountSettings()
         }
@@ -1579,7 +1399,7 @@ class AccountSettings(
     fun updateSearchRelayList(newSearchRelayList: SearchRelayListEvent?) {
         if (newSearchRelayList == null) return
 
-        if (acceptIntoBackup(backupSearchRelayList, newSearchRelayList, isEmpty = newSearchRelayList.tags.isEmpty()) { updateSearchRelayList(newSearchRelayList) }) {
+        if (backupGuard.accept(backupSearchRelayList, newSearchRelayList, isEmpty = newSearchRelayList.tags.isEmpty()) { updateSearchRelayList(newSearchRelayList) }) {
             backupSearchRelayList = newSearchRelayList
             saveAccountSettings()
         }
@@ -1588,7 +1408,7 @@ class AccountSettings(
     fun updateIndexRelayList(newIndexRelayList: IndexerRelayListEvent?) {
         if (newIndexRelayList == null) return
 
-        if (acceptIntoBackup(backupIndexRelayList, newIndexRelayList, isEmpty = newIndexRelayList.tags.isEmpty()) { updateIndexRelayList(newIndexRelayList) }) {
+        if (backupGuard.accept(backupIndexRelayList, newIndexRelayList, isEmpty = newIndexRelayList.tags.isEmpty()) { updateIndexRelayList(newIndexRelayList) }) {
             backupIndexRelayList = newIndexRelayList
             saveAccountSettings()
         }
@@ -1597,7 +1417,7 @@ class AccountSettings(
     fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
         if (newRelayFeedList == null) return
 
-        if (acceptIntoBackup(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
+        if (backupGuard.accept(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
             backupRelayFeedsList = newRelayFeedList
             saveAccountSettings()
         }
@@ -1606,7 +1426,7 @@ class AccountSettings(
     fun updateBlockedRelayList(newBlockedRelayList: BlockedRelayListEvent?) {
         if (newBlockedRelayList == null) return
 
-        if (acceptIntoBackup(backupBlockedRelayList, newBlockedRelayList, isEmpty = newBlockedRelayList.tags.isEmpty()) { updateBlockedRelayList(newBlockedRelayList) }) {
+        if (backupGuard.accept(backupBlockedRelayList, newBlockedRelayList, isEmpty = newBlockedRelayList.tags.isEmpty()) { updateBlockedRelayList(newBlockedRelayList) }) {
             backupBlockedRelayList = newBlockedRelayList
             saveAccountSettings()
         }
@@ -1615,7 +1435,7 @@ class AccountSettings(
     fun updateTrustedRelayList(newTrustedRelayList: TrustedRelayListEvent?) {
         if (newTrustedRelayList == null) return
 
-        if (acceptIntoBackup(backupTrustedRelayList, newTrustedRelayList, isEmpty = newTrustedRelayList.tags.isEmpty()) { updateTrustedRelayList(newTrustedRelayList) }) {
+        if (backupGuard.accept(backupTrustedRelayList, newTrustedRelayList, isEmpty = newTrustedRelayList.tags.isEmpty()) { updateTrustedRelayList(newTrustedRelayList) }) {
             backupTrustedRelayList = newTrustedRelayList
             saveAccountSettings()
         }
@@ -1624,7 +1444,7 @@ class AccountSettings(
     fun updatePrivateHomeRelayList(newPrivateHomeRelayList: PrivateOutboxRelayListEvent?) {
         if (newPrivateHomeRelayList == null) return
 
-        if (acceptIntoBackup(backupPrivateHomeRelayList, newPrivateHomeRelayList, isEmpty = newPrivateHomeRelayList.tags.isEmpty()) { updatePrivateHomeRelayList(newPrivateHomeRelayList) }) {
+        if (backupGuard.accept(backupPrivateHomeRelayList, newPrivateHomeRelayList, isEmpty = newPrivateHomeRelayList.tags.isEmpty()) { updatePrivateHomeRelayList(newPrivateHomeRelayList) }) {
             backupPrivateHomeRelayList = newPrivateHomeRelayList
             saveAccountSettings()
         }
@@ -1635,7 +1455,7 @@ class AccountSettings(
     override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
         if (newChannelList == null) return
 
-        if (acceptIntoBackup(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
+        if (backupGuard.accept(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
             backupChannelList = newChannelList
             saveAccountSettings()
         }
@@ -1644,7 +1464,7 @@ class AccountSettings(
     fun updateGeohashListTo(newGeohashList: GeohashListEvent?) {
         if (newGeohashList == null) return
 
-        if (acceptIntoBackup(backupGeohashList, newGeohashList, isEmpty = newGeohashList.tags.isEmpty()) { updateGeohashListTo(newGeohashList) }) {
+        if (backupGuard.accept(backupGeohashList, newGeohashList, isEmpty = newGeohashList.tags.isEmpty()) { updateGeohashListTo(newGeohashList) }) {
             backupGeohashList = newGeohashList
             saveAccountSettings()
         }
@@ -1653,7 +1473,7 @@ class AccountSettings(
     fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
         if (newHashtagList == null) return
 
-        if (acceptIntoBackup(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {
+        if (backupGuard.accept(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {
             backupHashtagList = newHashtagList
             saveAccountSettings()
         }
@@ -1662,7 +1482,7 @@ class AccountSettings(
     fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
         if (newFavoriteDvmList == null) return
 
-        if (acceptIntoBackup(backupFavoriteAlgoFeedsList, newFavoriteDvmList, isEmpty = newFavoriteDvmList.tags.isEmpty()) { updateFavoriteAlgoFeedsListTo(newFavoriteDvmList) }) {
+        if (backupGuard.accept(backupFavoriteAlgoFeedsList, newFavoriteDvmList, isEmpty = newFavoriteDvmList.tags.isEmpty()) { updateFavoriteAlgoFeedsListTo(newFavoriteDvmList) }) {
             backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
@@ -1671,7 +1491,7 @@ class AccountSettings(
     fun updateCommunityListTo(newCommunityList: CommunityListEvent?) {
         if (newCommunityList == null) return
 
-        if (acceptIntoBackup(backupCommunityList, newCommunityList, isEmpty = newCommunityList.tags.isEmpty()) { updateCommunityListTo(newCommunityList) }) {
+        if (backupGuard.accept(backupCommunityList, newCommunityList, isEmpty = newCommunityList.tags.isEmpty()) { updateCommunityListTo(newCommunityList) }) {
             backupCommunityList = newCommunityList
             saveAccountSettings()
         }
@@ -1682,7 +1502,7 @@ class AccountSettings(
     override fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
         if (newEphemeralChatList == null) return
 
-        if (acceptIntoBackup(backupEphemeralChatList, newEphemeralChatList, isEmpty = newEphemeralChatList.tags.isEmpty()) { updateEphemeralChatListTo(newEphemeralChatList) }) {
+        if (backupGuard.accept(backupEphemeralChatList, newEphemeralChatList, isEmpty = newEphemeralChatList.tags.isEmpty()) { updateEphemeralChatListTo(newEphemeralChatList) }) {
             backupEphemeralChatList = newEphemeralChatList
             saveAccountSettings()
         }
@@ -1695,7 +1515,7 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newRelayGroupList == null) return
 
-        if (acceptIntoBackup(backupRelayGroupList, newRelayGroupList) { updateRelayGroupListTo(newRelayGroupList) }) {
+        if (backupGuard.accept(backupRelayGroupList, newRelayGroupList) { updateRelayGroupListTo(newRelayGroupList) }) {
             backupRelayGroupList = newRelayGroupList
             saveAccountSettings()
         }
@@ -1708,7 +1528,7 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newConcordList == null) return
 
-        if (acceptIntoBackup(backupConcordList, newConcordList) { updateConcordListTo(newConcordList) }) {
+        if (backupGuard.accept(backupConcordList, newConcordList) { updateConcordListTo(newConcordList) }) {
             backupConcordList = newConcordList
             saveAccountSettings()
         }
@@ -1717,7 +1537,7 @@ class AccountSettings(
     fun updateTrustProviderListTo(trustProviderList: TrustProviderListEvent?) {
         if (trustProviderList == null) return
 
-        if (acceptIntoBackup(backupTrustProviderList, trustProviderList, isEmpty = trustProviderList.tags.isEmpty()) { updateTrustProviderListTo(trustProviderList) }) {
+        if (backupGuard.accept(backupTrustProviderList, trustProviderList, isEmpty = trustProviderList.tags.isEmpty()) { updateTrustProviderListTo(trustProviderList) }) {
             backupTrustProviderList = trustProviderList
             saveAccountSettings()
         }
@@ -1726,7 +1546,7 @@ class AccountSettings(
     fun updateMuteList(newMuteList: MuteListEvent?) {
         if (newMuteList == null) return
 
-        if (acceptIntoBackup(backupMuteList, newMuteList, isEmpty = newMuteList.tags.isEmpty()) { updateMuteList(newMuteList) }) {
+        if (backupGuard.accept(backupMuteList, newMuteList, isEmpty = newMuteList.tags.isEmpty()) { updateMuteList(newMuteList) }) {
             backupMuteList = newMuteList
             saveAccountSettings()
         }
@@ -1738,7 +1558,7 @@ class AccountSettings(
     ) {
         if (appSettings == null) return
 
-        if (acceptIntoBackup(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isEmpty()) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
+        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isEmpty()) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
             backupAppSpecificData = appSettings
             // An emptied blob (signed here or accepted by the user) has no settings to merge.
             if (appSettings.content.isEmpty()) {
