@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -427,12 +428,22 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val draftToDelete = draftNote
-        innerSendPost(null)
-        onUiThread { cancel() }
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+        // With PoW on, the gift wraps are mined in the background and leave the phone
+        // minutes later; until then the draft is the only copy the user can see. The
+        // auto-save is debounced and cancel() drops the pending save, so flush it now
+        // and delete it only once the wraps are actually sent.
+        if (accountViewModel.account.powDifficultyFor(GiftWrapEvent.KIND) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
         }
+
+        val draftToDelete = draftNote
+        val account = accountViewModel.account
+        innerSendPost(null) {
+            // off the caller: signing the deletion must not hold up clearing the composer.
+            account.scope.launch(Dispatchers.IO) { account.deleteDraftIgnoreErrors(draftToDelete) }
+        }
+        onUiThread { cancel() }
     }
 
     suspend fun sendDraftSync() {
@@ -575,7 +586,10 @@ class ChatNewMessageViewModel :
         }
     }
 
-    private suspend fun innerSendPost(draftTag: String?) {
+    private suspend fun innerSendPost(
+        draftTag: String?,
+        onSent: suspend () -> Unit = {},
+    ) {
         val room = room.value ?: return
 
         val messageText = message.text.toString()
@@ -628,7 +642,7 @@ class ChatNewMessageViewModel :
         if (draftTag != null) {
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
         } else {
-            accountViewModel.account.sendNip17PrivateMessage(template)
+            accountViewModel.account.sendNip17PrivateMessage(template, onSent)
         }
 
         if (draftTag == null) {

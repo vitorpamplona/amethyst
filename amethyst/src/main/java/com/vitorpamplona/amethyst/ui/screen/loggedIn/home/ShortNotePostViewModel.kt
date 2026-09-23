@@ -1147,7 +1147,9 @@ open class ShortNotePostViewModel :
         // app is backgrounded and frozen — and the draft is its only user-visible copy
         // until then. The auto-save is debounced and cancel() below drops the pending
         // save, so the last second of typing would never reach it: flush it now.
-        if (accountViewModel.account.powDifficultyFor(template.kind, chosenPow) != null) {
+        // A private note mines its gift wraps, not the kind-1 itself.
+        val minedKind = if (wantsPrivateNote && template.kind == TextNoteEvent.KIND) GiftWrapEvent.KIND else template.kind
+        if (accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
             draftNote = account.getOrCreateDraftNote(draftTag.current)
             sendDraftSync()
         }
@@ -1180,10 +1182,12 @@ open class ShortNotePostViewModel :
             // reply must never fall through to a public publish path (the UI
             // hides those toggles while private mode is on). The inner note and
             // seals are signed inline; only wrap mining is queued — the content
-            // is committed (and checkpointed) by the time this returns.
+            // is committed (and checkpointed) by the time this returns. The draft
+            // goes only once the wraps are sent, like the public paths.
             @Suppress("UNCHECKED_CAST")
-            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>, chosenPow)
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>, chosenPow) {
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
             return
         }
 
