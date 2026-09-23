@@ -41,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.CompactButtonHeight
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.CompactButtonPadding
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_changes_retry
 import com.vitorpamplona.amethyst.commons.resources.git_pr_loading_changes
