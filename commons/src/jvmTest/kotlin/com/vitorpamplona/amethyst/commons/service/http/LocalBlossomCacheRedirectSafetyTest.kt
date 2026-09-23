@@ -34,6 +34,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -41,6 +42,11 @@ class LocalBlossomCacheRedirectSafetyTest {
     private val sha = "b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553"
     private val origin = "https://blossom.example.com/$sha.jpg"
     private val bridged = "http://127.0.0.1:24242/$sha.jpg?xs=https%3A%2F%2Fblossom.example.com"
+
+    private fun media(
+        url: String = origin,
+        kind: String = LocalBlossomCacheRedirectInterceptor.MEDIA,
+    ) = Request.Builder().url(url).header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, kind)
 
     private object IdentityCipher : NostrCipher {
         override fun name() = "identity"
@@ -84,40 +90,88 @@ class LocalBlossomCacheRedirectSafetyTest {
     @Test
     fun getIsBridged() {
         val sent = mutableListOf<Request>()
-        LocalBlossomCacheRedirectInterceptor { true }.intercept(chain(Request.Builder().url(origin).build(), sent)).close()
+        LocalBlossomCacheRedirectInterceptor { true }.intercept(chain(media().build(), sent)).close()
         assertEquals(bridged, sent.single().url.toString())
     }
 
     @Test
-    fun profilePicturesOnlyBridgesTaggedRequestsAlone() {
+    fun profilePicturesOnlyBridgesProfilePicturesAlone() {
         // The "profile pictures only" setting: bridge a request only when it is a profile picture.
         val interceptor = LocalBlossomCacheRedirectInterceptor { profilePicture -> profilePicture }
 
         val feedImage = mutableListOf<Request>()
-        interceptor.intercept(chain(Request.Builder().url(origin).build(), feedImage)).close()
+        interceptor.intercept(chain(media().build(), feedImage)).close()
         assertEquals(origin, feedImage.single().url.toString())
 
         val avatar = mutableListOf<Request>()
-        val tagged =
-            Request
-                .Builder()
-                .url(origin)
-                .tag(ProfilePictureRequest::class.java, ProfilePictureRequest)
-                .build()
-        interceptor.intercept(chain(tagged, avatar)).close()
+        interceptor.intercept(chain(media(kind = LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE).build(), avatar)).close()
         assertEquals(bridged, avatar.single().url.toString())
     }
 
     @Test
-    fun profilePictureCallFactoryTagsItsRequests() {
-        var seen: Request? = null
+    fun unmarkedRequestsAreNeverBridged() {
+        // BUD-02 `GET /list/<pubkey>` ends in 64 hex chars too, but it is not a blob download.
+        val list = "https://blossom.example.com/list/$sha"
+        val sent = mutableListOf<Request>()
+        LocalBlossomCacheRedirectInterceptor { true }
+            .intercept(
+                chain(
+                    Request
+                        .Builder()
+                        .url(list)
+                        .header("Authorization", "Nostr abc")
+                        .build(),
+                    sent,
+                ),
+            ).close()
+        assertEquals(list, sent.single().url.toString())
+    }
+
+    @Test
+    fun authGatedDownloadsGoToTheirServer() {
+        val sent = mutableListOf<Request>()
+        LocalBlossomCacheRedirectInterceptor { true }
+            .intercept(chain(media().header("Authorization", "Nostr abc").build(), sent))
+            .close()
+        assertEquals(origin, sent.single().url.toString())
+    }
+
+    @Test
+    fun theMarkerNeverLeavesTheApp() {
+        listOf(
+            LocalBlossomCacheRedirectInterceptor { true },
+            LocalBlossomCacheRedirectInterceptor { false },
+            LocalBlossomCacheRedirectInterceptor(bridges = false) { true },
+        ).forEach { interceptor ->
+            val sent = mutableListOf<Request>()
+            interceptor.intercept(chain(media().build(), sent)).close()
+            assertNull(sent.single().header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER))
+        }
+    }
+
+    @Test
+    fun aNonBridgingInstanceLeavesMediaAlone() {
+        val sent = mutableListOf<Request>()
+        LocalBlossomCacheRedirectInterceptor(bridges = false) { true }.intercept(chain(media().build(), sent)).close()
+        assertEquals(origin, sent.single().url.toString())
+    }
+
+    @Test
+    fun mediaCallFactoryMarksCallsButKeepsAnExistingMarker() {
+        val seen = mutableListOf<Request>()
         val factory =
-            ProfilePictureCallFactory { request ->
-                seen = request
+            LocalBlossomMediaCallFactory({ request ->
+                seen.add(request)
                 OkHttpClient().newCall(request)
-            }
+            })
+
         factory.newCall(Request.Builder().url(origin).build())
-        assertNotNull(seen?.tag(ProfilePictureRequest::class.java))
+        factory.newCall(media(kind = LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE).build())
+
+        assertEquals(
+            listOf(LocalBlossomCacheRedirectInterceptor.MEDIA, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE),
+            seen.map { it.header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER) },
+        )
     }
 
     @Test
@@ -156,7 +210,7 @@ class LocalBlossomCacheRedirectSafetyTest {
         keys.add(origin, info)
 
         val sent = mutableListOf<Request>()
-        LocalBlossomCacheRedirectInterceptor(keyCache = keys) { true }.intercept(chain(Request.Builder().url(origin).build(), sent)).close()
+        LocalBlossomCacheRedirectInterceptor(keyCache = keys) { true }.intercept(chain(media().build(), sent)).close()
 
         // EncryptedBlobInterceptor runs after the rewrite and looks the key up by the URL it sees.
         assertSame(info, assertNotNull(keys.get(sent.single().url.toString())))
@@ -168,7 +222,7 @@ class LocalBlossomCacheRedirectSafetyTest {
         val sent = mutableListOf<Request>()
         val response =
             LocalBlossomCacheRedirectInterceptor(onUnreachable = { reports++ }) { true }
-                .intercept(chain(Request.Builder().url(origin).build(), sent) { it.url.host == "127.0.0.1" })
+                .intercept(chain(media().build(), sent) { it.url.host == "127.0.0.1" })
 
         assertEquals(200, response.code)
         assertEquals(listOf(bridged, origin), sent.map { it.url.toString() })
@@ -180,7 +234,7 @@ class LocalBlossomCacheRedirectSafetyTest {
     fun deadCacheIsReportedForResolvedBlossomUrls() {
         var reports = 0
         val sent = mutableListOf<Request>()
-        val request = Request.Builder().url("http://127.0.0.1:24242/$sha.mp4?xs=https://blossom.example.com").build()
+        val request = media("http://127.0.0.1:24242/$sha.mp4?xs=https://blossom.example.com").build()
 
         assertFailsWith<ConnectException> {
             LocalBlossomCacheRedirectInterceptor(onUnreachable = { reports++ }) { true }

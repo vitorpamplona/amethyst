@@ -85,8 +85,16 @@ class OkHttpClientFactory(
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
+
+    // Tor-routed media skips the local cache (the cache would fetch the origin outside Tor, and
+    // Tor refuses 127.0.0.1 anyway), but its media marker header must still be stripped: this
+    // non-bridging instance takes the redirect's place on Tor clients, and stands in for it when
+    // the bridge isn't configured at all.
+    private val blossomCacheMarkerStripper = LocalBlossomCacheRedirectInterceptor(bridges = false) { false }
+
     private val blossomCacheRedirect =
-        shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(keyCache, onLocalBlossomCacheUnreachable, it) }
+        shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(keyCache, onLocalBlossomCacheUnreachable, bridges = true, shouldBridge = it) }
+            ?: blossomCacheMarkerStripper
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
@@ -136,15 +144,13 @@ class OkHttpClientFactory(
             .followSslRedirects(true)
             .apply { usageInterceptor?.let { addInterceptor(it) } }
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .apply {
-                blossomCacheRedirect?.let { addInterceptor(it) }
-            }
-            // Sits outside the network interceptors so its retry re-runs the
-            // full stack (content-type, blossom cache, key decryptor) for the
-            // authenticated response. Only signs on an actual 401.
+            // Sits before the local-cache redirect and outside the network interceptors, so it
+            // sees the origin host (a token is scoped to it) and its retry re-runs the rest of
+            // the stack (blossom cache, key decryptor) for the authenticated response. Only
+            // signs on an actual 401. A request carrying a token is never bridged.
             .apply {
                 blossomReadAuth?.let { addInterceptor(it) }
-            }
+            }.addInterceptor(blossomCacheRedirect)
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
             // Passively populates [onionCache] from any HTTP/WebSocket response
@@ -178,11 +184,15 @@ class OkHttpClientFactory(
             // `.onion`s — clearnet clients must never try to resolve `.onion`
             // (DNS would fail, and we don't want fingerprintable lookups).
             .apply { if (proxy != null) addInterceptor(OnionUrlRewriteInterceptor(onionCache)) }
-            // The local Blossom cache lives on 127.0.0.1, which Tor refuses to reach, so
-            // rewriting a Tor-routed request to it can only fail. Tor-routed media keeps
-            // going to its origin through Tor; the local cache is used by the direct client.
-            .apply { if (proxy != null) blossomCacheRedirect?.let { interceptors().remove(it) } }
-            .connectTimeout(Duration.ofSeconds(seconds.toLong()))
+            // The local Blossom cache lives on 127.0.0.1, which Tor refuses to reach, and it
+            // would fetch the origin outside Tor. Tor-routed media keeps going to its origin
+            // through Tor; the local cache is used by the direct client only.
+            .apply {
+                if (proxy != null) {
+                    val index = interceptors().indexOf(blossomCacheRedirect)
+                    if (index >= 0) interceptors()[index] = blossomCacheMarkerStripper
+                }
+            }.connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .build()

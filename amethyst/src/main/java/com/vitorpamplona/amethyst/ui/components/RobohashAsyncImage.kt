@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -42,9 +43,13 @@ import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
 import com.vitorpamplona.amethyst.ui.theme.isLight
@@ -200,9 +205,25 @@ fun GifProfilePicture(
             )
         }
 
+    val context = LocalContext.current
+    // Animated avatars skip ProfilePictureFetcher (its thumbnail cache would flatten them), so
+    // they carry the profile-picture marker themselves for the local Blossom cache bridge.
+    val model =
+        remember(userPicture) {
+            ImageRequest
+                .Builder(context)
+                .data(userPicture)
+                .httpHeaders(
+                    NetworkHeaders
+                        .Builder()
+                        .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
+                        .build(),
+                ).build()
+        }
+
     Box(modifier = modifier) {
         SubcomposeAsyncImage(
-            model = userPicture,
+            model = model,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

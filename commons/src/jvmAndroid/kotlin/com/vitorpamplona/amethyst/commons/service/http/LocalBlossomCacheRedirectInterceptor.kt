@@ -29,26 +29,27 @@ import okhttp3.Response
 import java.net.ConnectException
 
 /**
- * App-wide OkHttp interceptor that transparently rewrites HTTP requests for
+ * OkHttp interceptor that transparently rewrites media downloads of
  * sha256-keyed blobs to a local Blossom cache running on `127.0.0.1:24242`,
  * per https://github.com/hzrd149/blossom/blob/master/implementations/local-blossom-cache.md
  *
  * This is the only place feed media, videos and profile pictures are routed
  * to the cache: callers keep the real URL, so the Tor decision, Coil/ExoPlayer
- * cache keys and decryption-key lookups all see the origin. Tor-proxied
- * clients don't carry this interceptor, so Tor-routed media skips the cache.
+ * cache keys and decryption-key lookups all see the origin.
  *
- * Activates when [shouldBridge] returns `true` AND the request URL contains
- * a 64-char hex sha256 segment in its path AND the host isn't already
- * `127.0.0.1`/`localhost`. The original scheme+host is appended as a `xs=`
- * proxy hint so the cache can fetch upstream on miss.
+ * Bridging is **opt-in**: only requests the media loaders mark with the
+ * [MEDIA_HEADER] header are considered (see [LocalBlossomMediaCallFactory]).
+ * Anything else whose last path segment merely looks like a hash — a BUD-02
+ * `GET /list/<pubkey>`, uploads, deletes, `HEAD` presence checks — must reach
+ * its server. The marker header is always stripped, so no server ever sees it;
+ * that is why Tor-proxied clients carry a non-bridging instance ([bridges] =
+ * false) instead of none: Tor-routed media skips the cache but is still cleaned.
  *
- * Coil's disk cache keys responses by the original `ImageRequest.data`, so
- * disk caching continues to work transparently even though the network
- * request now goes to localhost.
- *
- * Only `GET`s are bridged: a `HEAD` presence check, a `DELETE` or an upload
- * addresses one specific server and must reach it, not the cache.
+ * A marked `GET` is rewritten when [shouldBridge] returns `true`, it carries no
+ * `Authorization` (an auth-gated blob goes to the host the token was signed
+ * for), its last path segment is `<sha256>[.ext]`, and the host isn't already
+ * the cache. The original scheme+host(+path prefix) is passed as the `xs=`
+ * hint so the cache can fetch upstream on miss.
  *
  * Encrypted blobs are looked up in [keyCache] by URL after this interceptor
  * runs, so their decryption key is registered under the rewritten URL too.
@@ -60,13 +61,15 @@ import java.net.ConnectException
 class LocalBlossomCacheRedirectInterceptor(
     private val keyCache: EncryptionKeyCache? = null,
     private val onUnreachable: () -> Unit = {},
+    val bridges: Boolean = true,
     // Last, so the `LocalBlossomCacheRedirectInterceptor { enabled }` trailing-lambda form binds here.
-    // Told whether the request is a profile picture (tagged [ProfilePictureRequest]), for the
-    // "profile pictures only" setting.
+    // Told whether the request is a profile picture, for the "profile pictures only" setting.
     private val shouldBridge: (profilePicture: Boolean) -> Boolean,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val request = chain.request()
+        val marked = chain.request()
+        val kind = marked.header(MEDIA_HEADER)
+        val request = if (kind != null) marked.newBuilder().removeHeader(MEDIA_HEADER).build() else marked
 
         if (request.method != "GET") return chain.proceed(request)
 
@@ -81,7 +84,9 @@ class LocalBlossomCacheRedirectInterceptor(
             }
         }
 
-        if (!shouldBridge(request.tag(ProfilePictureRequest::class.java) != null)) return chain.proceed(request)
+        if (!bridges || kind == null || request.header("Authorization") != null) return chain.proceed(request)
+
+        if (!shouldBridge(kind == PROFILE_PICTURE)) return chain.proceed(request)
 
         val rewritten = rewriteIfApplicable(request.url) ?: return chain.proceed(request)
 
@@ -166,15 +171,26 @@ class LocalBlossomCacheRedirectInterceptor(
         const val LOCAL_CACHE_PORT = 24242
         const val LOCAL_CACHE_BASE = "http://$LOCAL_CACHE_HOST:$LOCAL_CACHE_PORT"
         private val BLOSSOM_LAST_SEGMENT_REGEX = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
+
+        /** Marks a request as a media download the local cache may serve. Stripped before sending. */
+        const val MEDIA_HEADER = "X-Amethyst-Local-Blossom"
+        const val MEDIA = "media"
+        const val PROFILE_PICTURE = "profile-picture"
     }
 }
 
-/** OkHttp request tag marking a profile-picture download. See [LocalBlossomCacheRedirectInterceptor]. */
-object ProfilePictureRequest
-
-/** Tags every call it creates with [ProfilePictureRequest]. */
-class ProfilePictureCallFactory(
+/**
+ * Marks every call it creates as a media download ([LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER]),
+ * keeping a marker the request already carries (e.g. a profile picture's).
+ */
+class LocalBlossomMediaCallFactory(
     private val delegate: Call.Factory,
+    private val kind: String = LocalBlossomCacheRedirectInterceptor.MEDIA,
 ) : Call.Factory {
-    override fun newCall(request: Request): Call = delegate.newCall(request.newBuilder().tag(ProfilePictureRequest::class.java, ProfilePictureRequest).build())
+    override fun newCall(request: Request): Call =
+        if (request.header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER) != null) {
+            delegate.newCall(request)
+        } else {
+            delegate.newCall(request.newBuilder().header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, kind).build())
+        }
 }

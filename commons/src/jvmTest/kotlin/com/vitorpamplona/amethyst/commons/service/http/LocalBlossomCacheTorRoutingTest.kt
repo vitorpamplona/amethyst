@@ -108,7 +108,8 @@ class LocalBlossomCacheTorRoutingTest {
         val direct = manager.getHttpClient(useProxy = false)
         val proxied = manager.getHttpClient(useProxy = true)
 
-        assertTrue(direct.interceptors.any { it is LocalBlossomCacheRedirectInterceptor })
-        assertFalse(proxied.interceptors.any { it is LocalBlossomCacheRedirectInterceptor })
+        // Both carry one (it strips the media marker), but only the direct client's bridges.
+        assertEquals(listOf(true), direct.interceptors.filterIsInstance<LocalBlossomCacheRedirectInterceptor>().map { it.bridges })
+        assertEquals(listOf(false), proxied.interceptors.filterIsInstance<LocalBlossomCacheRedirectInterceptor>().map { it.bridges })
     }
 }

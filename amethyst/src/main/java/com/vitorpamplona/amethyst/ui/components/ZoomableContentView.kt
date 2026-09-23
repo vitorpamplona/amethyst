@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -1261,7 +1262,7 @@ private suspend fun shareLocalVideoFile(
 private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
-    Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
+    Amethyst.instance.diskCache.openSnapshot(BlossomFetcher.diskCacheKey(content.url))?.use { snapshot ->
         val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
         return hashBytes.toHexKey() == content.hash
     }

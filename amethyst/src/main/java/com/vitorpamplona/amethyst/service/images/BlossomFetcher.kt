@@ -58,7 +58,7 @@ class BlossomFetcher(
             // servers and wait on relays, and fails outright offline, where the bytes are
             // still sitting in the cache. NetworkFetcher reads the snapshot under [key]
             // before it ever looks at the url.
-            val onDisk = imageLoader.diskCache?.openSnapshot(key)?.use { true } ?: false
+            val onDisk = options.diskCachePolicy.readEnabled && imageLoader.diskCache?.openSnapshot(key)?.use { true } ?: false
             val fromDisk =
                 if (onDisk) {
                     // Evicted between the check and the read: the fetcher would try the

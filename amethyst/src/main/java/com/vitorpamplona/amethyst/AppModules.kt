@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvi
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
@@ -1152,7 +1153,8 @@ class AppModules(
             blossomServerResolver = { blossomResolver },
             // Through the role builder (not raw getHttpClient) so Coil's image
             // traffic carries the "image" ledger tag. Same Tor decision inside.
-            callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
+            // Marked as media so the local Blossom cache may serve these downloads.
+            callFactory = { LocalBlossomMediaCallFactory(roleBasedHttpClientBuilder.okHttpClientForImage(it)) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
             readAuth = blossomReadAuthTokens,
@@ -1361,6 +1363,13 @@ class AppModules(
         }
         applicationIOScope.launch {
             localBlossomCacheProbe.available.drop(1).collect {
+                blossomResolver.clearCaches()
+            }
+        }
+        // A resolution to the local cache made while a media type was not Tor-routed must not
+        // survive the user switching it to Tor: the cache would keep fetching it outside Tor.
+        applicationIOScope.launch {
+            torPrefs.value.propertyWatchFlow.drop(1).collect {
                 blossomResolver.clearCaches()
             }
         }
