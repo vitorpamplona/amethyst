@@ -52,10 +52,14 @@ private val VIEWER_HEIGHT = 360.dp
  * 3330).
  *
  * The same payload and the same rules as a standalone object — only the
- * container differs — so this renders through the same card. What it does not
- * do is open a bag: a shard still sealed in its `kind 33330` bag is ciphertext
- * until its region key is derived, which is the cyberspace protocol rather than
- * a renderer.
+ * container differs — so this renders through the same card.
+ *
+ * This is the shard that arrived **on its own**: quoted in a note, or fetched
+ * by id. One still inside its `kind 33330` bag is ciphertext until that
+ * region's key is derived, and deriving it belongs to [RenderCyberspaceBag],
+ * which sweeps the box the bag's hint names (§7.7) and renders what comes out
+ * through this same card. So a sealed shard reaching here is one nobody has
+ * opened, not one nobody can.
  */
 @Composable
 fun RenderSnoShard(
