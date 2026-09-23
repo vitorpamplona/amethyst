@@ -172,6 +172,10 @@ class OkHttpClientFactory(
             // `.onion`s — clearnet clients must never try to resolve `.onion`
             // (DNS would fail, and we don't want fingerprintable lookups).
             .apply { if (proxy != null) addInterceptor(OnionUrlRewriteInterceptor(onionCache)) }
+            // The local Blossom cache lives on 127.0.0.1, which Tor refuses to reach, so
+            // rewriting a Tor-routed request to it can only fail. Tor-routed media keeps
+            // going to its origin through Tor; the local cache is used by the direct client.
+            .apply { if (proxy != null) blossomCacheRedirect?.let { interceptors().remove(it) } }
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
