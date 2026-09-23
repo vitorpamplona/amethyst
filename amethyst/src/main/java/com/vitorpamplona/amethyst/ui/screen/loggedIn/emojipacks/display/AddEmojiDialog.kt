@@ -56,10 +56,10 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_public_explainer
 import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_invalid
 import com.vitorpamplona.amethyst.commons.resources.emoji_shortcode_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_url_label
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 

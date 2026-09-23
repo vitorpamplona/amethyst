@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.call_video
 import com.vitorpamplona.amethyst.commons.resources.call_voice
 import com.vitorpamplona.amethyst.commons.resources.edits_the_channel_metadata
 import com.vitorpamplona.amethyst.commons.resources.messages_group_descriptor
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.collections.immutable.toPersistentList
 

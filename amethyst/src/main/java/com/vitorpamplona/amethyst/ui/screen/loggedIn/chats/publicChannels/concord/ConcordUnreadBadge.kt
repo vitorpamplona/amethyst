@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
-import com.vitorpamplona.amethyst.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.CHAT_UNREAD_CAP
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
 

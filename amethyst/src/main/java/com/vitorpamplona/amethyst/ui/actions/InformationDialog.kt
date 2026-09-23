@@ -45,12 +45,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_stack_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import java.io.PrintWriter
 import java.io.StringWriter

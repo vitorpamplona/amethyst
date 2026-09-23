@@ -69,10 +69,10 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_request_join
 import com.vitorpamplona.amethyst.commons.resources.relay_members_request_leave
 import com.vitorpamplona.amethyst.commons.resources.relay_members_title
 import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow

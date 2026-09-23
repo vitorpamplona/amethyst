@@ -24,8 +24,8 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_events
 import com.vitorpamplona.amethyst.commons.resources.calendar_day_a11y_no_events
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 // Picks calendar_day_a11y_no_events when count is 0 because ICU/CLDR maps 0 to
 // the `other` category for every locale we ship, which would otherwise render

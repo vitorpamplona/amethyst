@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.new_highlight_note_placehold
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_passage_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_source_label
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /** A warm highlighter amber — the highlight metaphor reads as yellow regardless of theme. */
 private val MarkerAccent = Color(0xFFF5C518)

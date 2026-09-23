@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_tor_on
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * The Tor routing toggle for an embedded web surface, drawn with the app's standard Tor onion

@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_popular
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_relay_label
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_your_relays
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.PopupUpEffect
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelaySuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.ShowRelaySuggestionList
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**

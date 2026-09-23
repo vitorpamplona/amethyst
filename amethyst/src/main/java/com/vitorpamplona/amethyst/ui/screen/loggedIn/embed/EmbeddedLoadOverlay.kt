@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.embedded_tab_load_failed
 import com.vitorpamplona.amethyst.commons.resources.retry
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Cover for an embedded tab's (z-below) surface while it has nothing to show yet: a spinner until the

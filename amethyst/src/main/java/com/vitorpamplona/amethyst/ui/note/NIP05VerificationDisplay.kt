@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip05_checking
 import com.vitorpamplona.amethyst.commons.resources.nip05_failed
 import com.vitorpamplona.amethyst.commons.resources.nip05_verified
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
@@ -76,7 +77,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeForUser
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag

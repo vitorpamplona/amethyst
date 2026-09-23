@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.spam_description
 import com.vitorpamplona.amethyst.commons.resources.uptime
 import com.vitorpamplona.amethyst.commons.resources.write_to_relay
 import com.vitorpamplona.amethyst.commons.resources.write_to_relay_description
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 

@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.ui.theme.QuickActionPopupShadow
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallestBorder
@@ -113,7 +114,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent

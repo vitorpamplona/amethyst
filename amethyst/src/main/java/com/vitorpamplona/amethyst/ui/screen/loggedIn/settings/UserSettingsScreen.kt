@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.target_language
 import com.vitorpamplona.amethyst.commons.resources.translate_to
 import com.vitorpamplona.amethyst.commons.resources.translate_to_description
 import com.vitorpamplona.amethyst.commons.resources.user_preferences
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
@@ -90,7 +91,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import java.util.Locale as JavaLocale
 

@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_text
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_wallet
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_web
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_pick_one
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent

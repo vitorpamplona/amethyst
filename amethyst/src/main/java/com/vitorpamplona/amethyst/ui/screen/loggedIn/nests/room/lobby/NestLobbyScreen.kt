@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_lobby_listeners_count
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_no_listeners
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_open_action
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -89,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestAct
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent

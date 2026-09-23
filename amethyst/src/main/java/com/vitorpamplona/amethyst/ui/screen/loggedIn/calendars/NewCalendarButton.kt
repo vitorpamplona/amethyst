@@ -44,11 +44,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_fab_new_collection
 import com.vitorpamplona.amethyst.commons.resources.calendar_fab_new_event
 import com.vitorpamplona.amethyst.commons.resources.calendar_fab_toggle
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun NewCalendarButton(nav: INav) {

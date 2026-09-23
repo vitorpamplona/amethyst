@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user
 import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user_confirm
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -99,7 +100,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestio
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow

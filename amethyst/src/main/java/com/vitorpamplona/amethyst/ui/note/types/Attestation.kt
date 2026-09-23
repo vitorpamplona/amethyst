@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
 import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -83,7 +84,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.AttestationStatus

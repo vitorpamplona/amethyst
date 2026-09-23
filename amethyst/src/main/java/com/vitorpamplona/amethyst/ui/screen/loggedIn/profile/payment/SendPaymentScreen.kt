@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
@@ -111,7 +112,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.FeeTier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.rateFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.technicalDetail
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.userMessage
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser

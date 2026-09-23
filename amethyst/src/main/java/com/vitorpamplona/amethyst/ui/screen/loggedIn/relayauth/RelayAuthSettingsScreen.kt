@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_session_undo_bloc
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_settings_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_undo
 import com.vitorpamplona.amethyst.commons.resources.relay_info
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -120,7 +121,6 @@ import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

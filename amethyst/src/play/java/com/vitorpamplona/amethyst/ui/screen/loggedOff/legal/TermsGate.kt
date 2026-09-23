@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.acceptance_of_terms_is_requi
 import com.vitorpamplona.amethyst.commons.resources.i_accept_the
 import com.vitorpamplona.amethyst.commons.resources.terms_of_use
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
 fun TermsGate(

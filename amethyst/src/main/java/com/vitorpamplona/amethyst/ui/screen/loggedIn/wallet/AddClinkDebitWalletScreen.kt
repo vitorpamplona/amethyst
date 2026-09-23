@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_name
 import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_ndebit
 import com.vitorpamplona.amethyst.commons.resources.wallet_save
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
 /**

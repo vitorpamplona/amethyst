@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_split_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlin.math.round
 
 @Composable

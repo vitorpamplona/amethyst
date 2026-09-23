@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_empty_label2
 import com.vitorpamplona.amethyst.commons.resources.follow_set_rename_btn_label
 import com.vitorpamplona.amethyst.commons.resources.group_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun BookmarkGroupItem(

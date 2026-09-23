@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.other
 import com.vitorpamplona.amethyst.commons.resources.profanity_hateful_speech
 import com.vitorpamplona.amethyst.commons.resources.spam
 import com.vitorpamplona.amethyst.commons.resources.violence
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 /**

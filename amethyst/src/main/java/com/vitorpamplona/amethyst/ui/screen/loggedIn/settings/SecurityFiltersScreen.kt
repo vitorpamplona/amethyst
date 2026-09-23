@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_sensitive_content_title
 import com.vitorpamplona.amethyst.commons.resources.spamming_users
 import com.vitorpamplona.amethyst.commons.resources.warn_when_posts_have_reports_from_your_follows_explainer
 import com.vitorpamplona.amethyst.commons.resources.warn_when_posts_have_reports_from_your_follows_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable

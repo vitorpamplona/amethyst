@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_join
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.ui.note.types.MeetingSpacePrivateFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE

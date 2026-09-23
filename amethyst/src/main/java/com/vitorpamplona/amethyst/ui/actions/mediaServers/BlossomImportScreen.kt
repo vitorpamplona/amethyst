@@ -81,14 +81,14 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_secti
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /** Vibrant palette for server monograms; picked deterministically from the host name. */
 private val ImportMonogramColors =

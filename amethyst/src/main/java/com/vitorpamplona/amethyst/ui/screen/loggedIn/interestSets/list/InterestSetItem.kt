@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.interest_set_clone
 import com.vitorpamplona.amethyst.commons.resources.interest_set_hashtag_count
 import com.vitorpamplona.amethyst.commons.resources.interest_set_rename
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -49,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun InterestSetItem(

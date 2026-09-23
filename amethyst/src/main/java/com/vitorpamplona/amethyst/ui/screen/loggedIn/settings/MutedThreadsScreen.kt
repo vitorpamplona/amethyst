@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_empty
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_title
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_unknown
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.MutedThreadsFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun MutedThreadsScreen(

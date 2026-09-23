@@ -76,10 +76,10 @@ import com.vitorpamplona.amethyst.commons.resources.schedule_post_time_label
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_multi
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_single
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_warning_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.DayOfWeek
 import java.time.Instant

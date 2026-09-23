@@ -44,8 +44,8 @@ import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_message
 import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_petition
 import com.vitorpamplona.amethyst.commons.resources.nowhere_link_card_store
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.stringRes
 
 // Maps the first path segment of a nowhere URL to a localized label. The nowhere project ships
 // eight tools (event, fundraiser, store, petition, message, drop, art, forum) and the URL path

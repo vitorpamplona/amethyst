@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_default_branch
 import com.vitorpamplona.amethyst.commons.resources.git_repo_item_count
 import com.vitorpamplona.amethyst.commons.resources.git_repo_retry
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /** Centered spinner + caption while the repository or a file is loading. */
 @Composable

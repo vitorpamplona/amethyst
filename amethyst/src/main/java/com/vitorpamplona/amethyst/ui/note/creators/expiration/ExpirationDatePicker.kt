@@ -63,10 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.expiration_date_select
 import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
 import com.vitorpamplona.amethyst.commons.resources.expiration_time
 import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
 import java.time.ZoneId

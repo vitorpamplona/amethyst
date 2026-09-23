@@ -37,9 +37,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.poll_option_description
 import com.vitorpamplona.amethyst.commons.resources.poll_option_index
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ZapPollOption(

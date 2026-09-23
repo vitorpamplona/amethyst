@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy2dp
@@ -83,7 +84,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.Follow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.coroutines.launch

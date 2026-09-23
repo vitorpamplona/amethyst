@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.telegram
 import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.website
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
@@ -84,7 +85,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.Display
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity

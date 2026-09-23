@@ -57,11 +57,11 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_relay
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_unknown_name
 import com.vitorpamplona.amethyst.commons.resources.concord_redeeming_invite
 import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import org.jetbrains.compose.resources.StringResource
 

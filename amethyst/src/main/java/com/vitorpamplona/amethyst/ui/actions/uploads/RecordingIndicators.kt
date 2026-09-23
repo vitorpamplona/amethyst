@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
 import com.vitorpamplona.amethyst.commons.resources.recording_indicator_with_time
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Animated expanding circles that pulse outward from the recording button

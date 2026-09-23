@@ -58,9 +58,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cashu_created_pick_mints
 import com.vitorpamplona.amethyst.commons.resources.cashu_created_subtitle
 import com.vitorpamplona.amethyst.commons.resources.cashu_created_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

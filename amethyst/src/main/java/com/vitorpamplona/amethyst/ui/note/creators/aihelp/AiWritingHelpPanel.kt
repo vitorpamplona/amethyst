@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.ai_writing_dismiss
 import com.vitorpamplona.amethyst.commons.resources.ai_writing_use_this
 import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
 import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableMap
 
 @Composable

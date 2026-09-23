@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_content_warning
 import com.vitorpamplona.amethyst.commons.resources.remove_content_warning
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
 fun MarkAsSensitiveButton(

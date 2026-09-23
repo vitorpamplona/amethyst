@@ -35,8 +35,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_zapraiser
 import com.vitorpamplona.amethyst.commons.resources.cancel_zapraiser
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun AddZapraiserButton(

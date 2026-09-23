@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_section
 import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.trusted_section
 import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
@@ -127,7 +128,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 

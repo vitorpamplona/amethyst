@@ -49,9 +49,9 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_added_p
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_left
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_removed
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_member_removed_passive
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatFeedRowRenderer
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemType

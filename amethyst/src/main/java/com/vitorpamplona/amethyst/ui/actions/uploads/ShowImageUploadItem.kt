@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_retention_1w
 import com.vitorpamplona.amethyst.commons.resources.marmot_retention_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_retention_off
 import com.vitorpamplona.amethyst.commons.resources.marmot_retention_title
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * How long messages live in a new group — component `0x8005`,

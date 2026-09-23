@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.chat_delivery_no_relay_info
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_pending
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_sending
 import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import org.jetbrains.compose.resources.StringResource

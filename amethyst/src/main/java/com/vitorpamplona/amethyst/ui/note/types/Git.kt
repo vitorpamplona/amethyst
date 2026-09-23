@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLastCommit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoStatTiles
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent

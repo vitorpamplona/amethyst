@@ -71,12 +71,12 @@ import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_url
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_username
 import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun CallSettingsScreen(

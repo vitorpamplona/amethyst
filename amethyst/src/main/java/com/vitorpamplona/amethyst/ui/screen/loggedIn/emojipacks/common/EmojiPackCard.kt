@@ -49,7 +49,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_count
 import com.vitorpamplona.amethyst.commons.resources.my_emoji_list_by_author
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 private const val PREVIEW_SLOTS = 6
 private val ThumbSize = 28.dp

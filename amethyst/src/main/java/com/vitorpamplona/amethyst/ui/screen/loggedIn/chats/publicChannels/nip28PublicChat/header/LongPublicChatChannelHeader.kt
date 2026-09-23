@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.channel_image
 import com.vitorpamplona.amethyst.commons.resources.created_at
 import com.vitorpamplona.amethyst.commons.resources.groups_no_descriptor
 import com.vitorpamplona.amethyst.commons.resources.owner
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.MuteChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.OpenChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.ShareChatButton
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun LongPublicChatChannelHeader(

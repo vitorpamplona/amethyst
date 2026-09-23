@@ -45,12 +45,12 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_mint_no_recs
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_plus_others
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by_others
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Shared mint directory row. Used by the wallet's add-cashu-mint

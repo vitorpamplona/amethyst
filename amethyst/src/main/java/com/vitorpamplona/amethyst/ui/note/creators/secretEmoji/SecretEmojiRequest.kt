@@ -53,11 +53,11 @@ import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver
 import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver_placeholder
 import com.vitorpamplona.amethyst.commons.resources.secret_visible_text
 import com.vitorpamplona.amethyst.commons.resources.secret_visible_text_placeholder
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun SecretEmojiRequest(onSuccess: (String) -> Unit) {

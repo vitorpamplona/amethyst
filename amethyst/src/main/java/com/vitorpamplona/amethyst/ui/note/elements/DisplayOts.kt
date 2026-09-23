@@ -29,10 +29,10 @@ import com.vitorpamplona.amethyst.commons.resources.ots_info_pending_description
 import com.vitorpamplona.amethyst.commons.resources.ots_info_title
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import java.text.SimpleDateFormat
 import java.util.Date
 

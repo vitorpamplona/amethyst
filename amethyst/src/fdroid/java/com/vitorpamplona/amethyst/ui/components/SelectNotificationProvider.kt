@@ -67,10 +67,10 @@ import com.vitorpamplona.amethyst.commons.resources.push_server_title
 import com.vitorpamplona.amethyst.commons.resources.push_server_uses_app_explainer
 import com.vitorpamplona.amethyst.commons.resources.quick_action_dont_show_again_button
 import com.vitorpamplona.amethyst.commons.resources.select_push_server
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

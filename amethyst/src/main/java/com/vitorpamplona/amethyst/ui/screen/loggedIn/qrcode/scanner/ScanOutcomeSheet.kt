@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_link
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unsupported_secret
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unsupported_title
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 
 /**

@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.resources.scan_qr
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScannedPaylo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ZxingCppBarcodeDecoder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.copyToClipboard
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

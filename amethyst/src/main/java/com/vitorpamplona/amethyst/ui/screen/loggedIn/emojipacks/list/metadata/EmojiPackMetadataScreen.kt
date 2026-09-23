@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_pack_name_label
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
 import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -78,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun EmojiPackMetadataScreen(

@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_button
 import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.resources.zap_description
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.LikedColor
 import com.vitorpamplona.amethyst.commons.ui.theme.RepostedColor
@@ -81,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleButton
-import com.vitorpamplona.amethyst.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
 @Composable

@@ -40,8 +40,8 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_stage_publishing
 import com.vitorpamplona.amethyst.commons.resources.onchain_stage_signing
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
 /**

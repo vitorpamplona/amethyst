@@ -51,10 +51,10 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_persona_runtime
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 // Well-known values for the persona's optional model / provider / runtime — suggestions only; any
 // string is still accepted (the fields are free-form both in NIP-AP and in Buzz's persona events).

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_private_presence_
 import com.vitorpamplona.amethyst.commons.resources.follow_set_public_member_add_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_public_presence_indicator
 import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50ModifierOffset10
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.DisplayParticipantNumberAndStatus
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview

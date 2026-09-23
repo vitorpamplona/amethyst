@@ -33,8 +33,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_loading_replies
 import com.vitorpamplona.amethyst.commons.resources.try_again
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun FeedError(

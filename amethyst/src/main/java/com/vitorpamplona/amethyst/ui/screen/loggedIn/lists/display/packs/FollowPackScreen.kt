@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.pack_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
@@ -94,7 +95,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.DrawUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.PeopleListView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.RenderAddUserFieldAndSuggestions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableStateFlow

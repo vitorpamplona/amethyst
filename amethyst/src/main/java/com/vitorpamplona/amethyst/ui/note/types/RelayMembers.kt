@@ -48,9 +48,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_added
 import com.vitorpamplona.amethyst.commons.resources.relay_members_count
 import com.vitorpamplona.amethyst.commons.resources.relay_members_removed
 import com.vitorpamplona.amethyst.commons.resources.relay_membership_list
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent

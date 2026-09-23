@@ -56,10 +56,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_week_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_week
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_week
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
 

@@ -32,9 +32,9 @@ import com.vitorpamplona.amethyst.commons.resources.kind_app_curation_set
 import com.vitorpamplona.amethyst.commons.resources.kind_favorite_algo_feeds
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repositories
 import com.vitorpamplona.amethyst.commons.resources.kind_simple_groups
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent

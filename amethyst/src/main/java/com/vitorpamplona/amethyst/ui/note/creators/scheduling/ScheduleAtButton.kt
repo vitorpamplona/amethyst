@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_add
 import com.vitorpamplona.amethyst.commons.resources.schedule_post_button_remove
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
 fun ScheduleAtButton(

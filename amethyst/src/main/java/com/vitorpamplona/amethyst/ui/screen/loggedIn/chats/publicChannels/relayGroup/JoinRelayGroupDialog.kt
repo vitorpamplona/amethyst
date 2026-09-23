@@ -41,8 +41,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_hint
 import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_label
 import com.vitorpamplona.amethyst.commons.resources.relay_group_join_confirm
 import com.vitorpamplona.amethyst.commons.resources.relay_group_join_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Ask for an invite code before joining a closed (invite-only) NIP-29 group, then

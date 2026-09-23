@@ -50,12 +50,12 @@ import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_backup_now
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_body
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_dismiss
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.flow.MutableStateFlow
