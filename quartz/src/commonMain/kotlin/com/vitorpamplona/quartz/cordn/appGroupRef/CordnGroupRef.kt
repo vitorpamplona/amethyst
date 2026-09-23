@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.cordn.appGroupRef
 
+import com.vitorpamplona.quartz.cordn.tlv.CordnStrictTlv
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
@@ -96,6 +97,9 @@ data class CordnGroupRef(
 
         private const val MAX_TLV_VALUE = 255
         private const val PUBKEY_HEX_LENGTH = 64
+
+        /** Names this type in decode errors. */
+        private const val SUBJECT = "cordn group ref"
         private const val PUBKEY_SIZE = 32
 
         /** Decodes a `cordn1…` reference, or throws with the rule it broke. */
@@ -117,7 +121,7 @@ data class CordnGroupRef(
                 "cordn group ref must use bech32, not bech32m"
             }
 
-            val tlv = parseStrict(bytes)
+            val tlv = CordnStrictTlv.parse(bytes, SUBJECT)
 
             val gids = tlv[TLV_GID].orEmpty()
             require(gids.size == 1) { "cordn group ref must carry exactly one gid, found ${gids.size}" }
@@ -133,13 +137,13 @@ data class CordnGroupRef(
 
             // §5 lets a consumer discard an empty relay rather than reject the
             // whole reference, which is the kinder reading of a producer bug.
-            val relays = tlv[TLV_RELAY].orEmpty().map { it.utf8("relay") }.filter { it.isNotEmpty() }
+            val relays = tlv[TLV_RELAY].orEmpty().map { CordnStrictTlv.utf8(it, SUBJECT, "relay") }.filter { it.isNotEmpty() }
             require(relays.isEmpty() || coordinators.isNotEmpty()) {
                 "cordn group ref carries a relay with no coordinator pubkey"
             }
 
             return CordnGroupRef(
-                gid = gids[0].utf8("gid"),
+                gid = CordnStrictTlv.utf8(gids[0], SUBJECT, "gid"),
                 coordinatorPubKey = coordinators.firstOrNull()?.toHexKey(),
                 relays = relays,
             )
@@ -151,40 +155,6 @@ data class CordnGroupRef(
                 decode(encoded)
             } catch (e: IllegalArgumentException) {
                 null
-            }
-
-        /**
-         * A strict TLV parse: trailing or overlong-length bytes are an error.
-         *
-         * `Tlv.parse` in quartz stops silently at a malformed tuple, which is
-         * right for NIP-19 (a truncated `nprofile` still names a usable
-         * pubkey). It is wrong here: §5 makes a malformed reference invalid,
-         * and quietly dropping the tail could turn a ref naming a coordinator
-         * into one that reaches for a default instead. Unknown TYPES are still
-         * ignored, per the same section — that is forward compatibility, not
-         * corruption.
-         */
-        private fun parseStrict(data: ByteArray): Map<Byte, List<ByteArray>> {
-            val result = mutableMapOf<Byte, MutableList<ByteArray>>()
-            var pos = 0
-            while (pos < data.size) {
-                require(pos + 2 <= data.size) { "cordn group ref has a truncated TLV header" }
-                val type = data[pos]
-                val length = data[pos + 1].toUByte().toInt()
-                require(pos + 2 + length <= data.size) {
-                    "cordn group ref TLV type $type declares $length bytes but only ${data.size - pos - 2} remain"
-                }
-                result.getOrPut(type) { mutableListOf() }.add(data.copyOfRange(pos + 2, pos + 2 + length))
-                pos += 2 + length
-            }
-            return result
-        }
-
-        private fun ByteArray.utf8(field: String): String =
-            try {
-                decodeToString(throwOnInvalidSequence = true)
-            } catch (e: CharacterCodingException) {
-                throw IllegalArgumentException("cordn group ref $field is not valid UTF-8", e)
             }
     }
 }
