@@ -1118,8 +1118,15 @@ class MlsGroup private constructor(
      *
      * The signature is computed with `SignWithLabel(., "FramedContentTBS",
      * FramedContentTBS)` using the member's signature private key.
+     *
+     * [authenticatedData] is sent in the clear as the message's
+     * `authenticated_data` (RFC 9420 §6.3.2). It is bound to the message by the
+     * AEAD and the signature, and returned by [decrypt].
      */
-    fun encrypt(plaintext: ByteArray): ByteArray {
+    fun encrypt(
+        plaintext: ByteArray,
+        authenticatedData: ByteArray = ByteArray(0),
+    ): ByteArray {
         // Trim sentKeys if it grows too large
         if (sentKeys.size > MAX_SENT_KEYS) {
             val sortedKeys = sentKeys.keys.sorted()
@@ -1148,7 +1155,7 @@ class MlsGroup private constructor(
                     groupId = groupId,
                     epoch = epoch,
                     senderLeafIndex = myLeafIndex,
-                    authenticatedData = ByteArray(0),
+                    authenticatedData = authenticatedData,
                     applicationData = plaintext,
                     groupContext = groupContext,
                 ),
@@ -1164,7 +1171,7 @@ class MlsGroup private constructor(
         val pmcPlaintext = pmcWriter.toByteArray()
 
         // Build PrivateContentAAD (RFC 9420 §6.3.2)
-        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
+        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, authenticatedData)
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
 
         // Build sender data plaintext: leaf_index || generation || reuse_guard
@@ -1202,7 +1209,7 @@ class MlsGroup private constructor(
                 groupId = groupId,
                 epoch = epoch,
                 contentType = ContentType.APPLICATION,
-                authenticatedData = ByteArray(0),
+                authenticatedData = authenticatedData,
                 encryptedSenderData = encryptedSenderData,
                 ciphertext = ciphertext,
             )
@@ -1444,6 +1451,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = applicationData,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1477,6 +1485,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = commitBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1564,6 +1573,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = proposalBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
         }
@@ -4567,19 +4577,23 @@ data class DecryptedMessage(
     val contentType: ContentType,
     val content: ByteArray,
     val epoch: Long,
+    /** The message's `authenticated_data` (RFC 9420 §6.3.2), verified by the AEAD. */
+    val authenticatedData: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DecryptedMessage) return false
         return senderLeafIndex == other.senderLeafIndex &&
             content.contentEquals(other.content) &&
-            epoch == other.epoch
+            epoch == other.epoch &&
+            authenticatedData.contentEquals(other.authenticatedData)
     }
 
     override fun hashCode(): Int {
         var result = senderLeafIndex
         result = 31 * result + content.contentHashCode()
         result = 31 * result + epoch.hashCode()
+        result = 31 * result + authenticatedData.contentHashCode()
         return result
     }
 }
