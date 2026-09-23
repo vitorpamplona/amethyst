@@ -622,6 +622,7 @@ object LocalPreferences {
             // would resurrect the deleted settings from this cache.
             mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
+            accountKeyStore.delete(accountInfo.npub)
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
 
@@ -756,6 +757,15 @@ object LocalPreferences {
                         JsonMapper.toJson(settings.pendingAttestations.value),
                     )
                 }
+
+                // Mirrored into the key store after the legacy write, not
+                // instead of it: both stores carry the key during the
+                // transition so a rollback still loads the account.
+                accountKeyStore.mirrorSave(
+                    npub = settings.keyPair.pubKey.toNpub(),
+                    usesExternalSigner = settings.externalSignerPackageName != null,
+                    privKeyHex = settings.keyPair.privKey?.toHexKey(),
+                )
             }
             uploadSettingsStore(settings.keyPair.pubKey.toNpub()).save(
                 UploadSettings(
@@ -966,8 +976,14 @@ object LocalPreferences {
             withContext(Dispatchers.IO) {
                 return@withContext with(encryptedPreferences(npub)) {
                     Log.d("LocalPreferences") { "Load account from file $npub - opened file" }
-                    val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
+                    // pubKey first: the key store is keyed by npub, which is derived
+                    // from it, and this is the same npub the save side writes under.
                     val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
+                    val privKey =
+                        accountKeyStore.read(
+                            npub = pubKey.hexToByteArray().toNpub(),
+                            legacyValue = getString(PrefKeys.NOSTR_PRIVKEY, null),
+                        )
                     val externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
