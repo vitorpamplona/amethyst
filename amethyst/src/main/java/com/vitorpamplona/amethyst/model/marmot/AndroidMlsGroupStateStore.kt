@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.marmot
 
-import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
+import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +32,7 @@ import java.io.FileOutputStream
  * Android implementation of [MlsGroupStateStore] using file-based encrypted storage.
  *
  * All MLS group state (containing private keys and epoch secrets) is encrypted
- * at rest using [KeyStoreEncryption] (AES/GCM backed by Android KeyStore).
+ * at rest using [SecretEncryption] (AES/GCM backed by Android KeyStore).
  *
  * Storage layout:
  * ```
@@ -43,7 +43,7 @@ import java.io.FileOutputStream
  */
 class AndroidMlsGroupStateStore(
     private val rootDir: File,
-    private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val encryption: SecretEncryption = SecretEncryption(),
 ) : MlsGroupStateStore {
     init {
         Log.d(TAG) {

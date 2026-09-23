@@ -90,6 +90,14 @@ kotlin {
                 // OkHttp), so declare the dependency the file actually has.
                 implementation(libs.okio)
 
+                // DataStore (KMP, Apache-2.0) — the preference storage layer.
+                // Publishes android/jvm/ios/linux/macos variants plus common
+                // metadata, so the stores under model/preferences/ are shared
+                // rather than duplicated per front end. Uses the okio-based
+                // `createWithPath` factory in common; the `java.io.File`
+                // overloads are jvmAndroid-only.
+                implementation(libs.androidx.datastore.preferences)
+
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 
@@ -161,7 +169,6 @@ kotlin {
 
                 // Secure key storage via Android Keystore
                 implementation(libs.androidx.security.crypto.ktx)
-                implementation(libs.androidx.datastore.preferences)
             }
         }
 

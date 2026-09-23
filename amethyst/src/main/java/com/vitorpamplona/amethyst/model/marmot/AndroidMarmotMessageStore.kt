@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.marmot
 
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedAppendLog
-import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
+import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
@@ -46,7 +46,7 @@ import java.io.File
  */
 class AndroidMarmotMessageStore(
     private val rootDir: File,
-    private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val encryption: SecretEncryption = SecretEncryption(),
 ) : MarmotMessageStore {
     private val logMutex = Mutex()
 
@@ -324,7 +324,7 @@ class AndroidMarmotMessageStore(
         EncryptedAppendLog(
             encrypt = { encryption.encrypt(it) },
             // EncryptedAppendLog requires null, not a throw, for a segment it
-            // cannot open — KeyStoreEncryption.decrypt rethrows. Without this
+            // cannot open — SecretEncryption.decrypt rethrows. Without this
             // one bad segment would abort the whole read, and a caller that
             // then sees an empty log can overwrite a history that was merely
             // unreadable.

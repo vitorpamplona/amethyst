@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.marmot
 
-import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
+import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -40,12 +40,12 @@ import java.io.File
  * The blob contains private key material — init keys, encryption keys,
  * signature keys — that the MLS engine needs to process Welcome events
  * received days or weeks after the corresponding KeyPackage was published.
- * It is encrypted at rest with [KeyStoreEncryption] (AES/GCM via Android
+ * It is encrypted at rest with [SecretEncryption] (AES/GCM via Android
  * KeyStore), the same primitive used by [AndroidMlsGroupStateStore].
  */
 class AndroidKeyPackageBundleStore(
     private val rootDir: File,
-    private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val encryption: SecretEncryption = SecretEncryption(),
 ) : KeyPackageBundleStore {
     private val mutex = Mutex()
 

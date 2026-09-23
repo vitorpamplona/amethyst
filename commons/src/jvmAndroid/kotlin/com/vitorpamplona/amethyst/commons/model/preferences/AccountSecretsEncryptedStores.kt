@@ -18,61 +18,67 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.model.preferences.UpdatablePropertyFlow
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
-import java.io.File
+import okio.Path
 
+/**
+ * The per-account secret store: one encrypted DataStore per npub, at
+ * `<root>/datastore/<npub>.secrets_pb`, for secrets that are not the identity
+ * key — wallet connection strings, NIP-46 bunker material.
+ *
+ * **Private keys do not belong here.** They live in
+ * [com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage], which backs
+ * them with the OS credential manager (Keychain, Credential Manager, Secret
+ * Service) rather than a file this process can read, and which desktop already
+ * uses. Two stores for one identity key would be one store too many, and the
+ * weaker one would win by being convenient.
+ *
+ * Separate from [AccountPreferenceStores] so ordinary settings stay cheap to
+ * read: every value here pays an encrypt/decrypt, which on a StrongBox-backed
+ * device runs at roughly 68 KB/s.
+ */
 class AccountSecretsEncryptedStores(
-    val rootFilesDir: () -> File,
+    val rootFilesDir: () -> Path,
     val scope: CoroutineScope,
+    private val encryption: SecretEncryption = SecretEncryption(),
 ) {
-    companion object Companion {
-        val encryption = KeyStoreEncryption()
-        val key = stringPreferencesKey("privKey")
+    companion object {
         val nwc = stringPreferencesKey("nwc")
     }
 
     private val storeCache = LargeCache<String, EncryptedDataStore>()
 
-    fun file(npub: String) = File(rootFilesDir(), "datastore/$npub.secrets")
+    fun file(npub: String): Path = rootFilesDir() / "datastore" / "$npub.secrets_pb"
 
-    private fun getDataStore(npub: String): EncryptedDataStore =
+    fun getDataStore(npub: String): EncryptedDataStore =
         storeCache.getOrCreate(npub) {
             EncryptedDataStore(
-                PreferenceDataStoreFactory.create(
-                    produceFile = { file(npub) },
-                ),
+                PreferenceDataStoreFactory.createWithPath(produceFile = { file(npub) }),
                 encryption,
                 scope = scope,
             )
         }
 
-    suspend fun getPrivateKey(npub: String): String? = getDataStore(npub).get(key)
-
-    suspend fun savePrivateKey(
-        npub: String,
-        value: HexKey,
-    ) {
-        getDataStore(npub).save(key, value)
-    }
-
-    suspend fun nwc(npub: String): UpdatablePropertyFlow<Nip47WalletConnect.Nip47URI> =
+    fun nwc(npub: String): UpdatablePropertyFlow<Nip47WalletConnect.Nip47URI> =
         getDataStore(npub).getProperty(
             key = nwc,
             parser = Nip47WalletConnect.Nip47URI::parser,
             serializer = Nip47WalletConnect.Nip47URI::serializer,
         )
 
+    /** See [AccountPreferenceStores.removeAccount] — the cached handle goes first. */
     fun removeAccount(npub: String): Boolean {
-        val deleted = file(npub).delete()
         storeCache.remove(npub)
-        return deleted
+        val path = file(npub)
+        if (!platformFileSystem.exists(path)) return false
+        platformFileSystem.delete(path)
+        return true
     }
 }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
@@ -33,9 +33,9 @@ import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
-class KeyStoreEncryption {
+actual class SecretEncryption {
     companion object {
-        private const val TAG = "KeyStoreEncryption"
+        private const val TAG = "SecretEncryption"
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
@@ -147,7 +147,7 @@ class KeyStoreEncryption {
         return createKeyStrongBoxIfAvailable() ?: createKeyRegular()
     }
 
-    fun encrypt(bytes: ByteArray): ByteArray {
+    actual fun encrypt(bytes: ByteArray): ByteArray {
         try {
             // Initializes the cipher in encrypt mode and encrypts data
             val cipher = ciphers.get()
@@ -164,7 +164,7 @@ class KeyStoreEncryption {
         }
     }
 
-    fun decrypt(bytes: ByteArray): ByteArray? {
+    actual fun decrypt(bytes: ByteArray): ByteArray? {
         try {
             // Extract the 12-byte GCM IV prefix and decrypt the remainder. The
             // AndroidKeyStore cipher only accepts GCMParameterSpec (not a plain

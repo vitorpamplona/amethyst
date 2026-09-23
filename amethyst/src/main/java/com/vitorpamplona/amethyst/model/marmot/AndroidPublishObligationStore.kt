@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.marmot
 
-import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
+import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
@@ -32,7 +32,7 @@ import java.io.File
 
 /**
  * Android implementation of [MarmotPublishObligationStore], encrypted at rest
- * with [KeyStoreEncryption] like the group-state and KeyPackage stores.
+ * with [SecretEncryption] like the group-state and KeyPackage stores.
  *
  * ```
  * <rootDir>/marmot_obligations/<obligationId>.obligation
@@ -51,7 +51,7 @@ import java.io.File
  */
 class AndroidPublishObligationStore(
     private val rootDir: File,
-    private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val encryption: SecretEncryption = SecretEncryption(),
 ) : MarmotPublishObligationStore {
     private val mutex = Mutex()
 

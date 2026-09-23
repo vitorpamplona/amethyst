@@ -18,18 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.UpdatablePropertyFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import java.io.IOException
+import okio.IOException
 
+/**
+ * Exposes one DataStore key as an [UpdatablePropertyFlow].
+ *
+ * A missing key, a blank serialization and an explicit null all mean the same
+ * thing here — the property is absent — so each of them removes the key rather
+ * than storing an empty string that would later parse into a bogus value.
+ *
+ * Uses okio's [IOException] rather than `java.io.IOException`: on JVM targets
+ * okio aliases it to exactly that type, so the read-error branch keeps catching
+ * what DataStore throws while the file stays compilable for Apple targets.
+ */
 fun <T> DataStore<Preferences>.getProperty(
     key: Preferences.Key<String>,
     parser: (String) -> T,
@@ -42,29 +52,14 @@ fun <T> DataStore<Preferences>.getProperty(
                 .catch { e ->
                     if (e is IOException) emit(emptyPreferences()) else throw e
                 }.map { prefs ->
-                    val value = prefs[key]
-                    if (value != null) {
-                        parser(value)
-                    } else {
-                        null
-                    }
+                    prefs[key]?.let(parser)
                 },
         update = { newValue ->
-            if (newValue != null) {
-                val serialized = serializer(newValue)
-                if (serialized.isNotBlank()) {
-                    edit { prefs ->
-                        prefs[key] = serialized
-                    }
-                } else {
-                    edit { prefs ->
-                        prefs.remove(key)
-                    }
-                }
+            val serialized = newValue?.let(serializer)
+            if (serialized != null && serialized.isNotBlank()) {
+                edit { prefs -> prefs[key] = serialized }
             } else {
-                edit { prefs ->
-                    prefs.remove(key)
-                }
+                edit { prefs -> prefs.remove(key) }
             }
         },
         scope = scope,

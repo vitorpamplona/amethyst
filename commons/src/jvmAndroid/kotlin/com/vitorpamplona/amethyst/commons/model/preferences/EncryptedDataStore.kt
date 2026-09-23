@@ -18,46 +18,44 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.UpdatablePropertyFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import java.io.IOException
+import okio.IOException
 import kotlin.io.encoding.Base64
 
+/**
+ * A DataStore whose values are encrypted with [SecretEncryption] and stored
+ * Base64-encoded, for anything that must not sit in plaintext on disk.
+ *
+ * Keys stay in the clear — only values are encrypted — so the set of keys an
+ * account has is visible even though their contents are not.
+ */
 class EncryptedDataStore(
     private val store: DataStore<Preferences>,
-    private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val encryption: SecretEncryption = SecretEncryption(),
     private val scope: CoroutineScope,
 ) {
-    private fun decode(str: String): ByteArray = Base64.decode(str)
+    private fun encrypt(value: String): String = Base64.encode(encryption.encrypt(value.encodeToByteArray()))
 
-    private fun encode(bytes: ByteArray): String = Base64.encode(bytes)
-
-    private fun encrypt(value: String): String = encode(encryption.encrypt(value.toByteArray()))
-
-    private fun decrypt(value: String): String = encryption.decrypt(decode(value)).contentToString()
+    private fun decrypt(value: String): String? = encryption.decrypt(Base64.decode(value))?.decodeToString()
 
     suspend fun remove(key: Preferences.Key<String>) {
-        store.edit { prefs ->
-            prefs.remove(key)
-        }
+        store.edit { prefs -> prefs.remove(key) }
     }
 
     suspend fun save(
         key: Preferences.Key<String>,
         value: String,
     ) {
-        store.edit { prefs ->
-            prefs[key] = encrypt(value)
-        }
+        store.edit { prefs -> prefs[key] = encrypt(value) }
     }
 
     suspend fun get(key: Preferences.Key<String>): String? =
@@ -79,26 +77,12 @@ class EncryptedDataStore(
                     .catch { e ->
                         if (e is IOException) emit(emptyPreferences()) else throw e
                     }.map { prefs ->
-                        val value = prefs[key]
-                        if (value != null) {
-                            val decrypted = decrypt(value)
-                            if (decrypted.isNotBlank()) {
-                                parser(decrypted)
-                            } else {
-                                null
-                            }
-                        } else {
-                            null
-                        }
+                        prefs[key]?.let { decrypt(it) }?.takeIf { it.isNotBlank() }?.let(parser)
                     },
             update = { newValue ->
-                if (newValue != null) {
-                    val serialized = serializer(newValue)
-                    if (serialized.isNotBlank()) {
-                        save(key, serialized)
-                    } else {
-                        remove(key)
-                    }
+                val serialized = newValue?.let(serializer)
+                if (serialized != null && serialized.isNotBlank()) {
+                    save(key, serialized)
                 } else {
                     remove(key)
                 }
