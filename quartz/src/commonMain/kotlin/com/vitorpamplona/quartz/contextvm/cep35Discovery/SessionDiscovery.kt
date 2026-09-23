@@ -42,6 +42,17 @@ class SessionDiscovery {
     val hasLearned get() = baseline != null
 
     /**
+     * The baseline, but only when the peer actually declared something.
+     *
+     * Null both before the peer's first message and when that message carried
+     * no discovery tags — two different facts a caller cannot act on
+     * differently, because both mean "this peer has told us nothing". Negotiate
+     * off this, not off [peer]: see [DiscoverySurface.declaresNothing] for the
+     * live case that makes the difference.
+     */
+    val declaredPeer get() = baseline?.takeIf { !it.declaresNothing }
+
+    /**
      * Applies a peer message's tags.
      *
      * The first one establishes the baseline; later ones are returned for

@@ -88,12 +88,38 @@ class CvmTransport(
     private val serverPubKey: HexKey,
     private val crypto: CvmGiftWrap = CvmGiftWrap(),
     private val discovery: SessionDiscovery = SessionDiscovery(),
-    /** Whether the peer is known to accept encrypted messages. */
-    private val peerSupportsEncryption: Boolean = true,
-    private val peerSupportsEphemeralWrap: Boolean = true,
+    /**
+     * What to assume about the peer **until it declares otherwise**.
+     *
+     * Not a fixed answer: once the peer sends a CEP-35 discovery surface, that
+     * surface wins (see [peerEncrypts]). These are only what to believe before
+     * the first message arrives, and for a peer that never declares anything.
+     *
+     * The default is optimistic on purpose. Assuming a peer cannot encrypt
+     * would have us send the first request of every session in the clear, which
+     * is the one message whose exposure we can still avoid.
+     */
+    private val assumePeerSupportsEncryption: Boolean = true,
+    private val assumePeerSupportsEphemeralWrap: Boolean = true,
 ) {
     /** The peer's learned discovery baseline, once its first message has arrived. */
     val peer get() = discovery.peer
+
+    /**
+     * Whether to encrypt to this peer, by what it has actually told us.
+     *
+     * A declared surface wins; silence leaves the assumption in place. That
+     * split is what makes [com.vitorpamplona.quartz.contextvm.cep04Encryption.EncryptionMode.REQUIRED]
+     * mean something: before this, its input was a constant, so its promise to
+     * fail loudly rather than downgrade could never fire. Now a peer that
+     * declares a surface without `support_encryption` gets a stated refusal
+     * instead of a wrap it cannot open and a request that times out with no
+     * reason.
+     */
+    private fun peerEncrypts() = discovery.declaredPeer?.supportsEncryption ?: assumePeerSupportsEncryption
+
+    /** As [peerEncrypts], for CEP-19's ephemeral wrap kind. */
+    private fun peerTakesEphemeralWrap() = discovery.declaredPeer?.supportsEphemeralEncryption ?: assumePeerSupportsEphemeralWrap
 
     private var sentFirstMessage = false
 
@@ -241,8 +267,8 @@ class CvmTransport(
         }
 
     private suspend fun outbound(inner: Event): Event =
-        if (crypto.shouldEncrypt(peerSupportsEncryption)) {
-            crypto.wrap(inner, serverPubKey, crypto.negotiatedWrapKind(peerSupportsEphemeralWrap))
+        if (crypto.shouldEncrypt(peerEncrypts())) {
+            crypto.wrap(inner, serverPubKey, crypto.negotiatedWrapKind(peerTakesEphemeralWrap()))
         } else {
             inner
         }

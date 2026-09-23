@@ -48,6 +48,32 @@ data class DiscoverySurface(
      */
     val unknownTags: List<Tag> = emptyList(),
 ) {
+    /**
+     * Whether the peer said anything about itself at all.
+     *
+     * The distinction this exists for: CEP-35 reads an absent flag as "not
+     * supported", which is right for a peer that sent a discovery surface and
+     * left a flag out of it. It is wrong for a peer that sent no discovery tags
+     * whatsoever — that peer has made no claim, and treating its silence as a
+     * denial would have us conclude it cannot do anything.
+     *
+     * This is not hypothetical. A live cordn coordinator's kind-25910 responses
+     * carry only the routing tags `p` and `e` (observed on the public relays,
+     * 2026-09-23), so reading them as a full surface would say "supports
+     * nothing" about a server that in fact accepts every wrap we send.
+     */
+    val declaresNothing: Boolean
+        get() =
+            name == null &&
+                about == null &&
+                picture == null &&
+                website == null &&
+                !supportsEncryption &&
+                !supportsEphemeralEncryption &&
+                !supportsOversizedTransfer &&
+                !supportsOpenStream &&
+                unknownTags.isEmpty()
+
     /** Raw access for a caller that understands a tag this version does not. */
     fun rawTag(name: String): Tag? = unknownTags.firstOrNull { it.isNotEmpty() && it[0] == name }
 

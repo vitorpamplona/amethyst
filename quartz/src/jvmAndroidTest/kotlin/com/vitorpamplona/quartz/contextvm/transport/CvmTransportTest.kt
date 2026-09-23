@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.contextvm.transport
 
+import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmEncryptionException
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.EncryptionMode
+import com.vitorpamplona.quartz.contextvm.cep04Encryption.GiftWrapMode
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
 import com.vitorpamplona.quartz.contextvm.core.CvmTags
@@ -47,6 +49,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -346,6 +349,132 @@ class CvmTransportTest {
                 "CEP-35 requires unknown discovery tags to survive",
             )
         }
+
+    @Test
+    fun `CVM-4-22 a peer that declares no encryption gets a refusal, not an unreadable wrap`() =
+        runTest {
+            // The point of EncryptionMode.REQUIRED. Before negotiation was
+            // wired up its input was a constant true, so this could never fire:
+            // we would have sent a wrap the peer cannot open and the caller
+            // would have seen a timeout with no reason.
+            val fixture = server(discoveryTags = listOf(arrayOf("name", "Plaintext only")))
+            fixture.start()
+            val transport = transport()
+
+            // First request establishes the baseline and still goes out under
+            // the optimistic assumption — the peer has not spoken yet.
+            exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), "ping"))
+            assertFalse(transport.peer!!.supportsEncryption)
+
+            val thrown =
+                runCatching {
+                    exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(1), "ping"))
+                }.exceptionOrNull()
+
+            assertTrue(thrown is CvmEncryptionException, "expected a stated refusal, got $thrown")
+        }
+
+    @Test
+    fun `CVM-4-23 a peer that declares encryption keeps getting wraps`() =
+        runTest {
+            val fixture =
+                server(
+                    discoveryTags = listOf(arrayOf("name", "Encrypts"), CvmTags.flag(CvmTags.SUPPORT_ENCRYPTION)),
+                )
+            fixture.start()
+            val transport = transport()
+
+            exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), "ping"))
+            val second =
+                exchange(
+                    fixture,
+                    transport, // id 0 again: the fixture answers every request with id 0 and the
+                    // transport correctly ignores a mismatched id (CVM-CORE-13).
+                    JsonRpcRequest(JsonRpcId.Num(0), "ping"),
+                )
+
+            assertTrue(second is JsonRpcSuccess)
+            assertTrue(relays.published.all { CvmKinds.isGiftWrap(it.kind) })
+        }
+
+    @Test
+    fun `CVM-4-24 a peer that declares nothing at all is not read as declaring no`() =
+        runTest {
+            // The case that decides the whole design. A live cordn coordinator's
+            // kind-25910 responses carry only the routing tags `p` and `e`
+            // (observed on the public relays, 2026-09-23). Reading that silence
+            // as a full CEP-35 surface would conclude it supports nothing, and
+            // REQUIRED would refuse to talk to every deployed coordinator.
+            val fixture = server(discoveryTags = emptyList())
+            fixture.start()
+            val transport = transport()
+
+            exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), "ping"))
+            val second =
+                exchange(
+                    fixture,
+                    transport, // id 0 again: the fixture answers every request with id 0 and the
+                    // transport correctly ignores a mismatched id (CVM-CORE-13).
+                    JsonRpcRequest(JsonRpcId.Num(0), "ping"),
+                )
+
+            assertTrue(second is JsonRpcSuccess, "a silent peer must stay reachable")
+            assertTrue(relays.published.all { CvmKinds.isGiftWrap(it.kind) })
+        }
+
+    @Test
+    fun `CVM-19-05 the wrap kind follows what the peer declared`() =
+        runTest {
+            // CEP-19: preferring 21059 must never mean refusing a 1059-only
+            // server. A declared surface without the ephemeral flag downgrades.
+            // The surface must declare encryption, or OPTIONAL would send the
+            // second request unwrapped and the wrap kind would never be picked
+            // at all - which made an earlier version of this test vacuous.
+            assertEquals(
+                listOf(CvmKinds.GIFT_WRAP),
+                wrapKindsOfSecondRequest(
+                    discoveryTags = listOf(arrayOf(CvmTags.SUPPORT_ENCRYPTION, "true"), arrayOf("name", "Persistent only")),
+                ),
+            )
+        }
+
+    @Test
+    fun `CVM-19-06 a peer that declares ephemeral support gets the ephemeral wrap`() =
+        runTest {
+            assertEquals(
+                listOf(CvmKinds.EPHEMERAL_GIFT_WRAP),
+                wrapKindsOfSecondRequest(
+                    discoveryTags =
+                        listOf(
+                            arrayOf(CvmTags.SUPPORT_ENCRYPTION, "true"),
+                            arrayOf(CvmTags.SUPPORT_ENCRYPTION_EPHEMERAL, "true"),
+                        ),
+                ),
+            )
+        }
+
+    /**
+     * Runs two requests against a server declaring [discoveryTags] and returns
+     * the kinds we published on the second one - by then the peer's surface has
+     * been learned from its first reply.
+     */
+    private suspend fun wrapKindsOfSecondRequest(discoveryTags: List<Array<String>>): List<Int> {
+        val fixture = server(discoveryTags = discoveryTags)
+        fixture.start()
+        val transport = transport(CvmGiftWrap(giftWrapMode = GiftWrapMode.EPHEMERAL, encryptionMode = EncryptionMode.OPTIONAL))
+
+        exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), "ping"))
+        relays.published.clear()
+        // id 0 again: the fixture answers every request with id 0 and the
+        // transport correctly ignores a mismatched id (CVM-CORE-13).
+        exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), "ping"))
+
+        // Only what WE sent: a wrap addressed to the server. The fixture's own
+        // replies are wrapped too and would otherwise be counted.
+        val ours = relays.published.filter { e -> e.tags.any { it.size >= 2 && it[0] == "p" && it[1] == serverSigner.pubKey } }
+        assertTrue(ours.isNotEmpty(), "the second request should have been published")
+        return ours.map { it.kind }.distinct()
+    }
 
     @Test
     fun `CVM-35-11 the stable identity is used only when asked for`() =
