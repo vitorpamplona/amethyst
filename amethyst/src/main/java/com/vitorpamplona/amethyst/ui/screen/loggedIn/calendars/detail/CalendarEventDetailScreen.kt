@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.route_calendar_event_detail
+import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -107,8 +109,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeT
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag

@@ -35,19 +35,11 @@ val DefaultPrimary = Color(red = 208, green = 188, blue = 255)
 val LightPurple = Color(red = 187, green = 134, blue = 252)
 
 // Material Design colors
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
 val Purple700 = Color(0xFF3700B3)
-val Teal200 = Color(0xFF03DAC5)
 
 // Bitcoin colors
-val BitcoinOrange = Color(0xFFF7931A)
-val BitcoinDark = Color(0xFFF7931A)
-val BitcoinLight = Color(0xFFB66605)
 
 // Status colors
-val RoyalBlue = Color(0xFF4169E1)
-val Following = Color(0xFF03DAC5)
 val FollowsFollow = Color.Yellow
 val Nip05Verified = Color.Blue
 
@@ -58,22 +50,13 @@ val Nip05EmailColorLight = Color(0xFFa770f3)
 
 // Feedback colors
 val DarkerGreen = Color.Green.copy(alpha = 0.32f)
-val LightRedColor = Color(0xFFC62828)
 val LighterRedColor = Color(0xFFFF0E0E)
 
 // Warning colors
-val LightWarningColor = Color(0xFFffcc00)
-val DarkWarningColor = Color(0xFFF8DE22)
 
 // Surface variant colors
-val LightRedColorOnSecondSurface = Color(0xFFC62828)
-val DarkRedColorOnSecondSurface = Color(0xFFF34747)
-val LightWarningColorOnSecondSurface = Color(0xFFC09B14)
-val DarkWarningColorOnSecondSurface = Color(0xFFE1C419)
 
 // Success colors
-val LightAllGoodColor = Color(0xFF339900)
-val DarkAllGoodColor = Color(0xFF99cc33)
 
 // Semantic status colors for desktop
 val StatusGreen = Color(0xFF4CAF50)
@@ -85,8 +68,6 @@ val StatusAmberDark = Color(0xFFFFD54F)
 val StatusBlue = Color(0xFF2196F3)
 
 // Fundraiser colors
-val LightFundraiserProgressColor = Color(0xFF3DB601)
-val DarkFundraiserProgressColor = Color(0xFF61A229)
 
 // Relay status colors
 object RelayStatusColors {

@@ -44,18 +44,18 @@ import com.vitorpamplona.amethyst.commons.resources.spam_description
 import com.vitorpamplona.amethyst.commons.resources.uptime
 import com.vitorpamplona.amethyst.commons.resources.write_to_relay
 import com.vitorpamplona.amethyst.commons.resources.write_to_relay_description
+import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
-import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 

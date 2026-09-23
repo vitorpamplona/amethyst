@@ -86,6 +86,10 @@ import com.vitorpamplona.amethyst.commons.resources.active_subs_title
 import com.vitorpamplona.amethyst.commons.resources.active_subs_unattributed
 import com.vitorpamplona.amethyst.commons.resources.active_subs_untagged
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
+import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -99,10 +103,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberM
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

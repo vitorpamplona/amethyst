@@ -52,6 +52,11 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -65,11 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplying
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview

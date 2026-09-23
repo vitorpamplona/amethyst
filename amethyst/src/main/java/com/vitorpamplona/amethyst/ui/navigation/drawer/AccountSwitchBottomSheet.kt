@@ -72,6 +72,9 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -81,9 +84,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

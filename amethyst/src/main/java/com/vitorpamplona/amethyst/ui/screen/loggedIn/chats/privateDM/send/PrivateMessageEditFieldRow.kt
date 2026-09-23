@@ -61,6 +61,15 @@ import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
 import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_in
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.commons.ui.theme.PostKeyboard
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -80,16 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplying
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.PostKeyboard
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

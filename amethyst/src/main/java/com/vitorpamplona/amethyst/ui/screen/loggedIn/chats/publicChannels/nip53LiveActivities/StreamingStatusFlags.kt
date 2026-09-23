@@ -37,9 +37,9 @@ import com.vitorpamplona.amethyst.commons.resources.live_stream_live_tag
 import com.vitorpamplona.amethyst.commons.resources.live_stream_offline_tag
 import com.vitorpamplona.amethyst.commons.resources.live_stream_planned_tag
 import com.vitorpamplona.amethyst.commons.resources.live_stream_private_tag
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.DateFormat
 import java.text.SimpleDateFormat

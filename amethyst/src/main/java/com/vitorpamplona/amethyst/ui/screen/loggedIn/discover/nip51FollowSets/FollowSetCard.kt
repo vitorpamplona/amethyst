@@ -41,6 +41,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.FollowSetImageModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -55,12 +61,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent

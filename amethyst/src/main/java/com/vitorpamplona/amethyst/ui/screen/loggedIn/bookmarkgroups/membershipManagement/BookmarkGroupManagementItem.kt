@@ -49,16 +49,16 @@ import com.vitorpamplona.amethyst.commons.resources.private_bookmark_add_action_
 import com.vitorpamplona.amethyst.commons.resources.private_bookmark_presence_indicator
 import com.vitorpamplona.amethyst.commons.resources.public_bookmark_add_action_label
 import com.vitorpamplona.amethyst.commons.resources.public_bookmark_presence_indicator
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.BookmarkMembershipStatusAndNumberDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun BookmarkGroupManagementItem(

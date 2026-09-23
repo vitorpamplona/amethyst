@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
 import com.vitorpamplona.amethyst.commons.resources.supports_npub_nip_05_hex_and_namecoin_bit_d_id
 import com.vitorpamplona.amethyst.commons.resources.tip
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -78,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted

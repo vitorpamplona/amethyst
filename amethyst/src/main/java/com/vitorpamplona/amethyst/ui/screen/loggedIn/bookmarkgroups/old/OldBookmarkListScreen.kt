@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
 @Composable

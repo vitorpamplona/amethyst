@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.google.common.math.IntMath.sqrt
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import java.math.RoundingMode
 import kotlin.math.ceil
 

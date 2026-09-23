@@ -50,16 +50,16 @@ import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.playback_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

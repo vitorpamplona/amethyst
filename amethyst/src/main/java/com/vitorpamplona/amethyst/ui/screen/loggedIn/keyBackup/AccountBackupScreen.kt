@@ -103,6 +103,10 @@ import com.vitorpamplona.amethyst.commons.resources.show_encrypted_private_key_q
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.show_private_key_qr_code
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -117,11 +121,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49

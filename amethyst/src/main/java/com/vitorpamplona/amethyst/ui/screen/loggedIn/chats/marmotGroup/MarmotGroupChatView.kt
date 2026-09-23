@@ -56,6 +56,12 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_not_a_member
 import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -74,12 +80,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList

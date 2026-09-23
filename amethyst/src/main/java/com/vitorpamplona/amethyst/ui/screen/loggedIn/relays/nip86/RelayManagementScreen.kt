@@ -122,6 +122,13 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.NIP05IconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -136,13 +143,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer

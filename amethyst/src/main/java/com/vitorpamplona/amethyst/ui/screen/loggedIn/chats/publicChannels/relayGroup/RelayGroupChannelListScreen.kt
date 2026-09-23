@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_section_forums
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_action
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_body
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
@@ -117,7 +118,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimeli
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_DM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

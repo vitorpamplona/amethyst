@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_select_date
 import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
 import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
 import com.vitorpamplona.amethyst.commons.resources.vanish_target_relay
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -100,8 +102,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

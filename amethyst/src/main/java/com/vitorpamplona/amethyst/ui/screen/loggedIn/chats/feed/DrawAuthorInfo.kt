@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -41,9 +44,6 @@ import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderUserCards
 import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
-import com.vitorpamplona.amethyst.ui.theme.isLight
 
 @Composable
 fun DrawAuthorInfo(

@@ -57,10 +57,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.blossom_sync_done
 import com.vitorpamplona.amethyst.commons.resources.blossom_syncing
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncState
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.delay
 
 /** How long the finished "Sync complete" banner lingers before it auto-dismisses. */

@@ -67,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_name
 import com.vitorpamplona.amethyst.commons.resources.wallet_name_hint
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_uri
 import com.vitorpamplona.amethyst.commons.resources.wallet_save
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -74,9 +77,6 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47DeepLink
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CancellationException

@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.mutual
 import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
 import com.vitorpamplona.amethyst.commons.resources.replies
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Size8dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.feeds.UserBlockedFeed
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -115,8 +117,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import kotlinx.coroutines.launch
 
 @Composable

@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.mute_hashtag
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.unmute_hashtag
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun HashtagScreen(

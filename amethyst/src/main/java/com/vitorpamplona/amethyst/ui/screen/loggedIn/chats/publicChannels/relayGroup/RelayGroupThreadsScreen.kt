@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty_read_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_loading_older
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -84,7 +85,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -50,9 +50,9 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels_hint
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote

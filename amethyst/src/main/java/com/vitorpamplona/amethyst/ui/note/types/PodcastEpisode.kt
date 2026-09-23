@@ -58,12 +58,12 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_video
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastLinkChip
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastValueSplits
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 
 // Bottom-rounded border on the audio player so it visually butts up against the cover's

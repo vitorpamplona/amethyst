@@ -38,14 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
+import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
+import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.videoGalleryModifier
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

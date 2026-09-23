@@ -60,6 +60,11 @@ import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_explainer
 import com.vitorpamplona.amethyst.commons.resources.public_chat_relays_title
 import com.vitorpamplona.amethyst.commons.resources.public_chat_title
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -75,12 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 

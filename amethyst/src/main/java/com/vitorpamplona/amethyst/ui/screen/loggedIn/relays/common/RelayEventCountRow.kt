@@ -40,11 +40,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_event_count
+import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font10SP
-import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 
 private val PillShape = RoundedCornerShape(12.dp)
 

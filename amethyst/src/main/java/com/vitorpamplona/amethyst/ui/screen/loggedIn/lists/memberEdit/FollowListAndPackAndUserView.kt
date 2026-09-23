@@ -43,17 +43,17 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows_explainer
 import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.follow_sets_explainer
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun FollowListAndPackAndUserView(

@@ -46,9 +46,9 @@ import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_descri
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_explainer
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun ContentSensitivityExplainer(

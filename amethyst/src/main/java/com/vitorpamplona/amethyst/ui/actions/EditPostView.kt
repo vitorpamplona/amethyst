@@ -78,6 +78,15 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_inv
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -96,15 +105,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSugge
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

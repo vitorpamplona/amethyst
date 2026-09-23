@@ -41,6 +41,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImageBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
@@ -51,13 +58,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.FavoriteAlgoFeedToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
-import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
-import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.nip05
 
 @Immutable
 data class DVMCard(

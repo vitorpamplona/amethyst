@@ -52,6 +52,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.pause
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size75Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.VoiceHeightModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
@@ -73,11 +78,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size75Modifier
-import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject

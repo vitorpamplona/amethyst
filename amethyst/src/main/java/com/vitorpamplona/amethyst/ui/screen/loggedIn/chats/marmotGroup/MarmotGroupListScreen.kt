@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_unread_messages
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -93,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncrypt
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 

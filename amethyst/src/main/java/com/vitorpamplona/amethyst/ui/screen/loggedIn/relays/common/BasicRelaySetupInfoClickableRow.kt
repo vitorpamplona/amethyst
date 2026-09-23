@@ -44,6 +44,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.and_more
 import com.vitorpamplona.amethyst.commons.resources.relay_reorder
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Height25Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightChatMaxWidth
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -52,13 +59,6 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
-import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
 

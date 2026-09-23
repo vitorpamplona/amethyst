@@ -45,12 +45,12 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_absence_indicator
 import com.vitorpamplona.amethyst.commons.resources.follow_set_icon_description
 import com.vitorpamplona.amethyst.commons.resources.follow_set_public_presence_indicator
 import com.vitorpamplona.amethyst.commons.resources.remove_user_from_the_list
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50ModifierOffset10
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.DisplayParticipantNumberAndStatus
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50ModifierOffset10
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview

@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppNavigationRail
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSelectionDrag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSidePanel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

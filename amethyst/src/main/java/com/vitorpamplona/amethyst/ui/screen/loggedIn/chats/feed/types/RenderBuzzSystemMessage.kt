@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_system_visibility_priva
 import com.vitorpamplona.amethyst.commons.resources.duration_days
 import com.vitorpamplona.amethyst.commons.resources.duration_hours
 import com.vitorpamplona.amethyst.commons.resources.duration_minutes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatSystemMessage
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessagePayload
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

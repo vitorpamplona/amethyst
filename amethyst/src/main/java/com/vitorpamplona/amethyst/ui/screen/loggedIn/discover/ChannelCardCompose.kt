@@ -26,6 +26,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -41,8 +43,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivitie
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.RenderCommunitiesThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.RenderContentDVMThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.RenderClassifiedsThumb
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent

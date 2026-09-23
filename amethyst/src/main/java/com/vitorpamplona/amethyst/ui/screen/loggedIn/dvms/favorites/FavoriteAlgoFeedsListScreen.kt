@@ -76,6 +76,11 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_empty_step2
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_explainer
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.remove_dvm_from_favorites
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImage35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -88,11 +93,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.launch
 
 private const val STAR_INLINE_ID = "star"

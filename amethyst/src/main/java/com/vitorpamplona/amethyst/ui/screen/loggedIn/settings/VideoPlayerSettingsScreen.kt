@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_settings_descri
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_location_overflow
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_location_top_bar
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_reorder
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.model.VideoPlayerButtonItem
@@ -92,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Composable

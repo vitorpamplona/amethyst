@@ -60,8 +60,8 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
 import com.vitorpamplona.amethyst.commons.resources.option_of
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
 
 @Composable

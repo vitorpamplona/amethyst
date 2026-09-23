@@ -43,12 +43,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.mute_button
 import com.vitorpamplona.amethyst.commons.resources.muted_button
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.coroutines.delay
 
 @Preview

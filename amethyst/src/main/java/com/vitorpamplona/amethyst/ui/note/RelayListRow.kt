@@ -53,6 +53,17 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
 import com.vitorpamplona.amethyst.commons.resources.relay_info
+import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size17dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.ui.theme.relayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -61,18 +72,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
-import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size17dp
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
-import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
-import com.vitorpamplona.amethyst.ui.theme.ripple24dp
-import com.vitorpamplona.amethyst.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.launch
 

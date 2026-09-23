@@ -36,11 +36,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_dismiss
 import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_remove
 import com.vitorpamplona.amethyst.commons.resources.deleted_items_banner_title
+import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BigPadding
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
 @Composable
 fun DeletedItemsBanner(

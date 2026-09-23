@@ -48,9 +48,9 @@ import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun UploadProgressIndicator(

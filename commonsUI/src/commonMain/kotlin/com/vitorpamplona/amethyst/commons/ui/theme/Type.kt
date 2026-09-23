@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.theme
+package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -27,8 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.halilibo.richtext.ui.HeadingStyle
-import com.vitorpamplona.amethyst.model.FontFamilyType
 
 // Set of Material typography styles to start with
 val Typography =
@@ -52,16 +50,6 @@ val Typography =
     )
      */
     )
-
-// Maps the user-selected font preference to a Compose [FontFamily].
-// SYSTEM returns null so the platform default is used unchanged.
-fun FontFamilyType.toFontFamily(): FontFamily? =
-    when (this) {
-        FontFamilyType.SYSTEM -> null
-        FontFamilyType.SANS_SERIF -> FontFamily.SansSerif
-        FontFamilyType.SERIF -> FontFamily.Serif
-        FontFamilyType.MONOSPACE -> FontFamily.Monospace
-    }
 
 // Applies the chosen [FontFamily] to every text style so Material components pick it up too.
 // A null family leaves the typography untouched (platform default).
@@ -98,69 +86,3 @@ val Font18SP = 18.sp
 val MarkdownTextStyle = TextStyle(lineHeight = 1.50.em)
 
 val DefaultParagraphSpacing: TextUnit = 20.sp
-
-internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
-    when (level) {
-        0 -> {
-            Typography.displayLarge.copy(
-                fontSize = 32.sp,
-                lineHeight = 40.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.5).sp,
-            )
-        }
-
-        1 -> {
-            Typography.displayMedium.copy(
-                fontSize = 26.sp,
-                lineHeight = 34.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.25).sp,
-            )
-        }
-
-        2 -> {
-            Typography.displaySmall.copy(
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        3 -> {
-            Typography.displaySmall.copy(
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        4 -> {
-            Typography.headlineLarge.copy(
-                fontSize = 18.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        5 -> {
-            Typography.headlineMedium.copy(
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        6 -> {
-            Typography.headlineSmall.copy(
-                fontSize = 15.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        else -> {
-            textStyle
-        }
-    }
-}

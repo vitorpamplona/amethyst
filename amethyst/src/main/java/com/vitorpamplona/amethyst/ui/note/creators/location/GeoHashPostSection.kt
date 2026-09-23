@@ -47,8 +47,8 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_title
 import com.vitorpamplona.amethyst.commons.resources.location_change_place
 import com.vitorpamplona.amethyst.commons.resources.location_pick_on_map
 import com.vitorpamplona.amethyst.commons.resources.remove_location
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 
 /**
  * The shared location section for post composers. Defaults to the device-GPS flow

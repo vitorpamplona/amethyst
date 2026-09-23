@@ -88,6 +88,12 @@ import com.vitorpamplona.amethyst.commons.resources.media_servers_upload_section
 import com.vitorpamplona.amethyst.commons.resources.my_blossom_data
 import com.vitorpamplona.amethyst.commons.resources.no_blossom_server_message
 import com.vitorpamplona.amethyst.commons.resources.use_default_servers
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -96,12 +102,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.draggableRela
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relayDragHandle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.utils.Rfc3986
 import org.jetbrains.compose.resources.StringResource
 

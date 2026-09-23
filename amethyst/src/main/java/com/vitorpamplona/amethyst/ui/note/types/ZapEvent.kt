@@ -47,6 +47,12 @@ import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityHeaderRow
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
@@ -57,13 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

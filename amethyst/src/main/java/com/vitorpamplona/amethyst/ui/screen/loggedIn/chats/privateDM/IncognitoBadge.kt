@@ -26,9 +26,9 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.ui.theme.IncognitoIconModifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.IncognitoIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 
 @Composable

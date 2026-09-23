@@ -27,10 +27,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 
 @Composable
 fun ChatDivisor(info: String) {

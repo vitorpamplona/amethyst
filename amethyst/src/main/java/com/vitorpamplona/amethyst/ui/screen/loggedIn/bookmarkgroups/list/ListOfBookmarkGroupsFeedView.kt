@@ -58,12 +58,12 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.podcast_bookmarks_explainer
 import com.vitorpamplona.amethyst.commons.resources.repository_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.repository_bookmarks_explainer
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.isPodcastEvent
 import kotlinx.coroutines.flow.StateFlow
 

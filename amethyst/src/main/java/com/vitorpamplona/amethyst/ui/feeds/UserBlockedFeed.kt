@@ -32,8 +32,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.unblock_user
 import com.vitorpamplona.amethyst.commons.resources.user_is_blocked_hidden
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun UserBlockedFeed(onUnblock: () -> Unit) {

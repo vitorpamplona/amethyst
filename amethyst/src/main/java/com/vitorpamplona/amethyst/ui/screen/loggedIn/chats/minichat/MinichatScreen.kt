@@ -63,6 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.chat_minichat_title
 import com.vitorpamplona.amethyst.commons.resources.chat_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_open_channel
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -83,10 +87,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toPlainImetas
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine

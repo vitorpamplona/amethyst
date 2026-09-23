@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_pending
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_transactions
 import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
+import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import java.text.NumberFormat
 import kotlin.math.absoluteValue
 

@@ -83,6 +83,11 @@ import com.vitorpamplona.amethyst.commons.resources.search_section
 import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.trusted_section
 import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -123,11 +128,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchI
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 

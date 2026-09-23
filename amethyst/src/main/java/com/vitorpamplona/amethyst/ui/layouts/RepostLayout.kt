@@ -29,11 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.RepostIcon
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 @Preview

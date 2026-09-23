@@ -28,11 +28,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_hide_a_cache
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun NewGeocacheButton(nav: INav) {

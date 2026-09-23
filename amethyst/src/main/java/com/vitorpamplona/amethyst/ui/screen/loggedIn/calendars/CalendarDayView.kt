@@ -60,10 +60,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import java.time.LocalDate
 import java.time.ZoneId
 

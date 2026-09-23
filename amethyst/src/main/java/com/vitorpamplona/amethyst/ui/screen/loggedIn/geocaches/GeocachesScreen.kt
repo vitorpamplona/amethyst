@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_tab_hunts
 import com.vitorpamplona.amethyst.commons.resources.geocache_tab_map
 import com.vitorpamplona.amethyst.commons.resources.geocache_tab_mine
 import com.vitorpamplona.amethyst.commons.resources.geocache_tab_nearby
+import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTab
-import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 

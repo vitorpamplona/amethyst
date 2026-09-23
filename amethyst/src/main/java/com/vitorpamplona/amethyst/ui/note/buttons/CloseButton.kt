@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 
 @Composable
 fun CloseButton(

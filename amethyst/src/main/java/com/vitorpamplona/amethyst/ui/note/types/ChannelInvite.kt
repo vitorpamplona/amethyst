@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_unknown_actor
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
 import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
+import com.vitorpamplona.amethyst.commons.ui.theme.Size22dp
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -74,8 +76,6 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size22dp
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId

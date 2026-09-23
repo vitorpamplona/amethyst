@@ -32,8 +32,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun FeedEmpty(onRefresh: () -> Unit) {

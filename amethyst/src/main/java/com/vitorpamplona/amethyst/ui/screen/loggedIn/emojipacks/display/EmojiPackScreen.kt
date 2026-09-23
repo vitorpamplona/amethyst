@@ -65,16 +65,16 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_long_press_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_private_badge
 import com.vitorpamplona.amethyst.commons.resources.emoji_remove_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
 @Composable

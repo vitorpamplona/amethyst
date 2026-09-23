@@ -75,13 +75,13 @@ import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.username
 import com.vitorpamplona.amethyst.commons.resources.website_url
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

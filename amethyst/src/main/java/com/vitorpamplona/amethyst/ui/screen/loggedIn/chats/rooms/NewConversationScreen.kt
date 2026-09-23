@@ -127,13 +127,13 @@ import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_dir
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_encrypted
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_relay
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_title
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.grayText
 import org.jetbrains.compose.resources.StringResource
 
 // Per-type accent colors. Each protocol gets its own hue so private-vs-public reads at a glance

@@ -39,7 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.semantics.Role
-import com.vitorpamplona.amethyst.ui.theme.ripple24dp
+import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 
 @Composable
 fun ClickableBox(

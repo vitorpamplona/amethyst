@@ -39,12 +39,12 @@ import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.now
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.ui.note.timeAbsoluteWith
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 /**
  * Which relative-time format to use when the timestamp is *not* toggled to absolute.

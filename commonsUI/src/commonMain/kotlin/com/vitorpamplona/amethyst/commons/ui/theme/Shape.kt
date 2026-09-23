@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.theme
+package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -55,7 +55,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
 
 val Shapes =
     Shapes(

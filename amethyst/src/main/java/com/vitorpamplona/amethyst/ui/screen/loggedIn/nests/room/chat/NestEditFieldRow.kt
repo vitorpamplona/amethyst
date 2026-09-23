@@ -38,6 +38,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -50,11 +55,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
-import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview
 

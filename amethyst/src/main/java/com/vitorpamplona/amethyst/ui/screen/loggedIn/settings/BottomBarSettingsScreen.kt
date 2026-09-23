@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned_empty
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_remove
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_reorder_hint
+import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryAvatar
@@ -101,7 +102,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag

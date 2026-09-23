@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.post_anonymously
+import com.vitorpamplona.amethyst.commons.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 
 @Composable
 fun AnonymousPostButton(
