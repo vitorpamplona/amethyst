@@ -87,7 +87,7 @@ only surviving copy of the user's data is gone.
    private-outbox and trusted relays as "N of M" reach over per-relay rows; blocked relays
    as an "N unblocked" warning with allowed / newly blocked / still blocked), public
    chats, communities, favorite feeds and ephemeral rooms as tiles loaded from relays and
-   faded when you left them, hashtags and places as a pill cloud, trust providers as a
+   faded when you left them, hashtags and places as a pill cloud (places as "City · #geohash" through `LoadCityName`, each pill opening its feed), trust providers as a
    per-service before/after table, payment targets and BOLT12 offers as cards, and the
    encrypted-only Cashu wallet and Concord list as one explained panel. Only NIP-78 app
    settings still uses the generic removed / added / changed sections.

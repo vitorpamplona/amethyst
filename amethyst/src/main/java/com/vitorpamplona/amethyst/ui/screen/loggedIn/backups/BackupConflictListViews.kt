@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -132,8 +133,8 @@ internal fun LazyListScope.listDiffItems(
         is CommunityListDiff -> communityItems(diff, conflict, accountViewModel, nav)
         is EphemeralChatListDiff -> ephemeralRoomItems(diff, conflict, nav)
         is FavoriteAlgoFeedsListDiff -> favoriteFeedItems(diff, conflict, accountViewModel, nav)
-        is HashtagListDiff -> topicItems(diff.hashtags, (conflict.saved as? HashtagListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false)
-        is GeohashListDiff -> topicItems(diff.geohashes, (conflict.saved as? GeohashListEvent)?.publicGeohashes().orEmpty(), diff.privateItems, isPlace = true)
+        is HashtagListDiff -> topicItems(diff.hashtags, (conflict.saved as? HashtagListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false, nav)
+        is GeohashListDiff -> topicItems(diff.geohashes, (conflict.saved as? GeohashListEvent)?.publicGeohashes().orEmpty(), diff.privateItems, isPlace = true, nav)
         is TrustProviderListDiff -> trustProviderItems(diff, conflict, accountViewModel, nav)
         is PaymentTargetsDiff -> paymentTargetItems(diff, conflict)
         is Bolt12OfferListDiff -> offerItems(diff, conflict)
@@ -617,6 +618,7 @@ private fun LazyListScope.topicItems(
     saved: List<String>,
     privateItems: ContentChange,
     isPlace: Boolean,
+    nav: INav,
 ) {
     val topics = fates(saved, diff) { it.lowercase() }
     countTiles(topics, if (isPlace) R.string.backup_review_places_gone else R.string.backup_review_topics_gone, R.string.backup_review_new_count_caption)
@@ -637,24 +639,45 @@ private fun LazyListScope.topicItems(
                                     else -> color.copy(alpha = 0.12f)
                                 },
                             ).then(if (fate == ItemFate.DROPPED) Modifier.border(1.dp, tones.removed.copy(alpha = 0.5f), shape) else Modifier)
+                            .clickable { nav.nav(if (isPlace) Route.Geohash(topic) else Route.Hashtag(topic)) }
                             .padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         if (isPlace) Icon(symbol = MaterialSymbols.LocationOn, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-                        Text(
-                            if (isPlace) topic else "#$topic",
-                            color = color,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            textDecoration = if (fate == ItemFate.DROPPED) TextDecoration.LineThrough else null,
-                        )
+                        val decoration = if (fate == ItemFate.DROPPED) TextDecoration.LineThrough else null
+                        if (isPlace) {
+                            // Like the rest of the app: the city the geohash resolves to next to
+                            // its code, and just the code until (or unless) the name resolves.
+                            LoadCityName(topic, onLoading = { TopicText("#$topic", color, decoration) }) { city ->
+                                TopicText(if (city == topic) "#$topic" else "$city · #$topic", color, decoration)
+                            }
+                        } else {
+                            TopicText("#$topic", color, decoration)
+                        }
                     }
                 }
             }
         }
     }
     privateItemsCard(privateItems)
+}
+
+@Composable
+private fun TopicText(
+    text: String,
+    color: Color,
+    decoration: TextDecoration?,
+) {
+    Text(
+        text,
+        color = color,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+        textDecoration = decoration,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 // ---------------------------------------------------------------------------------------
