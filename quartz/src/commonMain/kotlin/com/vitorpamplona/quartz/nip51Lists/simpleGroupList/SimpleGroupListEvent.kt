@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -47,7 +48,7 @@ class SimpleGroupListEvent(
     override fun diffFrom(older: Event): SimpleGroupListDiff? {
         if (older !is SimpleGroupListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return SimpleGroupListDiff(
-            ListDiff.of(older.publicGroups(), publicGroups(), { it.groupId + "@" + it.relayUrl }, { a, b -> a.name == b.name }),
+            ListDiff.of(older.publicGroups(), publicGroups(), { it.groupId + "@" + (RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.url ?: it.relayUrl) }, { a, b -> a.name == b.name }),
             privateItemsChangeFrom(older),
         )
     }

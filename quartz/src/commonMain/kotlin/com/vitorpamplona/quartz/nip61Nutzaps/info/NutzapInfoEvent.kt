@@ -47,7 +47,7 @@ class NutzapInfoEvent(
     override fun diffFrom(older: Event): NutzapInfoDiff? {
         if (older !is NutzapInfoEvent || older.pubKey != pubKey) return null
         return NutzapInfoDiff(
-            ListDiff.of(older.mints(), mints(), { it.mintUrl }, { a, b -> a.units == b.units }),
+            ListDiff.of(older.mints(), mints(), { it.mintUrl.trimEnd('/').lowercase() }, { a, b -> a.units.toSet() == b.units.toSet() }),
             ListDiff.of(older.relays(), relays(), { it }),
             ValueChange.of(older.p2pkPubkey(), p2pkPubkey()),
         )

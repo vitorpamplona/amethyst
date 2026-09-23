@@ -51,10 +51,17 @@ class MetadataDiff(
 ) : EventDiff {
     private fun fieldChanges(): List<ValueChange<*>> = listOfNotNull(name, displayName, picture, banner, website, about, pronouns, nip05, lud06, lud16, clinkOffer, bot, birthday)
 
-    override fun removesData() = fieldChanges().any { it.isRemoval() } || otherFields.hasRemovals() || identityClaims.hasRemovals()
+    // Dropping the deprecated NIP-24 aliases (displayName, username) is a cleanup, not a loss:
+    // clients that follow NIP-24 remove them and keep display_name / name.
+    override fun removesData() =
+        fieldChanges().any { it.isRemoval() } ||
+            otherFields.removed.any { it.first !in DEPRECATED_ALIASES } ||
+            identityClaims.hasRemovals()
 
     companion object {
         /** JSON keys [UserMetadata] parses into typed fields above. */
+        val DEPRECATED_ALIASES = setOf("displayName", "username")
+
         val MODELED_FIELDS = setOf("name", "display_name", "picture", "banner", "website", "about", "pronouns", "nip05", "lud06", "lud16", "clink_offer", "bot", "birthday")
     }
 }

@@ -30,5 +30,9 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 class AdvertisedRelayListDiff(
     val relays: ListDiff<AdvertisedRelayInfo>,
 ) : EventDiff {
-    override fun removesData() = relays.hasRemovals()
+    // A relay that stops being read (inbox) or write (outbox) loses that role even though it
+    // is still listed: going from read+write to write-only drops the user's inbox there.
+    override fun removesData() =
+        relays.hasRemovals() ||
+            relays.changed.any { (it.before.type.isRead() && !it.after.type.isRead()) || (it.before.type.isWrite() && !it.after.type.isWrite()) }
 }

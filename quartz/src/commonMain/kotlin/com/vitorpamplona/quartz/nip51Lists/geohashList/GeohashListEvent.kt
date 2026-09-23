@@ -53,7 +53,7 @@ class GeohashListEvent(
     override fun diffFrom(older: Event): GeohashListDiff? {
         if (older !is GeohashListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return GeohashListDiff(
-            ListDiff.of(older.publicGeohashes(), publicGeohashes(), { it }),
+            ListDiff.of(older.publicGeohashes(), publicGeohashes(), { it.lowercase() }),
             privateItemsChangeFrom(older),
         )
     }

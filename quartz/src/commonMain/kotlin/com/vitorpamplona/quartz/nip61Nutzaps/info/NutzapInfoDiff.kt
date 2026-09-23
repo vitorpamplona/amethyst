@@ -35,5 +35,10 @@ class NutzapInfoDiff(
     val relays: ListDiff<NormalizedRelayUrl>,
     val p2pkPubkey: ValueChange<HexKey>?,
 ) : EventDiff {
-    override fun removesData() = mints.hasRemovals() || relays.hasRemovals() || p2pkPubkey?.isRemoval() == true
+    // A mint that stops accepting a unit (sat, usd…) loses that unit's nutzaps.
+    override fun removesData() =
+        mints.hasRemovals() ||
+            mints.changed.any { !it.after.units.containsAll(it.before.units) } ||
+            relays.hasRemovals() ||
+            p2pkPubkey?.isRemoval() == true
 }

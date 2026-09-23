@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
@@ -293,5 +294,70 @@ class EventDiffTest {
         assertEquals(listOf(1 to "a"), diff.removed)
         assertEquals(listOf(3 to "c"), diff.added)
         assertEquals(2 to "B", diff.changed.single().after)
+    }
+
+    private fun nip65(
+        createdAt: Long,
+        vararg tags: Array<String>,
+    ) = sign<AdvertisedRelayListEvent>(AdvertisedRelayListEvent.KIND, createdAt, arrayOf(*tags))
+
+    @Test
+    fun nip65RelayThatStopsBeingAnInboxIsALoss() {
+        val older = nip65(100, arrayOf("r", "wss://a.com/"))
+        val newer = nip65(200, arrayOf("r", "wss://a.com/", "write"))
+        assertTrue(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
+    fun nip65RelayThatGainsARoleIsNotALoss() {
+        val older = nip65(100, arrayOf("r", "wss://a.com/", "write"))
+        val newer = nip65(200, arrayOf("r", "wss://a.com/"))
+        assertFalse(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
+    fun nip65SplitReadAndWriteTagsMeanBoth() {
+        val older = nip65(100, arrayOf("r", "wss://a.com/", "read"), arrayOf("r", "wss://a.com/", "write"))
+        val newer = nip65(200, arrayOf("r", "wss://a.com/"))
+        val diff = assertNotNull(newer.diffFrom(older))
+        assertTrue(diff.relays.isEmpty())
+        assertFalse(diff.removesData())
+    }
+
+    @Test
+    fun nutzapMintThatDropsAUnitIsALoss() {
+        val older = sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 100, arrayOf(arrayOf("mint", "https://mint.com", "sat", "usd")))
+        val newer = sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 200, arrayOf(arrayOf("mint", "https://mint.com", "sat")))
+        assertTrue(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
+    fun nutzapMintUrlSpellingAndUnitOrderAreNotChanges() {
+        val older = sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 100, arrayOf(arrayOf("mint", "https://Mint.com", "sat", "usd")))
+        val newer = sign<NutzapInfoEvent>(NutzapInfoEvent.KIND, 200, arrayOf(arrayOf("mint", "https://mint.com/", "usd", "sat")))
+        val diff = assertNotNull(newer.diffFrom(older))
+        assertTrue(diff.mints.isEmpty())
+        assertFalse(diff.removesData())
+    }
+
+    @Test
+    fun groupRelaySpellingIsNotARemoval() {
+        val older = sign<SimpleGroupListEvent>(SimpleGroupListEvent.KIND, 100, arrayOf(arrayOf("d", ""), arrayOf("group", "g1", "wss://groups.com")))
+        val newer = sign<SimpleGroupListEvent>(SimpleGroupListEvent.KIND, 200, arrayOf(arrayOf("d", ""), arrayOf("group", "g1", "wss://groups.com/")))
+        assertFalse(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
+    fun geohashCaseIsNotARemoval() {
+        val older = sign<GeohashListEvent>(GeohashListEvent.KIND, 100, arrayOf(arrayOf("g", "9Q8")))
+        val newer = sign<GeohashListEvent>(GeohashListEvent.KIND, 200, arrayOf(arrayOf("g", "9q8")))
+        assertFalse(assertNotNull(newer.diffFrom(older)).removesData())
+    }
+
+    @Test
+    fun droppingDeprecatedProfileAliasesIsNotALoss() {
+        val older = sign<MetadataEvent>(MetadataEvent.KIND, 100, arrayOf(), """{"name":"vitor","display_name":"Vitor","displayName":"Vitor","username":"vitor"}""")
+        val newer = sign<MetadataEvent>(MetadataEvent.KIND, 200, arrayOf(), """{"name":"vitor","display_name":"Vitor"}""")
+        assertFalse(assertNotNull(newer.diffFrom(older)).removesData())
     }
 }
