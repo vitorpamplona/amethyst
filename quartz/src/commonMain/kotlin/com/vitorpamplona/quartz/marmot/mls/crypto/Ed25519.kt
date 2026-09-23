@@ -64,6 +64,12 @@ expect object Ed25519 {
      * @return 32-byte public key
      */
     fun publicFromPrivate(privateKey: ByteArray): ByteArray
+
+    /**
+     * Rebuild a key pair from a 32-byte seed (RFC 8032 §5.1.5), for keys stored as seeds only.
+     * @return pair of (privateKey: 64 bytes seed+public, publicKey: 32 bytes)
+     */
+    fun keyPairFromSeed(seed: ByteArray): Ed25519KeyPair
 }
 
 data class Ed25519KeyPair(

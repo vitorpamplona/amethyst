@@ -114,6 +114,12 @@ actual object Ed25519 {
         return privateKey.copyOfRange(SEED_LENGTH, SEED_LENGTH * 2)
     }
 
+    actual fun keyPairFromSeed(seed: ByteArray): Ed25519KeyPair {
+        require(seed.size == SEED_LENGTH) { "Seed must be 32 bytes" }
+        val publicKey = derivePublicKey(seed)
+        return Ed25519KeyPair(seed + publicKey, publicKey)
+    }
+
     private fun derivePublicKey(seed: ByteArray): ByteArray {
         val d = sha512(seed)
         d[0] = (d[0].toInt() and 248).toByte()
