@@ -196,6 +196,8 @@ class MlsGroup private constructor(
      */
     internal fun groupContextExtensionsSnapshot(): List<Extension> = groupContext.extensions.toList()
 
+    private fun allMembersSupportExtension(extensionType: Int): Boolean = (0 until tree.leafCount).all { i -> tree.getLeaf(i)?.let { extensionType in it.capabilities.extensions } ?: true }
+
     /**
      * Encode the current ratchet tree the same way it's serialized into
      * the GroupInfo's `ratchet_tree` extension on a Welcome — a freshly-
@@ -2898,9 +2900,11 @@ class MlsGroup private constructor(
             }
 
             is Proposal.GroupContextExtensions -> {
-                // Validate extension types are supported (RFC 9420 Section 12.1.7)
+                // RFC 9420 §13.4: an extension in use by the group MUST be supported by all members. Types this
+                // implementation knows are accepted as before; any other type is accepted when every member's leaf
+                // advertises it in capabilities.extensions.
                 for (ext in proposal.extensions) {
-                    require(ext.extensionType in KNOWN_EXTENSION_TYPES) {
+                    require(ext.extensionType in KNOWN_EXTENSION_TYPES || allMembersSupportExtension(ext.extensionType)) {
                         "Unsupported extension type: ${ext.extensionType}"
                     }
                 }
