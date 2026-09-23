@@ -215,11 +215,41 @@ the file key with `aad = mime‖0x00‖filename‖0x00‖sha256(plaintext)`, whe
 `HKDF-Expand(exporter, context)` with `aad = "mip04-v2"‖0x00‖hash‖0x00‖mime‖0x00‖filename`.
 Separate codec; shared primitives (ChaCha20-Poly1305, NIP-92 `imeta`, Blossom) all already exist.
 
-### 4.6 Multi-device is not interoperable — explicit non-goal
+### 4.6 Multi-device — cross-client interop is impossible; the feature is not
 
-`spec/applications/multi-device.md` ships `base64(serialized ts-mls ClientState)` inside sealed
-Blossom documents advertised by an opaque tip. That is a ts-mls-internal serialization, not an MLS
-wire format. There is nothing to implement against. Do not attempt it.
+`spec/applications/multi-device.md` gives a user's devices **one shared MLS leaf** per group and
+carries that group's `ClientState` inside sealed Blossom documents advertised by an opaque tip.
+
+**What is not implementable: interop with their devices.** The document's `clientState` is
+`base64(serialized MLS ClientState)`, and §4.2 says outright that it is *"library-serialized and
+intentionally not pinned to a wire format"* — the only pinned MLS serialization in the document is
+TLS, used for `lastResortKeyPackage`. So the field is ts-mls's private encoding by design, not by
+omission. An Amethyst device and a cordn-web device can never share a leaf, and no work on our side
+changes that.
+
+**What IS implementable: our own fleet.** Everything else §14 lists as a MUST is pinned and
+vendor-neutral — the two document JSON shapes, the NIP-44 v2 seal to a per-identity DEK, `sha256`
+content addressing, the highest-epoch-wins reconciliation rule, the `{gid, epoch}` tombstone shape,
+the sibling-skip rule, and the tip format. Amethyst-device ↔ Amethyst-device sync would work with
+`MlsGroupState` in that one field.
+
+**Why it stays a non-goal anyway**, which is the honest reason and not the one above:
+
+- It buys Amethyst-only device sync. A user who mixes clients gets nothing.
+- §10's **symmetric commit race is unresolved in the spec**. Two devices committing inside one
+  delivery round-trip both reach epoch N+1 with different states; the forward-only epoch check
+  cannot break the tie, and §15 concedes that *"equal-epoch MLS states have no merge function."*
+  The spec offers only refuse-to-commit-while-behind and a manual re-sync prompt; automatic
+  resolution is *"possible but unspecified."* We would be shipping that race.
+- It is a heavy, always-on discipline for a Draft spec: a document republish plus a full tip
+  rewrite after **every** epoch-advancing Commit (§10.5), and a full reconcile before opening any
+  delivery stream on startup (§10.6), because a backlog fetched while behind arrives sealed under
+  epochs the device has not adopted.
+- It needs an `MlsGroupState` ⇄ document codec and a `prev`-chain walk (§8.5) that nothing else
+  in the codebase wants.
+
+So: do not attempt it — but record it as a cost/benefit call on a Draft spec with a known race,
+not as "there is nothing to implement."
 
 ## 5. What we already have
 
@@ -1155,8 +1185,10 @@ Still open in Stage 3:
 - **A ts-mls `ClientState` export.** `verify.ts` carries an optional gate that
   decodes a Kotlin-exported ts-mls state and sends from it. We write no such
   file, so it is skipped. Producing one means re-encoding `MlsGroupState` into
-  ts-mls's layout — real work, and only needed for multi-device, an explicit
-  non-goal (§4.6).
+  ts-mls's layout — real work, and the only thing it would buy is cross-client
+  multi-device, which §4.6 shows the spec rules out by design (`clientState` is
+  deliberately library-private). So this gate has no reachable purpose, not
+  merely a deferred one.
 - **Tier B**, live against `ghcr.io/cordn-msg/cordn:latest`.
 
 ### Stage 4 — App integration — LANDED (disclosure UI + headless layer); group UI open
@@ -1255,7 +1287,9 @@ The original scope, for reference:
 
 ### Non-goals
 
-- Multi-device (§4.6) — nothing interoperable to build.
+- Multi-device (§4.6). Cross-client sync is impossible by design — `clientState` is
+  deliberately library-private — and our own fleet is buildable but not worth it: it would
+  ship §10's unresolved equal-epoch commit race, for an Amethyst-only feature, on a Draft spec.
 - Reusing any `Marmot*`/`Mip*` type for cordn.
 - A production Kotlin ContextVM *server*. The Tier C fixture (§6.4) plays the server role for
   tests only. For a real coordinator, `cordn-rs` exists, is faster, and shares the SQLite schema —
