@@ -584,10 +584,20 @@ open class CommentPostViewModel :
             }
         }
 
-        val draftToDelete = draftNote
-        val anonymous = wantsAnonymousPost
         // captured before cancel() resets the chip
         val chosenPow = powOverride
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        if (accountViewModel.account.powDifficultyFor(template.kind, chosenPow) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
+
+        val draftToDelete = draftNote
+        val anonymous = wantsAnonymousPost
         onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post

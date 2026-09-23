@@ -403,6 +403,16 @@ open class ChannelNewMessageViewModel :
         // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
         if (channel is GeohashChatChannel && channelRelays.isEmpty()) return
 
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        // Geohash posts mine inline and drop the draft right away, so only the queued path needs it.
+        if (channel !is GeohashChatChannel && accountViewModel.account.powDifficultyFor(template.kind) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
+
         val draftToDelete = draftNote
         onUiThread { cancel() }
 

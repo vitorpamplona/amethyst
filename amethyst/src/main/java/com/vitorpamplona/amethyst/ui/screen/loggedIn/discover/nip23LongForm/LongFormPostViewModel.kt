@@ -356,6 +356,15 @@ class LongFormPostViewModel :
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        if (accountViewModel.account.powDifficultyFor(template.kind) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
+
         val draftToDelete = draftNote
         onUiThread { cancel() }
 
