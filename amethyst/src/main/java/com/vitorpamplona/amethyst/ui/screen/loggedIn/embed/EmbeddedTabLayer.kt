@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import com.vitorpamplona.amethyst.commons.browser.ui.EmbeddedLoadOverlay
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put

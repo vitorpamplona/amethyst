@@ -26,15 +26,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_community_note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun NewRelayNoteButton(

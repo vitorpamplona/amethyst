@@ -38,10 +38,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.skip_back
 import com.vitorpamplona.amethyst.commons.resources.skip_forward
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.playback.composable.SKIP_SECONDS
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 private val FadeIn = fadeIn()
 private val FadeOut = fadeOut()

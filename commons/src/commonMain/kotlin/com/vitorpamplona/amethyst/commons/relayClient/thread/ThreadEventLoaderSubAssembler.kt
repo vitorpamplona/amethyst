@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.thread
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.thread.filterMissingEventsForThread
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

@@ -57,10 +57,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
 import com.vitorpamplona.amethyst.commons.resources.video_quality_auto
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.Locale

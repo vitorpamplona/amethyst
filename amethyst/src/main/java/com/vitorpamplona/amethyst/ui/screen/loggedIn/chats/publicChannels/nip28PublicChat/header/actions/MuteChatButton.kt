@@ -20,24 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.chats.ui.MuteChannelButton
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.mute_notifications
-import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun MuteChatButton(
@@ -47,23 +35,5 @@ fun MuteChatButton(
     val mutedChats by accountViewModel.mutedPublicChatsFlow().collectAsStateWithLifecycle()
     val isMuted = channel.idHex in mutedChats
 
-    val label =
-        stringRes(
-            if (isMuted) Res.string.unmute_notifications else Res.string.mute_notifications,
-        )
-
-    FilledTonalButton(
-        modifier =
-            Modifier
-                .padding(horizontal = 3.dp)
-                .width(50.dp),
-        onClick = { accountViewModel.toggleMutedPublicChat(channel.idHex) },
-        contentPadding = ZeroPadding,
-    ) {
-        Icon(
-            symbol = if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Notifications,
-            contentDescription = label,
-            modifier = Size20Modifier,
-        )
-    }
+    MuteChannelButton(isMuted) { accountViewModel.toggleMutedPublicChat(channel.idHex) }
 }

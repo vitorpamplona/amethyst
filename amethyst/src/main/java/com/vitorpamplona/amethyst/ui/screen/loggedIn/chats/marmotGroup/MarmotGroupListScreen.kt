@@ -56,9 +56,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatUnreadBadge
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group
@@ -79,21 +81,19 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_unread_messages
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 

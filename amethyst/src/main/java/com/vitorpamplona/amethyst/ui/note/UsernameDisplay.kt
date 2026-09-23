@@ -38,6 +38,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.note.PlayIcon
+import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
@@ -45,8 +48,6 @@ import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.Log
 
 @Composable

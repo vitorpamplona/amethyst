@@ -64,7 +64,6 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_image
@@ -81,14 +80,13 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.filter
@@ -505,12 +503,6 @@ private fun RenderImageOrVideo(
                     }
 
                 val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
-                val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
-                val bridgedUrl =
-                    remember(content.url, useLocalBlossomBridge) {
-                        content.toCoilModel(useLocalBlossomBridge)
-                    }
-
                 val modifier =
                     if (ratio != null) {
                         Modifier.aspectRatio(ratio)
@@ -520,7 +512,7 @@ private fun RenderImageOrVideo(
 
                 Box(modifier, contentAlignment = Alignment.Center) {
                     VideoViewInner(
-                        videoUri = bridgedUrl,
+                        videoUri = content.url,
                         mimeType = content.mimeType,
                         aspectRatio = ratio,
                         title = content.description,

@@ -63,17 +63,20 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_chat_empty
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_listeners_count
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_no_listeners
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_open_action
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -88,8 +91,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestAct
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -414,8 +415,7 @@ private fun RoomHeader(
                             accountViewModel = accountViewModel,
                             onClick = { hex ->
                                 nav.nav(
-                                    com.vitorpamplona.amethyst.ui.navigation.routes.Route
-                                        .Profile(hex),
+                                    Route.Profile(hex),
                                 )
                             },
                         )

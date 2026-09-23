@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

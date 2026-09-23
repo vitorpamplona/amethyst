@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.ui.note.creators.notify
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserContext
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceCap
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceList
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceListKind
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

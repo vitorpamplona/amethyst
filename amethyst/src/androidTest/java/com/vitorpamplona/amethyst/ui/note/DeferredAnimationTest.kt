@@ -30,7 +30,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.ui.actions.DeferredCrossfade
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,8 +57,10 @@ class DeferredAnimationTest {
         rule.mainClock.autoAdvance = false
 
         rule.setContent {
-            DeferredCrossfade(
+            // enabled = true is the deferred path (DeferredCrossfade, internal to commonsUI).
+            CrossfadeIfEnabled(
                 targetState = state.value,
+                enabled = true,
                 modifier = Modifier,
                 contentAlignment = Alignment.TopStart,
                 animationSpec = tween(DURATION_MS),

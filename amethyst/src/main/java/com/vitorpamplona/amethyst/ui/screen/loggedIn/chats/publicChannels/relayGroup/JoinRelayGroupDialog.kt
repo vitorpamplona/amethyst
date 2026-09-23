@@ -20,29 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_hint
-import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_label
-import com.vitorpamplona.amethyst.commons.resources.relay_group_join_confirm
-import com.vitorpamplona.amethyst.commons.resources.relay_group_join_title
+import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayGroupInviteCodeDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Ask for an invite code before joining a closed (invite-only) NIP-29 group, then
@@ -56,37 +37,11 @@ fun JoinRelayGroupDialog(
     onJoined: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var code by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringRes(Res.string.relay_group_join_title)) },
-        text = {
-            Column {
-                Text(stringRes(Res.string.relay_group_join_code_hint))
-                OutlinedTextField(
-                    value = code,
-                    onValueChange = { code = it },
-                    singleLine = true,
-                    label = { Text(stringRes(Res.string.relay_group_join_code_label)) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
-            }
+    RelayGroupInviteCodeDialog(
+        onJoin = { code ->
+            accountViewModel.joinRelayGroup(channel, code)
+            onJoined()
         },
-        confirmButton = {
-            TextButton(
-                enabled = code.isNotBlank(),
-                onClick = {
-                    accountViewModel.joinRelayGroup(channel, code.trim())
-                    onJoined()
-                    onDismiss()
-                },
-            ) {
-                Text(stringRes(Res.string.relay_group_join_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
-        },
+        onDismiss = onDismiss,
     )
 }

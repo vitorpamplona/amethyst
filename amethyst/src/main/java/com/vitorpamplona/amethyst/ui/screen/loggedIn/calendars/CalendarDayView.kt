@@ -51,6 +51,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarEmptyState
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarNavigationHeader
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.calendarSwipeNavigation
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_continues
@@ -60,10 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import java.time.LocalDate
 import java.time.ZoneId
 

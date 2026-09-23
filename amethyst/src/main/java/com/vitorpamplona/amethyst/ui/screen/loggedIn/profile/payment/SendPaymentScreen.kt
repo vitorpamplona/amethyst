@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
+import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
+import com.vitorpamplona.amethyst.commons.onchain.ui.userMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
@@ -91,14 +93,15 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
@@ -109,9 +112,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.FeeTier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.rateFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.technicalDetail
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.userMessage
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser

@@ -47,19 +47,19 @@ import com.vitorpamplona.amethyst.commons.resources.my_awesome_group
 import com.vitorpamplona.amethyst.commons.resources.relay_chat
 import com.vitorpamplona.amethyst.commons.resources.relay_chat_explainer
 import com.vitorpamplona.amethyst.commons.resources.relay_chat_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewEphemeralChatScreen(

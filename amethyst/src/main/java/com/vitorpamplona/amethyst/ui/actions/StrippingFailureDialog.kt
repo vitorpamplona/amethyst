@@ -29,9 +29,9 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_body
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.uploads.ConfirmationCallbacks
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun StrippingFailureDialog(confirmation: SuspendableConfirmation) {

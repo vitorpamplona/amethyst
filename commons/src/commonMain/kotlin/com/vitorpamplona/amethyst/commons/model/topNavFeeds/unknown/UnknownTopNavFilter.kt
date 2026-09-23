@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.unknown.UnknownTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow

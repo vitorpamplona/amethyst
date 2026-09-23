@@ -22,15 +22,20 @@ package com.vitorpamplona.amethyst.service.pow
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import android.os.PowerManager
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPhase
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -43,6 +48,17 @@ import kotlinx.coroutines.launch
  * persistable job is already checkpointed by [PowJobStore], so anything still
  * unmined resumes on the next app launch. Started on every enqueue (the app
  * is necessarily in the foreground then), stops itself when the queue drains.
+ *
+ * Staying schedulable is not enough on its own once the user also locks the
+ * screen or leaves the app, so while it runs the service also:
+ * - holds a partial wake lock, or the CPU suspends with the screen off and the
+ *   nonce search stalls until the phone is unlocked;
+ * - keeps the relay pool (and Tor) up. The UI stops holding them ~30 s after
+ *   the app is backgrounded, so a post mined after that would only reach the
+ *   in-memory outbox — while its checkpoint and draft were already deleted —
+ *   and die with the process;
+ * - lingers [PUBLISH_GRACE_MS] after the queue drains, so the event that was
+ *   just handed to the pool actually leaves before the process is frozen.
  *
  * The notification card (a live [androidx.core.app.NotificationCompat.ProgressStyle]) and all the
  * service lifecycle live in [FlowProgressForegroundService]; this subclass only maps mining state
@@ -68,17 +84,60 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     private var sessionTotal = 0
     private var lastQueueSize = 0
 
+    // Whether the last non-empty queue still had a job publishing: a queue that drains by
+    // publishing needs the grace for the event to leave; one drained by cancel does not.
+    private var drainedByPublishing = false
+
+    override fun stopGraceMs() = if (drainedByPublishing) PUBLISH_GRACE_MS else 0L
+
+    override fun renderDraining() = Content(stringRes(this, R.string.pow_notification_sending), null, Bar.Indeterminate)
+
     // Benchmarked once per service run (~250 ms, cached by the estimator).
     @Volatile
     private var hashRate: Double? = null
 
+    private var wakeLock: PowerManager.WakeLock? = null
+
     override fun onCreate() {
         super.onCreate()
         running = true
+
+        wakeLock =
+            runCatching {
+                (getSystemService(Context.POWER_SERVICE) as PowerManager)
+                    .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "amethyst:pow-mining")
+                    .apply {
+                        setReferenceCounted(false)
+                        acquire(WAKE_LOCK_TIMEOUT_MS)
+                    }
+            }.onFailure { Log.w(TAG, "Could not acquire the mining wake lock", it) }
+                .getOrNull()
+
+        // Re-arm the timeout while the service lives: before Android 14 there is no FGS budget
+        // and a hard nonce can mine for hours, but a lock with no timeout could outlive a
+        // service that died without onDestroy.
+        scope.launch {
+            while (true) {
+                delay(WAKE_LOCK_TIMEOUT_MS / 2)
+                wakeLock?.let { if (it.isHeld) it.acquire(WAKE_LOCK_TIMEOUT_MS) }
+            }
+        }
+
+        // Mirrors what the resumed UI collects (AccountScreen's ManageRelayServices +
+        // ManageWebOkHttp): subscribed, they keep the relay pool connected and, through
+        // the connector's combine and the proxy-port provider, Tor up.
+        val app = Amethyst.instance
+        scope.launch(Dispatchers.IO) {
+            launch { app.relayProxyClientConnector.relayServices.collect {} }
+            launch { app.okHttpClients.defaultHttpClient.collect {} }
+            launch { app.okHttpClients.defaultHttpClientWithoutProxy.collect {} }
+        }
     }
 
     override fun onDestroy() {
         running = false
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
         super.onDestroy()
     }
 
@@ -97,6 +156,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     }
 
     override fun onEmission(value: ImmutableList<PoWJobState>) {
+        if (value.isNotEmpty()) drainedByPublishing = value.any { it.phase == PoWJobPhase.PUBLISHING }
         if (value.size > lastQueueSize) sessionTotal += value.size - lastQueueSize
         lastQueueSize = value.size
     }
@@ -154,6 +214,13 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         private const val ACTION_SEND_ALL_NOW = "com.vitorpamplona.amethyst.pow.SEND_ALL_NOW"
 
         private const val PROGRESS_REFRESH_MS = 30_000L
+
+        // Time for a just-mined post to connect, send and get its OK before the service
+        // lets go of the relays and the process becomes freezable.
+        private const val PUBLISH_GRACE_MS = 20_000L
+
+        // Safety net only: onDestroy releases it, and the service re-arms it while alive.
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
         // Best-effort de-dup for start(): the queue calls it on EVERY enqueue.
         @Volatile

@@ -43,16 +43,16 @@ import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
 import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_editing
 import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_examples
 import com.vitorpamplona.amethyst.commons.resources.search_relays_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalMaterial3Api::class)

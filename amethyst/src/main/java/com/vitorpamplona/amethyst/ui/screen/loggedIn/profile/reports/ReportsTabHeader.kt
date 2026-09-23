@@ -28,9 +28,9 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.number_reports
 import com.vitorpamplona.amethyst.commons.resources.reports
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ReportsTabHeader(

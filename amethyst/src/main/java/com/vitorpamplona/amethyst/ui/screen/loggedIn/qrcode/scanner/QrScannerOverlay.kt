@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_sequence_progress
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_torch_off
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_torch_on
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_zoom_reset
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlin.math.max
 
 /**

@@ -28,13 +28,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.FillWidthQuoteBorderModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Height100Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 
 @Composable
 fun DisplayPreviews(

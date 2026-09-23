@@ -21,45 +21,23 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.pow_info_description
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
-import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.note.ProofOfWorkPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
-@Composable
-@Preview
-fun DisplayPoWPreview() {
-    ThemeComparisonColumn(
-        toPreview = { DisplayPoW(pow = 24, accountViewModel = mockAccountViewModel()) },
-    )
-}
-
-/**
- * Compact pill showing the proof of work a received note carries: a gear plus
- * the difficulty in leading zero bits. Tapping it explains what the number
- * means. Sits inline in note headers, so it stays at text height.
- */
+/** Entry: the shared [ProofOfWorkPill], explaining the number in a toast when tapped. */
 @Composable
 fun DisplayPoW(
     pow: Int,
     accountViewModel: AccountViewModel,
 ) {
-    HeaderPill(
-        symbol = MaterialSymbols.Manufacturing,
-        text = pow.toString(),
-        contentDescription = stringRes(Res.string.pow_settings_title),
-        onClick = {
-            accountViewModel.toastManager.toast(
-                Res.string.pow_settings_title,
-                Res.string.pow_info_description,
-                pow.toString(),
-            )
-        },
-    )
+    ProofOfWorkPill(pow) {
+        accountViewModel.toastManager.toast(
+            Res.string.pow_settings_title,
+            Res.string.pow_info_description,
+            pow.toString(),
+        )
+    }
 }

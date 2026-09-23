@@ -139,6 +139,10 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -3836,6 +3840,9 @@ open class EventCache :
                 is GeocacheListingEvent,
                 is GeocacheCurationListEvent,
                 is GeohashListEvent,
+                is SnoObjectEvent,
+                is SnoAvatarEvent,
+                is CyberspaceBagEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
                 is UserGraspListEvent,
@@ -3964,6 +3971,7 @@ open class EventCache :
                 is GitPullRequestEvent,
                 is GitPullRequestUpdateEvent,
                 is GitStatusEvent,
+                is SnoShardEvent,
                 is ChessGameEvent,
                 is JesterEvent,
                 is HighlightEvent,

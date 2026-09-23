@@ -34,8 +34,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryScrollableTabRow
@@ -52,8 +50,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.DiscoverTab
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.NewArticleButton
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.NewProductButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.discover_chat
 import com.vitorpamplona.amethyst.commons.resources.discover_community_v2
@@ -62,36 +62,30 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.discover_live_v2
 import com.vitorpamplona.amethyst.commons.resources.discover_marketplace
 import com.vitorpamplona.amethyst.commons.resources.discover_reads
-import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
-import com.vitorpamplona.amethyst.commons.resources.new_product
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -273,11 +267,11 @@ private fun DiscoverPages(
             if (currentPage >= 0 && currentPage < feedTabs.size) {
                 FabBottomBarPadded(nav) {
                     if (feedTabs[currentPage].resource == Res.string.discover_marketplace) {
-                        NewProductButton(accountViewModel, nav)
+                        NewProductButton(nav)
                     }
 
                     if (feedTabs[currentPage].resource == Res.string.discover_reads) {
-                        NewLongFormMarkdownButton(accountViewModel, nav)
+                        NewArticleButton(nav)
                     }
                 }
             }
@@ -369,50 +363,6 @@ private fun RenderDiscoverFeed(
                 LoadingFeed()
             }
         }
-    }
-}
-
-@Composable
-fun NewProductButton(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FloatingActionButton(
-        onClick = {
-            nav.nav(Route.NewProduct())
-        },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_product),
-            modifier = Size26Modifier,
-            tint = MaterialTheme.colorScheme.onPrimary,
-        )
-    }
-}
-
-@Composable
-fun NewLongFormMarkdownButton(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FloatingActionButton(
-        onClick = {
-            nav.nav(Route.NewLongFormPost())
-        },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_long_form_post),
-            modifier = Size26Modifier,
-            tint = MaterialTheme.colorScheme.onPrimary,
-        )
     }
 }
 

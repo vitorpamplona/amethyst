@@ -52,10 +52,10 @@ import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
 import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun KeyTextField(

@@ -20,30 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_confirm
-import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_explainer
-import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_field
-import com.vitorpamplona.amethyst.commons.resources.add_hashtag_label_title
-import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.nip32Labeling.ui.HashtagLabelDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * NIP-32: lets the user tag any post with a hashtag by publishing a kind 1985 label
@@ -56,53 +36,8 @@ fun AddHashtagLabelDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    var hashtag by remember { mutableStateOf("") }
-
-    // Strip the leading '#', drop whitespace and lowercase so the stored label matches the
-    // hashtag-feed convention. A blank result disables the confirm button.
-    val sanitized =
-        hashtag
-            .trim()
-            .removePrefix("#")
-            .filterNot { it.isWhitespace() }
-            .lowercase()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringRes(Res.string.add_hashtag_label_title)) },
-        text = {
-            Column {
-                Text(stringRes(Res.string.add_hashtag_label_explainer))
-                OutlinedTextField(
-                    value = hashtag,
-                    onValueChange = { hashtag = it },
-                    singleLine = true,
-                    label = { Text(stringRes(Res.string.add_hashtag_label_field)) },
-                    prefix = { Text("#") },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            capitalization = KeyboardCapitalization.None,
-                            imeAction = ImeAction.Done,
-                        ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = sanitized.isNotEmpty(),
-                onClick = {
-                    accountViewModel.labelWithHashtag(note, sanitized)
-                    onDismiss()
-                },
-            ) {
-                Text(stringRes(Res.string.add_hashtag_label_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringRes(Res.string.cancel))
-            }
-        },
+    HashtagLabelDialog(
+        onConfirm = { hashtag -> accountViewModel.labelWithHashtag(note, hashtag) },
+        onDismiss = onDismiss,
     )
 }

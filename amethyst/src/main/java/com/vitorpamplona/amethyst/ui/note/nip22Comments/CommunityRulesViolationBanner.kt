@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_ma
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_quota_exceeded
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_stale_rules
 import com.vitorpamplona.amethyst.commons.resources.community_rules_violation_wot_gate_failed
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 
 /**

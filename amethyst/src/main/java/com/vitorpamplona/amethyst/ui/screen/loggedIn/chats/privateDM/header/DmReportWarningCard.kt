@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
+import com.vitorpamplona.amethyst.commons.nip56Reports.ui.reportTypeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_dismiss
@@ -65,17 +66,16 @@ import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_icon
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_more_count
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_subtitle
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_who
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size36dp
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabels
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
-import com.vitorpamplona.amethyst.ui.theme.Size36dp
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 /** Reporter avatars shown before the row collapses into a "+N" overflow chip. */

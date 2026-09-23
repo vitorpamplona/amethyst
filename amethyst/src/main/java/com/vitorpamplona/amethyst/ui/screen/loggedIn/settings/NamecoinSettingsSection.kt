@@ -86,8 +86,8 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_test_results
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_success
 import com.vitorpamplona.amethyst.commons.resources.namecoin_testing
 import com.vitorpamplona.amethyst.commons.resources.namecoin_tls_info
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend

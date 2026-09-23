@@ -27,10 +27,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalFoundationApi::class)

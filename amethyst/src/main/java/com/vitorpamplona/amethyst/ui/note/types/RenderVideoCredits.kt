@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.video_credit_accepted
 import com.vitorpamplona.amethyst.commons.resources.video_credit_audio_from
@@ -44,13 +45,12 @@ import com.vitorpamplona.amethyst.commons.resources.video_credit_featuring
 import com.vitorpamplona.amethyst.commons.resources.video_credit_inspired_by
 import com.vitorpamplona.amethyst.commons.resources.video_credit_references
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent

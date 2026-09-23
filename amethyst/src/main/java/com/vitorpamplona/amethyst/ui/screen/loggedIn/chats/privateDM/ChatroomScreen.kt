@@ -27,10 +27,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RenderRoomTopBar
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

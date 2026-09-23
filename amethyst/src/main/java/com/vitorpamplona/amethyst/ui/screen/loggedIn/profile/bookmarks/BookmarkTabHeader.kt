@@ -26,9 +26,9 @@ import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun BookmarkTabHeader(

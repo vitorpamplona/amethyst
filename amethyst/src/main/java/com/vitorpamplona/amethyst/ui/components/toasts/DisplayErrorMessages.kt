@@ -22,12 +22,12 @@ package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun DisplayErrorMessages(

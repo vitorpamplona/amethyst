@@ -34,25 +34,26 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip72ModCommunities.ui.NewCommunityButton
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 @Composable

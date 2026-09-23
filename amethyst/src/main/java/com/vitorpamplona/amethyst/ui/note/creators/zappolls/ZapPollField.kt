@@ -35,8 +35,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_poll_option_button
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.utils.RandomInstance
 

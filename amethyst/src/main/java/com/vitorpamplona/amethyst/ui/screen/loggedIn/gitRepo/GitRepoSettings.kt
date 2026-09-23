@@ -45,8 +45,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_save
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_topics
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_web_urls
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 /**

@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit
  * to as ACCEPTED.
  *
  * The work is bounded — scans LocalCache (which is bounded by the relay subscription) and
- * consults [CalendarReminderStore] to skip events that have already been notified for. Run as
+ * consults [CalendarReminderLogStore] to skip events that have already been notified for. Run as
  * a 15-minute periodic worker: that's the WorkManager minimum and matches the resolution of
  * the reminder UI ("starts in ~15 min" is the smallest interval users perceive as "soon").
  *

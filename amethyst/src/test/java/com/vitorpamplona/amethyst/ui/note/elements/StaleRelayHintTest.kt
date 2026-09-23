@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import com.vitorpamplona.amethyst.commons.ui.note.elements.StaleRelayThresholds
+import com.vitorpamplona.amethyst.commons.ui.note.elements.isStaleByLatestMonitorReports
 import com.vitorpamplona.quartz.utils.TimeUtils
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

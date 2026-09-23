@@ -45,9 +45,9 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlaybackSpeedState
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

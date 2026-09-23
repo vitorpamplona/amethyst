@@ -20,210 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.report
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.block_only
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_label
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_placeholder
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_illegal
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_impersonation
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_nudity
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_post_report_btn
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_profanity
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_reminder_public
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_report_btn
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_label
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_select_reason_placeholder
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_spam
-import com.vitorpamplona.amethyst.commons.resources.report_dialog_title
-import com.vitorpamplona.amethyst.commons.resources.report_malware
-import com.vitorpamplona.amethyst.commons.resources.violence
-import com.vitorpamplona.amethyst.ui.components.TextSpinner
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.nip56Reports.ui.ReportDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.LightRedColor
-import com.vitorpamplona.quartz.nip56Reports.ReportType
-import kotlinx.collections.immutable.toImmutableList
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportNoteDialog(
     note: Note,
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val reportTypes =
-        listOf(
-            Pair(ReportType.SPAM, stringRes(Res.string.report_dialog_spam)),
-            Pair(ReportType.PROFANITY, stringRes(Res.string.report_dialog_profanity)),
-            Pair(ReportType.IMPERSONATION, stringRes(Res.string.report_dialog_impersonation)),
-            Pair(ReportType.NUDITY, stringRes(Res.string.report_dialog_nudity)),
-            Pair(ReportType.ILLEGAL, stringRes(Res.string.report_dialog_illegal)),
-            Pair(ReportType.MALWARE, stringRes(Res.string.report_malware)),
-            Pair(ReportType.VIOLENCE, stringRes(Res.string.violence)),
-        )
-
-    val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
-    var additionalReason by remember { mutableStateOf("") }
-    var selectedReason by remember { mutableIntStateOf(-1) }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(text = stringRes(id = Res.string.report_dialog_title)) },
-                    navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                )
-            },
-        ) { pad ->
-            Column(
-                modifier =
-                    Modifier.padding(16.dp, pad.calculateTopPadding(), 16.dp, pad.calculateBottomPadding()),
-                verticalArrangement = Arrangement.SpaceAround,
-            ) {
-                SpacerH16()
-                SectionHeader(text = stringRes(id = Res.string.block_only))
-                SpacerH16()
-                Text(
-                    text = stringRes(Res.string.report_dialog_blocking_a_user),
-                )
-                SpacerH16()
-                ActionButton(
-                    text = stringRes(Res.string.report_dialog_block_hide_user_btn),
-                    icon = MaterialSymbols.Block,
-                    onClick = {
-                        note.author?.let { accountViewModel.hide(it) }
-                        onDismiss()
-                    },
-                )
-                SpacerH16()
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = DividerThickness)
-
-                SpacerH16()
-                SectionHeader(text = stringRes(Res.string.report_dialog_report_btn))
-                SpacerH16()
-                Text(stringRes(Res.string.report_dialog_reminder_public))
-                SpacerH16()
-                TextSpinner(
-                    label = stringRes(Res.string.report_dialog_select_reason_label),
-                    placeholder = stringRes(Res.string.report_dialog_select_reason_placeholder),
-                    options = reasonOptions,
-                    onSelect = { selectedReason = it },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                SpacerH16()
-                OutlinedTextField(
-                    value = additionalReason,
-                    onValueChange = { additionalReason = it },
-                    placeholder = {
-                        Text(text = stringRes(Res.string.report_dialog_additional_reason_placeholder))
-                    },
-                    label = { Text(stringRes(Res.string.report_dialog_additional_reason_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                SpacerH16()
-
-                ActionButton(
-                    text = stringRes(Res.string.report_dialog_post_report_btn),
-                    icon = MaterialSymbols.Report,
-                    enabled = selectedReason in 0..reportTypes.lastIndex,
-                    onClick = {
-                        accountViewModel.report(
-                            note,
-                            reportTypes[selectedReason].first,
-                            additionalReason,
-                        )
-                        note.author?.let { accountViewModel.hide(it) }
-                        onDismiss()
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable private fun SpacerH16() = Spacer(modifier = Modifier.height(16.dp))
-
-@Composable
-private fun SectionHeader(text: String) =
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 18.sp,
+    ReportDialog(
+        onBlock = { note.author?.let { accountViewModel.hide(it) } },
+        onReport = { reason, additionalReason ->
+            accountViewModel.report(note, reason, additionalReason)
+            note.author?.let { accountViewModel.hide(it) }
+        },
+        onDismiss = onDismiss,
     )
-
-@Composable
-private fun ActionButton(
-    text: String,
-    icon: MaterialSymbol,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) = Button(
-    onClick = onClick,
-    enabled = enabled,
-    colors = ButtonDefaults.buttonColors(containerColor = LightRedColor),
-    modifier = Modifier.fillMaxWidth(),
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            symbol = icon,
-            contentDescription = null,
-            tint = Color.White,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, color = Color.White)
-    }
 }

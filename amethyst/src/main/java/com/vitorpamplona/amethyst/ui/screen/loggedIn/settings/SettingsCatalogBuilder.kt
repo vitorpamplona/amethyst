@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.account_settings
 import com.vitorpamplona.amethyst.commons.resources.active_subs_search_keywords
@@ -102,8 +103,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.resources.zaps_search_keywords
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import org.jetbrains.compose.resources.StringResource
 
 /**

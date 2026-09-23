@@ -40,18 +40,19 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarEndSeconds
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarStartSeconds
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarEmptyState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_empty_feed_subtitle
 import com.vitorpamplona.amethyst.commons.resources.calendar_empty_feed_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_section_past
 import com.vitorpamplona.amethyst.commons.resources.calendar_section_upcoming
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Composable

@@ -30,16 +30,16 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.search.asSearchQuery
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 @Composable

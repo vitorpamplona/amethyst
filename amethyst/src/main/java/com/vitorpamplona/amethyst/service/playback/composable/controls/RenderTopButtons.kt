@@ -64,6 +64,12 @@ import com.vitorpamplona.amethyst.commons.resources.download_to_phone
 import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.cast.CastRequest
@@ -78,12 +84,6 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 

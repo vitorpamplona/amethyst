@@ -35,20 +35,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.ui.JoinChannelButton
+import com.vitorpamplona.amethyst.commons.chats.ui.LeaveChannelButton
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.JoinChatButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.LeaveChatButton
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 
 @Composable
 fun ShortEphemeralChatChannelHeader(
@@ -118,20 +118,19 @@ fun ShortEphemeralChatActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    JoinEphemeralChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
+    JoinEphemeralChatButtonIfNotAlreadyJoined(channel, accountViewModel)
 }
 
 @Composable
 fun JoinEphemeralChatButtonIfNotAlreadyJoined(
     channel: EphemeralChatChannel,
     accountViewModel: AccountViewModel,
-    nav: INav,
 ) {
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (!isFollowing) {
-        JoinChatButton(channel, accountViewModel, nav)
+        JoinChannelButton { accountViewModel.follow(channel) }
     } else {
-        LeaveChatButton(channel, accountViewModel, nav)
+        LeaveChannelButton { accountViewModel.unfollow(channel) }
     }
 }

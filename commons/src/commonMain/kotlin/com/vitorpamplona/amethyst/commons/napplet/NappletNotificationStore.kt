@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.utils.TimeUtils

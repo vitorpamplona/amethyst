@@ -48,9 +48,16 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import okhttp3.Interceptor
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -387,6 +394,48 @@ class RadioBurstEstimatorTest {
 }
 
 class LoopbackExclusionTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    /** Runs [UsageCountingInterceptor] over a chain whose downstream sent [sentUrl] for [url]. */
+    private fun countedRequests(
+        url: String,
+        sentUrl: String,
+    ): Long? {
+        val accountant = ResourceUsageAccountant(ResourceUsageStore(File(temp.root, "u.json")), CoroutineScope(Dispatchers.Unconfined), epochDay = { 1L })
+        val interceptor = UsageCountingInterceptor(accountant, isMobile = { true }, isForeground = { true }, nowMs = { 0L })
+
+        val request = Request.Builder().url(url).build()
+        val chain = mockk<Interceptor.Chain>()
+        every { chain.request() } returns request
+        every { chain.proceed(any()) } answers {
+            Response
+                .Builder()
+                .request(request.newBuilder().url(sentUrl).build())
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body("".toResponseBody(null))
+                .build()
+        }
+        interceptor.intercept(chain).close()
+
+        return runBlocking { accountant.allDaysIncludingLive() }[1L].orEmpty()[UsageKeys.netReqs(UsageKeys.ROLE_OTHER, mobile = true, foreground = true)]
+    }
+
+    @Test
+    fun requestRewrittenToTheLocalCacheIsNotCounted() {
+        // This interceptor is outermost: it sees the CDN URL, but the request that actually went
+        // out (LocalBlossomCacheRedirectInterceptor's rewrite) never touched the radio.
+        val sha = "b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553"
+        assertNull(countedRequests("https://cdn.example.com/$sha.jpg", "http://127.0.0.1:24242/$sha.jpg"))
+    }
+
+    @Test
+    fun requestToARealHostIsCounted() {
+        assertEquals(1L, countedRequests("https://cdn.example.com/a.jpg", "https://cdn.example.com/a.jpg"))
+    }
+
     @Test
     fun loopbackHostsAreRecognizedAndRealHostsAreNot() {
         assertTrue(UsageCountingInterceptor.isLoopback("127.0.0.1"))
@@ -646,7 +695,7 @@ class ScreenTimeIntegratorTest {
 
     @Test
     fun routeNamesLoseTheirArgumentsBeforeAnythingIsRecorded() {
-        assertEquals("Profile", ScreenTimeIntegrator.screenNameOf("com.vitorpamplona.amethyst.ui.navigation.routes.Route.Profile/{userId}"))
+        assertEquals("Profile", ScreenTimeIntegrator.screenNameOf("com.vitorpamplona.amethyst.commons.model.navigation.Route.Profile/{userId}"))
         assertEquals("Hashtag", ScreenTimeIntegrator.screenNameOf("routes.Route.Hashtag/{tag}?extra={extra}"))
         assertEquals("Home", ScreenTimeIntegrator.screenNameOf("routes.Route.Home"))
         assertNull(ScreenTimeIntegrator.screenNameOf(null))

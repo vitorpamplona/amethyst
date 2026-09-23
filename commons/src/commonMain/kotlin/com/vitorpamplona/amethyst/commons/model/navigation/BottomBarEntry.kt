@@ -30,7 +30,7 @@ import kotlinx.serialization.Serializable
  * built-in destinations, favorite apps, and individual joined chats/groups, so the user can pin and
  * drag-reorder them together in one list.
  *
- * - [BuiltIn] resolves its [Route][com.vitorpamplona.amethyst.ui.navigation.routes.Route] (and its
+ * - [BuiltIn] resolves its [Route][com.vitorpamplona.amethyst.commons.model.navigation.Route] (and its
  *   icon/label/notification badge) through [NavBarCatalog], like before.
  * - [Favorite] points at a [FavoriteApp][com.vitorpamplona.amethyst.commons.favorites.FavoriteApp] by
  *   its stable id (which already encodes the route's parameters — the `url` or addressable

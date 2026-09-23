@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_empty
@@ -68,11 +69,10 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes

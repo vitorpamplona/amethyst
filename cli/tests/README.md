@@ -38,6 +38,9 @@ cli/tests/
 │   └── README.md                   # operator brief + per-test matrix
 ├── pow/                   # NIP-13 primitives (bench/mine/check) — no relay
 │   └── pow-headless.sh
+├── sno/                   # DECK-0003 conformance vs the cyberspace project's
+│   ├── sno-conformance.sh #   own reference implementations — no relay
+│   └── refdriver.py
 ├── relaygroup/            # NIP-29 round-trip vs embedded `amy serve` (geode)
 │   └── relaygroup-headless.sh
 └── sync/                  # NIP-77 deletion propagation vs `amy serve`
@@ -58,6 +61,14 @@ Suite notes:
   (the same fixtures quartz's `ClinkInteropTest` uses) to the right fields,
   plus the argument-error paths. The round-trip verbs (`offer request`,
   `debit pay/budget`) need a live CLINK service and aren't covered here.
+- **`sno/sno-conformance.sh`** is relay-free and diffs `amy sno` against the
+  cyberspace project's own references: the deck's `sno-reference.py` for §1.9
+  verdicts (the rejection table drives the run, so the fixtures are theirs and
+  not ours) and cyberspace-cli's `avatar.py` for the §8.10 work ladder and its
+  golden vectors. The two places our reader knowingly differs are asserted as
+  divergences rather than skipped, so neither can drift quietly. Reference
+  checkouts are cloned into `state/` unless `CYBERSPACE_DIR` /
+  `CYBERSPACE_CLI_DIR` already point at them.
 - **`pow/pow-headless.sh`** is also relay-free: `pow bench` sanity,
   `pow mine` hitting its target (and exiting 124 on an impossible one),
   and mined-nonce round-trips through `pow check`.

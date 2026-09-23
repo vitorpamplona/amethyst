@@ -196,6 +196,8 @@ class MlsGroup private constructor(
      */
     internal fun groupContextExtensionsSnapshot(): List<Extension> = groupContext.extensions.toList()
 
+    private fun allMembersSupportExtension(extensionType: Int): Boolean = (0 until tree.leafCount).all { i -> tree.getLeaf(i)?.let { extensionType in it.capabilities.extensions } ?: true }
+
     /**
      * Encode the current ratchet tree the same way it's serialized into
      * the GroupInfo's `ratchet_tree` extension on a Welcome — a freshly-
@@ -509,6 +511,8 @@ class MlsGroup private constructor(
         leafExtensions: List<Extension> = emptyList(),
         capabilities: Capabilities = marmotLeafCapabilities(),
         keyPackageExtensions: List<Extension> = emptyList(),
+        /** The leaf's lifetime. Null uses the Marmot window (84 days, backdated an hour for clock skew). */
+        lifetime: Lifetime? = null,
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
         val encKp = X25519.generateKeyPair()
@@ -523,6 +527,7 @@ class MlsGroup private constructor(
                 signingKey = sigKp.privateKey,
                 capabilities = capabilities,
                 leafExtensions = leafExtensions,
+                lifetime = lifetime,
             )
 
         val unsigned =
@@ -1116,8 +1121,15 @@ class MlsGroup private constructor(
      *
      * The signature is computed with `SignWithLabel(., "FramedContentTBS",
      * FramedContentTBS)` using the member's signature private key.
+     *
+     * [authenticatedData] is sent in the clear as the message's
+     * `authenticated_data` (RFC 9420 §6.3.2). It is bound to the message by the
+     * AEAD and the signature, and returned by [decrypt].
      */
-    fun encrypt(plaintext: ByteArray): ByteArray {
+    fun encrypt(
+        plaintext: ByteArray,
+        authenticatedData: ByteArray = ByteArray(0),
+    ): ByteArray {
         // Trim sentKeys if it grows too large
         if (sentKeys.size > MAX_SENT_KEYS) {
             val sortedKeys = sentKeys.keys.sorted()
@@ -1146,7 +1158,7 @@ class MlsGroup private constructor(
                     groupId = groupId,
                     epoch = epoch,
                     senderLeafIndex = myLeafIndex,
-                    authenticatedData = ByteArray(0),
+                    authenticatedData = authenticatedData,
                     applicationData = plaintext,
                     groupContext = groupContext,
                 ),
@@ -1162,7 +1174,7 @@ class MlsGroup private constructor(
         val pmcPlaintext = pmcWriter.toByteArray()
 
         // Build PrivateContentAAD (RFC 9420 §6.3.2)
-        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, ByteArray(0))
+        val contentAad = buildPrivateContentAAD(groupId, epoch, ContentType.APPLICATION, authenticatedData)
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, guardedNonce, contentAad, pmcPlaintext)
 
         // Build sender data plaintext: leaf_index || generation || reuse_guard
@@ -1200,7 +1212,7 @@ class MlsGroup private constructor(
                 groupId = groupId,
                 epoch = epoch,
                 contentType = ContentType.APPLICATION,
-                authenticatedData = ByteArray(0),
+                authenticatedData = authenticatedData,
                 encryptedSenderData = encryptedSenderData,
                 ciphertext = ciphertext,
             )
@@ -1442,6 +1454,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = applicationData,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1475,6 +1488,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = commitBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1562,6 +1576,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = proposalBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
         }
@@ -2894,13 +2909,15 @@ class MlsGroup private constructor(
                 require(
                     verifyLeafNodeSignature(proposal.leafNode, groupId, senderLeafIndex),
                 ) { "Invalid LeafNode signature in Update proposal" }
-                tree.setLeaf(senderLeafIndex, proposal.leafNode)
+                tree.updateLeaf(senderLeafIndex, proposal.leafNode)
             }
 
             is Proposal.GroupContextExtensions -> {
-                // Validate extension types are supported (RFC 9420 Section 12.1.7)
+                // RFC 9420 §13.4: an extension in use by the group MUST be supported by all members. Types this
+                // implementation knows are accepted as before; any other type is accepted when every member's leaf
+                // advertises it in capabilities.extensions.
                 for (ext in proposal.extensions) {
-                    require(ext.extensionType in KNOWN_EXTENSION_TYPES) {
+                    require(ext.extensionType in KNOWN_EXTENSION_TYPES || allMembersSupportExtension(ext.extensionType)) {
                         "Unsupported extension type: ${ext.extensionType}"
                     }
                 }
@@ -3624,7 +3641,9 @@ class MlsGroup private constructor(
              * the MIP-era set; a current-profile group passes
              * [buildCurrentProfileRequiredCapabilitiesExtension].
              */
-            requiredCapabilities: Extension = buildMarmotRequiredCapabilitiesExtension(),
+            requiredCapabilities: Extension? = buildMarmotRequiredCapabilitiesExtension(),
+            /** The group's MLS `group_id`. Null picks 32 random bytes. */
+            groupId: ByteArray? = null,
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -3633,7 +3652,7 @@ class MlsGroup private constructor(
                 } ?: Ed25519.generateKeyPair()
 
             val encKp = X25519.generateKeyPair()
-            val groupId = MlsCryptoProvider.randomBytes(32)
+            val groupId = groupId ?: MlsCryptoProvider.randomBytes(32)
 
             val leafNode =
                 buildLeafNode(
@@ -3654,7 +3673,7 @@ class MlsGroup private constructor(
             // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
             // new peers who join later can see the group name without first
             // decrypting a pre-membership bootstrap commit — see MIP-03).
-            val baseExtensions = listOf(requiredCapabilities)
+            val baseExtensions = listOfNotNull(requiredCapabilities)
             val groupContext =
                 GroupContext(
                     groupId = groupId,
@@ -4254,6 +4273,7 @@ class MlsGroup private constructor(
             parentHash: ByteArray? = null,
             capabilities: Capabilities = marmotLeafCapabilities(),
             leafExtensions: List<Extension> = emptyList(),
+            lifetime: Lifetime? = null,
         ): LeafNode {
             val unsigned =
                 LeafNode(
@@ -4265,7 +4285,9 @@ class MlsGroup private constructor(
                     capabilities = capabilities,
                     leafNodeSource = source,
                     lifetime =
-                        if (source == LeafNodeSource.KEY_PACKAGE) {
+                        if (source == LeafNodeSource.KEY_PACKAGE && lifetime != null) {
+                            lifetime
+                        } else if (source == LeafNodeSource.KEY_PACKAGE) {
                             // A real, bounded window. `Lifetime(0, Long.MAX_VALUE)`
                             // used to go here, which any receiver enforcing
                             // `foundation/key-packages.md` rejects outright: the
@@ -4563,19 +4585,23 @@ data class DecryptedMessage(
     val contentType: ContentType,
     val content: ByteArray,
     val epoch: Long,
+    /** The message's `authenticated_data` (RFC 9420 §6.3.2), verified by the AEAD. */
+    val authenticatedData: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DecryptedMessage) return false
         return senderLeafIndex == other.senderLeafIndex &&
             content.contentEquals(other.content) &&
-            epoch == other.epoch
+            epoch == other.epoch &&
+            authenticatedData.contentEquals(other.authenticatedData)
     }
 
     override fun hashCode(): Int {
         var result = senderLeafIndex
         result = 31 * result + content.contentHashCode()
         result = 31 * result + epoch.hashCode()
+        result = 31 * result + authenticatedData.contentHashCode()
         return result
     }
 }

@@ -66,6 +66,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.profile.ui.RelaysTabHeader
 import com.vitorpamplona.amethyst.commons.relayClient.profile.UserProfileFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gallery
@@ -73,12 +75,14 @@ import com.vitorpamplona.amethyst.commons.resources.mutual
 import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
 import com.vitorpamplona.amethyst.commons.resources.replies
+import com.vitorpamplona.amethyst.commons.ui.feeds.UserBlockedFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Size8dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
-import com.vitorpamplona.amethyst.ui.feeds.UserBlockedFeed
-import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.apps.TabApps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.apps.dal.UserProfileAppsFeedViewModel
@@ -106,7 +110,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.RelaysTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
@@ -114,9 +117,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserPro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import kotlinx.coroutines.launch
 
 @Composable
@@ -697,7 +697,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Bookmarks -> BookmarkTabHeader(baseUser, accountViewModel)
                     ProfileTab.FollowedTags -> FollowedTagsTabHeader(baseUser, accountViewModel)
                     ProfileTab.Reports -> ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel)
-                    ProfileTab.Relays -> RelaysTabHeader(baseUser, accountViewModel)
+                    ProfileTab.Relays -> RelaysTabHeader()
                 }
             },
         )

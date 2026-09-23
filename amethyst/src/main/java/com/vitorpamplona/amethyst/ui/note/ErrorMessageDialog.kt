@@ -45,11 +45,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size16dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
 @Preview

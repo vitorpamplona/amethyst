@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue

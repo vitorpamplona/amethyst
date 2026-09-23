@@ -20,25 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.FollowedHashtagLabel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
@@ -68,25 +61,7 @@ fun DisplayFollowingHashtagsInPost(
         }
     }
 
-    firstTag?.let {
-        Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, accountViewModel, nav) }
-        }
-    }
-}
-
-@Composable
-private fun DisplayTagList(
-    firstTag: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    ClickableTextColor(
-        "#$firstTag",
-        linkColor = MaterialTheme.colorScheme.lessImportantLink,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 1,
-    ) {
-        nav.nav(Route.Hashtag(firstTag.lowercase()))
+    firstTag?.let { tag ->
+        FollowedHashtagLabel(tag) { nav.nav(Route.Hashtag(tag.lowercase())) }
     }
 }

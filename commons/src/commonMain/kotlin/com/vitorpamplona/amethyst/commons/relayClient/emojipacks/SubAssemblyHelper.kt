@@ -26,11 +26,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.filterBrowseEmojiSetsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.filterBrowseEmojiSetsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.filterBrowseEmojiSetsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.filterBrowseEmojiSetsByMutedAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.filterBrowseEmojiSetsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

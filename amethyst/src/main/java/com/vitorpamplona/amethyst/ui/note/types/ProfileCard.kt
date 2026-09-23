@@ -65,26 +65,26 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.number_followers
 import com.vitorpamplona.amethyst.commons.resources.profile_card_bot
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ShowFollowingOrUnfollowingButton
-import com.vitorpamplona.amethyst.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
 // A kind-0 in the feed is a person, not a JSON blob. The card mirrors the profile
