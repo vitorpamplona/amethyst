@@ -85,6 +85,11 @@ object CordnDeviceDocument {
     private const val ROOM_STATE = "amethystRoomState"
     private const val ECHO_STATE = "amethystEchoState"
     private const val JOINED_VIA_REQUEST = "amethystJoinedViaRequest"
+    private const val COORDINATOR_RELAYS = "amethystCoordinatorRelays"
+    private const val KEY_PACKAGES = "amethystKeyPackages"
+    private const val COORDINATOR_PUBKEY = "coordinator"
+    private const val REF = "ref"
+    private const val BUNDLE = "bundle"
     private const val REMOVED = "removed"
     private const val EPOCH = "epoch"
     private const val LAST_RESORT_KEY_PACKAGE = "lastResortKeyPackage"
@@ -143,6 +148,9 @@ object CordnDeviceDocument {
             document.roomState?.let { put(ROOM_STATE, it) }
             document.echoState?.let { put(ECHO_STATE, it) }
             if (document.joinedViaRequest) put(JOINED_VIA_REQUEST, true)
+            if (document.coordinatorRelays.isNotEmpty()) {
+                put(COORDINATOR_RELAYS, buildJsonArray { document.coordinatorRelays.forEach { add(JsonPrimitive(it)) } })
+            }
         }.toString()
 
     private fun decodeGroup(root: JsonObject): CordnGroupDocument =
@@ -163,6 +171,12 @@ object CordnDeviceDocument {
             roomState = root.stringOrNull(ROOM_STATE),
             echoState = root.stringOrNull(ECHO_STATE),
             joinedViaRequest = root.boolOrNull(JOINED_VIA_REQUEST) ?: false,
+            coordinatorRelays =
+                (root[COORDINATOR_RELAYS] as? JsonArray)
+                    ?.filterIsInstance<JsonPrimitive>()
+                    ?.filter { it.isString }
+                    ?.map { it.content }
+                    .orEmpty(),
         )
 
     private fun encodeMeta(document: CordnMetaDocument) =
@@ -179,6 +193,22 @@ object CordnDeviceDocument {
                                 buildJsonObject {
                                     put(GID, it.gid)
                                     put(EPOCH, it.epoch)
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+            if (document.keyPackages.isNotEmpty()) {
+                put(
+                    KEY_PACKAGES,
+                    buildJsonArray {
+                        document.keyPackages.forEach {
+                            add(
+                                buildJsonObject {
+                                    put(COORDINATOR_PUBKEY, it.coordinatorPubKey)
+                                    put(REF, it.keyPackageRef)
+                                    put(BUNDLE, it.bundle)
                                 },
                             )
                         }
@@ -218,9 +248,20 @@ object CordnDeviceDocument {
                 CordnLastResortKeyPackage(public, private)
             }
 
+        val keyPackages =
+            (root[KEY_PACKAGES] as? JsonArray)
+                ?.filterIsInstance<JsonObject>()
+                ?.mapNotNull {
+                    val coordinator = it.stringOrNull(COORDINATOR_PUBKEY) ?: return@mapNotNull null
+                    val ref = it.stringOrNull(REF) ?: return@mapNotNull null
+                    val bundle = it.stringOrNull(BUNDLE) ?: return@mapNotNull null
+                    CordnCarriedKeyPackage(coordinator, ref, bundle)
+                }.orEmpty()
+
         return CordnMetaDocument(
             removed = removed,
             lastResortKeyPackage = keyPackage,
+            keyPackages = keyPackages,
             issuedAt = root.longOrNull(ISSUED_AT) ?: 0L,
         )
     }
@@ -294,6 +335,16 @@ data class CordnGroupDocument(
     val echoState: String? = null,
     /** Whether this group was entered by join request rather than invitation. */
     val joinedViaRequest: Boolean = false,
+    /**
+     * Where the coordinator is reachable.
+     *
+     * §4.1's `coordinator` field is an identity, and `spec/00.md` §8.5 says a
+     * coordinator has no address beyond its pubkey — so the relays its traffic
+     * runs on have to come from somewhere, and for a device that has never
+     * talked to it there is nowhere else. A seeded group whose coordinator has
+     * no relays is a group that cannot sync.
+     */
+    val coordinatorRelays: List<String> = emptyList(),
 ) : CordnDeviceDoc {
     /** Whether this device's MLS engine can read [clientState] at all. */
     val isReadableHere: Boolean get() = clientStateFormat == CordnDeviceDocument.CLIENT_STATE_FORMAT
@@ -303,8 +354,25 @@ data class CordnGroupDocument(
 data class CordnMetaDocument(
     val removed: List<CordnTombstone> = emptyList(),
     val lastResortKeyPackage: CordnLastResortKeyPackage? = null,
+    /**
+     * Every key package bundle this account holds, one-use ones included.
+     *
+     * §11.5 carries only the last-resort package, because a *fleet* keeps
+     * one-use packages device-local: a sibling that cannot open one Welcome is
+     * an inconvenience while the publishing device is still around. A device
+     * being replaced is not still around, so a Welcome in flight against one of
+     * its one-use packages would be lost outright. Additive for that reason.
+     */
+    val keyPackages: List<CordnCarriedKeyPackage> = emptyList(),
     val issuedAt: Long = 0L,
 ) : CordnDeviceDoc
+
+/** One key package bundle travelling with a migration. `bundle` is base64. */
+data class CordnCarriedKeyPackage(
+    val coordinatorPubKey: String,
+    val keyPackageRef: String,
+    val bundle: String,
+)
 
 /** §4.2 `removed` — "stopped tracking [gid] while it was at [epoch]". */
 data class CordnTombstone(
