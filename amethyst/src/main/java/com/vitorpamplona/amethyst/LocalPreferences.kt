@@ -34,6 +34,10 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
+import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -85,6 +89,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 // Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
@@ -248,6 +253,40 @@ object LocalPreferences {
     // read in parallel, and the migration branch could double-write ALL_ACCOUNT_INFO.
     private val savedAccountsMutex = Mutex()
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
+
+    /**
+     * The per-account DataStore, and the top-nav filter selections inside it.
+     *
+     * Each account's store carries a [CopyOnceMigration] that lifts the filters
+     * out of that account's legacy encrypted SharedPreferences the first time
+     * the store is read. The copy leaves the legacy keys in place, so a build
+     * that reads the old location still works — see [CopyOnceMigration].
+     */
+    private val accountStores: AccountPreferenceStores by lazy {
+        AccountPreferenceStores(
+            rootFilesDir = {
+                Amethyst.instance.appContext.filesDir
+                    .toOkioPath()
+            },
+            migrations = { npub -> listOf(followListMigration(npub)) },
+        )
+    }
+
+    private fun followListStore(npub: String) = TopNavFollowListStore(accountStores.getDataStore(npub))
+
+    private fun followListMigration(npub: String) =
+        CopyOnceMigration("migrated.followLists") {
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                // Pair(...) and not `slot.key to it`: androidx.datastore declares its
+                // own infix `to` on Preferences.Key, which would build a
+                // Preferences.Pair instead of the kotlin Pair toMap() needs.
+                FollowListSlot.entries
+                    .mapNotNull { slot ->
+                        legacy.getString(slot.prefKey, null)?.let { Pair(slot.key, it) }
+                    }.toMap()
+            }
+        }
 
     // Global master switch for the always-on notification service ("Background
     // notification service"). Default ON: existing users keep current behavior, and
@@ -526,38 +565,8 @@ object LocalPreferences {
                     putString(PrefKeys.NIP46_TRANSPORT_KEY, settings.nip46TransportKey.value)
                     putStringSet(PrefKeys.NIP46_SEEN_IDS, settings.nip46SeenRequestIds.value)
 
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
-                    putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNotificationFollowList.value))
-                    putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultDiscoveryFollowList.value))
-
-                    putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
-                    putString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultRelayGroupsDiscoveryFollowList.value))
-                    putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
-                    putString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNsitesFollowList.value))
-                    putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
-                    putString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGitRepositoriesFollowList.value))
-                    putString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHighlightsFollowList.value))
-                    putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
-                    putString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGeocachesFollowList.value))
-                    putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
-                    putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
-                    putString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNestsFollowList.value))
-                    putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
-                    putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
-                    putString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicTracksFollowList.value))
-                    putString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicPlaylistsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastEpisodesFollowList.value))
-                    putString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastsFollowList.value))
-                    putString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultSoftwareAppsFollowList.value))
-                    putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
-                    putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
-                    putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
-                    putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
-                    putString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultAppRecommendationsFollowList.value))
+                    // top-nav filters now live in the account's DataStore; written below,
+                    // outside this edit block, because that write is suspend.
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -678,6 +687,41 @@ object LocalPreferences {
                     )
                 }
             }
+            followListStore(settings.keyPair.pubKey.toNpub()).saveAll(
+                mapOf(
+                    FollowListSlot.HOME to settings.defaultHomeFollowList.value,
+                    FollowListSlot.STORIES to settings.defaultStoriesFollowList.value,
+                    FollowListSlot.NOTIFICATION to settings.defaultNotificationFollowList.value,
+                    FollowListSlot.DISCOVERY to settings.defaultDiscoveryFollowList.value,
+                    FollowListSlot.POLLS to settings.defaultPollsFollowList.value,
+                    FollowListSlot.PICTURES to settings.defaultPicturesFollowList.value,
+                    FollowListSlot.RELAY_GROUPS_DISCOVERY to settings.defaultRelayGroupsDiscoveryFollowList.value,
+                    FollowListSlot.NAPPLETS to settings.defaultNappletsFollowList.value,
+                    FollowListSlot.NSITES to settings.defaultNsitesFollowList.value,
+                    FollowListSlot.WORKOUTS to settings.defaultWorkoutsFollowList.value,
+                    FollowListSlot.GIT_REPOSITORIES to settings.defaultGitRepositoriesFollowList.value,
+                    FollowListSlot.HIGHLIGHTS to settings.defaultHighlightsFollowList.value,
+                    FollowListSlot.CALENDARS to settings.defaultCalendarsFollowList.value,
+                    FollowListSlot.PRODUCTS to settings.defaultProductsFollowList.value,
+                    FollowListSlot.GEOCACHES to settings.defaultGeocachesFollowList.value,
+                    FollowListSlot.SHORTS to settings.defaultShortsFollowList.value,
+                    FollowListSlot.PUBLIC_CHATS to settings.defaultPublicChatsFollowList.value,
+                    FollowListSlot.LIVE_STREAMS to settings.defaultLiveStreamsFollowList.value,
+                    FollowListSlot.NESTS to settings.defaultNestsFollowList.value,
+                    FollowListSlot.LONGS to settings.defaultLongsFollowList.value,
+                    FollowListSlot.ARTICLES to settings.defaultArticlesFollowList.value,
+                    FollowListSlot.MUSIC_TRACKS to settings.defaultMusicTracksFollowList.value,
+                    FollowListSlot.MUSIC_PLAYLISTS to settings.defaultMusicPlaylistsFollowList.value,
+                    FollowListSlot.PODCAST_EPISODES to settings.defaultPodcastEpisodesFollowList.value,
+                    FollowListSlot.PODCASTS to settings.defaultPodcastsFollowList.value,
+                    FollowListSlot.SOFTWARE_APPS to settings.defaultSoftwareAppsFollowList.value,
+                    FollowListSlot.BADGES to settings.defaultBadgesFollowList.value,
+                    FollowListSlot.BROWSE_EMOJI_SETS to settings.defaultBrowseEmojiSetsFollowList.value,
+                    FollowListSlot.COMMUNITIES to settings.defaultCommunitiesFollowList.value,
+                    FollowListSlot.FOLLOW_PACKS to settings.defaultFollowPacksFollowList.value,
+                    FollowListSlot.APP_RECOMMENDATIONS to settings.defaultAppRecommendationsFollowList.value,
+                ),
+            )
         }
         Log.d("LocalPreferences", "Saved to encrypted storage")
     }
@@ -810,7 +854,7 @@ object LocalPreferences {
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
-                    val followListPrefs = loadFollowListPrefs()
+                    val followListPrefs = toFollowListPrefs(followListStore(keyPair.pubKey.toNpub()).load())
 
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
@@ -1160,39 +1204,45 @@ object LocalPreferences {
         return migrated
     }
 
-    private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
+    /**
+     * Maps the store's slot table onto the named fields [AccountSettings]
+     * still expects. `getValue` is intentional: [TopNavFollowListStore.load]
+     * returns every slot, so a missing one is a bug in this mapping rather
+     * than a user with no saved filter, and should fail loudly.
+     */
+    private fun SharedPreferences.toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowListPrefs =
         FollowListPrefs(
-            home = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null), TopFilter.AllFollows),
-            stories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null), TopFilter.Global),
-            notification = migrateNotificationFilter(parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Selected)),
-            discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
-            polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
-            pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
-            relayGroupsDiscovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, null), TopFilter.Mine),
-            napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
-            nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
-            workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),
-            gitRepositories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, null), TopFilter.Global),
-            highlights = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, null), TopFilter.Global),
-            calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
-            products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
-            geocaches = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, null), TopFilter.AroundMe),
-            shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
-            publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
-            liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
-            nests = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, null), TopFilter.Global),
-            longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
-            articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
-            musicTracks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, null), TopFilter.Global),
-            musicPlaylists = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, null), TopFilter.Global),
-            podcastEpisodes = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, null), TopFilter.Global),
-            podcasts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, null), TopFilter.Global),
-            softwareApps = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, null), TopFilter.Global),
-            badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
-            browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
-            communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
-            followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
-            appRecommendations = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, null), TopFilter.Global),
+            home = filters.getValue(FollowListSlot.HOME),
+            stories = filters.getValue(FollowListSlot.STORIES),
+            notification = migrateNotificationFilter(filters.getValue(FollowListSlot.NOTIFICATION)),
+            discovery = filters.getValue(FollowListSlot.DISCOVERY),
+            polls = filters.getValue(FollowListSlot.POLLS),
+            pictures = filters.getValue(FollowListSlot.PICTURES),
+            relayGroupsDiscovery = filters.getValue(FollowListSlot.RELAY_GROUPS_DISCOVERY),
+            napplets = filters.getValue(FollowListSlot.NAPPLETS),
+            nsites = filters.getValue(FollowListSlot.NSITES),
+            workouts = filters.getValue(FollowListSlot.WORKOUTS),
+            gitRepositories = filters.getValue(FollowListSlot.GIT_REPOSITORIES),
+            highlights = filters.getValue(FollowListSlot.HIGHLIGHTS),
+            calendars = filters.getValue(FollowListSlot.CALENDARS),
+            products = filters.getValue(FollowListSlot.PRODUCTS),
+            geocaches = filters.getValue(FollowListSlot.GEOCACHES),
+            shorts = filters.getValue(FollowListSlot.SHORTS),
+            publicChats = filters.getValue(FollowListSlot.PUBLIC_CHATS),
+            liveStreams = filters.getValue(FollowListSlot.LIVE_STREAMS),
+            nests = filters.getValue(FollowListSlot.NESTS),
+            longs = filters.getValue(FollowListSlot.LONGS),
+            articles = filters.getValue(FollowListSlot.ARTICLES),
+            musicTracks = filters.getValue(FollowListSlot.MUSIC_TRACKS),
+            musicPlaylists = filters.getValue(FollowListSlot.MUSIC_PLAYLISTS),
+            podcastEpisodes = filters.getValue(FollowListSlot.PODCAST_EPISODES),
+            podcasts = filters.getValue(FollowListSlot.PODCASTS),
+            softwareApps = filters.getValue(FollowListSlot.SOFTWARE_APPS),
+            badges = filters.getValue(FollowListSlot.BADGES),
+            browseEmojiSets = filters.getValue(FollowListSlot.BROWSE_EMOJI_SETS),
+            communities = filters.getValue(FollowListSlot.COMMUNITIES),
+            followPacks = filters.getValue(FollowListSlot.FOLLOW_PACKS),
+            appRecommendations = filters.getValue(FollowListSlot.APP_RECOMMENDATIONS),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {

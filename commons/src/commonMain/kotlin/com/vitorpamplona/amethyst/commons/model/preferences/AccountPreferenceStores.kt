@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.preferences
 
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -38,9 +39,14 @@ import okio.Path
  *
  * Built on [PreferenceDataStoreFactory.createWithPath], the okio-based factory,
  * because the `java.io.File` overloads are absent on Apple targets.
+ *
+ * [migrations] runs once per account, before that account's store answers its
+ * first read. Android supplies one that copies out of the legacy
+ * SharedPreferences; front ends with no history supply none.
  */
 class AccountPreferenceStores(
     val rootFilesDir: () -> Path,
+    private val migrations: (npub: String) -> List<DataMigration<Preferences>> = { emptyList() },
 ) {
     private val storeCache = LargeCache<String, DataStore<Preferences>>()
 
@@ -48,7 +54,10 @@ class AccountPreferenceStores(
 
     fun getDataStore(npub: String): DataStore<Preferences> =
         storeCache.getOrCreate(npub) {
-            PreferenceDataStoreFactory.createWithPath(produceFile = { file(npub) })
+            PreferenceDataStoreFactory.createWithPath(
+                migrations = migrations(npub),
+                produceFile = { file(npub) },
+            )
         }
 
     /**
