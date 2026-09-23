@@ -36,6 +36,8 @@ import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor.Companion.PROFILE_PICTURE
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
@@ -121,7 +123,8 @@ class ProfilePictureFetcher(
                     NetworkFetcher(
                         url = data.url,
                         options = options.withAuthHeader(authHeader),
-                        networkClient = lazy { networkClient(data.url).asNetworkClient() },
+                        // Marked so the local Blossom cache bridge can honour "profile pictures only".
+                        networkClient = lazy { LocalBlossomMediaCallFactory(networkClient(data.url), PROFILE_PICTURE).asNetworkClient() },
                         diskCache = diskCacheLazy,
                         cacheStrategy = cacheStrategyLazy,
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },

@@ -23,11 +23,16 @@ package com.vitorpamplona.quartz.nip65RelayList
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,7 +43,24 @@ class AdvertisedRelayListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<AdvertisedRelayListDiff> {
+    override fun diffFrom(older: Event): AdvertisedRelayListDiff? {
+        if (older !is AdvertisedRelayListEvent || older.pubKey != pubKey) return null
+        return AdvertisedRelayListDiff(ListDiff.of(older.relaysByUrl(), relaysByUrl(), { it.relayUrl }, { a, b -> a.type == b.type }))
+    }
+
+    /** One entry per relay: a separate read tag and write tag for the same URL mean both. */
+    private fun relaysByUrl(): List<AdvertisedRelayInfo> {
+        val byUrl = LinkedHashMap<NormalizedRelayUrl, AdvertisedRelayType>()
+        tags.forEach { tag ->
+            val info = AdvertisedRelayInfo.parse(tag) ?: return@forEach
+            val current = byUrl[info.relayUrl]
+            byUrl[info.relayUrl] = if (current == null || current == info.type) info.type else AdvertisedRelayType.BOTH
+        }
+        return byUrl.map { (url, type) -> AdvertisedRelayInfo(url, type) }
+    }
+
     fun relays() = tags.mapNotNull(AdvertisedRelayInfo::parse)
 
     fun relaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseNorm)

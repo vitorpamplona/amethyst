@@ -22,7 +22,10 @@ package com.vitorpamplona.quartz.experimental.nipA3
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -33,7 +36,13 @@ class PaymentTargetsEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<PaymentTargetsDiff> {
+    override fun diffFrom(older: Event): PaymentTargetsDiff? {
+        if (older !is PaymentTargetsEvent || older.pubKey != pubKey) return null
+        return PaymentTargetsDiff(ListDiff.of(older.paymentTargets(), paymentTargets(), { it }))
+    }
+
     fun paymentTargets(): List<PaymentTarget> = tags.mapNotNull { PaymentTargetTag.parse(it) }
 
     companion object {

@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Discovers a local Blossom cache running on `http://127.0.0.1:24242` per
@@ -47,6 +48,9 @@ class LocalBlossomCacheProbe(
 
     @Volatile
     private var cachedAtMs: Long = 0L
+
+    // Bumped by [markUnavailable]; lets a probe that raced it discard its stale positive result.
+    private val unavailableMarks = AtomicInteger(0)
 
     private val _available = MutableStateFlow(false)
     val available: StateFlow<Boolean> = _available
@@ -66,7 +70,11 @@ class LocalBlossomCacheProbe(
                 return@withLock _available.value
             }
 
+            val startedAt = unavailableMarks.get()
             val newResult = probe()
+            // A refused connection reported while this probe was in flight is newer evidence
+            // than a HEAD that may have succeeded just before the cache went away.
+            if (newResult && startedAt != unavailableMarks.get()) return@withLock false
             _available.value = newResult
             cachedAtMs = currentTimeMs()
             newResult
@@ -78,6 +86,17 @@ class LocalBlossomCacheProbe(
      */
     fun invalidate() {
         cachedAtMs = 0L
+    }
+
+    /**
+     * Records that the cache just refused a connection. Flipping [available] right away turns
+     * the bridge off everywhere it is read, instead of letting every sha256 URL keep failing
+     * against the dead loopback port until the positive TTL runs out and someone re-probes.
+     */
+    fun markUnavailable() {
+        unavailableMarks.incrementAndGet()
+        cachedAtMs = currentTimeMs()
+        _available.value = false
     }
 
     // Confined to Dispatchers.IO because callers reach this through suspend

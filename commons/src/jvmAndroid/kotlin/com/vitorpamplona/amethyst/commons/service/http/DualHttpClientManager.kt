@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,7 +42,7 @@ class DualHttpClientManager(
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
     dns: SurgeDns,
-    shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    shouldBridgeBlossomCache: ((profilePicture: Boolean) -> Boolean)? = null,
     // Required (not nullable): every general-purpose HTTP client we mint must be
     // wired into the OnionLocationCache so the app's `.onion`-routing behavior
     // is uniform across image, upload, NIP-05, money, preview, and push roles.
@@ -53,8 +54,10 @@ class DualHttpClientManager(
     // Signs BUD-01 read-auth to retry auth-gated Blossom downloads on 401.
     // See [BlossomReadAuthInterceptor].
     blossomReadAuth: Interceptor? = null,
+    // Told when the local Blossom cache refuses a connection. See [LocalBlossomCacheRedirectInterceptor].
+    onLocalBlossomCacheUnreachable: () -> Unit = {},
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth, onLocalBlossomCacheUnreachable)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
@@ -96,10 +99,23 @@ class DualHttpClientManager(
 
 /**
  * the okhttp can change on the manager without affecting other systems.
+ *
+ * [useProxy] is fixed when the factory is built (e.g. per video player pool), from the URL the
+ * caller knew at the time. The URL that is finally requested can differ: a `blossom:` URI is
+ * resolved to the local Blossom cache on `127.0.0.1:24242` only when the data source opens. Tor
+ * refuses to connect to loopback/private addresses, so those requests must never take the proxied
+ * client — the same rule RoleBasedHttpClientBuilder applies to URLs it sees upfront.
  */
 class DynamicCallFactory(
     val useProxy: Boolean,
     val manager: DualHttpClientManager,
 ) : Call.Factory {
-    override fun newCall(request: Request): Call = manager.getHttpClient(useProxy).newCall(request)
+    override fun newCall(request: Request): Call = manager.getHttpClient(shouldUseProxy(useProxy, request.url.toString())).newCall(request)
+
+    companion object {
+        fun shouldUseProxy(
+            useProxy: Boolean,
+            url: String,
+        ): Boolean = useProxy && !RelayUrlNormalizer.isLocalHost(url) && !RelayUrlNormalizer.isOverlayNetwork(url)
+    }
 }

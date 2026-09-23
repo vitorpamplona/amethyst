@@ -66,7 +66,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
@@ -105,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
@@ -123,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -200,26 +199,20 @@ fun ZoomableContentView(
             sourceBounds = coordinates.boundsInWindow()
         }
 
-    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
-
     when (content) {
         is MediaUrlImage -> {
             val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
-            val bridgedUrl =
-                remember(content.url, useLocalBlossomBridge) {
-                    content.toCoilModel(useLocalBlossomBridge)
-                }
             ContentWarningGate(
                 isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
-                preloadUrls = listOf(bridgedUrl),
+                preloadUrls = listOf(content.url),
                 accountViewModel = accountViewModel,
                 modifier = mediaSizingModifier(ratio, contentScale),
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 if (content.isAnimatedMedia()) {
                     GifVideoView(
-                        videoUri = bridgedUrl,
+                        videoUri = content.url,
                         contentDescription = content.description,
                         dimensions = content.dim,
                         blurhash = content.blurhash,
@@ -254,10 +247,6 @@ fun ZoomableContentView(
                 content.dim?.aspectRatioOrNull()
                     ?: MediaAspectRatioCache.get(content.url)
                     ?: fallbackRatio
-            val bridgedUrl =
-                remember(content.url, useLocalBlossomBridge) {
-                    content.toCoilModel(useLocalBlossomBridge)
-                }
             ContentWarningGate(
                 isSensitive = content.contentWarning != null,
                 reasons = setOfNotNull(content.contentWarning),
@@ -277,7 +266,7 @@ fun ZoomableContentView(
                     contentAlignment = Alignment.Center,
                 ) {
                     VideoView(
-                        videoUri = bridgedUrl,
+                        videoUri = content.url,
                         mimeType = content.mimeType,
                         title = content.description,
                         artworkUri = content.artworkUri,
@@ -544,22 +533,17 @@ fun UrlImageView(
         }
 
     val context = LocalContext.current
-    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
-    val bridgedUrl =
-        remember(content.url, useLocalBlossomBridge) {
-            content.toCoilModel(useLocalBlossomBridge)
-        }
     val imageModel =
         if (fullResolution) {
-            remember(bridgedUrl, context) {
+            remember(content.url, context) {
                 ImageRequest
                     .Builder(context)
-                    .data(bridgedUrl)
+                    .data(content.url)
                     .size(Size.ORIGINAL)
                     .build()
             }
         } else {
-            bridgedUrl
+            content.url
         }
 
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
@@ -1281,15 +1265,9 @@ private suspend fun shareLocalVideoFile(
 private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
-    val keys = mutableListOf(content.url)
-    val bridged = content.toCoilModel(true)
-    if (bridged != content.url) keys.add(bridged)
-
-    for (key in keys) {
-        Amethyst.instance.diskCache.openSnapshot(key)?.use { snapshot ->
-            val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
-            return hashBytes.toHexKey() == content.hash
-        }
+    Amethyst.instance.diskCache.openSnapshot(BlossomFetcher.diskCacheKey(content.url))?.use { snapshot ->
+        val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
+        return hashBytes.toHexKey() == content.hash
     }
 
     return null

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvi
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
@@ -44,17 +45,48 @@ import kotlin.coroutines.cancellation.CancellationException
 class BlossomFetcher(
     private val options: Options,
     private val data: Uri,
+    private val imageLoader: ImageLoader,
     private val blossomServerResolver: () -> BlossomServerResolver,
-    private val networkFetcher: (url: String) -> Fetcher,
+    private val networkFetcher: (url: String, diskCacheKey: String) -> Fetcher,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? =
         try {
-            val urlResult = blossomServerResolver().findServers(data.toString())
-            networkFetcher(urlResult?.serverUrl ?: data.toString()).fetch()
+            val uri = data.toString()
+            val key = options.diskCacheKey ?: diskCacheKey(uri)
+
+            // A blob already on disk is served without resolving: resolution may HEAD
+            // servers and wait on relays, and fails outright offline, where the bytes are
+            // still sitting in the cache. NetworkFetcher reads the snapshot under [key]
+            // before it ever looks at the url.
+            val onDisk = options.diskCachePolicy.readEnabled && imageLoader.diskCache?.openSnapshot(key)?.use { true } ?: false
+            val fromDisk =
+                if (onDisk) {
+                    // Evicted between the check and the read: the fetcher would try the
+                    // network with the unresolvable `blossom:` uri, so resolve after all.
+                    try {
+                        networkFetcher(uri, key).fetch()
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        null
+                    }
+                } else {
+                    null
+                }
+
+            fromDisk ?: networkFetcher(blossomServerResolver().findServers(uri)?.serverUrl ?: uri, key).fetch()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
         }
+
+    companion object {
+        /**
+         * Blossom blobs are content-addressed, so the sha256 names the bytes wherever they
+         * were served from. Keying on it (instead of the resolved server URL) finds the
+         * blob again after a restart, a probe flip or a different server answering.
+         */
+        fun diskCacheKey(uri: String): String = BlossomUri.parse(uri)?.let { "blossom:${it.sha256}" } ?: uri
+    }
 
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
@@ -78,20 +110,19 @@ class BlossomFetcher(
             if (!isApplicable(data)) return null
             // Wrapped per resolved url (not per Factory) because the server the
             // blob actually lives on is only known once the resolver has run.
-            return BlossomFetcher(options, data, blossomServerResolver) { url ->
+            return BlossomFetcher(options, data, imageLoader, blossomServerResolver) { url, diskCacheKey ->
+                val keyedOptions = options.copy(diskCacheKey = diskCacheKey)
                 readAuthAware(url, readAuth) { authHeader ->
                     NetworkFetcher(
                         url = url,
-                        options = options.withAuthHeader(authHeader),
+                        options = keyedOptions.withAuthHeader(authHeader),
                         networkClient = lazy { networkClient(url).asNetworkClient() },
                         diskCache = lazy { imageLoader.diskCache },
                         cacheStrategy = cacheStrategyLazy,
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                         concurrentRequestStrategy = concurrentRequestStrategyLazy,
                     )
-                    // Keyed on the resolved server url, which is what the NetworkFetcher above
-                    // caches under -- not on the `blossom:` uri the request came in as.
-                }.onSystemFileSystem(options.diskCacheKey ?: url)
+                }.onSystemFileSystem(diskCacheKey)
             }
         }
 

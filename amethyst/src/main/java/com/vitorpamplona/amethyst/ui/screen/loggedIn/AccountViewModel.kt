@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -275,32 +276,10 @@ class AccountViewModel(
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     /**
-     * `true` when feed/note media (images and videos in `MediaUrlContent`)
-     * should be routed through the local Blossom cache. Requires the master
-     * toggle on, the probe up, AND the profile-pictures-only restriction
-     * to be off.
+     * `true` when the local Blossom cache is enabled and the probe sees it up. Only drives the
+     * "detected" chip in settings: the routing itself happens in LocalBlossomCacheRedirectInterceptor.
      */
-    val useLocalBlossomBridge: StateFlow<Boolean> =
-        try {
-            combine(
-                account.settings.useLocalBlossomCache,
-                account.settings.localBlossomCacheProfilePicturesOnly,
-                Amethyst.instance.localBlossomCacheProbe.available,
-            ) { toggle, profileOnly, probeUp -> toggle && probeUp && !profileOnly }.stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                false,
-            )
-        } catch (e: UninitializedPropertyAccessException) {
-            MutableStateFlow(false)
-        }
-
-    /**
-     * `true` when profile pictures should be routed through the local
-     * Blossom cache. Requires only the master toggle and the probe to be
-     * up; the profile-pictures-only restriction does not gate this flow.
-     */
-    val useLocalBlossomBridgeForProfilePics: StateFlow<Boolean> =
+    val localBlossomCacheDetected: StateFlow<Boolean> =
         try {
             combine(
                 account.settings.useLocalBlossomCache,
@@ -1662,6 +1641,12 @@ class AccountViewModel(
             direct()
         }
     }
+
+    /**
+     * Keeps another app's version of a backed-up list. Off the main thread: it waits for the
+     * backup guard's lock, which the backup collectors hold while diffing large lists.
+     */
+    fun acceptExternalBackupVersion(conflict: ReplaceableBackupConflict) = viewModelScope.launch(Dispatchers.IO) { account.acceptExternalVersion(conflict) }
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {

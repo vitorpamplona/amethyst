@@ -23,12 +23,17 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,7 +53,13 @@ class KeyPackageRelayListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<RelayListDiff> {
+    override fun diffFrom(older: Event): RelayListDiff? {
+        if (older !is KeyPackageRelayListEvent || older.pubKey != pubKey) return null
+        return RelayListDiff(ListDiff.of(older.relays(), relays(), { it }), ContentChange.NONE)
+    }
+
     /**
      * Relays from this list, with local-network entries dropped.
      *

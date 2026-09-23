@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
@@ -50,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHlsMimeType
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
-import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -256,16 +254,11 @@ fun UrlImageView(
 
     val isVideo = content is MediaUrlVideo
     val artworkUri = (content as? MediaUrlVideo)?.artworkUri
-    val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
     // Coil's VideoFrameDecoder can extract a frame from .mp4/.webm but not from an HLS .m3u8
     // playlist (it's a text manifest). For an HLS video without a separate artwork URL, sending
     // the playlist to SubcomposeAsyncImage just produces an Error state and a stand-in icon.
     // Skip the fetch in that case and render blurhash + play overlay directly.
-    val bridgedUrl =
-        remember(content.url, useLocalBlossomBridge) {
-            content.toCoilModel(useLocalBlossomBridge)
-        }
-    val imageModelUrl = artworkUri ?: bridgedUrl
+    val imageModelUrl = artworkUri ?: content.url
     val canLoadAsImage = !isVideo || artworkUri != null || !isHlsMedia(content.url, content.mimeType)
 
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
