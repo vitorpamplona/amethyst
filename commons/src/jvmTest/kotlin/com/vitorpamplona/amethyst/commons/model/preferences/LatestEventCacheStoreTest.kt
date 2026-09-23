@@ -123,7 +123,7 @@ class LatestEventCacheStoreTest {
         runTest {
             val legacy = mapOf(Pair(LatestEventSlot.USER_METADATA.key, """{"kind":0}"""))
 
-            val loaded = store(listOf(CopyOnceMigration("migrated.latestEvents") { legacy })).load()
+            val loaded = store(listOf(CopyOnceMigration("migrated.latestEvents") { out -> legacy.forEach { (k, v) -> out[k] = v } })).load()
 
             assertEquals("""{"kind":0}""", loaded[LatestEventSlot.USER_METADATA])
             assertFalse("slots absent from the legacy store stay absent", loaded.containsKey(LatestEventSlot.MUTE_LIST))

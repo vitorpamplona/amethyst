@@ -36,10 +36,20 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntr
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
+import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissal
+import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissalStore
+import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibility
+import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibilityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefs
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuth
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
+import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettings
+import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -270,7 +280,10 @@ object LocalPreferences {
                 Amethyst.instance.appContext.filesDir
                     .toOkioPath()
             },
-            migrations = { npub -> listOf(followListMigration(npub), latestEventMigration(npub)) },
+            migrations = { npub ->
+                listOf(followListMigration(npub), latestEventMigration(npub)) +
+                    listOf(uploadSettingsMigration(npub), dialogDismissalMigration(npub), relayAuthMigration(npub), feedVisibilityMigration(npub), notificationPrefsMigration(npub))
+            },
         )
     }
 
@@ -278,28 +291,126 @@ object LocalPreferences {
 
     private fun latestEventStore(npub: String) = LatestEventCacheStore(accountStores.getDataStore(npub))
 
-    private fun followListMigration(npub: String) =
-        CopyOnceMigration("migrated.followLists") {
+    private fun uploadSettingsStore(npub: String) = UploadSettingsStore(accountStores.getDataStore(npub))
+
+    private fun dialogDismissalStore(npub: String) = DialogDismissalStore(accountStores.getDataStore(npub))
+
+    private fun relayAuthStore(npub: String) = RelayAuthStore(accountStores.getDataStore(npub))
+
+    private fun feedVisibilityStore(npub: String) = FeedVisibilityStore(accountStores.getDataStore(npub))
+
+    private fun notificationPrefsStore(npub: String) = NotificationPrefsStore(accountStores.getDataStore(npub))
+
+    private fun uploadSettingsMigration(npub: String) =
+        CopyOnceMigration("migrated.uploadSettings") { out ->
             withContext(Dispatchers.IO) {
                 val legacy = encryptedPreferences(npub)
-                // Pair(...) and not `slot.key to it`: androidx.datastore declares its
-                // own infix `to` on Preferences.Key, which would build a
-                // Preferences.Pair instead of the kotlin Pair toMap() needs.
-                FollowListSlot.entries
-                    .mapNotNull { slot ->
-                        legacy.getString(slot.prefKey, null)?.let { Pair(slot.key, it) }
-                    }.toMap()
+                if (legacy.contains(PrefKeys.STRIP_LOCATION_ON_UPLOAD)) out[UploadSettingsStore.stripLocationOnUpload] = legacy.getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, false)
+                if (legacy.contains(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD)) out[UploadSettingsStore.optimizeMediaOnUpload] = legacy.getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
+                if (legacy.contains(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS)) out[UploadSettingsStore.mirrorUploadsToAllServers] = legacy.getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, false)
+                if (legacy.contains(PrefKeys.USE_LOCAL_BLOSSOM_CACHE)) out[UploadSettingsStore.useLocalBlossomCache] = legacy.getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, false)
+                if (legacy.contains(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY)) out[UploadSettingsStore.localBlossomCacheProfilePicturesOnly] = legacy.getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
+                legacy.getString(PrefKeys.DEFAULT_FILE_SERVER, null)?.let { out[UploadSettingsStore.defaultFileServerJson] = it }
+            }
+        }
+
+    private fun dialogDismissalMigration(npub: String) =
+        CopyOnceMigration("migrated.dialogDismissal") { out ->
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                if (legacy.contains(PrefKeys.HIDE_DELETE_REQUEST_DIALOG)) out[DialogDismissalStore.hideDeleteRequestDialog] = legacy.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
+                if (legacy.contains(PrefKeys.HIDE_BLOCK_ALERT_DIALOG)) out[DialogDismissalStore.hideBlockAlertDialog] = legacy.getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
+                if (legacy.contains(PrefKeys.HIDE_NIP_17_WARNING_DIALOG)) out[DialogDismissalStore.hideNip17WarningDialog] = legacy.getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
+                if (legacy.contains(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS)) out[DialogDismissalStore.hideCommunityRulesViolations] = legacy.getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
+                legacy.getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null)?.let { out[DialogDismissalStore.dismissedPollNoteIds] = it }
+                legacy.getStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, null)?.let { out[DialogDismissalStore.dismissedChannelInvites] = it }
+                legacy.getStringSet(PrefKeys.MUTED_PUBLIC_CHATS, null)?.let { out[DialogDismissalStore.mutedPublicChats] = it }
+                legacy.getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null)?.let { out[DialogDismissalStore.hasDonatedInVersion] = it }
+                legacy.getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)?.let { out[DialogDismissalStore.viewedPollResultNoteIdsJson] = it }
+            }
+        }
+
+    private fun relayAuthMigration(npub: String) =
+        CopyOnceMigration("migrated.relayAuth") { out ->
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                legacy.getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)?.let { out[RelayAuthStore.policyName] = it }
+                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS)) out[RelayAuthStore.trustMyRelays] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, false)
+                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS)) out[RelayAuthStore.trustReadFollows] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, false)
+                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS)) out[RelayAuthStore.trustMessageFollows] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, false)
+                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS)) out[RelayAuthStore.trustMessageStrangers] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false)
+            }
+        }
+
+    private fun feedVisibilityMigration(npub: String) =
+        CopyOnceMigration("migrated.feedVisibility") { out ->
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                legacy.getString(PrefKeys.DISABLED_CHAT_FEEDS, null)?.let { out[FeedVisibilityStore.disabledChatFeeds] = it }
+                legacy.getString(PrefKeys.DISABLED_HOME_FEED_TYPES, null)?.let { out[FeedVisibilityStore.disabledHomeFeedTypes] = it }
+                legacy.getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null)?.let { out[FeedVisibilityStore.relayGroupViewMode] = it }
+                legacy.getString(PrefKeys.CONCORD_VIEW_MODE, null)?.let { out[FeedVisibilityStore.concordViewMode] = it }
+                if (legacy.contains(PrefKeys.CALLS_ENABLED)) out[FeedVisibilityStore.callsEnabled] = legacy.getBoolean(PrefKeys.CALLS_ENABLED, false)
+            }
+        }
+
+    private fun notificationPrefsMigration(npub: String) =
+        CopyOnceMigration("migrated.notificationPrefs") { out ->
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                if (legacy.contains(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE)) out[NotificationPrefsStore.alwaysOnService] = legacy.getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
+                if (legacy.contains(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS)) out[NotificationPrefsStore.showMessagesInNotifications] = legacy.getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, false)
+                if (legacy.contains(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED)) out[NotificationPrefsStore.splitNotificationsEnabled] = legacy.getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
+            }
+        }
+
+    /**
+     * Everything the account's DataStore holds, read in one hop.
+     *
+     * Loaded as a group rather than store by store because
+     * [innerLoadCurrentAccountFromEncryptedStorage] is already near the JVM's
+     * 64KB method limit: every suspend call inside it adds a state to the
+     * generated coroutine state machine, and seven separate loads pushed it
+     * over. One call, one state.
+     */
+    private class AccountStoreData(
+        val followLists: Map<FollowListSlot, TopFilter>,
+        val latestEvents: Map<LatestEventSlot, String>,
+        val uploadSettings: UploadSettings,
+        val dialogDismissal: DialogDismissal,
+        val relayAuth: RelayAuth,
+        val feedVisibility: FeedVisibility,
+        val notificationPrefs: NotificationPrefs,
+    )
+
+    private suspend fun loadAccountStores(npub: String) =
+        AccountStoreData(
+            followLists = followListStore(npub).load(),
+            latestEvents = latestEventStore(npub).load(),
+            uploadSettings = uploadSettingsStore(npub).load(),
+            dialogDismissal = dialogDismissalStore(npub).load(),
+            relayAuth = relayAuthStore(npub).load(),
+            feedVisibility = feedVisibilityStore(npub).load(),
+            notificationPrefs = notificationPrefsStore(npub).load(),
+        )
+
+    private fun followListMigration(npub: String) =
+        CopyOnceMigration("migrated.followLists") { out ->
+            withContext(Dispatchers.IO) {
+                val legacy = encryptedPreferences(npub)
+                FollowListSlot.entries.forEach { slot ->
+                    legacy.getString(slot.prefKey, null)?.let { out[slot.key] = it }
+                }
             }
         }
 
     private fun latestEventMigration(npub: String) =
-        CopyOnceMigration("migrated.latestEvents") {
+        CopyOnceMigration("migrated.latestEvents") { out ->
             withContext(Dispatchers.IO) {
                 val legacy = encryptedPreferences(npub)
-                LatestEventSlot.entries
-                    .mapNotNull { slot ->
-                        legacy.getString(slot.prefKey, null)?.let { Pair(slot.key, it) }
-                    }.toMap()
+                LatestEventSlot.entries.forEach { slot ->
+                    legacy.getString(slot.prefKey, null)?.let { out[slot.key] = it }
+                }
             }
         }
 
@@ -564,17 +675,6 @@ object LocalPreferences {
                     }
                     settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
 
-                    putString(
-                        PrefKeys.DEFAULT_FILE_SERVER,
-                        JsonMapper.toJson(settings.defaultFileServer),
-                    )
-
-                    putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
-                    putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
-                    putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
-                    putBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, settings.mirrorUploadsToAllServers.value)
-                    putBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, settings.optimizeMediaOnUpload.value)
-                    putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
                     putBoolean(PrefKeys.NIP46_SIGNER_ENABLED, settings.nip46SignerEnabled.value)
                     putString(PrefKeys.NIP46_BUNKER_SECRET, settings.nip46BunkerSecret.value)
                     putString(PrefKeys.NIP46_TRANSPORT_KEY, settings.nip46TransportKey.value)
@@ -622,22 +722,6 @@ object LocalPreferences {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
 
-                    putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
-                    putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
-                    putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
-                    putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
-                    putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
-                    putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
-                    putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
-                    putString(PrefKeys.CONCORD_VIEW_MODE, settings.concordViewMode.value.name)
-                    putString(PrefKeys.DISABLED_CHAT_FEEDS, ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value))
-                    putString(PrefKeys.DISABLED_HOME_FEED_TYPES, HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value))
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, settings.relayAuthTrustMessageStrangers.value)
-                    putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
-                    putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
                     // post-split meaning, so stamp it as migrated. This keeps the one-shot
                     // Global -> Selected rewrite from ever touching it again and preserves a
@@ -657,14 +741,6 @@ object LocalPreferences {
                         PrefKeys.LAST_READ_PER_ROUTE,
                         JsonMapper.toJson(regularMap),
                     )
-                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
-                    putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
-                    putStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, settings.dismissedChannelInvites.value)
-                    putStringSet(PrefKeys.MUTED_PUBLIC_CHATS, settings.mutedPublicChats.value)
-                    putString(
-                        PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
-                        JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
-                    )
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
@@ -672,6 +748,54 @@ object LocalPreferences {
                     )
                 }
             }
+            uploadSettingsStore(settings.keyPair.pubKey.toNpub()).save(
+                UploadSettings(
+                    stripLocationOnUpload = settings.stripLocationOnUpload,
+                    optimizeMediaOnUpload = settings.optimizeMediaOnUpload.value,
+                    mirrorUploadsToAllServers = settings.mirrorUploadsToAllServers.value,
+                    useLocalBlossomCache = settings.useLocalBlossomCache.value,
+                    localBlossomCacheProfilePicturesOnly = settings.localBlossomCacheProfilePicturesOnly.value,
+                    defaultFileServerJson = JsonMapper.toJson(settings.defaultFileServer),
+                ),
+            )
+            dialogDismissalStore(settings.keyPair.pubKey.toNpub()).save(
+                DialogDismissal(
+                    hideDeleteRequestDialog = settings.hideDeleteRequestDialog,
+                    hideBlockAlertDialog = settings.hideBlockAlertDialog,
+                    hideNip17WarningDialog = settings.hideNIP17WarningDialog,
+                    hideCommunityRulesViolations = settings.hideCommunityRulesViolations.value,
+                    dismissedPollNoteIds = settings.dismissedPollNoteIds.value,
+                    dismissedChannelInvites = settings.dismissedChannelInvites.value,
+                    mutedPublicChats = settings.mutedPublicChats.value,
+                    hasDonatedInVersion = settings.hasDonatedInVersion.value,
+                    viewedPollResultNoteIdsJson = JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
+                ),
+            )
+            relayAuthStore(settings.keyPair.pubKey.toNpub()).save(
+                RelayAuth(
+                    policyName = settings.defaultRelayAuthPolicy.value.name,
+                    trustMyRelays = settings.relayAuthTrustMyRelaysAndVenues.value,
+                    trustReadFollows = settings.relayAuthTrustReadFollows.value,
+                    trustMessageFollows = settings.relayAuthTrustMessageFollows.value,
+                    trustMessageStrangers = settings.relayAuthTrustMessageStrangers.value,
+                ),
+            )
+            feedVisibilityStore(settings.keyPair.pubKey.toNpub()).save(
+                FeedVisibility(
+                    disabledChatFeeds = ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value),
+                    disabledHomeFeedTypes = HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value),
+                    relayGroupViewMode = settings.relayGroupViewMode.value.name,
+                    concordViewMode = settings.concordViewMode.value.name,
+                    callsEnabled = settings.callsEnabled.value,
+                ),
+            )
+            notificationPrefsStore(settings.keyPair.pubKey.toNpub()).save(
+                NotificationPrefs(
+                    alwaysOnService = settings.alwaysOnNotificationService.value,
+                    showMessagesInNotifications = settings.showMessagesInNotifications.value,
+                    splitNotificationsEnabled = settings.splitNotificationsEnabled.value,
+                ),
+            )
             latestEventStore(settings.keyPair.pubKey.toNpub()).saveAll(
                 mapOf(
                     LatestEventSlot.CONTACT_LIST to settings.backupContactList?.let { OptimizedJsonMapper.toJson(it) },
@@ -839,74 +963,75 @@ object LocalPreferences {
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
 
+                    val stores = loadAccountStores(keyPair.pubKey.toNpub())
+
                     Log.d("LocalPreferences") { "Load account from file $npub - keys ready" }
 
-                    val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
-                    val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
-                    val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
-                    val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
-                    val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
-                    val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
+                    val stripLocationOnUpload = stores.uploadSettings.stripLocationOnUpload
+                    val useLocalBlossomCache = stores.uploadSettings.useLocalBlossomCache
+                    val localBlossomCacheProfilePicturesOnly = stores.uploadSettings.localBlossomCacheProfilePicturesOnly
+                    val mirrorUploadsToAllServers = stores.uploadSettings.mirrorUploadsToAllServers
+                    val optimizeMediaOnUpload = stores.uploadSettings.optimizeMediaOnUpload
+                    val hideCommunityRulesViolations = stores.dialogDismissal.hideCommunityRulesViolations
                     val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
                     val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
                     val nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: ""
                     val nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf()
-                    val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
-                    val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
-                    val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
-                    val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
-                    val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
+                    val hideDeleteRequestDialog = stores.dialogDismissal.hideDeleteRequestDialog
+                    val hideBlockAlertDialog = stores.dialogDismissal.hideBlockAlertDialog
+                    val hideNIP17WarningDialog = stores.dialogDismissal.hideNip17WarningDialog
+                    val callsEnabled = stores.feedVisibility.callsEnabled
+                    val alwaysOnNotificationService = stores.notificationPrefs.alwaysOnService
                     // Read as a group via a helper: this load lambda sits right at the JVM's
                     // per-method bytecode limit (see the note above the awaits below), so keeping
                     // these heavy string/enum decodes out of it preserves headroom.
-                    val inboxPrefs = readInboxPrefs()
-                    val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
-                    val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
-                    val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
-                    val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
-                    val dismissedChannelInvites = getStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, null) ?: setOf()
-                    val mutedPublicChats = getStringSet(PrefKeys.MUTED_PUBLIC_CHATS, null) ?: setOf()
-                    val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
+                    val inboxPrefs = readInboxPrefs(stores.relayAuth, stores.feedVisibility)
+                    val splitNotificationsEnabled = stores.notificationPrefs.splitNotificationsEnabled
+                    val showMessagesInNotifications = stores.notificationPrefs.showMessagesInNotifications
+                    val hasDonatedInVersion = stores.dialogDismissal.hasDonatedInVersion
+                    val dismissedPollNoteIds = stores.dialogDismissal.dismissedPollNoteIds
+                    val dismissedChannelInvites = stores.dialogDismissal.dismissedChannelInvites
+                    val mutedPublicChats = stores.dialogDismissal.mutedPublicChats
+                    val viewedPollResultNoteIdsStr = stores.dialogDismissal.viewedPollResultNoteIdsJson
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
-                    val followListPrefs = toFollowListPrefs(followListStore(keyPair.pubKey.toNpub()).load())
+                    val followListPrefs = toFollowListPrefs(stores.followLists)
 
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
                     val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
                     val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
                     val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
-                    val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
+                    val defaultFileServerStr = stores.uploadSettings.defaultFileServerJson
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val openBackupConflictsStr = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null)
-                    val latestEvents = latestEventStore(keyPair.pubKey.toNpub()).load()
-                    val latestUserMetadataStr = latestEvents[LatestEventSlot.USER_METADATA]
-                    val latestContactListStr = latestEvents[LatestEventSlot.CONTACT_LIST]
-                    val latestDmRelayListStr = latestEvents[LatestEventSlot.DM_RELAY_LIST]
-                    val latestNip65RelayListStr = latestEvents[LatestEventSlot.NIP65_RELAY_LIST]
-                    val latestSearchRelayListStr = latestEvents[LatestEventSlot.SEARCH_RELAY_LIST]
-                    val latestIndexRelayListStr = latestEvents[LatestEventSlot.INDEX_RELAY_LIST]
-                    val latestRelayFeedsListStr = latestEvents[LatestEventSlot.RELAY_FEEDS_LIST]
-                    val latestBlockedRelayListStr = latestEvents[LatestEventSlot.BLOCKED_RELAY_LIST]
-                    val latestTrustedRelayListStr = latestEvents[LatestEventSlot.TRUSTED_RELAY_LIST]
-                    val latestMuteListStr = latestEvents[LatestEventSlot.MUTE_LIST]
-                    val latestPrivateHomeRelayListStr = latestEvents[LatestEventSlot.PRIVATE_HOME_RELAY_LIST]
-                    val latestAppSpecificDataStr = latestEvents[LatestEventSlot.APP_SPECIFIC_DATA]
-                    val latestChannelListStr = latestEvents[LatestEventSlot.CHANNEL_LIST]
-                    val latestCommunityListStr = latestEvents[LatestEventSlot.COMMUNITY_LIST]
-                    val latestHashtagListStr = latestEvents[LatestEventSlot.HASHTAG_LIST]
-                    val latestGeohashListStr = latestEvents[LatestEventSlot.GEOHASH_LIST]
-                    val latestEphemeralListStr = latestEvents[LatestEventSlot.EPHEMERAL_LIST]
-                    val latestRelayGroupListStr = latestEvents[LatestEventSlot.RELAY_GROUP_LIST]
-                    val latestConcordListStr = latestEvents[LatestEventSlot.CONCORD_LIST]
-                    val latestTrustProviderListStr = latestEvents[LatestEventSlot.TRUST_PROVIDER_LIST]
-                    val latestKeyPackageRelayListStr = latestEvents[LatestEventSlot.KEY_PACKAGE_RELAY_LIST]
-                    val latestFavoriteAlgoFeedsListStr = latestEvents[LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST]
-                    val latestPaymentTargetsStr = latestEvents[LatestEventSlot.PAYMENT_TARGETS]
-                    val latestBolt12OffersStr = latestEvents[LatestEventSlot.BOLT12_OFFERS]
-                    val latestCashuWalletStr = latestEvents[LatestEventSlot.CASHU_WALLET]
-                    val latestNutzapInfoStr = latestEvents[LatestEventSlot.NUTZAP_INFO]
+                    val latestUserMetadataStr = stores.latestEvents[LatestEventSlot.USER_METADATA]
+                    val latestContactListStr = stores.latestEvents[LatestEventSlot.CONTACT_LIST]
+                    val latestDmRelayListStr = stores.latestEvents[LatestEventSlot.DM_RELAY_LIST]
+                    val latestNip65RelayListStr = stores.latestEvents[LatestEventSlot.NIP65_RELAY_LIST]
+                    val latestSearchRelayListStr = stores.latestEvents[LatestEventSlot.SEARCH_RELAY_LIST]
+                    val latestIndexRelayListStr = stores.latestEvents[LatestEventSlot.INDEX_RELAY_LIST]
+                    val latestRelayFeedsListStr = stores.latestEvents[LatestEventSlot.RELAY_FEEDS_LIST]
+                    val latestBlockedRelayListStr = stores.latestEvents[LatestEventSlot.BLOCKED_RELAY_LIST]
+                    val latestTrustedRelayListStr = stores.latestEvents[LatestEventSlot.TRUSTED_RELAY_LIST]
+                    val latestMuteListStr = stores.latestEvents[LatestEventSlot.MUTE_LIST]
+                    val latestPrivateHomeRelayListStr = stores.latestEvents[LatestEventSlot.PRIVATE_HOME_RELAY_LIST]
+                    val latestAppSpecificDataStr = stores.latestEvents[LatestEventSlot.APP_SPECIFIC_DATA]
+                    val latestChannelListStr = stores.latestEvents[LatestEventSlot.CHANNEL_LIST]
+                    val latestCommunityListStr = stores.latestEvents[LatestEventSlot.COMMUNITY_LIST]
+                    val latestHashtagListStr = stores.latestEvents[LatestEventSlot.HASHTAG_LIST]
+                    val latestGeohashListStr = stores.latestEvents[LatestEventSlot.GEOHASH_LIST]
+                    val latestEphemeralListStr = stores.latestEvents[LatestEventSlot.EPHEMERAL_LIST]
+                    val latestRelayGroupListStr = stores.latestEvents[LatestEventSlot.RELAY_GROUP_LIST]
+                    val latestConcordListStr = stores.latestEvents[LatestEventSlot.CONCORD_LIST]
+                    val latestTrustProviderListStr = stores.latestEvents[LatestEventSlot.TRUST_PROVIDER_LIST]
+                    val latestKeyPackageRelayListStr = stores.latestEvents[LatestEventSlot.KEY_PACKAGE_RELAY_LIST]
+                    val latestFavoriteAlgoFeedsListStr = stores.latestEvents[LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST]
+                    val latestPaymentTargetsStr = stores.latestEvents[LatestEventSlot.PAYMENT_TARGETS]
+                    val latestBolt12OffersStr = stores.latestEvents[LatestEventSlot.BOLT12_OFFERS]
+                    val latestCashuWalletStr = stores.latestEvents[LatestEventSlot.CASHU_WALLET]
+                    val latestNutzapInfoStr = stores.latestEvents[LatestEventSlot.NUTZAP_INFO]
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
@@ -1342,20 +1467,22 @@ private class InboxPrefs(
     val relayAuthTrustMessageStrangers: Boolean,
 )
 
-private fun SharedPreferences.readInboxPrefs() =
-    InboxPrefs(
-        // Missing key = an account saved before this setting existed. Those keep CUSTOM; only
-        // brand-new logins get the ALWAYS default from AccountSettings' constructor.
-        defaultRelayAuthPolicy =
-            getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
-                ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
-                ?: RelayAuthPolicy.CUSTOM,
-        relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null)),
-        concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null)),
-        enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(getString(PrefKeys.DISABLED_CHAT_FEEDS, null)),
-        enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(getString(PrefKeys.DISABLED_HOME_FEED_TYPES, null)),
-        relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true),
-        relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true),
-        relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true),
-        relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false),
-    )
+private fun readInboxPrefs(
+    relayAuth: RelayAuth,
+    feedVisibility: FeedVisibility,
+) = InboxPrefs(
+    // Missing key = an account saved before this setting existed. Those keep CUSTOM; only
+    // brand-new logins get the ALWAYS default from AccountSettings' constructor.
+    defaultRelayAuthPolicy =
+        relayAuth.policyName
+            ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
+            ?: RelayAuthPolicy.CUSTOM,
+    relayGroupViewMode = RelayGroupViewMode.fromName(feedVisibility.relayGroupViewMode),
+    concordViewMode = ConcordViewMode.fromName(feedVisibility.concordViewMode),
+    enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(feedVisibility.disabledChatFeeds),
+    enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(feedVisibility.disabledHomeFeedTypes),
+    relayAuthTrustMyRelays = relayAuth.trustMyRelays,
+    relayAuthTrustReadFollows = relayAuth.trustReadFollows,
+    relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,
+    relayAuthTrustMessageStrangers = relayAuth.trustMessageStrangers,
+)

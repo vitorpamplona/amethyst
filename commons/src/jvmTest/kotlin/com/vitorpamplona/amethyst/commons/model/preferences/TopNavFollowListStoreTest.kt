@@ -165,7 +165,7 @@ class TopNavFollowListStoreTest {
                     Pair(FollowListSlot.BADGES.key, encode(TopFilter.AllFollows)),
                 )
 
-            val loaded = store(scope(), listOf(CopyOnceMigration("migrated.followLists") { legacy })).load()
+            val loaded = store(scope(), listOf(CopyOnceMigration("migrated.followLists") { out -> legacy.forEach { (k, v) -> out[k] = v } })).load()
 
             assertEquals(TopFilter.Global, loaded.getValue(FollowListSlot.HOME))
             assertEquals(TopFilter.AllFollows, loaded.getValue(FollowListSlot.BADGES))
@@ -196,9 +196,9 @@ class TopNavFollowListStoreTest {
                                 scope = scope,
                                 migrations =
                                     listOf(
-                                        CopyOnceMigration("migrated.followLists") {
+                                        CopyOnceMigration("migrated.followLists") { out ->
                                             reads++
-                                            legacy
+                                            legacy.forEach { (k, v) -> out[k] = v }
                                         },
                                     ),
                                 produceFile = { file.toOkioPath() },

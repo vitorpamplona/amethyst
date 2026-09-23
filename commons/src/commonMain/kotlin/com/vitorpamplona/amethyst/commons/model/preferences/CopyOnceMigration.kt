@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.datastore.core.DataMigration
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 
@@ -36,18 +37,18 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
  * left untouched and a rollback still works. Deleting the legacy data is a
  * separate decision, taken once the migration has shipped and held.
  *
- * [read] is only called when the migration actually runs, so the cost of
- * opening the legacy store is not paid on every launch.
+ * [copy] receives the destination and writes whatever it has, so a migration
+ * can carry strings, booleans, int and string sets alike. It is only called
+ * when the migration actually runs, so opening the legacy store is not a cost
+ * paid on every launch. A key it does not write is left absent rather than
+ * written blank, so it keeps reading as "unset" and falls back to its default.
  *
  * @param markerName key recording, in this store, that the copy has run.
  *   Distinct per migration, so several can run against the same store.
- * @param read the legacy values, already mapped onto this store's keys. A key
- *   absent here is left absent rather than written blank, so it keeps reading
- *   as "unset" and falls back to its default.
  */
 class CopyOnceMigration(
     markerName: String,
-    private val read: suspend () -> Map<Preferences.Key<String>, String>,
+    private val copy: suspend (MutablePreferences) -> Unit,
 ) : DataMigration<Preferences> {
     private val marker = booleanPreferencesKey(markerName)
 
@@ -56,7 +57,7 @@ class CopyOnceMigration(
     override suspend fun migrate(currentData: Preferences): Preferences {
         val updated = currentData.toMutablePreferences()
 
-        read().forEach { (key, value) -> updated[key] = value }
+        copy(updated)
         updated[marker] = true
 
         return updated.toPreferences()
