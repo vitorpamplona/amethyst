@@ -34,14 +34,15 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_enabled_subtitle
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_enabled_title
@@ -50,8 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_l
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_title
 import com.vitorpamplona.amethyst.commons.resources.settings_section_reminders
-import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.pluralStringRes
@@ -60,14 +61,22 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarReminderSettingsScreen(nav: INav) {
     val context = LocalContext.current
-    val prefs = remember { CalendarReminderPrefs(context) }
-    var enabled by remember { mutableStateOf(prefs.isEnabled()) }
-    var leadMinutes by remember { mutableIntStateOf(prefs.leadMinutes()) }
+    val scope = rememberCoroutineScope()
+    val store = remember(context) { context.calendarReminderSettings() }
+
+    // DataStore reads are suspend, so the first frame renders the defaults and
+    // the stored values arrive right after. Collecting the flow rather than
+    // reading once also keeps the screen correct if the worker path or another
+    // screen changes a value while this one is open.
+    val settings by store.flow.collectAsStateWithLifecycle(CalendarReminderSettings())
+    val enabled = settings.enabled
+    val leadMinutes = settings.leadMinutes
 
     Scaffold(
         topBar = {
@@ -92,8 +101,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                     description = Res.string.calendar_reminder_settings_enabled_subtitle,
                     checked = enabled,
                     onCheckedChange = {
-                        enabled = it
-                        prefs.setEnabled(it)
+                        scope.launch { store.setEnabled(it) }
                         // Cancel eagerly on disable so the periodic worker stops waking the
                         // process; re-enabling re-schedules immediately, and the ACCEPTED-RSVP
                         // observer in AppModules re-schedules on the next relevant RSVP too.
@@ -110,15 +118,14 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                     title = stringRes(Res.string.calendar_reminder_settings_lead_title),
                     description = stringRes(Res.string.calendar_reminder_settings_lead_subtitle),
                 ) {
-                    val choices = CalendarReminderPrefs.LEAD_TIME_CHOICES
+                    val choices = CalendarReminderSettings.LEAD_TIME_CHOICES
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         choices.forEachIndexed { index, choice ->
                             SegmentedButton(
                                 selected = choice == leadMinutes,
                                 enabled = enabled,
                                 onClick = {
-                                    leadMinutes = choice
-                                    prefs.setLeadMinutes(choice)
+                                    scope.launch { store.setLeadMinutes(choice) }
                                 },
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
                                 icon = {},

@@ -414,6 +414,15 @@ object LocalPreferences {
             }
         }
 
+    // NOT migrated to DataStore, and cannot be: DataStore is suspend-only, while
+    // NotificationRelayService.isEnabled(context) is a synchronous Boolean read
+    // from Service and BroadcastReceiver entry points in freshly started
+    // processes (boot, watchdog, WorkManager). Making it suspend would mean the
+    // restart layers could not consult it at all, and a saved OFF would be
+    // missed on cold boot — the service would resurrect itself. Plain
+    // SharedPreferences is the only store here that answers synchronously on
+    // any thread, so this key stays on it deliberately.
+    //
     // Global master switch for the always-on notification service ("Background
     // notification service"). Default ON: existing users keep current behavior, and
     // per-account participation decides who actually stays active.

@@ -24,6 +24,21 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
+/**
+ * Still on SharedPreferences, deliberately, while the rest of the app moved to
+ * DataStore.
+ *
+ * ChessLobbyLogic reads this in a property initializer and writes it from two
+ * non-suspending functions. DataStore is suspend-only, so migrating would mean
+ * seeding the dismissed set asynchronously — and until that load lands, a game
+ * the user already dismissed reappears in the list. That is a visible
+ * regression in exchange for consistency alone: this store is already an
+ * expect/actual with a working iOS implementation, so unlike the rest of the
+ * preference layer it is not blocking any target.
+ *
+ * Worth revisiting if ChessLobbyLogic ever gains a suspending initialisation
+ * path of its own.
+ */
 actual class ChessDismissedGamesStorage private actual constructor() {
     private var prefs: SharedPreferences? = null
 

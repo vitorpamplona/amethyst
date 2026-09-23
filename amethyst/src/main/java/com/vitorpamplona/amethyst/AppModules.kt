@@ -75,8 +75,8 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
-import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
@@ -1297,7 +1297,7 @@ class AppModules(
                     Filter(kinds = listOf(CalendarDateSlotEvent.KIND, CalendarTimeSlotEvent.KIND)),
                 ).conflate()
                 .collect {
-                    if (CalendarReminderPrefs(appContext).isEnabled() &&
+                    if (appContext.calendarReminderSettings().load().enabled &&
                         CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)
