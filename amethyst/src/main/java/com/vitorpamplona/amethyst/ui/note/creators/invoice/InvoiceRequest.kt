@@ -56,12 +56,12 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_tips
 import com.vitorpamplona.amethyst.commons.resources.note_to_receiver
 import com.vitorpamplona.amethyst.commons.resources.send_sats
 import com.vitorpamplona.amethyst.commons.resources.thank_you_so_much
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun InvoiceRequest(

@@ -45,15 +45,15 @@ import com.vitorpamplona.amethyst.commons.resources.profile_ui_setting_zap_recei
 import com.vitorpamplona.amethyst.commons.resources.profile_ui_settings
 import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
 import com.vitorpamplona.amethyst.commons.resources.settings_section_profile_sections
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Preview
 @Composable

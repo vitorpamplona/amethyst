@@ -57,19 +57,19 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_settings_sections
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_show_all
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_title
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_visible
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")

@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_post
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_dnf
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.GeocacheLogComment
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent

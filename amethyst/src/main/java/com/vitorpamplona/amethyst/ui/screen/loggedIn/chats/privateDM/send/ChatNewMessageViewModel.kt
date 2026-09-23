@@ -36,8 +36,12 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -50,12 +54,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileSender
@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -139,9 +140,13 @@ class ChatNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
                     accountViewModel.launchSigner {
-                        sendDraftSync()
+                        // Post rotates the tag and then clears the composer. A save still queued from
+                        // before that would see the empty text and delete the draft Post just saved
+                        // for the post that is still mining, so it's skipped once the tag has moved on.
+                        if (draftTag.current == tag) sendDraftSync()
                     }
                 }
             }
@@ -427,12 +432,22 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val draftToDelete = draftNote
-        innerSendPost(null)
-        onUiThread { cancel() }
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+        // With PoW on, the gift wraps are mined in the background and leave the phone
+        // minutes later; until then the draft is the only copy the user can see. The
+        // auto-save is debounced and cancel() drops the pending save, so flush it now
+        // and delete it only once the wraps are actually sent.
+        if (accountViewModel.account.powDifficultyFor(GiftWrapEvent.KIND) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
         }
+
+        val draftToDelete = draftNote
+        val account = accountViewModel.account
+        innerSendPost(null) {
+            // off the caller: signing the deletion must not hold up clearing the composer.
+            account.scope.launch(Dispatchers.IO) { account.deleteDraftIgnoreErrors(draftToDelete) }
+        }
+        onUiThread { cancel() }
     }
 
     suspend fun sendDraftSync() {
@@ -575,7 +590,10 @@ class ChatNewMessageViewModel :
         }
     }
 
-    private suspend fun innerSendPost(draftTag: String?) {
+    private suspend fun innerSendPost(
+        draftTag: String?,
+        onSent: suspend () -> Unit = {},
+    ) {
         val room = room.value ?: return
 
         val messageText = message.text.toString()
@@ -628,7 +646,7 @@ class ChatNewMessageViewModel :
         if (draftTag != null) {
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
         } else {
-            accountViewModel.account.sendNip17PrivateMessage(template)
+            accountViewModel.account.sendNip17PrivateMessage(template, onSent)
         }
 
         if (draftTag == null) {

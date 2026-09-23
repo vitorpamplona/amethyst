@@ -74,12 +74,12 @@ import com.vitorpamplona.amethyst.commons.resources.call_search_users
 import com.vitorpamplona.amethyst.commons.resources.call_speaker
 import com.vitorpamplona.amethyst.commons.resources.call_switch_camera
 import com.vitorpamplona.amethyst.commons.resources.call_unmute
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import org.webrtc.VideoTrack

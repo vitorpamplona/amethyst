@@ -37,9 +37,9 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_notification
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_notification_sent_title
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostNotifier
+import com.vitorpamplona.amethyst.commons.scheduledposts.extractContentPreview
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.extractContentPreview
 
 /**
  * Android [ScheduledPostNotifier]: posts a user-visible system notification when a

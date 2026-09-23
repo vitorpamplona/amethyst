@@ -57,13 +57,13 @@ import com.vitorpamplona.amethyst.commons.resources.local_blossom_cache_profile_
 import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache
 import com.vitorpamplona.amethyst.commons.resources.use_local_blossom_cache_caption
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun AllMediaServersScreen(

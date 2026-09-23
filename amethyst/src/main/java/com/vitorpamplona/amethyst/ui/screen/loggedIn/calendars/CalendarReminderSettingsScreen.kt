@@ -50,16 +50,16 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_l
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_lead_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_settings_title
 import com.vitorpamplona.amethyst.commons.resources.settings_section_reminders
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

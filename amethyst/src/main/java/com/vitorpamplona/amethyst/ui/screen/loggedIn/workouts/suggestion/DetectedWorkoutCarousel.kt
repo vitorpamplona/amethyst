@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutOrigin
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.workout_from_health_connect
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_combined_sessions
@@ -68,16 +69,15 @@ import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_d
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_message
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_title
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_distance_km
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Duration

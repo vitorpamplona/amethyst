@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
@@ -48,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -69,11 +73,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -147,9 +147,13 @@ class LongFormPostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
                     accountViewModel.launchSigner {
-                        sendDraftSync()
+                        // Post rotates the tag and then clears the composer. A save still queued from
+                        // before that would see the empty text and delete the draft Post just saved
+                        // for the post that is still mining, so it's skipped once the tag has moved on.
+                        if (draftTag.current == tag) sendDraftSync()
                     }
                 }
             }
@@ -355,6 +359,15 @@ class LongFormPostViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        if (accountViewModel.account.powDifficultyFor(template.kind) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
 
         val draftToDelete = draftNote
         onUiThread { cancel() }

@@ -31,12 +31,12 @@ import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.commons.ui.note.FoundLogProof
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheCard
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent

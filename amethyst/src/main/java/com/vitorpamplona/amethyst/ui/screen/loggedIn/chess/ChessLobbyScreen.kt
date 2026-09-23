@@ -60,11 +60,13 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.CompletedGameCard
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.NewChessGameButton
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.OverlappingAvatars
@@ -75,13 +77,12 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**

@@ -20,73 +20,80 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import org.jetbrains.compose.resources.StringResource
 
-/**
- * Standard button shape used for action buttons.
- */
-val ActionButtonShape = RoundedCornerShape(20.dp)
-
-/**
- * Standard content padding for action buttons.
- */
-val ActionButtonPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
-
-/**
- * An "Add" action button with consistent styling.
- *
- * @param onClick Action to perform when clicked
- * @param modifier Modifier for the button
- * @param text Button text (default: "Add")
- * @param enabled Whether the button is enabled
- */
 @Composable
-fun AddButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    text: String = "Add",
-    enabled: Boolean = true,
-) {
-    OutlinedButton(
-        modifier = modifier,
-        enabled = enabled,
-        onClick = onClick,
-        shape = ActionButtonShape,
-        contentPadding = ActionButtonPadding,
-    ) {
-        Text(text = text, textAlign = TextAlign.Center)
+@Preview
+fun AddButtonPreview() {
+    ThemeComparisonColumn {
+        Row {
+            Column {
+                AddButton(isActive = true) {}
+                AddButton(isActive = false) {}
+            }
+
+            Column {
+                RemoveButton(isActive = true) {}
+                RemoveButton(isActive = false) {}
+            }
+        }
     }
 }
 
 /**
- * A "Remove" action button with consistent styling.
- *
- * @param onClick Action to perform when clicked
- * @param modifier Modifier for the button
- * @param text Button text (default: "Remove")
- * @param enabled Whether the button is enabled
+ * The standard outlined "Add" action button (localized label, pill shape).
+ */
+@Composable
+fun AddButton(
+    modifier: Modifier = Modifier,
+    text: StringResource = Res.string.add,
+    isActive: Boolean = true,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        modifier = modifier,
+        enabled = isActive,
+        onClick = onClick,
+        shape = ButtonBorder,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
+    ) {
+        Text(text = stringRes(text), textAlign = TextAlign.Center)
+    }
+}
+
+/**
+ * The standard outlined "Remove" action button (localized label, pill shape).
  */
 @Composable
 fun RemoveButton(
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    text: String = "Remove",
-    enabled: Boolean = true,
+    text: StringResource = Res.string.remove,
+    isActive: Boolean = true,
+    onClick: () -> Unit,
 ) {
     OutlinedButton(
         modifier = modifier,
         onClick = onClick,
-        shape = ActionButtonShape,
-        enabled = enabled,
-        contentPadding = ActionButtonPadding,
+        shape = ButtonBorder,
+        enabled = isActive,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = text)
+        Text(text = stringRes(text))
     }
 }

@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_ft
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_km
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_m
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_unit_mi
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.phonePrefersMiles
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import kotlin.math.roundToInt

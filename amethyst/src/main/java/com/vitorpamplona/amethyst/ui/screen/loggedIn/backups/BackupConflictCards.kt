@@ -53,11 +53,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff

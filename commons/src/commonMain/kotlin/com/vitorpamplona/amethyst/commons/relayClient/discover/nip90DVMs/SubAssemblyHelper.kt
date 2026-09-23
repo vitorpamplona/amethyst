@@ -29,13 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByGeohash
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.filterContentDVMsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo

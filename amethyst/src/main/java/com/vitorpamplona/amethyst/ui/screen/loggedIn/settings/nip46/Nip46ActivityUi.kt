@@ -53,8 +53,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_ping
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_shared_pubkey
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_signed_kind
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_denied
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.stringRes
 
 private val LiveGreen = Color(0xFF3DDC84)
 

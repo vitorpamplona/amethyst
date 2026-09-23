@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.edited
 import com.vitorpamplona.amethyst.commons.resources.original
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.types.EditState
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Pencil marking an edited note; tapping cycles through the versions. The

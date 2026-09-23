@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_open_
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_title
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_video
 import com.vitorpamplona.amethyst.commons.resources.call_permission_denied_voice
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 fun hasPermission(
     context: Context,

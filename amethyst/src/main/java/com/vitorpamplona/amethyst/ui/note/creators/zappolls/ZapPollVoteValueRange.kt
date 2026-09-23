@@ -43,10 +43,10 @@ import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_max
 import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min
 import com.vitorpamplona.amethyst.commons.resources.poll_zap_value_min_max_explainer
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun ZapPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {

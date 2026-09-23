@@ -71,9 +71,9 @@ import com.vitorpamplona.amethyst.commons.resources.call_incoming
 import com.vitorpamplona.amethyst.commons.resources.call_incoming_video
 import com.vitorpamplona.amethyst.commons.resources.call_incoming_voice
 import com.vitorpamplona.amethyst.commons.resources.call_reject
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

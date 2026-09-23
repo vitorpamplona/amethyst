@@ -118,9 +118,6 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
-import com.vitorpamplona.amethyst.model.AccountMarmotActions
-import com.vitorpamplona.amethyst.model.AccountRelayGroupActions
-import com.vitorpamplona.amethyst.model.EventBroadcaster
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
 import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
@@ -1431,6 +1428,9 @@ class Account(
         // wraps still register with the delivery-ticks tracker at publish time.
         // Null for restart-restored jobs, whose rumor id wasn't persisted.
         displayedNoteId: HexKey? = null,
+        // Runs once the mined wraps are handed to the relays (e.g. to drop the
+        // composer's draft). Not persisted: a restart-restored job skips it.
+        onPublished: suspend () -> Unit = {},
     ): Boolean {
         val queue = powQueue() ?: return false
         if (seals.isEmpty()) return true
@@ -1465,7 +1465,10 @@ class Account(
                 }
                 seals.map { NIP17Factory().wrapSeal(it, expirationDelta, templateConversion = mineWrap) }
             },
-            publish = { wraps -> broadcastPrivately(wraps, displayedNoteId) },
+            publish = { wraps ->
+                broadcastPrivately(wraps, displayedNoteId)
+                onPublished()
+            },
         )
         return true
     }
@@ -2947,13 +2950,24 @@ class Account(
         broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer))
     }
 
-    override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
+    override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) = sendNip17PrivateMessage(template) {}
+
+    /**
+     * [onSent] runs once the wraps are handed to the relays — right away when
+     * the message is not mined, after the nonce search when it is — so the
+     * composer can keep its draft for as long as the message only exists in
+     * the mining queue.
+     */
+    suspend fun sendNip17PrivateMessage(
+        template: EventTemplate<ChatMessageEvent>,
+        onSent: suspend () -> Unit,
+    ) {
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id)) {
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id, onPublished = onSent)) {
                 // The wraps publish only after mining, but the user has already
                 // replied — advance the read marker now.
                 markDmRoomAsRead(senderMessage)
@@ -2962,6 +2976,7 @@ class Account(
         }
 
         broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer))
+        onSent()
     }
 
     /**
@@ -2973,10 +2988,13 @@ class Account(
      *
      * [powOverrideDifficulty] is the composer chip's per-post override:
      * null follows the account's gift-wrap setting, 0 disables mining.
+     * [onSent] runs once the wraps are handed to the relays (after mining,
+     * when mined).
      */
     suspend fun sendPrivateNote(
         template: EventTemplate<TextNoteEvent>,
         powOverrideDifficulty: Int? = null,
+        onSent: suspend () -> Unit = {},
     ) {
         if (!isWriteable()) return
 
@@ -2986,10 +3004,11 @@ class Account(
             val senderNote = signer.sign(template)
             val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
             val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id)) return
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id, onPublished = onSent)) return
         }
 
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
+        onSent()
     }
 
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {

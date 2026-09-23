@@ -50,8 +50,6 @@ import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.service.images.BlossomFetcher
-import com.vitorpamplona.amethyst.service.images.ProfilePictureFetcher
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope

@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_lower_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_mic_mute
 import com.vitorpamplona.amethyst.commons.resources.nest_mic_unmute
 import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Compact PIP layout. Renders three things, in priority order:

@@ -42,6 +42,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -91,8 +92,7 @@ class Nip88PollTagsTest {
     @Test
     fun theSpecsPollExampleParsesFieldForField() {
         val event = Event.fromJson(specPoll)
-        assertTrue(event is PollEvent)
-        val poll = event as PollEvent
+        val poll = assertIs<PollEvent>(event)
 
         assertEquals("Pineapple on pizza", poll.content)
         assertEquals(listOf("qj518h583" to "Yay", "gga6cdnqj" to "Nay"), poll.options().map { it.code to it.label })
@@ -104,8 +104,7 @@ class Nip88PollTagsTest {
     @Test
     fun theSpecsResponseExampleParsesFieldForField() {
         val event = Event.fromJson(specResponse)
-        assertTrue(event is PollResponseEvent)
-        val response = event as PollResponseEvent
+        val response = assertIs<PollResponseEvent>(event)
 
         assertEquals("1fc80cf813f1af33d5a435862b7ef7fb96b47e68a48f1abcadf8081f5a545550", response.poll()?.eventId)
         // Both tags are read. Which of them counts is the polltype's business, not the parser's.

@@ -61,6 +61,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.RepoInfoBar
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
@@ -72,10 +75,10 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_root
 import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry
 

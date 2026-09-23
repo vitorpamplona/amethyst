@@ -76,13 +76,13 @@ import com.vitorpamplona.amethyst.commons.resources.report_dialog_spam
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.report_malware
 import com.vitorpamplona.amethyst.commons.resources.violence
-import com.vitorpamplona.amethyst.ui.components.TextSpinner
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
 

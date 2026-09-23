@@ -34,17 +34,17 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.SimpleHeaderImage
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.commons.ui.theme.authorNotePictureForImageHeader
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.SimpleHeaderImage
-import com.vitorpamplona.amethyst.ui.theme.Size16dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 
 @Composable
 fun DefaultImageHeader(

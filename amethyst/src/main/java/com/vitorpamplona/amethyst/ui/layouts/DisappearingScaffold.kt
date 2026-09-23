@@ -59,11 +59,11 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberDisappearingBarState
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
 import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 

@@ -29,13 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByGeohash
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.discover.nip72Communities.filterCommunitiesGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

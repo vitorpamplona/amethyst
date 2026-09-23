@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_description
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_go
@@ -56,15 +57,14 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_popular
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_relay_label
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_your_relays
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.PopupUpEffect
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelaySuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.ShowRelaySuggestionList
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**

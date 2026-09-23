@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -45,6 +47,9 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -64,13 +69,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -160,8 +160,12 @@ open class CommentPostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
-                    sendDraftSync()
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
+                    // Post rotates the tag and then clears the composer. A save still queued from
+                    // before that would see the empty text and delete the draft Post just saved
+                    // for the post that is still mining, so it's skipped once the tag has moved on.
+                    if (draftTag.current == tag) sendDraftSync()
                 }
             }
         }
@@ -584,10 +588,20 @@ open class CommentPostViewModel :
             }
         }
 
-        val draftToDelete = draftNote
-        val anonymous = wantsAnonymousPost
         // captured before cancel() resets the chip
         val chosenPow = powOverride
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        if (accountViewModel.account.powDifficultyFor(template.kind, chosenPow) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
+
+        val draftToDelete = draftNote
+        val anonymous = wantsAnonymousPost
         onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post

@@ -52,6 +52,10 @@ import com.vitorpamplona.amethyst.commons.resources.new_media
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.take_a_picture
 import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -59,12 +63,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers

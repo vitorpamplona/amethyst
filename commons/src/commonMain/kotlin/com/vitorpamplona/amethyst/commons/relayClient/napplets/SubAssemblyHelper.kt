@@ -25,10 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.napplets.filterNappletsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.napplets.filterNappletsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.napplets.filterNappletsByMutedAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.napplets.filterNappletsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

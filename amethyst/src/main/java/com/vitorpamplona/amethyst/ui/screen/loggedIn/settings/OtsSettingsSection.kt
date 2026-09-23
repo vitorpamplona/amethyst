@@ -62,8 +62,8 @@ import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_api_label
 import com.vitorpamplona.amethyst.commons.resources.ots_reset_to_auto_select
 import com.vitorpamplona.amethyst.commons.resources.save
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 
 /**

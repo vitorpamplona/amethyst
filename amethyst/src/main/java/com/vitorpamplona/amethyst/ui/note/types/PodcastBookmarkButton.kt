@@ -43,8 +43,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * A bookmark toggle for a podcast (show or episode). "Favoriting"/subscribing to a podcast reuses
