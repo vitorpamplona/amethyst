@@ -1908,8 +1908,10 @@ class Account(
             val now = TimeUtils.now()
             // Newer than the version it replaces, but never far in the future: relays reject
             // those, and later edits signed at "now" would lose to it. A far-future external
-            // version can't be outranked safely; the restore then goes out at "now".
-            val createdAt = (conflict.incoming.createdAt + 1).takeIf { it <= now + maxRestoreFutureSeconds }?.coerceAtLeast(now) ?: now
+            // version can't be outranked safely, and a restore signed at "now" would lose to it
+            // everywhere, so it isn't sent: the conflict reopens and only keeping it works.
+            val createdAt = (conflict.incoming.createdAt + 1).coerceAtLeast(now)
+            if (createdAt > now + maxRestoreFutureSeconds) return
             val resigned = signer.sign<Event>(createdAt, saved.kind, BackupRestore.tagsToResign(saved, now), saved.content)
             broadcaster.sendRestoredVersion(resigned)
             restored = true

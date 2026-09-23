@@ -2927,8 +2927,14 @@
     <string name="backup_review_service_followers">Followers</string>
     <string name="backup_review_service_topics">Topics</string>
     <string name="backup_review_trust_warning">Ranks, follower counts and spam filtering you see come from these providers.</string>
-    <string name="backup_review_payment_targets_gone">%1$s ways to pay you removed</string>
-    <string name="backup_review_offers_gone">%1$s offers removed</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">%1$d way to pay you removed</item>
+        <item quantity="other">%1$d ways to pay you removed</item>
+    </plurals>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d offer removed</item>
+        <item quantity="other">%1$d offers removed</item>
+    </plurals>
     <string name="backup_review_payments_explainer">People paying you only see what\'s in this list.</string>
     <string name="backup_review_offer">BOLT12 offer</string>
     <string name="backup_review_encrypted_cleared">You emptied it</string>

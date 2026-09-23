@@ -122,7 +122,7 @@ class AppSpecificState(
                             // The settings handed over are never merged — updateAppSpecificData
                             // returns before that whenever the content is empty — so defaults
                             // here cannot overwrite the real ones.
-                            if (event.content.isEmpty()) {
+                            if (event.content.isBlank()) {
                                 settings.updateAppSpecificData(event, AccountSyncedSettingsInternal())
                                 return@let
                             }

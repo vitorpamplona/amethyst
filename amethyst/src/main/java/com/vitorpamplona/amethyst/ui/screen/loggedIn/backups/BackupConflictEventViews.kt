@@ -94,7 +94,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
@@ -106,6 +105,7 @@ import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoDiff
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
@@ -158,8 +158,7 @@ private fun LazyListScope.followListItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
-    val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
+    val (saved, new) = conflict.followCounts
     val dropped = diff.follows.removed.size
     val gained = diff.follows.added.size
     val edited = diff.follows.changed.size
@@ -192,7 +191,12 @@ private fun LazyListScope.followListItems(
                     stringRes(R.string.backup_review_tab_edited, edited.toString()),
                 ),
             selected = ui.tab,
-            onSelect = { ui.tab = it },
+            onSelect = {
+                // The search box only shows on long tabs; a query typed there must not keep
+                // filtering a short tab that has no box to clear it from.
+                ui.tab = it
+                ui.query = ""
+            },
             modifier = Pad.padding(top = 16.dp),
         )
     }
@@ -951,17 +955,20 @@ private fun LazyListScope.nutzapItems(
         }
     }
 
-    val saved = (conflict.saved as? NutzapInfoEvent)?.mints().orEmpty()
+    // Matched the way the diff matches them, and once per mint: a list can repeat a mint,
+    // and a repeated row key crashes the LazyColumn.
+    val mintKey = { m: NutzapMintTag -> m.mintUrl.trimEnd('/').lowercase() }
+    val saved = (conflict.saved as? NutzapInfoEvent)?.mints().orEmpty().distinctBy(mintKey)
     val removedUrls =
         diff.mints.removed
-            .map { it.mintUrl }
+            .map(mintKey)
             .toSet()
-    val changedUrls = diff.mints.changed.associate { it.after.mintUrl to it }
+    val changedUrls = diff.mints.changed.associateBy { mintKey(it.before) }
     val mintRows =
         saved.map { m ->
-            when (m.mintUrl) {
+            when (mintKey(m)) {
                 in removedUrls -> Triple(m.mintUrl, m.units.joinToString(), LaneState.DROPPED)
-                in changedUrls -> Triple(m.mintUrl, changedUrls.getValue(m.mintUrl).let { it.before.units.joinToString() + " → " + it.after.units.joinToString() }, LaneState.DEMOTED)
+                in changedUrls -> Triple(m.mintUrl, changedUrls.getValue(mintKey(m)).let { it.before.units.joinToString() + " → " + it.after.units.joinToString() }, LaneState.DEMOTED)
                 else -> Triple(m.mintUrl, m.units.joinToString(), LaneState.KEPT)
             }
         } + diff.mints.added.map { Triple(it.mintUrl, it.units.joinToString(), LaneState.ADDED) }
@@ -1050,13 +1057,15 @@ private fun LazyListScope.groupItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val key = { g: GroupTag -> g.groupId + "@" + g.relayUrl }
+    // Matched the way the diff matches them, and once per group: a repeated row key crashes
+    // the LazyColumn.
+    val key = { g: GroupTag -> g.groupId + "@" + (RelayUrlNormalizer.normalizeOrNull(g.relayUrl)?.url ?: g.relayUrl) }
     val removed =
         diff.groups.removed
             .map(key)
             .toSet()
-    val changed = diff.groups.changed.associateBy { key(it.after) }
-    val saved = (conflict.saved as? SimpleGroupListEvent)?.publicGroups().orEmpty()
+    val changed = diff.groups.changed.associateBy { key(it.before) }
+    val saved = (conflict.saved as? SimpleGroupListEvent)?.publicGroups().orEmpty().distinctBy(key)
     val tiles =
         saved.map { g ->
             when (key(g)) {

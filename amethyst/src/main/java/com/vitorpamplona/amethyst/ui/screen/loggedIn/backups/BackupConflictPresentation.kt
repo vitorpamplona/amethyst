@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
@@ -40,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.Birthday
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
@@ -63,9 +63,6 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDif
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 
 private const val MAX_VALUE_LENGTH = 80
-
-/** Follows counted the way [ContactListDiff] matches them: valid keys, one per pubkey. */
-internal fun ContactListEvent.uniqueFollowCount() = follows().mapTo(HashSet()) { it.pubKey }.size
 
 /** Items lost, gained and changed in a conflict, counting encrypted content as one item. */
 @Immutable
@@ -239,9 +236,21 @@ private fun arrow(
     after: String?,
 ) = (before ?: "∅") + " → " + (after ?: "∅")
 
-/** Turns each event's own diff into typed, labelled groups. */
+/**
+ * Each event's own diff as typed, labelled groups, built once per diff: it maps every item,
+ * which for a large list is too much work to redo on each recomposition.
+ */
 @Composable
-fun presentationOf(diff: EventDiff): DiffPresentation {
+fun rememberPresentation(diff: EventDiff): DiffPresentation {
+    val context = LocalContext.current
+    return remember(diff, context) { presentationOf(diff) { context.getString(it) } }
+}
+
+/** Turns each event's own diff into typed, labelled groups. [str] resolves the labels. */
+fun presentationOf(
+    diff: EventDiff,
+    str: (Int) -> String,
+): DiffPresentation {
     val (groups, content) =
         when (diff) {
             is MetadataDiff -> {
@@ -251,19 +260,19 @@ fun presentationOf(diff: EventDiff): DiffPresentation {
                     fieldGroup(
                         R.string.backup_entry_profile_field,
                         listOf(
-                            stringRes(R.string.backup_profile_field_name) to diff.name,
-                            stringRes(R.string.backup_profile_field_display_name) to diff.displayName,
-                            stringRes(R.string.backup_profile_field_about) to diff.about,
-                            stringRes(R.string.backup_profile_field_picture) to diff.picture,
-                            stringRes(R.string.backup_profile_field_banner) to diff.banner,
-                            stringRes(R.string.backup_profile_field_website) to diff.website,
-                            stringRes(R.string.backup_profile_field_nip05) to diff.nip05,
-                            stringRes(R.string.backup_profile_field_lud16) to diff.lud16,
-                            stringRes(R.string.backup_profile_field_lud06) to diff.lud06,
-                            stringRes(R.string.backup_profile_field_clink_offer) to diff.clinkOffer,
-                            stringRes(R.string.backup_profile_field_pronouns) to diff.pronouns,
-                            stringRes(R.string.backup_profile_field_birthday) to birthday,
-                            stringRes(R.string.backup_profile_field_bot) to bot,
+                            str(R.string.backup_profile_field_name) to diff.name,
+                            str(R.string.backup_profile_field_display_name) to diff.displayName,
+                            str(R.string.backup_profile_field_about) to diff.about,
+                            str(R.string.backup_profile_field_picture) to diff.picture,
+                            str(R.string.backup_profile_field_banner) to diff.banner,
+                            str(R.string.backup_profile_field_website) to diff.website,
+                            str(R.string.backup_profile_field_nip05) to diff.nip05,
+                            str(R.string.backup_profile_field_lud16) to diff.lud16,
+                            str(R.string.backup_profile_field_lud06) to diff.lud06,
+                            str(R.string.backup_profile_field_clink_offer) to diff.clinkOffer,
+                            str(R.string.backup_profile_field_pronouns) to diff.pronouns,
+                            str(R.string.backup_profile_field_birthday) to birthday,
+                            str(R.string.backup_profile_field_bot) to bot,
                         ),
                     ),
                     listGroup(
@@ -307,9 +316,9 @@ fun presentationOf(diff: EventDiff): DiffPresentation {
             is AdvertisedRelayListDiff -> {
                 val types =
                     mapOf(
-                        AdvertisedRelayType.BOTH to stringRes(R.string.backup_conflict_relay_read_write),
-                        AdvertisedRelayType.READ to stringRes(R.string.backup_conflict_relay_read_only),
-                        AdvertisedRelayType.WRITE to stringRes(R.string.backup_conflict_relay_write_only),
+                        AdvertisedRelayType.BOTH to str(R.string.backup_conflict_relay_read_write),
+                        AdvertisedRelayType.READ to str(R.string.backup_conflict_relay_read_only),
+                        AdvertisedRelayType.WRITE to str(R.string.backup_conflict_relay_write_only),
                     )
                 listOf(
                     listGroup(

@@ -72,6 +72,11 @@ class BackupConflictGuard(
     // Externally signed versions the user explicitly chose to keep over the backup.
     private val accepted = HashSet<HexKey>()
 
+    // Slots with a restore in flight, and those whose backup moved on meanwhile: a failed
+    // restore must not reopen a conflict about a version that is no longer the newest.
+    private val restoringSlots = HashSet<String>()
+    private val movedOnWhileRestoring = HashSet<String>()
+
     /**
      * Decides whether [incoming] may overwrite the [saved] backup. Versions signed by this app
      * always may. A newer version signed elsewhere that removed items from the saved one is
@@ -91,6 +96,9 @@ class BackupConflictGuard(
         lock.withLock {
             if (saved?.id == incoming.id) return@withLock false
             if (incoming.id in resolving) return@withLock false
+            // Never roll the backup back, e.g. by the retry of a conflict whose version has
+            // been overtaken since it was raised.
+            if (saved != null && incoming.createdAt < saved.createdAt) return@withLock false
 
             val slot = backupSlot(incoming)
             val pending = _conflicts.value[slot]
@@ -130,7 +138,12 @@ class BackupConflictGuard(
             dropLocked(slot)
             // A wipe from elsewhere that lost nothing (e.g. the backup was empty too) doesn't
             // become the backup; one signed here or explicitly kept does.
-            !isEmpty || isLocal || wasAccepted
+            val stored = !isEmpty || isLocal || wasAccepted
+            if (stored) {
+                accepted.remove(incoming.id)
+                if (slot in restoringSlots) movedOnWhileRestoring.add(slot)
+            }
+            stored
         }
 
     /** Forgets the open conflict of [slot], e.g. because its event was deleted. */
@@ -203,6 +216,7 @@ class BackupConflictGuard(
         lock.withLock {
             val retry = claimLocked(conflict) ?: return@withLock null
             resolving.add(conflict.incoming.id)
+            restoringSlots.add(conflict.slot)
             retry
         }
 
@@ -217,7 +231,9 @@ class BackupConflictGuard(
     ) {
         lock.withLock {
             resolving.remove(conflict.incoming.id)
-            if (restored || _conflicts.value.containsKey(conflict.slot)) return@withLock
+            restoringSlots.remove(conflict.slot)
+            val movedOn = movedOnWhileRestoring.remove(conflict.slot)
+            if (restored || movedOn || _conflicts.value.containsKey(conflict.slot)) return@withLock
             _conflicts.update { it + (conflict.slot to conflict) }
             retries[conflict.slot] = token
             onChange()

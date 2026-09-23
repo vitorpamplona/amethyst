@@ -86,7 +86,6 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDif
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
@@ -192,8 +191,9 @@ fun BackupConflictReviewScreen(
         conflict = conflict,
         accountViewModel = accountViewModel,
         nav = nav,
-        onRestore = { accountViewModel.launchSigner { accountViewModel.account.restoreBackupOver(conflict) } },
-        onKeepNew = { accountViewModel.account.acceptExternalVersion(conflict) },
+        // A read-only account can't sign the saved version again, so it can only keep the new one.
+        onRestore = if (accountViewModel.isWriteable()) ({ accountViewModel.launchSigner { accountViewModel.account.restoreBackupOver(conflict) } }) else null,
+        onKeepNew = { accountViewModel.acceptExternalBackupVersion(conflict) },
     )
 }
 
@@ -202,10 +202,10 @@ private fun BackupConflictReview(
     conflict: ReplaceableBackupConflict,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onRestore: () -> Unit,
+    onRestore: (() -> Unit)?,
     onKeepNew: () -> Unit,
 ) {
-    val presentation = presentationOf(conflict.diff)
+    val presentation = rememberPresentation(conflict.diff)
     val ui = remember(conflict.slot) { ReviewUiState() }
     val (keepLabel, restoreLabel) = actionLabels(conflict)
 
@@ -297,7 +297,7 @@ internal fun SectionRow(row: ReviewRow.Section) {
 private fun ReviewActions(
     keepLabel: String,
     restoreLabel: String,
-    onRestore: () -> Unit,
+    onRestore: (() -> Unit)?,
     onKeepNew: () -> Unit,
 ) {
     Surface(tonalElevation = 3.dp) {
@@ -316,13 +316,15 @@ private fun ReviewActions(
         ) {
             // Keeping the new version is the default: it's what is on relays already. Restoring
             // always reverts another app's change, so it is the red, secondary choice.
-            OutlinedButton(
-                onClick = onRestore,
-                modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-            ) {
-                Text(restoreLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+            if (onRestore != null) {
+                OutlinedButton(
+                    onClick = onRestore,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                ) {
+                    Text(restoreLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+                }
             }
             Button(onClick = onKeepNew, modifier = Modifier.weight(1f).height(52.dp)) {
                 Text(keepLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
@@ -345,8 +347,7 @@ internal fun eventTitle(conflict: ReplaceableBackupConflict): String {
 private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, String> =
     when (val diff = conflict.diff) {
         is ContactListDiff -> {
-            val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
-            val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
+            val (saved, new) = conflict.followCounts
             stringRes(R.string.backup_action_keep_count, new.toString()) to stringRes(R.string.backup_action_restore_count, saved.toString())
         }
         is MuteListDiff -> {

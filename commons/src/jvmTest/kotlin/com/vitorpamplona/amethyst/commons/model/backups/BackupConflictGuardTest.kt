@@ -399,4 +399,29 @@ class BackupConflictGuardTest {
         guard.drop(conflict.slot)
         assertEquals(4, changes)
     }
+
+    @Test
+    fun anOlderVersionNeverRollsTheBackupBack() {
+        val saved = follows(200, alice)
+        val backup = Backup(saved)
+        backup.update(signedHere(follows(100, alice, bob)))
+        assertSame(saved, backup.saved)
+    }
+
+    @Test
+    fun aFailedRestoreDoesNotReopenAConflictTheBackupMovedPast() {
+        val saved = follows(100, alice, bob)
+        val backup = Backup(saved)
+        backup.update(follows(200, bob))
+        val conflict = openConflict()
+        val token = assertNotNull(guard.startRestoring(conflict))
+
+        // While the signer is still asking, another app puts everything back and more.
+        val fixed = follows(300, alice, bob, carol)
+        backup.update(fixed)
+        guard.finishRestoring(conflict, token, restored = false)
+
+        assertTrue(guard.conflicts.value.isEmpty())
+        assertSame(fixed, backup.saved)
+    }
 }

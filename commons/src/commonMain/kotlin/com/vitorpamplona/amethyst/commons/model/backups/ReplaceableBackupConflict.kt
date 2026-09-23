@@ -143,6 +143,15 @@ class ReplaceableBackupConflict(
     val slot: String = backupSlot(incoming)
 
     val eventType: BackupEventType get() = BackupEventType.of(incoming.kind)
+
+    /**
+     * Distinct people followed by the saved and the incoming version, for follow-list
+     * conflicts (0 otherwise). Parsed once: a follow list can have thousands of entries, and
+     * the Home card, the review screen and its buttons all show these counts.
+     */
+    val followCounts: Pair<Int, Int> by lazy { uniqueFollows(saved) to uniqueFollows(incoming) }
+
+    private fun uniqueFollows(event: Event) = (event as? ContactListEvent)?.follows()?.mapTo(HashSet()) { it.pubKey }?.size ?: 0
 }
 
 fun backupSlot(event: Event): String = backupSlotOf(event.kind, event.dTag())

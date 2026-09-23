@@ -1215,11 +1215,11 @@ class AccountSettings(
             is ConcordCommunityListEvent -> updateConcordListTo(incoming)
             is TrustProviderListEvent -> updateTrustProviderListTo(incoming)
             is MuteListEvent -> updateMuteList(incoming)
-            // NIP-78 is deliberately absent: its update also takes the decrypted
-            // AccountSyncedSettingsInternal, which only the caller can produce. Keeping that
-            // version still works — [BackupConflictGuard.keepIncoming] records the id as accepted
-            // first, so the next delivery walks into the backup
-            // unchallenged — it just lands when the event next arrives rather than right now.
+            // NIP-78 only raises a conflict when its blob was emptied, and an empty blob is
+            // stored without merging the settings handed with it, so defaults are safe here.
+            // A non-empty one needs the decrypted settings only the caller has; it lands when
+            // the event next arrives, already recorded as accepted.
+            is AppSpecificDataEvent -> if (incoming.content.isBlank()) updateAppSpecificData(incoming, AccountSyncedSettingsInternal())
             else -> Unit
         }
     }
@@ -1558,10 +1558,10 @@ class AccountSettings(
     ) {
         if (appSettings == null) return
 
-        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isEmpty()) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
+        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isBlank()) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
             backupAppSpecificData = appSettings
             // An emptied blob (signed here or accepted by the user) has no settings to merge.
-            if (appSettings.content.isEmpty()) {
+            if (appSettings.content.isBlank()) {
                 saveAccountSettings()
                 return
             }

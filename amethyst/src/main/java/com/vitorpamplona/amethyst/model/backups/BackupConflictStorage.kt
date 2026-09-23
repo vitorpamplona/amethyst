@@ -39,7 +39,18 @@ import com.vitorpamplona.quartz.utils.Log
  * Kept out of `LocalPreferences` so it is reachable from a plain JVM test.
  */
 object BackupConflictStorage {
-    fun encode(conflicts: List<Triple<Event, Event, Event>>): String =
+    // Every settings save writes the open conflicts, and each can hold a follow list with
+    // thousands of entries: reuse the last encoding while the conflicts themselves are the same.
+    @Volatile
+    private var lastEncoded: Pair<List<String>, String>? = null
+
+    fun encode(conflicts: List<Triple<Event, Event, Event>>): String {
+        val ids = conflicts.flatMap { (saved, incoming, cause) -> listOf(saved.id, incoming.id, cause.id) }
+        lastEncoded?.let { (cachedIds, encoded) -> if (cachedIds == ids) return encoded }
+        return encodeUncached(conflicts).also { lastEncoded = ids to it }
+    }
+
+    private fun encodeUncached(conflicts: List<Triple<Event, Event, Event>>): String =
         JsonMapper.toJson(
             conflicts.map { (saved, incoming, cause) ->
                 listOf(

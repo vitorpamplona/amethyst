@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -673,10 +674,26 @@ private fun LazyListScope.trustProviderItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val before = (conflict.saved as? TrustProviderListEvent)?.serviceProviders().orEmpty().associate { it.service.type to it.pubkey }
-    val after = (conflict.incoming as? TrustProviderListEvent)?.serviceProviders().orEmpty().associate { it.service.type to it.pubkey }
-    val rows = (before.keys + after.keys).distinct().map { ServiceRow(it, before[it], after[it]) }
-    val affected = rows.count { it.before != it.after }
+    // A service can have several providers, so each side is a set per service: providers on
+    // both sides are kept rows, and the ones only before or only after are paired up as swaps.
+    val before = (conflict.saved as? TrustProviderListEvent)?.serviceProviders().orEmpty().groupBy({ it.service.type }, { it.pubkey })
+    val after = (conflict.incoming as? TrustProviderListEvent)?.serviceProviders().orEmpty().groupBy({ it.service.type }, { it.pubkey })
+    val services = (before.keys + after.keys).distinct()
+    val rows =
+        services.flatMap { service ->
+            val had = before[service].orEmpty().distinct()
+            val has = after[service].orEmpty().distinct()
+            val gone = had - has.toSet()
+            val new = has - had.toSet()
+            had.filter { it in has }.map { ServiceRow(service, it, it) } +
+                List(maxOf(gone.size, new.size)) { ServiceRow(service, gone.getOrNull(it), new.getOrNull(it)) }
+        }
+    val affected =
+        rows
+            .filter { it.before != it.after }
+            .map { it.service }
+            .distinct()
+            .size
 
     item(key = "trust-hero", contentType = "hero") {
         val tones = conflictTones()
@@ -686,7 +703,7 @@ private fun LazyListScope.trustProviderItems(
                     Icon(symbol = MaterialSymbols.Group, contentDescription = null, tint = tones.changed)
                 }
                 Column {
-                    Text(stringRes(R.string.backup_review_services_changed, affected.toString(), rows.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(stringRes(R.string.backup_review_services_changed, affected.toString(), services.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
                     Text(stringRes(R.string.backup_review_services_changed_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }
@@ -699,7 +716,7 @@ private fun LazyListScope.trustProviderItems(
             }
         }
     }
-    items(rows, key = { "service-" + it.service }, contentType = { "service-row" }) { row -> ServiceTableRow(row, accountViewModel, nav) }
+    items(rows, key = { "service-" + it.service + "-" + it.before + "-" + it.after }, contentType = { "service-row" }) { row -> ServiceTableRow(row, accountViewModel, nav) }
     item(key = "trust-note", contentType = "note") {
         val tones = conflictTones()
         Row(
@@ -806,7 +823,7 @@ private fun LazyListScope.paymentTargetItems(
 ) {
     val saved = (conflict.saved as? PaymentTargetsEvent)?.paymentTargets().orEmpty()
     val targets = fates(saved, diff.targets) { it }
-    moneyHero(targets.count { it.second == ItemFate.DROPPED }, R.string.backup_review_payment_targets_gone)
+    moneyHero(targets.count { it.second == ItemFate.DROPPED }, R.plurals.backup_review_payment_targets_gone)
     items(targets, key = { "target-" + it.first.type + ":" + it.first.authority }, contentType = { "money-row" }) { (target, fate) -> PaymentTargetRow(target, fate) }
 }
 
@@ -816,7 +833,7 @@ private fun LazyListScope.offerItems(
 ) {
     val saved = (conflict.saved as? Bolt12OfferListEvent)?.offers().orEmpty()
     val offers = fates(saved, diff.offers) { it }
-    moneyHero(offers.count { it.second == ItemFate.DROPPED }, R.string.backup_review_offers_gone)
+    moneyHero(offers.count { it.second == ItemFate.DROPPED }, R.plurals.backup_review_offers_gone)
     items(offers, key = { "offer-" + it.first }, contentType = { "money-row" }) { (offer, fate) ->
         MoneyRow(stringRes(R.string.backup_review_offer), offer.toShortDisplay(prefixSize = 4), fate)
     }
@@ -835,7 +852,7 @@ private fun LazyListScope.moneyHero(
                     Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, tint = color)
                 }
                 Column {
-                    Text(stringRes(headline, dropped.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = color)
+                    Text(pluralStringResource(headline, dropped, dropped), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = color)
                     Text(stringRes(R.string.backup_review_payments_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }

@@ -145,3 +145,10 @@ lands on the next delivery.
 - Edits from the same user on another Amethyst install count as "external" when they
   remove items. That's intended: the device can't tell them apart from a careless app.
 - Desktop marks its own events too but has no backup store or conflict UI yet.
+- Moving public items into a private section that already existed is still questioned: the
+  private section re-encrypts on every save, so it only reads as "changed", and telling
+  "made private" from "deleted" would need decrypting it.
+- A version dated more than 15 minutes in the future can't be outranked safely, so Restore
+  refuses it (the conflict reopens) and only keeping it works.
+- Read-only (npub) accounts can't re-sign the saved version, so their review offers only
+  keeping the new one.

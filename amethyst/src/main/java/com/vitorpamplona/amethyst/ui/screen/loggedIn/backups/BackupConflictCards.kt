@@ -66,7 +66,6 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
@@ -273,8 +272,7 @@ private fun LeadConflictCard(
             }
             val diff = conflict.diff
             if (diff is ContactListDiff) {
-                val saved = (conflict.saved as? ContactListEvent)?.uniqueFollowCount() ?: 0
-                val new = (conflict.incoming as? ContactListEvent)?.uniqueFollowCount() ?: 0
+                val (saved, new) = conflict.followCounts
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(saved.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     SplitBar(

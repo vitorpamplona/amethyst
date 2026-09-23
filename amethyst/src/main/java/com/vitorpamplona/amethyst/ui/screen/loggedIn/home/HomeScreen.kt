@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -438,15 +439,25 @@ fun FeedLoaded(
     val backupConflicts by accountViewModel.account.settings.backupConflicts
         .collectAsStateWithLifecycle()
 
+    // The list keeps its position anchored to the first visible post, so cards that appear
+    // while the feed sits at the top would be inserted just above the screen. Only then (not
+    // when the user has scrolled down) bring them into view.
+    val hasConflicts = backupConflicts.isNotEmpty()
+    val atTop by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
+    val cardsAppearedAtTop = remember(hasConflicts) { hasConflicts && atTop }
+    LaunchedEffect(cardsAppearedAtTop) {
+        if (cardsAppearedAtTop) listState.scrollToItem(0)
+    }
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
         // Only while a conflict is open, so the list's first item (and with it how the
         // scroll position anchors when new posts arrive) is unchanged the rest of the time.
-        if (backupConflicts.isNotEmpty()) {
+        if (hasConflicts) {
             item(key = "backupConflicts", contentType = "backupConflicts") {
-                BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel.account::acceptExternalVersion)
+                BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel::acceptExternalBackupVersion)
             }
         }
         if (liveSection != null) {
@@ -552,7 +563,7 @@ private fun WithBackupConflicts(
         BackupConflictCards(
             backupConflicts,
             nav,
-            onAccept = accountViewModel.account::acceptExternalVersion,
+            onAccept = accountViewModel::acceptExternalBackupVersion,
             Modifier
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
