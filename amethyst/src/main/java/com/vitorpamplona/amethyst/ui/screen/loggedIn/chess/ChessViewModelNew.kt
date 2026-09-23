@@ -25,7 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStorage
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStore
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessLobbyLogic
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
@@ -61,7 +61,7 @@ class ChessViewModelNew(
     private val publisher = AndroidChessPublisher(account)
     private val fetcher = AndroidRelayFetcher(account)
     private val metadataProvider = AndroidMetadataProvider()
-    private val dismissedStorage = ChessDismissedGamesStorage.create(application)
+    private val dismissedStorage = ChessDismissedGamesStore(application.chessDismissedGamesData)
 
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =

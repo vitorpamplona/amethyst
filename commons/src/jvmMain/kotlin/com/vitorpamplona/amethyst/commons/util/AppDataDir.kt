@@ -18,34 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.nip64Chess
+package com.vitorpamplona.amethyst.commons.util
 
-import java.util.prefs.Preferences
+import java.io.File
 
-actual class ChessDismissedGamesStorage private actual constructor() {
-    private val prefs: Preferences = Preferences.userNodeForPackage(ChessDismissedGamesStorage::class.java)
-
-    actual companion object {
-        private const val NODE_PREFIX = "chess_dismissed_"
-        private const val DELIMITER = ","
-
-        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
-    }
-
-    actual fun load(userPubkey: String): Set<String> {
-        val raw = prefs.get("$NODE_PREFIX$userPubkey", "")
-        if (raw.isEmpty()) return emptySet()
-        return raw.split(DELIMITER).toSet()
-    }
-
-    actual fun save(
-        userPubkey: String,
-        ids: Set<String>,
-    ) {
-        if (ids.isEmpty()) {
-            prefs.remove("$NODE_PREFIX$userPubkey")
-        } else {
-            prefs.put("$NODE_PREFIX$userPubkey", ids.joinToString(DELIMITER))
+/**
+ * Where this desktop OS keeps per-user application data.
+ *
+ * One definition, so the key file, the preference stores and anything else
+ * persistent land together rather than each picking their own convention.
+ */
+val appDataDir: File
+    get() {
+        val home = System.getProperty("user.home") ?: "."
+        val os = System.getProperty("os.name").orEmpty().lowercase()
+        return when {
+            os.contains("mac") || os.contains("darwin") ->
+                File(home, "Library/Application Support/Amethyst")
+            os.contains("win") ->
+                File(System.getenv("APPDATA") ?: "$home\\AppData\\Roaming", "Amethyst")
+            else ->
+                File(System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() } ?: "$home/.local/share", "amethyst")
         }
     }
-}

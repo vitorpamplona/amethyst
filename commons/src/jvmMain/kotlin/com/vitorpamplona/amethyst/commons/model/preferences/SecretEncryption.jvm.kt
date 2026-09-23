@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.preferences
 
+import com.vitorpamplona.amethyst.commons.util.appDataDir
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
@@ -56,21 +57,7 @@ actual class SecretEncryption internal constructor(
         private const val GCM_TAG_LENGTH_BITS = 128
         private const val KEY_FILE_NAME = "secret.key"
 
-        /** Where this OS keeps per-user application data. */
-        internal fun defaultKeyFile(): File {
-            val home = System.getProperty("user.home") ?: "."
-            val os = System.getProperty("os.name").orEmpty().lowercase()
-            val dir =
-                when {
-                    os.contains("mac") || os.contains("darwin") ->
-                        File(home, "Library/Application Support/Amethyst")
-                    os.contains("win") ->
-                        File(System.getenv("APPDATA") ?: "$home\\AppData\\Roaming", "Amethyst")
-                    else ->
-                        File(System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() } ?: "$home/.local/share", "amethyst")
-                }
-            return File(dir, KEY_FILE_NAME)
-        }
+        internal fun defaultKeyFile(): File = File(appDataDir, KEY_FILE_NAME)
     }
 
     // A Cipher holds the state of the operation in progress, so two coroutines

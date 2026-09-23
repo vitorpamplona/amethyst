@@ -18,27 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.nip64Chess
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
-// Phase 2 compile-only iOS actual. In-memory only; persistence via
-// NSUserDefaults arrives with the iosApp module in Phase 3.
-actual class ChessDismissedGamesStorage private actual constructor() {
-    private val dismissed = mutableMapOf<String, Set<String>>()
+import android.content.Context
+import androidx.datastore.preferences.preferencesDataStore
 
-    actual companion object {
-        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
-    }
-
-    actual fun load(userPubkey: String): Set<String> = dismissed[userPubkey] ?: emptySet()
-
-    actual fun save(
-        userPubkey: String,
-        ids: Set<String>,
-    ) {
-        if (ids.isEmpty()) {
-            dismissed.remove(userPubkey)
-        } else {
-            dismissed[userPubkey] = ids
-        }
-    }
-}
+/**
+ * Where Android keeps the dismissed-chess-games store.
+ *
+ * A new file rather than a migration of `chess_dismissed_games`: the dismissed
+ * list is a convenience, and chess has few enough users that carrying the old
+ * data over is not worth the code. Anyone who had dismissed a game sees it once
+ * more and dismisses it again.
+ */
+internal val Context.chessDismissedGamesData by preferencesDataStore(name = "chess_dismissed_games_v2")

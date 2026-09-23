@@ -128,13 +128,33 @@ class ChessLobbyLogic(
     private val metadataProvider: IUserMetadataProvider,
     private val scope: CoroutineScope,
     pollingConfig: ChessPollingConfig = ChessPollingDefaults.android,
-    private val dismissedStorage: ChessDismissedGamesStorage? = null,
+    private val dismissedStorage: ChessDismissedGamesStore? = null,
 ) {
     val state = ChessLobbyState(userPubkey, scope)
 
     private val dismissedGameIdsLock = KmpLock()
-    private val dismissedGameIds: MutableSet<String> =
-        (dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf())
+
+    /**
+     * Seeded asynchronously: the store is DataStore-backed and reads suspend,
+     * so this starts empty and fills shortly after construction. Until it does,
+     * a previously dismissed game can appear in the completed list for a frame
+     * or two.
+     *
+     * The seed unions rather than replaces, so a dismissal the user makes
+     * before the read lands is not overwritten by it.
+     */
+    private val dismissedGameIds: MutableSet<String> = mutableSetOf()
+
+    init {
+        dismissedStorage?.let { storage ->
+            scope.launch {
+                val stored = storage.load(userPubkey)
+                if (stored.isNotEmpty()) {
+                    dismissedGameIdsLock.withLock { dismissedGameIds.addAll(stored) }
+                }
+            }
+        }
+    }
 
     // Track when games were last loaded to prevent duplicate fetches
     // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it).
@@ -969,7 +989,7 @@ class ChessLobbyLogic(
                 dismissedGameIds.add(gameId)
                 dismissedGameIds.toSet()
             }
-        dismissedStorage?.save(userPubkey, snapshot)
+        dismissedStorage?.let { storage -> scope.launch { storage.save(userPubkey, snapshot) } }
     }
 
     fun dismissAllCompletedGames() {
@@ -980,7 +1000,7 @@ class ChessLobbyLogic(
                 dismissedGameIds.addAll(allIds)
                 dismissedGameIds.toSet()
             }
-        dismissedStorage?.save(userPubkey, snapshot)
+        dismissedStorage?.let { storage -> scope.launch { storage.save(userPubkey, snapshot) } }
     }
 
     /**

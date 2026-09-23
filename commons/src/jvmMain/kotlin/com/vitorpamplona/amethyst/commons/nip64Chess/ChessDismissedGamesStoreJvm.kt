@@ -20,19 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.vitorpamplona.amethyst.commons.util.appDataDir
+import okio.Path.Companion.toOkioPath
+import java.io.File
+
 /**
- * Persists dismissed chess game IDs locally per user.
- * Uses expect/actual for platform-specific storage.
+ * The desktop dismissed-games store, in the shared app data directory.
+ *
+ * Built here rather than in desktopApp so a front end does not need DataStore
+ * on its own classpath to get one. Replaces a `java.util.prefs` node without
+ * carrying it over — the dismissed list is a convenience, and chess has few
+ * enough users that a migration is not worth the code.
  */
-expect class ChessDismissedGamesStorage private constructor() {
-    companion object {
-        fun create(context: Any? = null): ChessDismissedGamesStorage
-    }
-
-    fun load(userPubkey: String): Set<String>
-
-    fun save(
-        userPubkey: String,
-        ids: Set<String>,
-    )
+fun desktopChessDismissedGamesStore(): ChessDismissedGamesStore {
+    val file = File(appDataDir, "chess_dismissed_games.preferences_pb")
+    file.parentFile?.mkdirs()
+    return ChessDismissedGamesStore(PreferenceDataStoreFactory.createWithPath(produceFile = { file.toOkioPath() }))
 }
