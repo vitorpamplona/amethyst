@@ -5320,4 +5320,35 @@
         <item quantity="one">%1$d new message</item>
         <item quantity="other">%1$d new messages</item>
     </plurals>
+    <string name="sno_object_title">3D object</string>
+    <string name="sno_object_details">%1$d vertices · %2$d faces</string>
+    <string name="sno_object_unreadable">This 3D object could not be read (rule %1$s)</string>
+    <string name="sno_avatar_title">Cyberspace avatar</string>
+    <string name="sno_avatar_unpaid">This avatar has not paid for its size, so it is not drawn</string>
+    <string name="sno_light_on">Lit; tap to draw the object flat</string>
+    <string name="sno_light_off">Flat; tap to light the object</string>
+    <string name="sno_object_scale">1 unit = %1$s</string>
+    <string name="sno_shard_dataspace">Hidden in dataspace · %1$s</string>
+    <string name="sno_shard_ideaspace">Hidden in ideaspace · %1$s</string>
+    <string name="sno_avatar_default">Default avatar</string>
+    <string name="sno_avatar_default_details">No shape published, so everyone sees this one</string>
+    <string name="cyberspace_bag_title">Hidden at a place</string>
+    <string name="cyberspace_bag_box">Hidden in a box of %1$s regions</string>
+    <string name="cyberspace_bag_destination">Hidden in one region, which the hint names exactly</string>
+    <string name="cyberspace_bag_no_hint">No hint, so this could be anywhere in cyberspace</string>
+    <string name="cyberspace_bag_out_of_reach">Out of reach: the hint names 2^%1$d regions to search</string>
+    <string name="cyberspace_bag_search">Search for it</string>
+    <string name="cyberspace_bag_cancel">Stop</string>
+    <string name="cyberspace_bag_measuring">Pricing the search on this device…</string>
+    <string name="cyberspace_bag_progress">Searched %1$s of %2$s regions</string>
+    <string name="cyberspace_bag_too_slow_minutes">Out of reach: about %1$d minutes of searching on this device</string>
+    <string name="cyberspace_bag_too_slow_hours">Out of reach: about %1$d hours of searching on this device</string>
+    <string name="cyberspace_bag_not_found">Not in the box the hint named</string>
+    <string name="cyberspace_bag_damaged">Found the region, but the contents could not be read</string>
+    <string name="cyberspace_bag_dropped">%1$d item hidden here did not match its signature and was dropped</string>
+    <string name="cyberspace_bag_dropped_many">%1$d items hidden here did not match their signatures and were dropped</string>
+    <string name="cyberspace_bag_empty">Opened, and there was nothing inside</string>
+    <string name="cyberspace_bag_unsigned">Unsigned, so this author is a claim</string>
+    <string name="cyberspace_bag_unknown_kind">An item of kind %1$d, which this client does not draw</string>
+    <string name="cyberspace_bag_opaque">%1$d bytes of something this client does not read</string>
 </resources>

@@ -177,6 +177,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
+import com.vitorpamplona.amethyst.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderExternalReaction
@@ -235,6 +236,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.ui.note.types.RenderRoadEventReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSnoAvatar
+import com.vitorpamplona.amethyst.ui.note.types.RenderSnoObject
+import com.vitorpamplona.amethyst.ui.note.types.RenderSnoShard
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareRelease
@@ -281,6 +285,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -1410,6 +1418,22 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        is SnoObjectEvent -> {
+            RenderSnoObject(baseNote, accountViewModel)
+        }
+
+        is SnoAvatarEvent -> {
+            RenderSnoAvatar(baseNote, accountViewModel)
+        }
+
+        is SnoShardEvent -> {
+            RenderSnoShard(baseNote, accountViewModel)
+        }
+
+        is CyberspaceBagEvent -> {
+            RenderCyberspaceBag(baseNote, accountViewModel)
         }
 
         is ChessGameEvent -> {

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import coil3.Image
 import coil3.asImage
 import com.vitorpamplona.amethyst.commons.base64Image.toBitmap
@@ -30,3 +32,5 @@ import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 actual fun PlatformImage.toCoilImage(): Image = toAndroidBitmap().asImage(true)
 
 actual fun base64DataUriToCoilImage(dataUri: String): Image = Base64Image.toBitmap(dataUri).asImage(true)
+
+actual fun PlatformImage.toComposeImageBitmap(): ImageBitmap = toAndroidBitmap().asImageBitmap()

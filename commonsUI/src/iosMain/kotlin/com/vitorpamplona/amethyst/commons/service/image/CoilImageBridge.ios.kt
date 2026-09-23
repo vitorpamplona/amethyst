@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import coil3.Image
 import coil3.asImage
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
@@ -36,3 +38,5 @@ actual fun base64DataUriToCoilImage(dataUri: String): Image {
     val encoded = SkiaImage.makeFromEncoded(Base64.decode(payload))
     return Bitmap.makeFromImage(encoded).asImage(true)
 }
+
+actual fun PlatformImage.toComposeImageBitmap(): ImageBitmap = toSkiaBitmap().asComposeImageBitmap()

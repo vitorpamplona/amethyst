@@ -40,6 +40,7 @@ import coil3.svg.SvgDecoder
 import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
 import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
+import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
@@ -63,9 +64,11 @@ object DesktopImageLoaderSetup {
                 add(SkiaGifDecoder.Factory())
                 add(Base64Fetcher.Factory)
                 add(BlurHashFetcher.Factory)
+                add(SnoFetcher.Factory)
                 add(ThumbHashFetcher.Factory)
                 add(Base64Fetcher.BKeyer)
                 add(BlurHashFetcher.BKeyer)
+                add(SnoFetcher.SKeyer)
                 add(ThumbHashFetcher.TKeyer)
             }.build()
 
