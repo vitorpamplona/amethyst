@@ -3,10 +3,17 @@
 # tier-b.sh — the cordn binding, end to end against the REFERENCE coordinator.
 #
 # Tier B of quartz/plans/2026-09-17-cordn-interop.md §6.4: a live
-# counterparty, not a fixture. Two amy accounts, one local relay (geode), one
-# reference coordinator, and the whole lifecycle — publish a KeyPackage,
+# counterparty, not a fixture. Three amy accounts, one local relay (geode),
+# one reference coordinator, and the whole lifecycle — publish a KeyPackage,
 # create a group, invite, open the Welcome without joining, join, talk in both
 # directions, and check both sides agree on epoch and membership.
+#
+# Then the parts that lifecycle never reaches, each driven directly, so that
+# all eleven coordinator tools of `spec/00.md` are exercised against a real
+# coordinator: a third account who ASKS to join rather than being invited
+# (join_request_store, join_request_take_many), a withdrawn KeyPackage
+# (kp_remove), a backlog big enough to be chunked (CEP-22), and a message
+# pushed down an open stream (msg_sub_many).
 #
 # The reference coordinator it runs against is UNLICENSED — read the header of
 # stack.sh, which boots it, before running this. Nothing here is wired into a
@@ -194,6 +201,36 @@ echo "   $COUNT messages, oversized_transfers=$CHUNKED"
 CGOT=$(carol cordn fetch --json)
 CCOUNT=$(echo "$CGOT" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['messages']))")
 [ "$CCOUNT" = "12" ] && ok "carol read the same 12" || bad "carol got $CCOUNT of 12"
+
+step "a message delivered over an open stream — msg_sub_many"
+# The eleventh tool, and the only one a request/response client never
+# reaches: `cordn watch` calls msg_sub_many and nothing else, so anything
+# it prints arrived over an open CEP-41 stream rather than a poll.
+#
+# Ordering is the whole test. The watcher goes up FIRST and we wait for it
+# to be listening; only then does alice send. A message sent beforehand
+# would be backlog the subscription replays, which proves a stream opened
+# but not that anything was pushed down it.
+WATCH_OUT="$WORK/watch.json"
+bob cordn watch --timeout 25000 --json >"$WATCH_OUT" 2>/dev/null &
+WATCH_PID=$!
+sleep 8
+LIVE="live-$$-$(date +%s)"
+alice cordn send --text "$LIVE" --json >/dev/null
+wait "$WATCH_PID"
+WATCHED=$(cat "$WATCH_OUT")
+echo "   $(echo "$WATCHED" | head -c 400)"
+[ "$(echo "$WATCHED" | field "['via']")" = "msg_sub_many" ] && ok "the stream was the source" || bad "cordn watch did not report a subscription"
+echo "$WATCHED" | grep -q "$LIVE" && ok "pushed live, not polled for" || bad "the subscription never delivered $LIVE"
+[ "$(echo "$WATCHED" | field "['messages'][0]['sender']")" = "$ALICE_PK" ] && ok "MLS authenticated the sender over the stream too" || bad "wrong sender on the streamed message"
+
+step "the watcher saved what it ingested"
+# Decrypting a streamed message advances the ratchet and the cursor. A
+# subscription that ended without writing would leave that only in memory,
+# and the next process would re-read its own progress as a gap.
+AFTER=$(bob cordn fetch --json)
+echo "$AFTER" | grep -q "$LIVE" && bad "the streamed message came back on the next fetch" || ok "the cursor survived the watching process"
+[ "$(echo "$AFTER" | field "['undecryptable']")" = "[]" ] && ok "no gaps after the stream closed" || bad "gaps after the stream: $(echo "$AFTER" | field "['undecryptable']")"
 
 step "both sides agree"
 A=$(alice cordn group info --json)

@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
 import com.vitorpamplona.quartz.contextvm.transport.TimeoutMode
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -156,71 +157,85 @@ class CvmMcpClient(
         val streamed = mutableListOf<String>()
 
         val response =
-            transport.request(
-                message =
-                    JsonRpcRequest(
-                        id = id,
-                        method = McpMethods.TOOLS_CALL,
-                        params =
-                            buildJsonObject {
-                                put(McpParams.NAME, JsonPrimitive(name))
-                                put(McpParams.ARGUMENTS, arguments)
-                                put(
-                                    McpParams.META,
-                                    buildJsonObject {
-                                        put(McpParams.PROGRESS_TOKEN, JsonPrimitive("call-${id.value}"))
-                                    },
-                                )
-                            },
-                    ),
-                identity = identity,
-                timeoutMs = timeoutMs,
-                timeoutMode = timeoutMode,
-            ) { notification ->
-                val envelope = ProgressEnvelope.parseOrNull(notification) ?: return@request null
-                if (envelope.token != token) return@request null
+            try {
+                transport.request(
+                    message =
+                        JsonRpcRequest(
+                            id = id,
+                            method = McpMethods.TOOLS_CALL,
+                            params =
+                                buildJsonObject {
+                                    put(McpParams.NAME, JsonPrimitive(name))
+                                    put(McpParams.ARGUMENTS, arguments)
+                                    put(
+                                        McpParams.META,
+                                        buildJsonObject {
+                                            put(McpParams.PROGRESS_TOKEN, JsonPrimitive("call-${id.value}"))
+                                        },
+                                    )
+                                },
+                        ),
+                    identity = identity,
+                    timeoutMs = timeoutMs,
+                    timeoutMode = timeoutMode,
+                ) { notification ->
+                    val envelope = ProgressEnvelope.parseOrNull(notification) ?: return@request null
+                    if (envelope.token != token) return@request null
 
-                when (envelope.type) {
-                    ProgressEnvelope.TYPE_OVERSIZED -> {
-                        val receiver =
-                            oversized ?: OversizedTransferReceiver(token, oversizedLimits, requireAccept = false)
-                                .also { oversized = it }
-                        OversizedFrame.parseOrNull(envelope)?.let { frame ->
-                            val result = receiver.accept(frame)
-                            if (result is OversizedProgressResult.Completed) {
-                                reassembled = result.message
-                                oversizedTransfersCompleted++
+                    when (envelope.type) {
+                        ProgressEnvelope.TYPE_OVERSIZED -> {
+                            val receiver =
+                                oversized ?: OversizedTransferReceiver(token, oversizedLimits, requireAccept = false)
+                                    .also { oversized = it }
+                            OversizedFrame.parseOrNull(envelope)?.let { frame ->
+                                val result = receiver.accept(frame)
+                                if (result is OversizedProgressResult.Completed) {
+                                    reassembled = result.message
+                                    oversizedTransfersCompleted++
+                                }
                             }
                         }
-                    }
 
-                    ProgressEnvelope.TYPE_OPEN_STREAM -> {
-                        val receiver =
-                            stream ?: OpenStreamReceiver(token, streamPolicy, requireAccept = false)
-                                .also { stream = it }
-                        OpenStreamFrame.parseOrNull(envelope)?.let { frame ->
-                            val event = receiver.accept(frame)
-                            if (event is OpenStreamEvent.Delivered) {
-                                streamed += event.fragments
-                                event.fragments.forEach(onStreamFragment)
+                        ProgressEnvelope.TYPE_OPEN_STREAM -> {
+                            val receiver =
+                                stream ?: OpenStreamReceiver(token, streamPolicy, requireAccept = false)
+                                    .also { stream = it }
+                            OpenStreamFrame.parseOrNull(envelope)?.let { frame ->
+                                val event = receiver.accept(frame)
+                                if (event is OpenStreamEvent.Delivered) {
+                                    streamed += event.fragments
+                                    event.fragments.forEach(onStreamFragment)
+                                }
                             }
                         }
+
+                        else -> Unit
                     }
 
-                    else -> Unit
+                    // A completed CEP-22 transfer IS the response, so handing it
+                    // back ends the call. A CEP-41 stream never does: `close` says
+                    // no more frames, not that the request is answered.
+                    reassembled
                 }
-
-                // A completed CEP-22 transfer IS the response, so handing it
-                // back ends the call. A CEP-41 stream never does: `close` says
-                // no more frames, not that the request is answered.
-                reassembled
+            } catch (e: TimeoutCancellationException) {
+                // Under TOTAL the timeout IS how the call ends. CEP-41 says a
+                // stream's `close` does not complete the JSON-RPC request, so
+                // an open-ended subscription has no other exit - treating the
+                // budget running out as a failure meant every subscription,
+                // however healthy, ended in an exception.
+                //
+                // Fragments were handed to onStreamFragment as they arrived,
+                // so nothing is lost by returning here.
+                if (timeoutMode == TimeoutMode.TOTAL) null else throw e
             }
 
         // A CEP-22 transfer replaces the response that could not be published
         // directly; a CEP-41 stream does not, since `close` never completes the
         // JSON-RPC request.
         val chunked = reassembled != null
-        return when (val effective = reassembled ?: response) {
+        // No response and no transfer: a subscription that ran its budget.
+        val effective = reassembled ?: response ?: return ToolCallResult(null, streamed = streamed)
+        return when (effective) {
             is JsonRpcSuccess -> ToolCallResult(effective.result, streamed = streamed, viaOversizedTransfer = chunked)
             is JsonRpcFailure -> ToolCallResult(null, effective.error, streamed, chunked)
             else -> ToolCallResult(null, streamed = streamed, viaOversizedTransfer = chunked)

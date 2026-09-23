@@ -91,6 +91,7 @@ object CordnCommands {
         |  cordn send --text "…" [--gid GID]              a kind-9 chat message
         |             [--reply-to ID] [--react-to ID]
         |  cordn fetch                                    drain the stream and print it
+        |  cordn watch [--timeout MS]                     hold a live subscription
         |
         |A group ref is a locator, not an invitation: holding one lets you ASK to
         |join, it does not make you a member. Relays say where to reach the
@@ -104,7 +105,7 @@ object CordnCommands {
         route(
             "cordn",
             tail,
-            "cordn <coordinator|keypackage|migrate|group|invite|request|requests|welcomes|join|decline|send|fetch|ref|exposure>",
+            "cordn <coordinator|keypackage|migrate|group|invite|request|requests|welcomes|join|decline|send|fetch|watch|ref|exposure>",
             help = USAGE,
             routes =
                 mapOf(
@@ -122,6 +123,7 @@ object CordnCommands {
                     "decline" to { rest -> CordnGroupCommands.decline(dataDir, rest) },
                     "send" to { rest -> CordnGroupCommands.send(dataDir, rest) },
                     "fetch" to { rest -> CordnGroupCommands.fetch(dataDir, rest) },
+                    "watch" to { rest -> CordnGroupCommands.watch(dataDir, rest) },
                 ),
         )
 

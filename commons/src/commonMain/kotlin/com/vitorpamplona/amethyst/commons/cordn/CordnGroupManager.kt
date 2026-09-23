@@ -574,13 +574,25 @@ class CordnGroupManager(
     /**
      * Subscribes to live delivery for every group. Suspends until the
      * coordinator closes the stream, so give it its own coroutine.
+     *
+     * Persists on the way out, like [catchUp], and for the same reason:
+     * delivering a message advances the ratchet and the cursor, so a
+     * subscription that ended without writing would leave that progress only
+     * in memory. A long-lived host survives that; a process-per-command client
+     * does not, and neither does a crash.
      */
     override suspend fun subscribe(
         timeoutMs: Long,
         onDelivery: (Delivery) -> Unit,
     ) {
         if (groups.isEmpty()) return
-        call { sync.subscribe(groups.keys.toList(), timeoutMs) { gid, ingestion -> onDelivery(ingest(gid, ingestion)) } }
+        try {
+            call { sync.subscribe(groups.keys.toList(), timeoutMs) { gid, ingestion -> onDelivery(ingest(gid, ingestion)) } }
+        } finally {
+            // finally, not after: a subscription normally ends by timing out or
+            // being cancelled, and those are the cases with progress to keep.
+            persistAll()
+        }
     }
 
     private fun ingest(

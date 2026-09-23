@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
+import com.vitorpamplona.quartz.contextvm.transport.TimeoutMode
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.async
@@ -248,6 +249,45 @@ class CvmMcpClientTest {
                     .jsonPrimitive.content,
                 "the reassembled payload is the response",
             )
+        }
+
+    @Test
+    fun `a CEP-41 subscription ends on its budget instead of throwing`() =
+        runTest {
+            // The other half of the rule above, and the one that made every
+            // live subscription an exception: if `close` does not complete the
+            // request, an open-ended subscription has NO response to wait for,
+            // so its budget running out is the only way it can end. Under
+            // TimeoutMode.TOTAL that is a normal return, not a failure.
+            val fixture = fixture { error("a subscription has no response to give") }
+            fixture.start()
+
+            val live = mutableListOf<String>()
+
+            val result =
+                coroutineScope {
+                    val pending =
+                        async {
+                            client().callTool("sub", timeoutMs = 5_000, timeoutMode = TimeoutMode.TOTAL) { live += it }
+                        }
+                    yield()
+
+                    listOf(
+                        OpenStreamFrame.start(firstCallToken, 1.0),
+                        OpenStreamFrame.chunk(firstCallToken, 2.0, 0, "pushed"),
+                        OpenStreamFrame.close(firstCallToken, 3.0, lastChunkIndex = 0),
+                    ).forEach { frame ->
+                        fixture.reply(frame.envelope.toNotification(), clientSigner.pubKey, "0".repeat(64))
+                    }
+
+                    // No pump: nothing answers, and the budget is the exit.
+                    pending.await()
+                }
+
+            assertEquals(listOf("pushed"), live, "fragments arrive as they are pushed")
+            assertEquals(listOf("pushed"), result.streamed)
+            assertNull(result.result, "there was no response, and that is not an error")
+            assertFalse(result.isError)
         }
 
     @Test

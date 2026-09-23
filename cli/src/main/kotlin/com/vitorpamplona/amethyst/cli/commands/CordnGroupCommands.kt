@@ -576,37 +576,7 @@ internal object CordnGroupCommands {
             val echoes = mutableListOf<Map<String, Any?>>()
             val undecryptable = mutableListOf<Map<String, Any?>>()
 
-            val drained =
-                scope.manager.catchUp { delivery ->
-                    when (delivery) {
-                        is CordnGroupManager.Delivery.Message ->
-                            messages +=
-                                mapOf(
-                                    "gid" to delivery.gid,
-                                    "cursor" to delivery.cursor,
-                                    "id" to delivery.received.envelope.id,
-                                    // What MLS authenticated, not what the
-                                    // envelope claims: the envelope is unsigned
-                                    // (spec/02.md), so its pubKey field is a
-                                    // claim and this is the fact.
-                                    "sender" to delivery.received.sender,
-                                    "epoch" to delivery.received.epoch,
-                                    "kind" to delivery.received.envelope.kind,
-                                    "created_at" to delivery.received.envelope.createdAt,
-                                    "content" to delivery.received.envelope.content,
-                                )
-
-                        is CordnGroupManager.Delivery.EpochAdvanced ->
-                            epochs += mapOf("gid" to delivery.gid, "cursor" to delivery.cursor, "epoch" to delivery.epoch)
-
-                        is CordnGroupManager.Delivery.Echo ->
-                            echoes += mapOf("gid" to delivery.gid, "cursor" to delivery.cursor)
-
-                        is CordnGroupManager.Delivery.Undecryptable ->
-                            undecryptable +=
-                                mapOf("gid" to delivery.gid, "cursor" to delivery.cursor, "reason" to delivery.reason)
-                    }
-                }
+            val drained = scope.manager.catchUp { it.collectInto(messages, epochs, echoes, undecryptable) }
 
             Output.emit(
                 mapOf(
@@ -625,6 +595,91 @@ internal object CordnGroupCommands {
             0
         }
     }
+
+    /**
+     * `cordn watch` - holds a live subscription and prints what arrives.
+     *
+     * The sibling of `fetch`, and deliberately not a superset of it: this
+     * calls `msg_sub_many` and nothing else, so what it prints arrived over
+     * an open CEP-41 stream rather than a poll. That distinction is the
+     * point - it is the only way to exercise the one coordinator tool a
+     * request/response client never reaches.
+     *
+     * `--timeout` is a budget, not a failure: the call returns when the
+     * coordinator closes the stream or the budget runs out, whichever comes
+     * first, and either way what was delivered has been ingested and saved.
+     */
+    suspend fun watch(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int {
+        val args = Args(tail)
+        val timeoutMs = args.longFlag("timeout", DEFAULT_WATCH_MS)
+        args.rejectUnknown("coordinator", "relay", "timeout")
+
+        if (timeoutMs < 1) return Output.error("bad_args", "--timeout must be positive")
+
+        return CordnRun.withSession(dataDir, args) { _, scope ->
+            val messages = mutableListOf<Map<String, Any?>>()
+            val epochs = mutableListOf<Map<String, Any?>>()
+            val echoes = mutableListOf<Map<String, Any?>>()
+            val undecryptable = mutableListOf<Map<String, Any?>>()
+
+            scope.manager.subscribe(timeoutMs) { delivery -> delivery.collectInto(messages, epochs, echoes, undecryptable) }
+
+            Output.emit(
+                mapOf(
+                    "coordinator" to scope.config.pubKey,
+                    "watched_ms" to timeoutMs,
+                    "messages" to messages,
+                    "epoch_changes" to epochs,
+                    "echoes" to echoes,
+                    "undecryptable" to undecryptable,
+                    // Everything above came over the subscription, so this is
+                    // a fact about the run rather than a label.
+                    "via" to "msg_sub_many",
+                ),
+            )
+            0
+        }
+    }
+
+    /** Files one delivery under the list its kind belongs in. */
+    private fun CordnGroupManager.Delivery.collectInto(
+        messages: MutableList<Map<String, Any?>>,
+        epochs: MutableList<Map<String, Any?>>,
+        echoes: MutableList<Map<String, Any?>>,
+        undecryptable: MutableList<Map<String, Any?>>,
+    ) {
+        when (this) {
+            is CordnGroupManager.Delivery.Message ->
+                messages +=
+                    mapOf(
+                        "gid" to gid,
+                        "cursor" to cursor,
+                        "id" to received.envelope.id,
+                        // What MLS authenticated, not what the envelope
+                        // claims: the envelope is unsigned (spec/02.md), so
+                        // its pubKey field is a claim and this is the fact.
+                        "sender" to received.sender,
+                        "epoch" to received.epoch,
+                        "kind" to received.envelope.kind,
+                        "created_at" to received.envelope.createdAt,
+                        "content" to received.envelope.content,
+                    )
+
+            is CordnGroupManager.Delivery.EpochAdvanced ->
+                epochs += mapOf("gid" to gid, "cursor" to cursor, "epoch" to epoch)
+
+            is CordnGroupManager.Delivery.Echo -> echoes += mapOf("gid" to gid, "cursor" to cursor)
+
+            is CordnGroupManager.Delivery.Undecryptable ->
+                undecryptable += mapOf("gid" to gid, "cursor" to cursor, "reason" to reason)
+        }
+    }
+
+    /** Long enough for a round trip, short enough to be a foreground command. */
+    private const val DEFAULT_WATCH_MS = 15_000L
 
     private fun JoinRequest.toMap() =
         mapOf(
