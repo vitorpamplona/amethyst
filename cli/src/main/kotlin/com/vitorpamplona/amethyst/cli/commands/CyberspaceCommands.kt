@@ -24,8 +24,10 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.cyberspace.CantorTree
 import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
+import com.vitorpamplona.quartz.cyberspace.CyberspaceHint
 import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
 import com.vitorpamplona.quartz.cyberspace.RegionKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
  * `amy cyberspace …` — places and the keys they derive, local and accountless.
@@ -45,6 +47,7 @@ object CyberspaceCommands {
         |
         |  cyberspace coord COORD_HEX             decode a coordinate: axes, plane, sectors (§2.2)
         |  cyberspace region COORD_HEX --height H the region key at that height (§7.2)
+        |  cyberspace hint [EVENT|-]              read a bag's hint and price its sweep (§7.7)
         |
         |COORD_HEX is 32 bytes of lowercase hex, as a `C` or `hint` tag carries it.
         |
@@ -57,10 +60,11 @@ object CyberspaceCommands {
         route(
             "cyberspace",
             tail,
-            "cyberspace <coord|region>",
+            "cyberspace <coord|region|hint>",
             mapOf(
                 "coord" to { rest -> coord(rest) },
                 "region" to { rest -> region(rest) },
+                "hint" to { rest -> hint(rest) },
             ),
             USAGE,
         )
@@ -118,6 +122,62 @@ object CyberspaceCommands {
                 "region_bits" to material.regionN.bitLength,
                 "key" to material.decryptionKey.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') },
                 "lookup_id" to material.lookupId,
+            ),
+        )
+        return 0
+    }
+
+    /**
+     * Read a bag's `hint` tag and price the search it describes (§7.7).
+     *
+     * A hint is the hider's difficulty knob, so the number that matters is the
+     * gap: `(Hx - h) + (Hy - h) + (Hz - h)`, the exponent of the candidate
+     * count. §7.7's own table reads in those terms — 12 is seconds, 24 is
+     * hours, 30 or more is "days to never" — and a client that means to offer a
+     * sweep has to know which of those it is offering *before* it starts.
+     *
+     * A malformed hint reports `hint: false` rather than an error, because
+     * §7.7 says a bad hint is an absent one and "never invalidates the bag".
+     */
+    private fun hint(rest: Array<String>): Int {
+        val args = Args(rest)
+        val json = RawEventSupport.readArgOrStdin(args)
+        args.rejectUnknown()
+
+        val event =
+            try {
+                Event.fromJson(json)
+            } catch (_: Exception) {
+                return Output.error("bad_event", "not a nostr event")
+            }
+
+        // §8.6's `h` tag: the height of the region the content is keyed to. A
+        // hint is read against it, since a box smaller than the region it
+        // claims to hold is one of §7.7's malformed cases.
+        val bagHeight =
+            event.tags
+                .firstOrNull { it.size > 1 && it[0] == "h" }
+                ?.get(1)
+                ?.toIntOrNull()
+        val hint = CyberspaceHint.read(event.tags, bagHeight)
+
+        if (hint == null) {
+            Output.emit(mapOf("hint" to false, "height" to bagHeight))
+            return 0
+        }
+
+        val height = bagHeight ?: 0
+        Output.emit(
+            mapOf(
+                "hint" to true,
+                "height" to bagHeight,
+                "box" to CyberspaceCoordinate.encode(hint.base),
+                "heights" to listOf(hint.heightX, hint.heightY, hint.heightZ),
+                "gap_bits" to hint.gapBits(height),
+                "candidates" to hint.candidates(height),
+                "axis_trees" to hint.axisTrees(height),
+                "destination" to hint.isDestination(height),
+                "sector_tags" to hint.sectorTags().map { it.toList() },
             ),
         )
         return 0

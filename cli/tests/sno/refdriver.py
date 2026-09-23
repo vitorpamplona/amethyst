@@ -13,6 +13,7 @@ and payment reference), and just re-emits what they answer.
   refdriver.py work    < payload     {"required":…}
   refdriver.py verify  < event       {"ok":…, "required":…, "committed":…, "zeros":…, "reason":…}
   refdriver.py region COORD HEIGHT   {"key":…, "lookup_id":…, "x":…, "y":…, "z":…, "plane":…}
+  refdriver.py hints                 §7.7's golden hint vectors, one per line
 
 Paths come from $CYBERSPACE_DIR and $CYBERSPACE_CLI_DIR.
 """
@@ -127,9 +128,26 @@ def cmd_region():
     })
 
 
+def cmd_hints():
+    """§7.7's golden vectors, straight out of the spec's own hint-reference.py."""
+    root = os.environ["CYBERSPACE_DIR"]
+    # It sits at the repo root, beside CYBERSPACE_V2.md, rather than under
+    # decks/ where the DECK references live; accept either in case it moves.
+    path = next(
+        (p for p in (os.path.join(root, "hint-reference.py"), os.path.join(root, "decks", "hint-reference.py")) if os.path.exists(p)),
+        None,
+    )
+    if path is None:
+        raise SystemExit("hint-reference.py not found under $CYBERSPACE_DIR")
+    hint_ref = _load(path, "hint_reference")
+    for name, vector in hint_ref.vectors().items():
+        emit({"name": name, **vector})
+
+
 COMMANDS = {
     "cases": cmd_cases,
     "region": cmd_region,
+    "hints": cmd_hints,
     "vectors": cmd_vectors,
     "verdict": cmd_verdict,
     "work": cmd_work,

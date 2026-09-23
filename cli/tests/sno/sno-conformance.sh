@@ -336,6 +336,52 @@ else
   fi
 fi
 
+# ---- 6. §7.7 hint boxes -----------------------------------------------------
+
+banner "6. hint boxes — §7.7's golden vectors through amy"
+
+# A hint is the hider's difficulty knob: the box it names decides how many
+# region keys a seeker has to derive. Getting the aligned base or the sector
+# rule wrong means sweeping the wrong box, which finds nothing and says so
+# only after the work is done.
+if [[ $HAVE_SNO_REF -eq 0 ]]; then
+  skip_msg "cyberspace checkout unavailable"
+  record_result "cyberspace-hints" skip "no cyberspace checkout"
+else
+  AGREE=0; DISAGREE=0
+  while IFS= read -r line; do
+    NAME="$(jq -r .name <<<"$line")"
+    H="$(jq -r .bag_height <<<"$line")"
+    WANT_LOG2="$(jq -r .candidates_log2 <<<"$line")"
+    WANT_HINT="$(jq -c '[.tags[] | select(.[0] == "hint")][0]' <<<"$line")"
+    WANT_SECTORS="$(jq -c '[.tags[] | select(.[0] != "hint")]' <<<"$line")"
+
+    # A bag carrying exactly the tags the reference says a hider writes.
+    BAG="$(jq -cn --argjson tags "$(jq -c .tags <<<"$line")" --arg h "$H" '
+      {id:("a"*64), pubkey:("b"*64), created_at:1, kind:33330,
+       tags:([["d",("c"*64)],["h",$h]] + $tags), content:"", sig:("0"*128)}')"
+
+    OURS="$(printf '%s' "$BAG" | amy cyberspace hint -)"
+    GOT_HINT="$(jq -c '["hint", .box, (.heights[0]|tostring), (.heights[1]|tostring), (.heights[2]|tostring)]' <<<"$OURS")"
+    GOT_SECTORS="$(jq -c '.sector_tags' <<<"$OURS")"
+    GOT_LOG2="$(jq -r .gap_bits <<<"$OURS")"
+
+    if [[ "$GOT_HINT" == "$WANT_HINT" && "$GOT_SECTORS" == "$WANT_SECTORS" && "$GOT_LOG2" == "$WANT_LOG2" ]]; then
+      AGREE=$((AGREE+1))
+      info "$NAME: 2^$GOT_LOG2 candidates, $(jq -r '.sector_tags | length' <<<"$OURS") sector tags"
+    else
+      DISAGREE=$((DISAGREE+1))
+      fail_msg "$NAME: hint amy=$GOT_HINT ref=$WANT_HINT; sectors amy=$GOT_SECTORS ref=$WANT_SECTORS; gap amy=$GOT_LOG2 ref=$WANT_LOG2"
+    fi
+  done < <(ref hints)
+
+  if [[ $DISAGREE -eq 0 && $AGREE -gt 0 ]]; then
+    record_result "cyberspace-hints" pass "$AGREE golden vectors agree"
+  else
+    record_result "cyberspace-hints" fail "$DISAGREE of $((AGREE+DISAGREE)) diverged"
+  fi
+fi
+
 print_summary
 
 grep -q $'\tfail\t' "$RESULTS_FILE" && exit 1

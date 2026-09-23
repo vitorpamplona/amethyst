@@ -195,7 +195,8 @@ is not offered as a button at all — it is reported as out of reach.
    to compare. Revisit when there is.
 2. **Cantor + region key**, with the big integer and the height refusal.
    `amy cyberspace region`, diffed against `cyberspace-cli`. **Done** — see §9.
-3. **Hints.** Parse, validate, price. `amy cyberspace hint`. The three golden vectors.
+3. **Hints.** Parse, validate, price. `amy cyberspace hint`. The three golden
+   vectors. **Done** — see §10.
 4. **The bag.** AES-256-GCM, plaintext shapes, item verification. `amy cyberspace
    open`, round-tripped against the reference CLI's `encrypt`.
 5. **The sweep**, as a budgeted cold sequence. `amy cyberspace sweep`.
@@ -261,3 +262,49 @@ roughly ten times an axis root at the same height, because it multiplies two
 numbers the size of the root rather than folding up to one. A budget model that
 prices a sweep by its tree builds will under-quote badly; price it by `2^G`
 combines and add the trees.
+
+
+## 10. Step 3 as built
+
+`CyberspaceHint`, `amy cyberspace hint`, and a harness section that runs §7.7's
+three golden vectors through the CLI and diffs them against the spec's own
+`hint-reference.py`. The harness is 13 of 13.
+
+The vectors pin more than a parser. Each states a point, a bag height and three
+hint heights, then gives the coordinate the aligned base must come out as and
+the sector tags the bag must carry — so building a hint from the point has to
+reproduce the published tag byte for byte, and `london_h5_box11`,
+`london_h5_x_exact` and `ideaspace_h8_y_open` all do.
+
+### What the type says, and why
+
+A hint is the hider's **difficulty knob**, so the number that matters is
+`gapBits` — `(Hx - h) + (Hy - h) + (Hz - h)` — and it is reported as an exponent
+rather than a count because it runs to 255 when all three axes are left open and
+nothing holds `2^255`. §7.7's own table reads in those terms: 12 is seconds, 24
+is hours, 30 or more is "days to never".
+
+`axisTrees` is reported apart from `candidates`, and the asymmetry is the point.
+A sweep needs one Cantor tree per distinct base *per axis* and then one combine
+per candidate, so a sector-only hint on a height-5 bag is a hundred million
+trees against `2^75` combines: both say hopeless, only one of them can say it
+with a number. A budget that prices a sweep by its trees under-quotes by the
+same margin §9 warned about.
+
+### The rule that shapes the API
+
+§7.7: "A `hint` tag that breaks any rule above MUST be treated as absent...
+A bad hint never invalidates the bag, because hints are advisory metadata about
+where to look; whether a bag is valid is decided by §7.2 and §7.6 alone."
+
+So `read` returns null and never throws, for every one of: wrong arity, bad hex,
+uppercase hex, an unaligned base, a height outside `[0, 85]`, a non-canonical
+integer (`"011"` is not `"11"`), a height below the bag's `h`, and — the one the
+spec states as a publisher rule without saying what a reader does — more than
+one `hint` tag, which is read the same way because a bag whose author cannot be
+read literally is exactly the case §7.7's remedy is for.
+
+The canonical-integer rule is worth keeping for the same reason the aligned base
+is: both exist so that two hiders who hint the same box publish the same bytes,
+and a reader that accepts `"05"` alongside `"5"` lets one box have two
+spellings and breaks comparison by equality.
