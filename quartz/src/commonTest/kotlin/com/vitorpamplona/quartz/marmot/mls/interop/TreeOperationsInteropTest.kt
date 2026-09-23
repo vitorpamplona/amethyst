@@ -23,7 +23,10 @@ package com.vitorpamplona.quartz.marmot.mls.interop
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.marmot.mls.messages.Proposal
+import com.vitorpamplona.quartz.marmot.mls.tree.BinaryTree
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
+import com.vitorpamplona.quartz.marmot.mls.tree.TreeNode
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -93,5 +96,41 @@ class TreeOperationsInteropTest {
                 "tree_hash_after mismatch at vector $idx (leafCount=${tree.leafCount}, nodeCount=${tree.leafCount * 2 - 1})",
             )
         }
+    }
+
+    /**
+     * RFC 9420 §7.7 for `addLeaf`, on every tree in the vectors: each non-blank parent on the new leaf's direct path keeps
+     * its key and records the new leaf in `unmerged_leaves`; blank ones stay blank. The tree-operations vectors never add
+     * under a populated parent that the add itself must preserve, so applying them cannot catch a blanking `addLeaf`;
+     * this checks the rule directly, and asserts the trees contain such parents so it cannot pass vacuously.
+     */
+    @Test
+    fun testAddLeafRecordsUnmergedLeavesOnPopulatedParents() {
+        // addLeaf only requires a fresh encryption key, so the vectors' Add leaf with a key no vector tree uses can join every tree
+        val newcomer =
+            vectors
+                .firstNotNullOf { (Proposal.decodeTls(TlsReader(it.proposal.hexToByteArray())) as? Proposal.Add)?.keyPackage?.leafNode }
+                .copy(encryptionKey = ByteArray(32) { 0x5A })
+        var populatedChecked = 0
+        for ((idx, v) in vectors.withIndex()) {
+            for ((which, hex) in listOf("before" to v.treeBefore, "after" to v.treeAfter)) {
+                val before = RatchetTree.decodeTls(TlsReader(hex.hexToByteArray()))
+                val tree = RatchetTree.decodeTls(TlsReader(hex.hexToByteArray()))
+                val leaf = tree.addLeaf(newcomer)
+                for (nodeIdx in BinaryTree.directPath(leaf, tree.leafCount)) {
+                    val was = (before.getNode(nodeIdx) as? TreeNode.Parent)?.parentNode
+                    val now = (tree.getNode(nodeIdx) as? TreeNode.Parent)?.parentNode
+                    if (was == null) {
+                        assertEquals(null, now, "vector $idx tree_$which: blank parent $nodeIdx must stay blank")
+                    } else {
+                        populatedChecked++
+                        assertTrue(now != null, "vector $idx tree_$which: populated parent $nodeIdx was blanked by the add")
+                        assertTrue(was.encryptionKey.contentEquals(now.encryptionKey), "vector $idx tree_$which: parent $nodeIdx changed its key")
+                        assertEquals(was.unmergedLeaves + leaf, now.unmergedLeaves, "vector $idx tree_$which: parent $nodeIdx unmerged_leaves")
+                    }
+                }
+            }
+        }
+        assertTrue(populatedChecked > 0, "the vectors should put a populated parent on some new leaf's path")
     }
 }
