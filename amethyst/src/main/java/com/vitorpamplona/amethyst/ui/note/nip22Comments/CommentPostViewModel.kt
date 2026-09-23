@@ -160,8 +160,12 @@ open class CommentPostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
-                    sendDraftSync()
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
+                    // Post rotates the tag and then clears the composer. A save still queued from
+                    // before that would see the empty text and delete the draft Post just saved
+                    // for the post that is still mining, so it's skipped once the tag has moved on.
+                    if (draftTag.current == tag) sendDraftSync()
                 }
             }
         }
@@ -584,10 +588,20 @@ open class CommentPostViewModel :
             }
         }
 
-        val draftToDelete = draftNote
-        val anonymous = wantsAnonymousPost
         // captured before cancel() resets the chip
         val chosenPow = powOverride
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        if (accountViewModel.account.powDifficultyFor(template.kind, chosenPow) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
+
+        val draftToDelete = draftNote
+        val anonymous = wantsAnonymousPost
         onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post

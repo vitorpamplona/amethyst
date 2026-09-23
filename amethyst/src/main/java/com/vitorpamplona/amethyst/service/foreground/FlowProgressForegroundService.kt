@@ -42,6 +42,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -93,6 +94,18 @@ abstract class FlowProgressForegroundService<T> : Service() {
 
     /** When non-null, re-render the card on this cadence (for clock-driven text like "time left"). */
     protected open val refreshMs: Long? = null
+
+    /**
+     * How long to keep the service (and whatever it holds up) alive after [isActive] turns
+     * false, before stopping. Lets work that was just handed off asynchronously — e.g. a
+     * broadcast still leaving through the relay pool — finish before the process loses its
+     * foreground protection and gets frozen. A new active emission during the grace keeps
+     * the service running. Asked each time the work drains, so it can depend on how it did.
+     */
+    protected open fun stopGraceMs(): Long = 0L
+
+    /** The card shown during [stopGraceMs]; null keeps the last one. */
+    protected open fun renderDraining(): Content? = null
 
     protected abstract fun state(): StateFlow<T>
 
@@ -222,9 +235,15 @@ abstract class FlowProgressForegroundService<T> : Service() {
         onStarted()
         watchJob =
             scope.launch {
-                state().collect { value ->
+                state().collectLatest { value ->
                     onEmission(value)
                     if (!isActive(value)) {
+                        // collectLatest: a new active emission cancels this pending stop.
+                        val grace = stopGraceMs()
+                        if (grace > 0) {
+                            renderDraining()?.let { notify(buildNotification(it)) }
+                            delay(grace)
+                        }
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
                     } else {
@@ -246,7 +265,7 @@ abstract class FlowProgressForegroundService<T> : Service() {
 
     private fun startForegroundCompat(value: T) {
         ensureChannel()
-        val notification = buildNotification(value)
+        val notification = buildNotification(render(value))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(notificationId, notification, fgsType)
         } else {
@@ -254,18 +273,19 @@ abstract class FlowProgressForegroundService<T> : Service() {
         }
     }
 
-    private fun updateNotification(value: T) {
+    private fun updateNotification(value: T) = notify(buildNotification(render(value)))
+
+    private fun notify(notification: Notification) {
         val manager = NotificationManagerCompat.from(this)
         if (!manager.areNotificationsEnabled()) return
         try {
-            manager.notify(notificationId, buildNotification(value))
+            manager.notify(notificationId, notification)
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS revoked mid-flight; the FGS keeps running.
         }
     }
 
-    private fun buildNotification(value: T): Notification {
-        val content = render(value)
+    private fun buildNotification(content: Content): Notification {
         val style =
             when (val bar = content.bar) {
                 is Bar.Indeterminate -> NotificationCompat.ProgressStyle().setProgressIndeterminate(true)

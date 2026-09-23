@@ -152,9 +152,13 @@ open class ChannelNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
                     accountViewModel.launchSigner {
-                        sendDraftSync()
+                        // Post rotates the tag and then clears the composer. A save still queued from
+                        // before that would see the empty text and delete the draft Post just saved
+                        // for the post that is still mining, so it's skipped once the tag has moved on.
+                        if (draftTag.current == tag) sendDraftSync()
                     }
                 }
             }
@@ -402,6 +406,16 @@ open class ChannelNewMessageViewModel :
         // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
         // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
         if (channel is GeohashChatChannel && channelRelays.isEmpty()) return
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        // Geohash posts mine inline and drop the draft right away, so only the queued path needs it.
+        if (channel !is GeohashChatChannel && accountViewModel.account.powDifficultyFor(template.kind) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            sendDraftSync()
+        }
 
         val draftToDelete = draftNote
         onUiThread { cancel() }
