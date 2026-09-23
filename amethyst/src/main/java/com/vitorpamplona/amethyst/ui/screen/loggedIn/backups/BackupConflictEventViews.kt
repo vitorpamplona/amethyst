@@ -1060,7 +1060,7 @@ private fun MintRow(
 }
 
 // ---------------------------------------------------------------------------------------
-// Groups: a tile per group, faded when you'd leave it, badged when new or renamed.
+// Groups: a tile per group, faded when you left it, badged when new or renamed.
 // ---------------------------------------------------------------------------------------
 
 private class GroupTile(
@@ -1097,7 +1097,7 @@ private fun LazyListScope.groupItems(
             StatTile(
                 diff.groups.removed.size
                     .toString(),
-                stringRes(R.string.backup_review_would_leave),
+                stringRes(R.string.backup_review_left),
                 tones.removed,
                 Modifier.weight(1f),
             )

@@ -410,7 +410,7 @@ private fun <T> LazyListScope.spaceGrid(
     key: (T) -> String,
     content: @Composable (T, ItemFate, Modifier) -> Unit,
 ) {
-    countTiles(items, R.string.backup_review_would_leave, R.string.backup_review_joined)
+    countTiles(items, R.string.backup_review_left, R.string.backup_review_joined)
     items(items.chunked(2), key = { keyPrefix + key(it.first().first) }, contentType = { "space-row" }) { row ->
         Row(Pad.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { (item, fate) -> content(item, fate, Modifier.weight(1f)) }
@@ -561,7 +561,7 @@ private fun LazyListScope.ephemeralRoomItems(
 ) {
     val saved = (conflict.saved as? EphemeralChatListEvent)?.publicRooms().orEmpty()
     val rooms = fates(saved, diff.rooms) { it }
-    countTiles(rooms, R.string.backup_review_would_leave, R.string.backup_review_joined)
+    countTiles(rooms, R.string.backup_review_left, R.string.backup_review_joined)
     items(rooms, key = { "room-" + it.first.toKey() }, contentType = { "room-row" }) { (room, fate) -> RoomRow(room, fate, nav) }
     privateItemsCard(diff.privateItems)
 }

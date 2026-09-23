@@ -2829,13 +2829,13 @@
         <item quantity="one">%1$d video</item>
         <item quantity="other">%1$d videos</item>
     </plurals>
-    <string name="backup_conflict_title">Your %1$s changed in another app</string>
+    <string name="backup_conflict_title">You changed your %1$s in another app</string>
     <string name="backup_conflict_removed">Removed (%1$s)</string>
     <string name="backup_conflict_added">Added (%1$s)</string>
     <string name="backup_conflict_changed">Changed (%1$s)</string>
-    <string name="backup_conflict_private_cleared">All private (encrypted) items were removed.</string>
-    <string name="backup_conflict_private_changed">Private (encrypted) items also changed. They can\'t be compared here.</string>
-    <string name="backup_conflict_private_added">Private (encrypted) items were added.</string>
+    <string name="backup_conflict_private_cleared">You removed all private (encrypted) items.</string>
+    <string name="backup_conflict_private_changed">You also changed private (encrypted) items. They can\'t be compared here.</string>
+    <string name="backup_conflict_private_added">You added private (encrypted) items.</string>
     <string name="backup_conflict_restore_mine">Restore saved version</string>
     <string name="backup_conflict_review">Review changes</string>
     <string name="backup_review_saved">On this device</string>
@@ -2845,11 +2845,11 @@
     <string name="backup_conflict_count_added">%1$s added</string>
     <string name="backup_conflict_count_changed">%1$s changed</string>
     <plurals name="backup_card_follows_dropped">
-        <item quantity="one">%1$d follow was dropped</item>
-        <item quantity="other">%1$d follows were dropped</item>
+        <item quantity="one">You unfollowed %1$d person</item>
+        <item quantity="other">You unfollowed %1$d people</item>
     </plurals>
     <string name="backup_card_show_less">Show less</string>
-    <string name="backup_review_changed_by_other_app">Changed by another app · %1$s</string>
+    <string name="backup_review_changed_by_other_app">Changed in another app · %1$s</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_restore_count">Restore %1$s</string>
     <string name="backup_action_remute">Re-mute %1$s</string>
@@ -2869,11 +2869,11 @@
     <string name="backup_review_newly_muted">%1$s newly muted</string>
     <string name="backup_review_words_and_hashtags">Words &amp; hashtags</string>
     <string name="backup_review_names_and_more">%1$s and %2$s more</string>
-    <string name="backup_review_private_wiped_title">Private items were wiped</string>
+    <string name="backup_review_private_wiped_title">You removed all private items</string>
     <string name="backup_review_private_wiped_body">They\'re encrypted, so only you can see what they were. Restoring brings them all back.</string>
-    <string name="backup_review_private_added_title">Items were made private</string>
-    <string name="backup_review_private_added_body">They\'re encrypted now, which may be where the public items above went.</string>
-    <string name="backup_review_private_changed_title">Private items were rewritten</string>
+    <string name="backup_review_private_added_title">You made items private</string>
+    <string name="backup_review_private_added_body">They\'re encrypted now, which is likely where the public items above went.</string>
+    <string name="backup_review_private_changed_title">You changed private items</string>
     <string name="backup_review_private_changed_body">They\'re encrypted, so they can\'t be compared here.</string>
     <string name="backup_review_gone">Gone</string>
     <string name="backup_review_new_tag">New</string>
@@ -2892,7 +2892,7 @@
     <string name="backup_review_key_replaced">Receiving key replaced</string>
     <string name="backup_review_key_removed">Receiving key removed</string>
     <string name="backup_review_key_warning">Nutzaps will be locked to this new key. If this device doesn\'t have it, you may not be able to redeem them here.</string>
-    <string name="backup_review_would_leave">you\'d leave</string>
+    <string name="backup_review_left">left</string>
     <string name="backup_review_joined">joined</string>
     <string name="backup_review_renamed">renamed</string>
     <string name="backup_review_was_named">was “%1$s”</string>
@@ -2925,7 +2925,7 @@
     <string name="backup_review_trusted_tag">Trusted</string>
     <string name="backup_review_untrusted_tag">Untrusted</string>
     <string name="backup_review_unblocked">%1$s unblocked</string>
-    <string name="backup_review_unblocked_explainer">Amethyst would connect to them again</string>
+    <string name="backup_review_unblocked_explainer">Amethyst will connect to them again</string>
     <string name="backup_review_no_longer_blocked">No longer blocked</string>
     <string name="backup_review_newly_blocked">Newly blocked</string>
     <string name="backup_review_still_blocked">Still blocked</string>
@@ -2948,122 +2948,130 @@
     <string name="backup_review_offers_gone">%1$s offers removed</string>
     <string name="backup_review_payments_explainer">People paying you only see what\'s in this list.</string>
     <string name="backup_review_offer">BOLT12 offer</string>
-    <string name="backup_review_encrypted_cleared">It was emptied</string>
-    <string name="backup_review_encrypted_added">It was created</string>
-    <string name="backup_review_encrypted_changed">It was rewritten</string>
+    <string name="backup_review_encrypted_cleared">You emptied it</string>
+    <string name="backup_review_encrypted_added">You created it</string>
+    <string name="backup_review_encrypted_changed">You changed it</string>
     <string name="backup_review_wallet_body">Your wallet\'s mints and keys are encrypted to you, so they can\'t be compared item by item here. Restoring puts back exactly what this device saved.</string>
     <string name="backup_review_concord_body">Your Concord communities are encrypted to you, so they can\'t be compared here. Restoring puts back exactly what this device saved.</string>
     <plurals name="backup_card_mutes_visible">
-        <item quantity="one">%1$d muted thing is visible again</item>
-        <item quantity="other">%1$d muted things are visible again</item>
+        <item quantity="one">You unmuted %1$d thing</item>
+        <item quantity="other">You unmuted %1$d things</item>
     </plurals>
     <plurals name="backup_card_profile_lost_fields">
-        <item quantity="one">Your profile lost %1$d field</item>
-        <item quantity="other">Your profile lost %1$d fields</item>
+        <item quantity="one">You removed %1$d profile field</item>
+        <item quantity="other">You removed %1$d profile fields</item>
     </plurals>
     <plurals name="backup_card_nip65_lost">
-        <item quantity="one">Your posts lost %1$d relay</item>
-        <item quantity="other">Your posts lost %1$d relays</item>
+        <item quantity="one">You removed %1$d public relay</item>
+        <item quantity="other">You removed %1$d public relays</item>
     </plurals>
     <plurals name="backup_card_dm_relays_lost">
-        <item quantity="one">DMs may miss you: %1$d inbox relay dropped</item>
-        <item quantity="other">DMs may miss you: %1$d inbox relays dropped</item>
+        <item quantity="one">You removed %1$d DM relay</item>
+        <item quantity="other">You removed %1$d DM relays</item>
     </plurals>
     <plurals name="backup_card_key_package_relays_lost">
-        <item quantity="one">%1$d group-chat key relay dropped</item>
-        <item quantity="other">%1$d group-chat key relays dropped</item>
+        <item quantity="one">You removed %1$d group-chat key relay</item>
+        <item quantity="other">You removed %1$d group-chat key relays</item>
     </plurals>
     <plurals name="backup_card_search_relays_lost">
-        <item quantity="one">%1$d search relay dropped</item>
-        <item quantity="other">%1$d search relays dropped</item>
+        <item quantity="one">You removed %1$d search relay</item>
+        <item quantity="other">You removed %1$d search relays</item>
     </plurals>
     <plurals name="backup_card_indexer_relays_lost">
-        <item quantity="one">%1$d indexer relay dropped</item>
-        <item quantity="other">%1$d indexer relays dropped</item>
+        <item quantity="one">You removed %1$d indexer relay</item>
+        <item quantity="other">You removed %1$d indexer relays</item>
     </plurals>
     <plurals name="backup_card_relay_feeds_lost">
-        <item quantity="one">%1$d relay feed removed</item>
-        <item quantity="other">%1$d relay feeds removed</item>
+        <item quantity="one">You removed %1$d relay feed</item>
+        <item quantity="other">You removed %1$d relay feeds</item>
     </plurals>
     <plurals name="backup_card_private_outbox_lost">
-        <item quantity="one">Your drafts lost %1$d storage relay</item>
-        <item quantity="other">Your drafts lost %1$d storage relays</item>
+        <item quantity="one">You removed %1$d private relay</item>
+        <item quantity="other">You removed %1$d private relays</item>
     </plurals>
     <plurals name="backup_card_trusted_lost">
-        <item quantity="one">%1$d relay is no longer trusted</item>
-        <item quantity="other">%1$d relays are no longer trusted</item>
+        <item quantity="one">You stopped trusting %1$d relay</item>
+        <item quantity="other">You stopped trusting %1$d relays</item>
     </plurals>
     <plurals name="backup_card_unblocked">
-        <item quantity="one">%1$d relay was unblocked</item>
-        <item quantity="other">%1$d relays were unblocked</item>
+        <item quantity="one">You unblocked %1$d relay</item>
+        <item quantity="other">You unblocked %1$d relays</item>
     </plurals>
     <plurals name="backup_card_leave_chats">
-        <item quantity="one">You\'d leave %1$d public chat</item>
-        <item quantity="other">You\'d leave %1$d public chats</item>
+        <item quantity="one">You left %1$d public chat</item>
+        <item quantity="other">You left %1$d public chats</item>
     </plurals>
     <plurals name="backup_card_leave_communities">
-        <item quantity="one">You\'d leave %1$d community</item>
-        <item quantity="other">You\'d leave %1$d communities</item>
+        <item quantity="one">You left %1$d community</item>
+        <item quantity="other">You left %1$d communities</item>
     </plurals>
     <plurals name="backup_card_leave_rooms">
-        <item quantity="one">You\'d leave %1$d chat room</item>
-        <item quantity="other">You\'d leave %1$d chat rooms</item>
+        <item quantity="one">You left %1$d chat room</item>
+        <item quantity="other">You left %1$d chat rooms</item>
     </plurals>
     <plurals name="backup_card_leave_groups">
-        <item quantity="one">You\'d leave %1$d group</item>
-        <item quantity="other">You\'d leave %1$d groups</item>
+        <item quantity="one">You left %1$d group</item>
+        <item quantity="other">You left %1$d groups</item>
     </plurals>
     <plurals name="backup_card_feeds_removed">
-        <item quantity="one">%1$d favorite feed removed</item>
-        <item quantity="other">%1$d favorite feeds removed</item>
+        <item quantity="one">You removed %1$d favorite feed</item>
+        <item quantity="other">You removed %1$d favorite feeds</item>
     </plurals>
     <plurals name="backup_card_hashtags_unfollowed">
-        <item quantity="one">%1$d hashtag unfollowed</item>
-        <item quantity="other">%1$d hashtags unfollowed</item>
+        <item quantity="one">You unfollowed %1$d hashtag</item>
+        <item quantity="other">You unfollowed %1$d hashtags</item>
     </plurals>
     <plurals name="backup_card_places_unfollowed">
-        <item quantity="one">%1$d place unfollowed</item>
-        <item quantity="other">%1$d places unfollowed</item>
+        <item quantity="one">You unfollowed %1$d place</item>
+        <item quantity="other">You unfollowed %1$d places</item>
     </plurals>
     <plurals name="backup_card_trust_services_changed">
-        <item quantity="one">%1$d trust service changed provider</item>
-        <item quantity="other">%1$d trust services changed provider</item>
+        <item quantity="one">You changed the provider of %1$d trust service</item>
+        <item quantity="other">You changed the provider of %1$d trust services</item>
     </plurals>
     <plurals name="backup_card_nutzap_mints_removed">
-        <item quantity="one">%1$d nutzap mint removed</item>
-        <item quantity="other">%1$d nutzap mints removed</item>
+        <item quantity="one">You removed %1$d nutzap mint</item>
+        <item quantity="other">You removed %1$d nutzap mints</item>
     </plurals>
     <plurals name="backup_card_payment_targets_removed">
-        <item quantity="one">%1$d way to pay you was removed</item>
-        <item quantity="other">%1$d ways to pay you were removed</item>
+        <item quantity="one">You removed %1$d way to get paid</item>
+        <item quantity="other">You removed %1$d ways to get paid</item>
     </plurals>
     <plurals name="backup_card_offers_removed">
-        <item quantity="one">%1$d BOLT12 offer removed</item>
-        <item quantity="other">%1$d BOLT12 offers removed</item>
+        <item quantity="one">You removed %1$d BOLT12 offer</item>
+        <item quantity="other">You removed %1$d BOLT12 offers</item>
     </plurals>
     <plurals name="backup_card_and_added">
-        <item quantity="one">%1$s, and %2$d was added</item>
-        <item quantity="other">%1$s, and %2$d were added</item>
+        <item quantity="one">%1$s and added %2$d</item>
+        <item quantity="other">%1$s and added %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s and followed %2$d</item>
+        <item quantity="other">%1$s and followed %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s and muted %2$d</item>
+        <item quantity="other">%1$s and muted %2$d</item>
     </plurals>
     <plurals name="backup_card_and_joined">
-        <item quantity="one">%1$s, and join %2$d</item>
-        <item quantity="other">%1$s, and join %2$d</item>
+        <item quantity="one">%1$s and joined %2$d</item>
+        <item quantity="other">%1$s and joined %2$d</item>
     </plurals>
     <plurals name="backup_card_and_blocked">
-        <item quantity="one">%1$s, and %2$d newly blocked</item>
-        <item quantity="other">%1$s, and %2$d newly blocked</item>
+        <item quantity="one">%1$s and blocked %2$d</item>
+        <item quantity="other">%1$s and blocked %2$d</item>
     </plurals>
     <plurals name="backup_card_more_lists">
         <item quantity="one">%1$d more list changed</item>
         <item quantity="other">%1$d more lists changed</item>
     </plurals>
     <string name="backup_card_app_settings">Your Amethyst synced app settings changed in another app that is not Amethyst. This can create problems.</string>
-    <string name="backup_card_nutzap_key_replaced">Your nutzap key was replaced</string>
-    <string name="backup_card_nutzap_key_removed">Your nutzap key was removed</string>
-    <string name="backup_card_wallet_emptied">Your Cashu wallet was emptied</string>
-    <string name="backup_card_wallet_rewritten">Your Cashu wallet was rewritten</string>
-    <string name="backup_card_concord_emptied">Your Concord list was emptied</string>
-    <string name="backup_card_concord_rewritten">Your Concord list was rewritten</string>
+    <string name="backup_card_nutzap_key_replaced">You replaced your nutzap key</string>
+    <string name="backup_card_nutzap_key_removed">You removed your nutzap key</string>
+    <string name="backup_card_wallet_emptied">You emptied your Cashu wallet</string>
+    <string name="backup_card_wallet_rewritten">You changed your Cashu wallet</string>
+    <string name="backup_card_concord_emptied">You emptied your Concord list</string>
+    <string name="backup_card_concord_rewritten">You changed your Concord list</string>
     <string name="backup_conflict_keep_new">Use new version</string>
     <string name="backup_conflict_relay_read_only">read only</string>
     <string name="backup_conflict_relay_write_only">write only</string>

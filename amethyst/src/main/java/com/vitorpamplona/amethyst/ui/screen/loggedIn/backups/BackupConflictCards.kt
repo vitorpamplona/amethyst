@@ -210,11 +210,13 @@ private fun headlineOf(
     if (specific.isNullOrEmpty()) return stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType)))
     // Headlines lead with the loss; what the other app added to the same list is said too,
     // so a list that dropped 3 and gained 40 doesn't read as if it only shrank. The wording
-    // follows the headline's: joining chats, newly blocking relays, adding everything else.
+    // follows the headline's: following people, muting, joining chats, blocking relays.
     val added = addedToHeadlinedList(diff, conflict.eventType)
     if (added <= 0) return specific
     val tail =
         when {
+            diff is ContactListDiff -> R.plurals.backup_card_and_followed
+            diff is MuteListDiff -> R.plurals.backup_card_and_muted
             diff is ChannelListDiff || diff is CommunityListDiff || diff is EphemeralChatListDiff || diff is SimpleGroupListDiff -> R.plurals.backup_card_and_joined
             conflict.eventType == BackupEventType.BLOCKED_RELAYS -> R.plurals.backup_card_and_blocked
             else -> R.plurals.backup_card_and_added

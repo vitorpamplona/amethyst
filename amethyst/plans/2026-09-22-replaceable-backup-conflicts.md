@@ -52,16 +52,19 @@ only surviving copy of the user's data is gone.
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `BackupConflictGuard.conflicts`.
    Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
-   next to the key-backup nudge): "Your mute list changed in another app" with a
+   next to the key-backup nudge): "You changed your mute list in another app" with a
    "12 removed · 3 added" summary. Cards can't be dismissed; they stay until the user
    decides. The most recent conflict gets a lead card with an event-specific headline
-   ("3 relays were unblocked", "Your follow list shrank" with its bar); the others collapse
+   ("You unblocked 3 relays", "You unfollowed 12 people" with its bar); the others collapse
    into slim pills. At most two pills show; more open conflicts sit behind an "N more lists
    changed" toggle that expands into a capped, scrollable area, since the cards float over
    the feed instead of scrolling with it. List headlines lead with what was lost and add
-   what was added to the same list, worded per list ("12 follows were dropped, and 40 were
-   added", "You'd leave 2 groups, and join 1", "3 relays were unblocked, and 1 newly
-   blocked"). Tapping one opens `Route.BackupConflictReview(slot)`
+   what was added to the same list, worded per list ("You unfollowed 12 people and
+   followed 40", "You left 2 groups and joined 1", "You unblocked 3 relays and blocked 1").
+   All copy assumes the change was on purpose: the user did it in another client, and
+   Amethyst is only confirming before its backup moves on. So it says what "you" did, in
+   the past tense ("You left 1 public chat", not "You'd leave"), and never calls it a loss.
+   Tapping one opens `Route.BackupConflictReview(slot)`
    (`BackupConflictReviewScreen`): a `LazyColumn` of every entry, so lists with hundreds of
    items scroll lazily. Entries are typed (`ReviewItem`, built per diff class in
    `BackupConflictPresentation.kt`) and rendered with the app's loaders, which subscribe to
@@ -80,12 +83,12 @@ only surviving copy of the user's data is gone.
    cards, then inline field diffs with images as thumbnails; NIP-65 reach numbers ("people
    find your posts on 2 of 3 relays") over outbox and inbox lanes; nutzap info a key swap
    drawn as color fingerprints with a warning, then mints; groups a tile per group, faded
-   when you'd leave it. The other lists (`BackupConflictListViews.kt`) get their own too:
+   when you left it. The other lists (`BackupConflictListViews.kt`) get their own too:
    each relay list framed by what it is for (DM, key-package, search, indexer, relay-feed,
    private-outbox and trusted relays as "N of M" reach over per-relay rows; blocked relays
    as an "N unblocked" warning with allowed / newly blocked / still blocked), public
    chats, communities, favorite feeds and ephemeral rooms as tiles loaded from relays and
-   faded when you'd leave them, hashtags and places as a pill cloud, trust providers as a
+   faded when you left them, hashtags and places as a pill cloud, trust providers as a
    per-service before/after table, payment targets and BOLT12 offers as cards, and the
    encrypted-only Cashu wallet and Concord list as one explained panel. Only NIP-78 app
    settings still uses the generic removed / added / changed sections.
