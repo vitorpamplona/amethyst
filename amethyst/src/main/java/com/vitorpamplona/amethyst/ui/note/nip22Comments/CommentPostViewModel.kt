@@ -160,8 +160,12 @@ open class CommentPostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
-                    sendDraftSync()
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
+                    // Post rotates the tag and then clears the composer. A save still queued from
+                    // before that would see the empty text and delete the draft Post just saved
+                    // for the post that is still mining, so it's skipped once the tag has moved on.
+                    if (draftTag.current == tag) sendDraftSync()
                 }
             }
         }

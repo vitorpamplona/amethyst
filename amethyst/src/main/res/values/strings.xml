@@ -623,6 +623,7 @@
         <item quantity="other">Mining proof of work… (%1$d posts in queue)</item>
     </plurals>
     <string name="pow_mining_title">Mining proof of work</string>
+    <string name="pow_notification_sending">Sending to relays…</string>
     <string name="pow_notification_cancel_all">Cancel</string>
     <string name="pow_time_left">≈ %1$s left</string>
     <string name="pow_time_left_soon">any moment now</string>

@@ -152,9 +152,13 @@ open class ChannelNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
                     accountViewModel.launchSigner {
-                        sendDraftSync()
+                        // Post rotates the tag and then clears the composer. A save still queued from
+                        // before that would see the empty text and delete the draft Post just saved
+                        // for the post that is still mining, so it's skipped once the tag has moved on.
+                        if (draftTag.current == tag) sendDraftSync()
                     }
                 }
             }

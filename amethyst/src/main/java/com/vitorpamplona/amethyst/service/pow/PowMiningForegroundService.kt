@@ -26,6 +26,7 @@ import android.os.PowerManager
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPhase
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -82,7 +84,13 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     private var sessionTotal = 0
     private var lastQueueSize = 0
 
-    override val stopGraceMs: Long = PUBLISH_GRACE_MS
+    // Whether the last non-empty queue still had a job publishing: a queue that drains by
+    // publishing needs the grace for the event to leave; one drained by cancel does not.
+    private var drainedByPublishing = false
+
+    override fun stopGraceMs() = if (drainedByPublishing) PUBLISH_GRACE_MS else 0L
+
+    override fun renderDraining() = Content(stringRes(this, R.string.pow_notification_sending), null, Bar.Indeterminate)
 
     // Benchmarked once per service run (~250 ms, cached by the estimator).
     @Volatile
@@ -104,6 +112,16 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
                     }
             }.onFailure { Log.w(TAG, "Could not acquire the mining wake lock", it) }
                 .getOrNull()
+
+        // Re-arm the timeout while the service lives: before Android 14 there is no FGS budget
+        // and a hard nonce can mine for hours, but a lock with no timeout could outlive a
+        // service that died without onDestroy.
+        scope.launch {
+            while (true) {
+                delay(WAKE_LOCK_TIMEOUT_MS / 2)
+                wakeLock?.let { if (it.isHeld) it.acquire(WAKE_LOCK_TIMEOUT_MS) }
+            }
+        }
 
         // Mirrors what the resumed UI collects (AccountScreen's ManageRelayServices +
         // ManageWebOkHttp): subscribed, they keep the relay pool connected and, through
@@ -138,6 +156,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     }
 
     override fun onEmission(value: ImmutableList<PoWJobState>) {
+        if (value.isNotEmpty()) drainedByPublishing = value.any { it.phase == PoWJobPhase.PUBLISHING }
         if (value.size > lastQueueSize) sessionTotal += value.size - lastQueueSize
         lastQueueSize = value.size
     }
@@ -200,9 +219,8 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         // lets go of the relays and the process becomes freezable.
         private const val PUBLISH_GRACE_MS = 20_000L
 
-        // Safety net only: onDestroy releases it. shortService caps the run at ~3 min on
-        // Android 14+; older releases have no FGS budget and mine until the queue drains.
-        private const val WAKE_LOCK_TIMEOUT_MS = 60 * 60 * 1000L
+        // Safety net only: onDestroy releases it, and the service re-arms it while alive.
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
         // Best-effort de-dup for start(): the queue calls it on EVERY enqueue.
         @Volatile
