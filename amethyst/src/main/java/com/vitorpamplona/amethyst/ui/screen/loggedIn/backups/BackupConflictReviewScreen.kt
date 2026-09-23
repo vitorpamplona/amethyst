@@ -376,7 +376,10 @@ private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, Stri
         is CommunityListDiff -> rejoinLabels(diff.communities.removed.size)
         is EphemeralChatListDiff -> rejoinLabels(diff.rooms.removed.size)
         is FavoriteAlgoFeedsListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_feeds)
-        is HashtagListDiff, is GeohashListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_topics)
+        is HashtagListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_topics)
+        // Geohashes are places, not topics: the screen counts "places gone" under "Followed
+        // locations", so the button has to agree with the page it sits on.
+        is GeohashListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_places)
         is TrustProviderListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_providers)
         is CashuWalletDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_wallet)
         else -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_conflict_restore_mine)

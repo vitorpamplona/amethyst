@@ -2900,6 +2900,7 @@
     <string name="backup_action_block_again">Block %1$s again</string>
     <string name="backup_action_restore_feeds">Restore feeds</string>
     <string name="backup_action_restore_topics">Restore topics</string>
+    <string name="backup_action_restore_places">Restore places</string>
     <string name="backup_action_restore_providers">Restore providers</string>
     <string name="backup_action_restore_wallet">Restore wallet</string>
     <string name="backup_review_kept">kept</string>
