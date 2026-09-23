@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopDmRoute
 import com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.DesktopRichText
+import com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.profile.EditProfileDialog
@@ -1685,19 +1686,19 @@ fun UserProfileScreen(
     }
 
     if (showProfileReportDialog && iAccount != null) {
-        com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog(
+        ReportNoteDialog(
             onDismiss = { showProfileReportDialog = false },
-            onReport = { type, comment ->
+            onBlock = {
                 scope.launch {
                     try {
-                        iAccount.report(pubKeyHex, type, comment)
-                        profileSnackbar?.showSnackbar("Report sent")
+                        iAccount.hideUser(pubKeyHex)
+                        profileSnackbar?.showSnackbar("User muted")
                     } catch (e: Exception) {
-                        profileSnackbar?.showSnackbar("Report failed: ${e.message}")
+                        profileSnackbar?.showSnackbar("Mute failed: ${e.message}")
                     }
                 }
             },
-            onBlockAndReport = { type, comment ->
+            onReport = { type, comment ->
                 scope.launch {
                     try {
                         iAccount.report(pubKeyHex, type, comment)

@@ -84,6 +84,18 @@ import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
 
+/** The NIP-56 reasons the dialog offers, in display order, with their labels. */
+private val ReportReasons =
+    listOf(
+        ReportType.SPAM to Res.string.report_dialog_spam,
+        ReportType.PROFANITY to Res.string.report_dialog_profanity,
+        ReportType.IMPERSONATION to Res.string.report_dialog_impersonation,
+        ReportType.NUDITY to Res.string.report_dialog_nudity,
+        ReportType.ILLEGAL to Res.string.report_dialog_illegal,
+        ReportType.MALWARE to Res.string.report_malware,
+        ReportType.VIOLENCE to Res.string.violence,
+    )
+
 /**
  * Block-or-report dialog for a post. [onBlock] hides the author; [onReport] files a public
  * NIP-56 report with the chosen reason and optional text (the host also hides the author).
@@ -96,18 +108,10 @@ fun ReportDialog(
     onReport: (reason: ReportType, additionalReason: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val reportTypes =
-        listOf(
-            Pair(ReportType.SPAM, stringRes(Res.string.report_dialog_spam)),
-            Pair(ReportType.PROFANITY, stringRes(Res.string.report_dialog_profanity)),
-            Pair(ReportType.IMPERSONATION, stringRes(Res.string.report_dialog_impersonation)),
-            Pair(ReportType.NUDITY, stringRes(Res.string.report_dialog_nudity)),
-            Pair(ReportType.ILLEGAL, stringRes(Res.string.report_dialog_illegal)),
-            Pair(ReportType.MALWARE, stringRes(Res.string.report_malware)),
-            Pair(ReportType.VIOLENCE, stringRes(Res.string.violence)),
-        )
-
-    val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
+    val labels = ReportReasons.map { stringRes(it.second) }
+    // Keyed on the labels so a locale change while the dialog is open relabels the spinner;
+    // typing in the reason field recomposes with equal labels and reuses the list.
+    val reasonOptions = remember(labels) { labels.map { TitleExplainer(it) }.toImmutableList() }
     var additionalReason by remember { mutableStateOf("") }
     var selectedReason by remember { mutableIntStateOf(-1) }
 
@@ -178,9 +182,9 @@ fun ReportDialog(
                 ActionButton(
                     text = stringRes(Res.string.report_dialog_post_report_btn),
                     icon = MaterialSymbols.Report,
-                    enabled = selectedReason in 0..reportTypes.lastIndex,
+                    enabled = selectedReason in 0..ReportReasons.lastIndex,
                     onClick = {
-                        onReport(reportTypes[selectedReason].first, additionalReason)
+                        onReport(ReportReasons[selectedReason].first, additionalReason)
                         onDismiss()
                     },
                 )

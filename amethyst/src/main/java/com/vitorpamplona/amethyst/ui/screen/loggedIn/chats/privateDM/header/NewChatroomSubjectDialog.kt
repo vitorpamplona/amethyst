@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip17Dm.ui.ChatroomSubjectDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -36,10 +37,12 @@ fun NewChatroomSubjectDialog(
 ) {
     ChatroomSubjectDialog(
         initialSubject =
-            accountViewModel.account.chatroomList.rooms
-                .get(room)
-                ?.subject
-                ?.value ?: "",
+            remember(room) {
+                accountViewModel.account.chatroomList.rooms
+                    .get(room)
+                    ?.subject
+                    ?.value ?: ""
+            },
         onPost = { subject, message ->
             accountViewModel.launchSigner {
                 val template =

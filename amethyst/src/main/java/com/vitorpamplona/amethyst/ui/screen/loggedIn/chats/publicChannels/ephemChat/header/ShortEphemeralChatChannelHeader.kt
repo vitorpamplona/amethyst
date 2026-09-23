@@ -118,14 +118,13 @@ fun ShortEphemeralChatActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    JoinEphemeralChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
+    JoinEphemeralChatButtonIfNotAlreadyJoined(channel, accountViewModel)
 }
 
 @Composable
 fun JoinEphemeralChatButtonIfNotAlreadyJoined(
     channel: EphemeralChatChannel,
     accountViewModel: AccountViewModel,
-    nav: INav,
 ) {
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 

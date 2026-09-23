@@ -159,17 +159,17 @@ fun NoteReportDialog(
     val scope = rememberCoroutineScope()
     ReportNoteDialog(
         onDismiss = onDismiss,
-        onReport = { type, comment ->
+        onBlock = {
             scope.launch {
                 try {
-                    account.reportEvent(event, type, comment)
-                    snackbar?.showSnackbar("Report sent")
+                    account.hideUser(event.pubKey)
+                    snackbar?.showSnackbar("User muted")
                 } catch (e: Exception) {
-                    snackbar?.showSnackbar("Report failed: ${e.message}")
+                    snackbar?.showSnackbar("Mute failed: ${e.message}")
                 }
             }
         },
-        onBlockAndReport = { type, comment ->
+        onReport = { type, comment ->
             scope.launch {
                 try {
                     account.reportEvent(event, type, comment)

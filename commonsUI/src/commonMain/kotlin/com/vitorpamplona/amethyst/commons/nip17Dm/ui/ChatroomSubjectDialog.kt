@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 /**
  * Rename a private group chat (NIP-17): edit the subject and write the message that carries the
  * change. [onPost] receives the subject (possibly blank) and the message, then the dialog closes.
+ * Posting is disabled while both are blank.
  */
 @Composable
 fun ChatroomSubjectDialog(
@@ -94,7 +95,8 @@ fun ChatroomSubjectDialog(
                             onPost(groupName.value, message.value)
                             onClose()
                         },
-                        true,
+                        // Nothing to send without a new subject or a message.
+                        isActive = groupName.value.isNotBlank() || message.value.isNotBlank(),
                     )
                 }
 

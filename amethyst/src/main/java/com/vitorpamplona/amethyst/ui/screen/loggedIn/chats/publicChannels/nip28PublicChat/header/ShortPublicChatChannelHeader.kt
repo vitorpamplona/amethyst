@@ -135,14 +135,13 @@ fun ShortChannelActionOptions(
         }
     }
 
-    JoinChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
+    JoinChatButtonIfNotAlreadyJoined(channel, accountViewModel)
 }
 
 @Composable
 fun JoinChatButtonIfNotAlreadyJoined(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
-    nav: INav,
 ) {
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
