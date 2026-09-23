@@ -361,3 +361,29 @@ class FileCordnCoordinatorStore(
             }
         }
 }
+
+/**
+ * The handoff flag, as the presence of a file.
+ *
+ * `<accountDir>/handed-off`. A zero-byte marker rather than an encrypted blob:
+ * it carries no secret, and a flag that failed to decrypt would fail open —
+ * which here means a device that quietly resumes committing after handing its
+ * groups to another one, the exact fork the flag exists to prevent.
+ */
+class FileCordnHandoffStore(
+    private val accountDir: File,
+) : CordnHandoffStore {
+    override suspend fun load(): Boolean = marker().exists()
+
+    override suspend fun save(handedOff: Boolean) {
+        val file = marker()
+        if (handedOff) {
+            file.parentFile?.mkdirs()
+            file.writeBytes(ByteArray(0))
+        } else {
+            file.delete()
+        }
+    }
+
+    private fun marker() = File(accountDir, "handed-off")
+}

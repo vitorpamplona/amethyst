@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
+import com.vitorpamplona.amethyst.commons.cordn.CordnHandedOffException
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
@@ -54,6 +55,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -269,6 +271,91 @@ class CordnRuntimeTest {
 
             val failure = runCatching { stranger.importArchive(archive, "pw") }.exceptionOrNull()
             assertTrue("expected a refusal, got $failure", failure is IllegalArgumentException)
+        }
+
+    @Test
+    fun `a snapshot carries the groups, their cursors and their key packages`() =
+        runBlocking {
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+
+            val snapshot = runtime.migrationSnapshot()
+
+            assertEquals(listOf("mine"), snapshot.groups.map { it.gid })
+            assertEquals(keyA, snapshot.groups[0].coordinatorPubKey)
+            assertTrue(snapshot.groups[0].coordinatorRelays.isNotEmpty())
+            assertTrue(snapshot.groups[0].clientStateBase64.isNotEmpty())
+        }
+
+    @Test
+    fun `adopting a snapshot replaces this device's groups rather than merging them`() =
+        runBlocking {
+            // Same rule as restoring a backup, and for the same reason: a merge
+            // is what produces two devices holding one group's state.
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "In the snapshot"), gid = "kept")
+            val snapshot = runtime.migrationSnapshot()
+
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Added after"), gid = "dropped")
+
+            runtime.adoptMigration(snapshot)
+
+            assertEquals(
+                setOf("kept"),
+                runtime.groups.all.value
+                    .map { it.gid }
+                    .toSet(),
+            )
+        }
+
+    @Test
+    fun `a snapshot from another account is refused`() =
+        runBlocking {
+            val runtime = runtime(runtimeScope())
+            val snapshot = runtime.migrationSnapshot().copy(accountPubKey = "ff".repeat(32))
+
+            val failure = runCatching { runtime.adoptMigration(snapshot) }.exceptionOrNull()
+
+            assertTrue("expected a refusal, got $failure", failure is IllegalArgumentException)
+        }
+
+    @Test
+    fun `a handed-off device refuses to open a session`() =
+        runBlocking {
+            // The fork guard. Without it both phones hold one leaf and both
+            // commit, and MLS does not recover from that.
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+            runtime.handoff.markHandedOff()
+
+            val failure = runCatching { runtime.session(configFor(keyA)) }.exceptionOrNull()
+
+            assertTrue("expected a refusal, got $failure", failure is CordnHandedOffException)
+        }
+
+    @Test
+    fun `cancelling a handoff lets the device work again`() =
+        runBlocking {
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+            runtime.handoff.markHandedOff()
+
+            runtime.cancelHandOff()
+
+            assertNotNull(runtime.session(configFor(keyA)))
+        }
+
+    @Test
+    fun `adopting a snapshot clears a handoff, because this device now holds the newest copy`() =
+        runBlocking {
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+            val snapshot = runtime.migrationSnapshot()
+            runtime.handoff.markHandedOff()
+
+            runtime.adoptMigration(snapshot)
+
+            assertFalse(runtime.handoff.handedOff.value)
         }
 
     @Test

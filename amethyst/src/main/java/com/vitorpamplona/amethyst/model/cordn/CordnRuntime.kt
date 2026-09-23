@@ -27,24 +27,36 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
+import com.vitorpamplona.amethyst.commons.cordn.CordnHandoffState
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
+import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
+import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationGroup
+import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationSnapshot
 import com.vitorpamplona.amethyst.commons.cordn.CordnRoomState
+import com.vitorpamplona.amethyst.commons.cordn.CordnRoomStateCodec
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
+import com.vitorpamplona.amethyst.commons.cordn.EchoStateCodec
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
+import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
+import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -55,6 +67,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Base64
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -107,6 +120,18 @@ class CordnRuntime(
             cipher,
         )
 
+    /**
+     * Whether this device has handed its groups to another one.
+     *
+     * Read before the first sync loop starts (see [restore]); checked on every
+     * path that would advance an epoch, because two devices committing from one
+     * leaf fork the ratchet tree irrecoverably.
+     */
+    val handoff =
+        CordnHandoffState(
+            FileCordnHandoffStore(CordnStorageLayout.accountDirectoryFor(filesDir, accountSigner.pubKey)),
+        )
+
     /** Every cordn room this account is in, for the inbox and the screens. */
     val groups = CordnGroupList(accountSigner.pubKey)
 
@@ -115,8 +140,17 @@ class CordnRuntime(
 
     val coordinators = registry.coordinators
 
-    /** The session for [config], opening and starting it if it is new. */
+    /**
+     * The session for [config], opening and starting it if it is new.
+     *
+     * Every epoch-advancing path goes through here — creating a group, joining
+     * one, accepting a Welcome, sending — so this is where a handed-off device
+     * is stopped. Reads of state already in memory are left alone: showing a
+     * user the conversations they had is harmless, and refusing it would make a
+     * failed migration look like data loss.
+     */
     suspend fun session(config: CoordinatorConfig): CordnSession {
+        handoff.requireNotHandedOff()
         val session = registry.session(config)
         lock.withLock {
             if (loops[config.pubKey] == null) {
@@ -320,7 +354,14 @@ class CordnRuntime(
      * group anyone can open, and nothing else on the device knows which
      * coordinator serves it.
      */
-    suspend fun restore() = start(coordinatorStore.load())
+    suspend fun restore() {
+        handoff.restore()
+        // A handed-off device does not open sessions at all. Its stores stay on
+        // disk so the handoff can be undone, but a live sync loop would fetch,
+        // decrypt and self-echo alongside the device that took over.
+        if (handoff.handedOff.value) return
+        start(coordinatorStore.load())
+    }
 
     /** Opens every configured coordinator and starts syncing. */
     suspend fun start(configs: List<CoordinatorConfig>) {
@@ -516,6 +557,125 @@ class CordnRuntime(
         coordinatorStore.save(archive.coordinators)
         start(archive.coordinators)
     }
+
+    /**
+     * Snapshots every group for a handoff, read off disk.
+     *
+     * Reads from the stores rather than memory for the same reason
+     * [exportArchive] does: a coordinator whose session failed to open today is
+     * still migrated, because a handoff that silently omitted the groups the
+     * app could not reach would be wrong precisely when it matters.
+     */
+    suspend fun migrationSnapshot(): CordnMigrationSnapshot {
+        val configs = coordinatorStore.load()
+        val groups = mutableListOf<CordnMigrationGroup>()
+        val keyPackages = mutableListOf<CordnCarriedKeyPackage>()
+
+        withContext(Dispatchers.IO) {
+            configs.forEach { config ->
+                val dir = CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, config.pubKey)
+                val groupStore = FileCordnGroupStore(dir, cipher)
+                val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
+
+                groupStore.listGroups().forEach { gid ->
+                    val state = groupStore.loadGroup(gid) ?: return@forEach
+                    groups +=
+                        CordnMigrationGroup(
+                            coordinatorPubKey = config.pubKey,
+                            coordinatorRelays = config.relays.map { it.url },
+                            gid = gid,
+                            clientStateBase64 = state.toBase64(),
+                            cursor = groupStore.loadCursor(gid)?.fetchCursor ?: 0L,
+                            roomStateBase64 = groupStore.loadRoomState(gid)?.let { CordnRoomStateCodec.encode(it).toBase64() },
+                            echoStateBase64 = groupStore.loadEchoState(gid)?.let { EchoStateCodec.encode(it).toBase64() },
+                            joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
+                        )
+                }
+
+                keyPackageStore.list().forEach { ref ->
+                    val bundle = keyPackageStore.load(ref) ?: return@forEach
+                    keyPackages += CordnCarriedKeyPackage(config.pubKey, ref, bundle.toBase64())
+                }
+            }
+        }
+
+        return CordnMigrationSnapshot(accountSigner.pubKey, groups, keyPackages = keyPackages)
+    }
+
+    /**
+     * Publishes a handoff and stands this device down.
+     *
+     * The order is deliberate. Everything is stored and advertised first, and
+     * only a migration that got that far marks the device — a failed publish
+     * that had already locked would leave the account on a phone that refuses
+     * to send from the only copy of its state.
+     */
+    suspend fun handOff(
+        migration: CordnMigration,
+        relays: Set<NormalizedRelayUrl>,
+    ): CordnHandoffCode {
+        val code = migration.publish(migrationSnapshot(), relays)
+        stop()
+        handoff.markHandedOff()
+        return code
+    }
+
+    /** Takes this device back after a handoff that did not complete. */
+    suspend fun cancelHandOff() {
+        handoff.resume()
+        start(coordinatorStore.load())
+    }
+
+    /**
+     * Adopts a snapshot another device published, replacing what is here.
+     *
+     * **Replaces, and is not a merge** — the same rule [importArchive] states,
+     * and for the same reason: two devices holding one group's state and both
+     * committing fork the ratchet tree, and MLS does not recover.
+     */
+    suspend fun adoptMigration(snapshot: CordnMigrationSnapshot) {
+        require(snapshot.accountPubKey == accountSigner.pubKey) {
+            "this migration belongs to a different account"
+        }
+
+        stop()
+
+        val configs =
+            snapshot.groups
+                .groupBy { it.coordinatorPubKey }
+                .mapNotNull { (pubKey, groups) ->
+                    val relays = groups.flatMap { it.coordinatorRelays }.distinct().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    if (relays.isEmpty()) null else CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
+                }
+
+        withContext(Dispatchers.IO) {
+            File(filesDir, "cordn/${accountSigner.pubKey}").deleteRecursively()
+
+            snapshot.groups.forEach { group ->
+                val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, group.coordinatorPubKey), cipher)
+                store.saveGroup(group.gid, group.clientStateBase64.fromBase64())
+                store.saveCursor(group.gid, GroupCursor(fetchCursor = group.cursor, lastCursor = group.cursor))
+                group.roomStateBase64?.let { store.saveRoomState(group.gid, CordnRoomStateCodec.decode(it.fromBase64())) }
+                group.echoStateBase64?.let { store.saveEchoState(group.gid, EchoStateCodec.decode(it.fromBase64())) }
+                if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
+            }
+
+            snapshot.keyPackages.forEach { keyPackage ->
+                FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, keyPackage.coordinatorPubKey), cipher)
+                    .save(keyPackage.keyPackageRef, keyPackage.bundle.fromBase64())
+            }
+        }
+
+        // A device that just adopted state is emphatically not handed off, even
+        // if it had handed off before: it now holds the newest copy.
+        handoff.resume()
+        coordinatorStore.save(configs)
+        start(configs)
+    }
+
+    private fun ByteArray.toBase64() = Base64.getEncoder().encodeToString(this)
+
+    private fun String.fromBase64() = Base64.getDecoder().decode(this)
 
     /** What [coordinatorPubKey] says about itself, or null if it is not open. */
     suspend fun serverInfo(coordinatorPubKey: HexKey): CoordinatorServerInfo? = registry.sessionOrNull(coordinatorPubKey)?.serverInfo()
