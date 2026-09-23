@@ -52,10 +52,10 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.DropdownOption
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 // Well-known values for the persona's optional model / provider / runtime — suggestions only; any

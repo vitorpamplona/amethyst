@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,8 +43,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 /**
  * A centered, muted system line for events that narrate the room rather than talk

@@ -18,43 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.topbars
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches
 
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geocache_hide_a_cache
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
-import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBarWithBackButton(
-    caption: String,
-    nav: INav,
-    actions: @Composable RowScope.() -> Unit = {},
-) {
-    ShorterTopAppBar(
-        title = {
-            Text(
-                text = caption,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-            )
-        },
-        actions = actions,
-        navigationIcon = {
-            // Suppress the back arrow when this is the bottom of the back stack
-            // (i.e. the user landed here via the bottom nav, which clears the stack
-            // with popUpTo(route) { inclusive = true }).
-            if (nav.canPop()) {
-                IconButton(nav::popBack) {
-                    ArrowBackIcon()
-                }
-            }
-        },
-    )
+fun NewGeocacheButton(nav: INav) {
+    FloatingActionButton(
+        onClick = { nav.nav(Route.NewGeocache()) },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(Res.string.geocache_hide_a_cache),
+            modifier = Size26Modifier,
+            tint = MaterialTheme.colorScheme.onPrimary,
+        )
+    }
 }

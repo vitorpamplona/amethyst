@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.PlayIconSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 
 @Preview
 @Composable

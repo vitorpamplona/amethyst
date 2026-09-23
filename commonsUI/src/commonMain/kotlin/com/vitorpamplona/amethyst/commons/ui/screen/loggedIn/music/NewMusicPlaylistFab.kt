@@ -18,35 +18,49 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.new_public_chat
+import com.vitorpamplona.amethyst.commons.resources.new_music_playlist
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 
 @Composable
-fun NewPublicChatButton(nav: INav) {
+fun NewMusicPlaylistFab(nav: INav) {
     FloatingActionButton(
-        onClick = { nav.nav(Route.ChannelMetadataEdit()) },
+        // Opens the full-screen playlist composer in create mode (no d-tag). The composer
+        // owns title, cover-image upload, description, notes, visibility and the collaborative
+        // flag — the old name-only dialog couldn't surface any of those.
+        onClick = { nav.nav(Route.NewMusicPlaylist()) },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_public_chat),
+            symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
+            contentDescription = stringRes(Res.string.new_music_playlist),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )
+    }
+}
+
+@Preview
+@Composable
+private fun NewMusicPlaylistFabPreview() {
+    ThemeComparisonRow {
+        NewMusicPlaylistFab(nav = EmptyNav())
     }
 }

@@ -65,9 +65,9 @@ import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings_de
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_static
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_waves
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.FakeWaveformAnimation
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.flow.Flow
 

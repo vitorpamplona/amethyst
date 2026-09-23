@@ -50,12 +50,12 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.resources.scan_qr
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageImport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ZxingCppBarcodeDecoder

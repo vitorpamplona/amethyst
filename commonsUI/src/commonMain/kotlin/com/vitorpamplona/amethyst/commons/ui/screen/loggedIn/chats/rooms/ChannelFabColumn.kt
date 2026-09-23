@@ -18,34 +18,42 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.new_community
+import com.vitorpamplona.amethyst.commons.resources.messages_create_public_private_chat_description
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
+/**
+ * The Messages "+" button. Instead of a speed-dial that fanned out several cryptic one-word FABs
+ * (Private / Public / Group / Find groups), a single button opens the full-screen
+ * [NewConversationScreen] chooser, which explains every conversation type and its trade-offs before
+ * the user commits to one.
+ */
 @Composable
-fun NewCommunityButton(nav: INav) {
+fun ChannelFabColumn(nav: INav) {
     FloatingActionButton(
-        onClick = { nav.nav(Route.NewCommunity) },
+        onClick = { nav.nav(Route.NewConversation) },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
             symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_community),
-            modifier = Size26Modifier,
+            contentDescription = stringRes(Res.string.messages_create_public_private_chat_description),
+            modifier = Modifier.size(26.dp),
             tint = MaterialTheme.colorScheme.onPrimary,
         )
     }

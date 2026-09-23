@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size17dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.launch
 

@@ -18,47 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.theme
+package com.vitorpamplona.amethyst.commons.ui.theme
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 
+/**
+ * The default-accent Amethyst theme for `@Preview`s and screenshot tests in shared code.
+ *
+ * The app's real theme (`AmethystTheme` in the Android module) also reads the user's accent,
+ * font and size preferences and paints the Activity's system bars, none of which a preview has.
+ */
 @Composable
-fun ThemeComparisonColumn(toPreview: @Composable () -> Unit) {
-    Column {
-        Box {
-            AmethystTheme(ThemeType.DARK) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-
-        Box {
-            AmethystTheme(ThemeType.LIGHT) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-    }
-}
-
-@Composable
-fun ThemeComparisonRow(toPreview: @Composable () -> Unit) {
-    Row {
-        Box(modifier = Modifier.weight(1f)) {
-            AmethystTheme(ThemeType.DARK) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
-            AmethystTheme(ThemeType.LIGHT) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
+fun AmethystPreviewTheme(
+    dark: Boolean,
+    content: @Composable () -> Unit,
+) {
+    MaterialTheme(
+        colorScheme = if (dark) DarkColorPalette else LightColorPalette,
+        typography = Typography,
+        shapes = Shapes,
+    ) {
+        ProvideAppIcons(content = content)
     }
 }

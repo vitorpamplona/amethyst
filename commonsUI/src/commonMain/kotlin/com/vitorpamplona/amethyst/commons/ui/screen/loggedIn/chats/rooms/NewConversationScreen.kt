@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -127,13 +127,13 @@ import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_dir
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_encrypted
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_section_relay
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import org.jetbrains.compose.resources.StringResource
 
 // Per-type accent colors. Each protocol gets its own hue so private-vs-public reads at a glance

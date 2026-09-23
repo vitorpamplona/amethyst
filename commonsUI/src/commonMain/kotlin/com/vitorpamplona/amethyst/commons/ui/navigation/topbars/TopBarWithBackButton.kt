@@ -18,28 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
-import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
+import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 
-/**
- * [zonedDrawerSwipe] gated on the drawer actually being modal. With the drawer permanently
- * docked ([INav.isDrawerDocked]) there is nothing to open, so the left-edge swipe zone is
- * not attached at all and the pager keeps its own gestures. Use this instead of calling
- * [zonedDrawerSwipe] directly from screens — the guard then can't be forgotten at new
- * call sites.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Modifier.zonedDrawerSwipeIfModal(
-    pagerState: PagerState,
+fun TopBarWithBackButton(
+    caption: String,
     nav: INav,
-): Modifier =
-    if (nav.isDrawerDocked) {
-        this
-    } else {
-        zonedDrawerSwipe(pagerState, nav::openDrawer)
-    }
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    ShorterTopAppBar(
+        title = {
+            Text(
+                text = caption,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            )
+        },
+        actions = actions,
+        navigationIcon = {
+            // Suppress the back arrow when this is the bottom of the back stack
+            // (i.e. the user landed here via the bottom nav, which clears the stack
+            // with popUpTo(route) { inclusive = true }).
+            if (nav.canPop()) {
+                IconButton(nav::popBack) {
+                    ArrowBackIcon()
+                }
+            }
+        },
+    )
+}

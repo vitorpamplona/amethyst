@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -27,7 +27,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KClass
 
 @Stable
@@ -35,9 +34,13 @@ class EmptyNav : INav {
     override val navigationScope: CoroutineScope get() = TODO("Not yet implemented")
     override val drawerState = DrawerState(DrawerValue.Closed)
 
-    override fun closeDrawer() = runBlocking { drawerState.close() }
+    override fun closeDrawer() {
+        // no-op: EmptyNav is a preview/test stub; animating the drawer needs a frame clock it has not got.
+    }
 
-    override fun openDrawer() = runBlocking { drawerState.open() }
+    override fun openDrawer() {
+        // no-op: EmptyNav is a preview/test stub; animating the drawer needs a frame clock it has not got.
+    }
 
     // All navigation methods are intentionally no-op; this is a stub for previews and tests
     override fun nav(route: Route) {

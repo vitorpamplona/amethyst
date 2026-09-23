@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.follow_sets_explainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.FollowPackAndUserItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.PeopleListAndUserItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding

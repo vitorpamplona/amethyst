@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_descriptio
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.MediaFeedRoute
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isSameRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.NewConversationScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.wizard.CashuWalletCreatedScreen
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -160,7 +162,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.NewConversationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
@@ -320,7 +321,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletCreatedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen

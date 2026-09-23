@@ -18,35 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.articles
+package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
+import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
+/**
+ * [zonedDrawerSwipe] gated on the drawer actually being modal. With the drawer permanently
+ * docked ([INav.isDrawerDocked]) there is nothing to open, so the left-edge swipe zone is
+ * not attached at all and the pager keeps its own gestures. Use this instead of calling
+ * [zonedDrawerSwipe] directly from screens — the guard then can't be forgotten at new
+ * call sites.
+ */
 @Composable
-fun NewArticleButton(nav: INav) {
-    FloatingActionButton(
-        onClick = { nav.nav(Route.NewLongFormPost()) },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_long_form_post),
-            modifier = Size26Modifier,
-            tint = MaterialTheme.colorScheme.onPrimary,
-        )
+fun Modifier.zonedDrawerSwipeIfModal(
+    pagerState: PagerState,
+    nav: INav,
+): Modifier =
+    if (nav.isDrawerDocked) {
+        this
+    } else {
+        zonedDrawerSwipe(pagerState, nav::openDrawer)
     }
-}

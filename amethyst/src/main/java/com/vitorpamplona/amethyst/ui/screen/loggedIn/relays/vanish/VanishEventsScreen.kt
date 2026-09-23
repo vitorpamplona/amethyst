@@ -70,9 +70,9 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_target_relays_label
 import com.vitorpamplona.amethyst.commons.resources.vanish_test_button
 import com.vitorpamplona.amethyst.commons.resources.vanish_test_error
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

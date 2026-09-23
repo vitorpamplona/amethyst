@@ -192,6 +192,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenDuration
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenFloatSpec
@@ -236,7 +237,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTarge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event

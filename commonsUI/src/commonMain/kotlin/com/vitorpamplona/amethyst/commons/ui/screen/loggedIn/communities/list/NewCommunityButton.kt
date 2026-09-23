@@ -18,48 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.list
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.edits_the_user_s_metadata
+import com.vitorpamplona.amethyst.commons.resources.new_community
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
 @Composable
-fun EditButton(nav: INav) {
-    InnerEditButton { nav.nav(Route.EditProfile) }
-}
-
-@Preview
-@Composable
-fun InnerEditButtonPreview() {
-    InnerEditButton {}
-}
-
-@Composable
-fun InnerEditButton(onClick: () -> Unit) {
-    FilledTonalButton(
-        modifier =
-            Modifier
-                .padding(horizontal = 3.dp)
-                .width(50.dp),
-        onClick = onClick,
-        contentPadding = ZeroPadding,
+fun NewCommunityButton(nav: INav) {
+    FloatingActionButton(
+        onClick = { nav.nav(Route.NewCommunity) },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            symbol = MaterialSymbols.EditNote,
-            contentDescription = stringRes(Res.string.edits_the_user_s_metadata),
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(id = Res.string.new_community),
+            modifier = Size26Modifier,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

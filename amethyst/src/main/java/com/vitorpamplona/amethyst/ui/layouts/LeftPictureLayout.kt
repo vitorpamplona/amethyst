@@ -51,10 +51,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.TextCount
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
 @Preview

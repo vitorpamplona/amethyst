@@ -78,16 +78,16 @@ import com.vitorpamplona.amethyst.commons.resources.reactions_settings_share_des
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_show_counter
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_zap
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_zap_description
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")

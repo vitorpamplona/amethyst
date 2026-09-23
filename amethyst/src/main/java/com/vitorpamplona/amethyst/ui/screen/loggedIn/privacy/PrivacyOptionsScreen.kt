@@ -97,10 +97,11 @@ import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
 import com.vitorpamplona.amethyst.commons.tor.whichPreset
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SegmentedChoiceTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsControlRow
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.explainerId
 import com.vitorpamplona.amethyst.ui.tor.resourceId

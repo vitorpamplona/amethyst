@@ -82,23 +82,23 @@ import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notificatio
 import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_title
 import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_description
 import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
 

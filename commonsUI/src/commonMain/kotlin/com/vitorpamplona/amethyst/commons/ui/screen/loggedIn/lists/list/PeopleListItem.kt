@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,7 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size50ModifierOffset10
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 
 private const val PREVIEW_LIST_TITLE = "Sample List Title"
 private const val PREVIEW_LIST_DESCRIPTION = "Sample List Description"
