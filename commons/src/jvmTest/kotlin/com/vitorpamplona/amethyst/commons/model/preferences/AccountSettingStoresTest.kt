@@ -168,34 +168,6 @@ class AccountSettingStoresTest {
             assertEquals(false, loaded.splitNotificationsEnabled)
         }
 
-    /**
-     * The one-shot migration marker is not a user setting, so it must not ride
-     * along in the bulk save where a stale copy could re-run or suppress it.
-     */
-    @Test
-    fun theGlobalToCuratedMarkerIsIndependentOfTheBulkSave() =
-        runTest {
-            val store = NotificationPrefsStore(raw())
-
-            assertEquals(false, store.hasRunGlobalToCuratedMigration())
-            store.markGlobalToCuratedMigrated()
-            store.save(NotificationPrefs(alwaysOnService = true))
-
-            assertEquals("a later bulk save must not clear it", true, store.hasRunGlobalToCuratedMigration())
-            assertEquals(true, store.load().alwaysOnService)
-        }
-
-    @Test
-    fun lastReadPerRouteIsIndependentOfTheBulkSave() =
-        runTest {
-            val store = NotificationPrefsStore(raw())
-
-            store.saveLastReadPerRoute("""{"home":1}""")
-            store.save(NotificationPrefs(splitNotificationsEnabled = true))
-
-            assertEquals("""{"home":1}""", store.lastReadPerRoute())
-        }
-
     /** A null string field must clear its key rather than leave the old value behind. */
     @Test
     fun aNullStringFieldClearsTheKey() =

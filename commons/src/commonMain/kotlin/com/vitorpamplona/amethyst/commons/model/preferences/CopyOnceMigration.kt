@@ -34,8 +34,14 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
  * run twice, and which makes the migration a one-way door: a build that rolls
  * back to reading the old store finds the user's settings gone. Here a marker
  * key in the *destination* records that the copy happened, so the source is
- * left untouched and a rollback still works. Deleting the legacy data is a
- * separate decision, taken once the migration has shipped and held.
+ * left untouched and a rollback still works.
+ *
+ * Deleting the legacy data is a separate and later decision, and a narrower one
+ * than it looks: because this runs lazily — on the first read of the
+ * destination, not at install time — the source has to stay *readable*
+ * indefinitely for installs that skip the release which introduced the
+ * destination. What can be retired is writing to the source, once nothing
+ * still reads a key only it holds.
  *
  * [copy] receives the destination and writes whatever it has, so a migration
  * can carry strings, booleans, int and string sets alike. It is only called

@@ -79,6 +79,9 @@ class EncryptedRosterStorage(
  * fresh install with no way back to the accounts that are sitting on disk.
  * So a read that fails or comes back empty falls through to the legacy file
  * rather than being taken at face value.
+ *
+ * The legacy reader stays for good; see [EncryptedStorage] for why a lazy
+ * migration cannot have its source deleted.
  */
 class AccountRoster(
     private val store: RosterStorage,

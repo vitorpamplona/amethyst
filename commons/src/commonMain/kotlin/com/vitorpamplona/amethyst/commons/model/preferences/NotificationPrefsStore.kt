@@ -25,13 +25,17 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import okio.IOException
 
 /**
  * This account's share of the notification settings.
+ *
+ * Two keys from the legacy file are deliberately absent:
+ * `notif_global_to_curated_migrated` and `last_read_per_route` are accepted
+ * losses rather than migrations — re-running a one-shot filter migration, or
+ * marking feeds unread once, costs less than the code to carry them.
 
  * The global on/off switch is not here — it lives in plain, non-encrypted
  * storage because the restart layer must read it synchronously from a fresh
@@ -55,8 +59,6 @@ class NotificationPrefsStore(
         val alwaysOnService = booleanPreferencesKey("always_on_notification_service")
         val showMessagesInNotifications = booleanPreferencesKey("show_messages_in_notifications")
         val splitNotificationsEnabled = booleanPreferencesKey("split_notifications_enabled")
-        val globalToCuratedMigrated = booleanPreferencesKey("notif_global_to_curated_migrated")
-        val lastReadPerRouteJson = stringPreferencesKey("last_read_per_route")
     }
 
     private suspend fun read(): Preferences =
@@ -72,32 +74,6 @@ class NotificationPrefsStore(
             showMessagesInNotifications = prefs[showMessagesInNotifications] ?: true,
             splitNotificationsEnabled = prefs[splitNotificationsEnabled] ?: false,
         )
-    }
-
-    /**
-     * Whether the one-shot global-to-curated notification filter migration has
-     * already run for this account.
-     *
-     * Kept out of [NotificationPrefs] and its bulk save because it is not a
-     * user setting: it is written once, by that migration, and a bulk save that
-     * carried a stale copy could re-run the migration or wrongly suppress it.
-     */
-    suspend fun hasRunGlobalToCuratedMigration(): Boolean = read()[globalToCuratedMigrated] ?: false
-
-    suspend fun markGlobalToCuratedMigrated() {
-        store.edit { prefs -> prefs[globalToCuratedMigrated] = true }
-    }
-
-    /**
-     * The per-route read markers, as JSON.
-     *
-     * Written on its own path as the user reads things, at a different cadence
-     * from the settings above, so it is not part of [save].
-     */
-    suspend fun lastReadPerRoute(): String? = read()[lastReadPerRouteJson]
-
-    suspend fun saveLastReadPerRoute(json: String) {
-        store.edit { prefs -> prefs[lastReadPerRouteJson] = json }
     }
 
     /** Writes the whole group in one edit, so a crash cannot half-apply it. */

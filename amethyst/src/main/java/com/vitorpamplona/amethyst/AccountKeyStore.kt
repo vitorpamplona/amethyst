@@ -75,8 +75,11 @@ class SecureKeyStorageVault(
  *    credential reset, say — falls back rather than presenting the account as
  *    having no key, which would silently demote it to read-only.
  *
- * Nothing is deleted here. Dropping the legacy file is a later release's job,
- * once this path has shipped and held; doing both at once leaves no way back.
+ * Nothing is deleted here, and the legacy *reader* is permanent — see
+ * [EncryptedStorage]. The migration is lazy, so an install that skips the
+ * release introducing this store still needs the old file readable when it
+ * finally arrives. What a later release can drop is the legacy **write**, once
+ * every key in that file has a new home; several still do not.
  *
  * The two stores cannot legitimately disagree: an npub is derived from its
  * private key, so the key for a given npub never changes. A mismatch means

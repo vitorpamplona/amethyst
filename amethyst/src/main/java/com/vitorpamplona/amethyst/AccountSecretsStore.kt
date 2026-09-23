@@ -40,6 +40,9 @@ import okio.Path.Companion.toOkioPath
  * Losing these is recoverable — the user re-pairs a signer or re-adds a wallet
  * — but it is not something to spend, so a read that fails falls back to the
  * legacy values rather than reporting the account as having none.
+ *
+ * The legacy reader stays for good; see [EncryptedStorage] for why a lazy
+ * migration cannot have its source deleted.
  */
 class AccountSecretsStore(
     private val stores: AccountSecretsEncryptedStores,
