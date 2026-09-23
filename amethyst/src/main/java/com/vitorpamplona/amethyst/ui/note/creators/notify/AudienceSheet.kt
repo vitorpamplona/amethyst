@@ -83,6 +83,11 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.num_selected
 import com.vitorpamplona.amethyst.commons.resources.select_all
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceCap
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceList
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceListKind
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceMember
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness

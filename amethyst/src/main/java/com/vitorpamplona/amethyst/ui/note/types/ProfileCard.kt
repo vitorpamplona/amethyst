@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.number_followers
 import com.vitorpamplona.amethyst.commons.resources.profile_card_bot
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
+import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -81,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ShowFollowingOrUnfollowingButton
-import com.vitorpamplona.amethyst.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

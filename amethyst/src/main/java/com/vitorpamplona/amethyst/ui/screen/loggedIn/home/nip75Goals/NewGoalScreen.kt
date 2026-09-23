@@ -59,11 +59,11 @@ import com.vitorpamplona.amethyst.commons.resources.goal_summary_placeholder
 import com.vitorpamplona.amethyst.commons.resources.goal_website_label
 import com.vitorpamplona.amethyst.commons.resources.goal_website_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_goal
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

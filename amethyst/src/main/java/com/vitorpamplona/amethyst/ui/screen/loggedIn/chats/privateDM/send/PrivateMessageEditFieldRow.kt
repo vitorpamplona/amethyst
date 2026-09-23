@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
 import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_in
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
@@ -87,7 +88,6 @@ import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.RoomChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.ImmutableList

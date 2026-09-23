@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
@@ -54,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview
 

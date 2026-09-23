@@ -70,12 +70,12 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_title_placeh
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_cta
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadPlaceholder

@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.fundraiser_ends
 import com.vitorpamplona.amethyst.commons.resources.fundraiser_onchain_donation
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags

@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.resources.zap_split_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ZapSplitIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer

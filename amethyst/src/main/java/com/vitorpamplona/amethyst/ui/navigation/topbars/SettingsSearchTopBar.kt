@@ -47,9 +47,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.settings_search_placeholder
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 
 /**
  * Top bar for the All Settings screen that hosts the settings filter directly in the app bar,

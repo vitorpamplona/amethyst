@@ -89,13 +89,13 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_episode_transcript_l
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_video_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanner

@@ -78,12 +78,19 @@ import com.vitorpamplona.amethyst.commons.resources.pinned_notes
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_description
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_title
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_mark
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.elements.StaleRelayHint
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBirdDetection
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBirdex
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCodeSnippetEvent
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -107,9 +114,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteModifications
-import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -126,7 +131,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
-import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
@@ -157,8 +161,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
-import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
-import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.ui.note.types.RenderBookshelfDirectory
@@ -174,7 +176,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
-import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
@@ -274,7 +275,6 @@ import com.vitorpamplona.amethyst.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay

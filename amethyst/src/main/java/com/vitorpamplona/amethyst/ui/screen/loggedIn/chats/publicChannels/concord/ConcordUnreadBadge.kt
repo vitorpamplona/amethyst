@@ -25,8 +25,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_unread_messages
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.CHAT_UNREAD_CAP
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.ChatUnreadBadge
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.CHAT_UNREAD_CAP
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.ChatUnreadBadge
 
 /**
  * A small pill showing an unread-message [count] (new messages since this account last read).

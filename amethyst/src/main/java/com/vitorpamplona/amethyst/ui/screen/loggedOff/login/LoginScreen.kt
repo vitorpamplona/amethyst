@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.login.LoginButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.login.SignUpButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp

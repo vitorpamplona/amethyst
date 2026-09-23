@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityHeaderRow
+import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
-import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn

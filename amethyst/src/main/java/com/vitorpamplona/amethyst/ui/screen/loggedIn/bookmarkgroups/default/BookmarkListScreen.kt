@@ -50,9 +50,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
+import com.vitorpamplona.amethyst.commons.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
-import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton

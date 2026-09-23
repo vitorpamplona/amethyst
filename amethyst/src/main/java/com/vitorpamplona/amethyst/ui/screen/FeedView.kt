@@ -30,18 +30,18 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 

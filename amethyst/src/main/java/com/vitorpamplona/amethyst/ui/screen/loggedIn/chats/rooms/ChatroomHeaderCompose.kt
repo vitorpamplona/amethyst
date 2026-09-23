@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
 import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayNameChip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
@@ -129,13 +131,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayNameChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote

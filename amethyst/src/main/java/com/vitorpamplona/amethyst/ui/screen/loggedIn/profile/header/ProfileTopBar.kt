@@ -43,13 +43,13 @@ import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.search_button
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.searchRouteFor
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

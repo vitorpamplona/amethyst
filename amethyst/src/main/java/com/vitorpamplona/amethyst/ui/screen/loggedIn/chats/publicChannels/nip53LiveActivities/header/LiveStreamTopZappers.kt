@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
+import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.LiveStreamTopZappersViewMod
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.math.BigDecimal

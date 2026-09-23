@@ -83,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.resources.notify_mute_user
 import com.vitorpamplona.amethyst.commons.resources.notify_unmute_user
 import com.vitorpamplona.amethyst.commons.resources.private_note_visible_to
 import com.vitorpamplona.amethyst.commons.resources.reply_notify
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceGroupChip
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp

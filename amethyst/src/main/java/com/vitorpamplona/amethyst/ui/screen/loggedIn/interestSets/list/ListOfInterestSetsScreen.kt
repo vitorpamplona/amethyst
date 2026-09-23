@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.interest_set_create_btn_label
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_empty
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_title
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.list.InterestSetItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding

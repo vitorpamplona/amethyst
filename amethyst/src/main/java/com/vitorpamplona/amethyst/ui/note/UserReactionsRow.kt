@@ -40,6 +40,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.zaps
+import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.RoyalBlue

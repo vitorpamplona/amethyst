@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.select_signer
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected2
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.login.LoginWithAmberButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp

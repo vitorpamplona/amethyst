@@ -67,6 +67,11 @@ import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -80,13 +85,8 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
-import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded

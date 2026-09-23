@@ -57,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.how_should_we_call_you
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
 import com.vitorpamplona.amethyst.commons.resources.welcome
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.signup.LoginButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.signup.SignUpButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp

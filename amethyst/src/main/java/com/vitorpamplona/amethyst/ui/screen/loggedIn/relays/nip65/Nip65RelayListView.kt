@@ -30,6 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayCountResult
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayDragState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.HorzPadding
@@ -39,11 +42,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable

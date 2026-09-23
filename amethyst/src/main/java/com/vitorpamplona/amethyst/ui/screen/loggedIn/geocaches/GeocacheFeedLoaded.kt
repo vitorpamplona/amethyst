@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_sorted_by_distance
 import com.vitorpamplona.amethyst.commons.resources.geocache_sorted_by_recent
 import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -66,8 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.types.RenderGeocache

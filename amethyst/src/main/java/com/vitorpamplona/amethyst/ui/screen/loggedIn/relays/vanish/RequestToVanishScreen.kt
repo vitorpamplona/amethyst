@@ -88,11 +88,11 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_select_date
 import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
 import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
 import com.vitorpamplona.amethyst.commons.resources.vanish_target_relay
+import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton

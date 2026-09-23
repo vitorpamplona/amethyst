@@ -68,6 +68,9 @@ import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_
 import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_search_empty
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
+import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -77,9 +80,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
-import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
-import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription

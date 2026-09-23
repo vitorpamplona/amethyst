@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScanOutcome
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException

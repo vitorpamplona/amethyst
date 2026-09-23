@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts
 
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.MediaUrl
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.extractEventId
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.extractFirstMediaUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

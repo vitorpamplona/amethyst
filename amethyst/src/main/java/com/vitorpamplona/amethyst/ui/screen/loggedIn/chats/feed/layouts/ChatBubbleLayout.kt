@@ -75,6 +75,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier
@@ -88,7 +90,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.chatBubbleThem
 import com.vitorpamplona.amethyst.commons.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.messageBubbleLimits
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.CommentIcon
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

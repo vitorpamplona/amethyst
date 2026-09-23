@@ -26,9 +26,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.never
 import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts.ChatDivisor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatDivisor
 import com.vitorpamplona.quartz.nip14Subject.subject
 
 @Composable

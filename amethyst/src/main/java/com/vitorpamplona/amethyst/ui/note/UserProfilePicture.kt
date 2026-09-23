@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.profile_image_of_user
 import com.vitorpamplona.amethyst.commons.resources.unknown_author
+import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Font6SP

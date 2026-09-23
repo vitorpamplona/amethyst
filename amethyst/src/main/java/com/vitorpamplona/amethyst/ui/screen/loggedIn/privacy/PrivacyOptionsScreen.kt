@@ -95,9 +95,9 @@ import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
 import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
 import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
 import com.vitorpamplona.amethyst.commons.tor.whichPreset
+import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton

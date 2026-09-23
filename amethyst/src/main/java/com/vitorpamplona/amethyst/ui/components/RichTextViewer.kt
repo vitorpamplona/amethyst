@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.richtext.HashtagIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState

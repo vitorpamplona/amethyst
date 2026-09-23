@@ -122,6 +122,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -134,7 +135,6 @@ import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDa
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
-import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ReplyModeToggle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
@@ -68,8 +70,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview

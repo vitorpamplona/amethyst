@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions

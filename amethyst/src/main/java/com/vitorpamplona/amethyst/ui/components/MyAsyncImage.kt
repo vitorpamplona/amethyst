@@ -38,12 +38,12 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

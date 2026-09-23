@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.resources.classifieds_location_placeho
 import com.vitorpamplona.amethyst.commons.resources.classifieds_price
 import com.vitorpamplona.amethyst.commons.resources.classifieds_title
 import com.vitorpamplona.amethyst.commons.resources.classifieds_title_placeholder
+import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -89,9 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag

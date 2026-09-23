@@ -25,7 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey

@@ -40,11 +40,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.commons.ui.note.EnablePiP
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.note.EnablePiP
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview

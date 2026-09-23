@@ -76,6 +76,10 @@ import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding

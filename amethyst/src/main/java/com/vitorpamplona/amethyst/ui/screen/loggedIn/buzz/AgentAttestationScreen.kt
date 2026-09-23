@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_remove
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_signed_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_topbar
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_warning
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.DropdownOption
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText

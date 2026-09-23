@@ -92,7 +92,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_section_forums
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_action
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_body
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
@@ -104,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -114,7 +115,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.HiddenDmHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription

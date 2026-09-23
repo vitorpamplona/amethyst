@@ -89,12 +89,17 @@ import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBirdDetection
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -120,7 +125,6 @@ import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -130,7 +134,6 @@ import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
-import com.vitorpamplona.amethyst.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.ui.note.Expiration
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
@@ -192,8 +195,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
-import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
-import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.ui.note.types.RenderBookshelfDirectory
@@ -264,7 +265,6 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay

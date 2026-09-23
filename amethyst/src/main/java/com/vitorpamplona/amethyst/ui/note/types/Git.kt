@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.amethyst.commons.ui.note.types.GitStatusPill
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer

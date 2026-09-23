@@ -38,6 +38,10 @@ import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.FollowButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.ListButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -49,9 +53,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ListButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 
 @Composable
 fun UserCompose(

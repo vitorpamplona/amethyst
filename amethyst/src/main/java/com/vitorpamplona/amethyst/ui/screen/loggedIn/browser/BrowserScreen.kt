@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription

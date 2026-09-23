@@ -56,11 +56,11 @@ import com.vitorpamplona.amethyst.commons.resources.award_badge_remove_recipient
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_placeholder
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState

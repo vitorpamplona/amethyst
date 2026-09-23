@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ZapSplitIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer

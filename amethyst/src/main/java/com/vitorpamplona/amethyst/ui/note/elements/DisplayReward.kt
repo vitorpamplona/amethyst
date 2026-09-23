@@ -59,13 +59,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bounty_label
 import com.vitorpamplona.amethyst.commons.resources.pledge_amount_in_sats
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers

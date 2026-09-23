@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.action_unmute
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_empty
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_title
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_unknown
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -59,8 +61,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15dp
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

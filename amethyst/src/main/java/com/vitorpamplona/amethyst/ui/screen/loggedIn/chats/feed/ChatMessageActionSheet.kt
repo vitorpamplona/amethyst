@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
@@ -87,10 +89,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
-import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid

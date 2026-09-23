@@ -73,12 +73,12 @@ import com.vitorpamplona.amethyst.commons.resources.mutual
 import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
 import com.vitorpamplona.amethyst.commons.resources.replies
+import com.vitorpamplona.amethyst.commons.ui.feeds.UserBlockedFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size8dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
-import com.vitorpamplona.amethyst.ui.feeds.UserBlockedFeed
-import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route

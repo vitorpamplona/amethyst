@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.clink_budget_one_time
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_request
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_title
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_weekly
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.labelRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import org.jetbrains.compose.resources.StringResource

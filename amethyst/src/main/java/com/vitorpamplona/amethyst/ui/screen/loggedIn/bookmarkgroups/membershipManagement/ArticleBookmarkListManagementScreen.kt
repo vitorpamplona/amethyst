@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.article_bookmark_management_title
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.membershipManagement.BookmarkGroupManagementItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -47,7 +49,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark

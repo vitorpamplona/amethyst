@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_icon
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_more_count
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_subtitle
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_who
+import com.vitorpamplona.amethyst.commons.ui.note.types.reportTypeLabels
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
@@ -73,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size36dp
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabels
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey

@@ -42,6 +42,8 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
 import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.list.ListOfBookmarkGroupsFeedView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
@@ -49,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 

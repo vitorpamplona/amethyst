@@ -24,8 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profiles
 import com.vitorpamplona.amethyst.commons.resources.relay_settings_lower2
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

@@ -108,7 +108,11 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
@@ -127,7 +131,6 @@ import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

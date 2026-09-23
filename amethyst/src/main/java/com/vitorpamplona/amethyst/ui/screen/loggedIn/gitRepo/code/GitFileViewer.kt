@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
 import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_plain_text
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitLoadingBox
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitMessageBox
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.setText

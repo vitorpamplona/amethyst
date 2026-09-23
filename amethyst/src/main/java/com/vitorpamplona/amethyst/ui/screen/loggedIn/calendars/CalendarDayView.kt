@@ -60,6 +60,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_empty_day_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarEmptyState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarNavigationHeader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.calendarSwipeNavigation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
