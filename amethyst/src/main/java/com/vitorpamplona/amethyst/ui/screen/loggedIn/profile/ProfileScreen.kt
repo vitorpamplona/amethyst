@@ -67,6 +67,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.profile.ui.RelaysTabHeader
 import com.vitorpamplona.amethyst.commons.relayClient.profile.UserProfileFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gallery
@@ -109,7 +110,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.RelaysTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
@@ -697,7 +697,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Bookmarks -> BookmarkTabHeader(baseUser, accountViewModel)
                     ProfileTab.FollowedTags -> FollowedTagsTabHeader(baseUser, accountViewModel)
                     ProfileTab.Reports -> ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel)
-                    ProfileTab.Relays -> RelaysTabHeader(baseUser, accountViewModel)
+                    ProfileTab.Relays -> RelaysTabHeader()
                 }
             },
         )

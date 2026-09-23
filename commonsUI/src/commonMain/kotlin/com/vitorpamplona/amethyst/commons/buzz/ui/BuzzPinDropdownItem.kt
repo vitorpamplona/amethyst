@@ -18,31 +18,45 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.commons.buzz.ui
 
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.leave
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.resources.buzz_pin
+import com.vitorpamplona.amethyst.commons.resources.buzz_unpin
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+/**
+ * Pin/Unpin overflow-menu item for a Buzz channel. [isPinned] picks the label and tints the pin;
+ * clicking closes the menu, then calls [onToggle].
+ */
 @Composable
-fun LeaveChatButton(
-    channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+fun BuzzPinDropdownItem(
+    isPinned: Boolean,
+    closeMenu: () -> Unit,
+    onToggle: () -> Unit,
 ) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.unfollow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringRes(Res.string.leave))
-    }
+    DropdownMenuItem(
+        leadingIcon = {
+            Icon(
+                symbol = MaterialSymbols.PushPin,
+                contentDescription = null,
+                tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        },
+        text = { Text(stringRes(if (isPinned) Res.string.buzz_unpin else Res.string.buzz_pin)) },
+        onClick = {
+            closeMenu()
+            onToggle()
+        },
+    )
 }

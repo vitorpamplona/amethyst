@@ -18,20 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.User
+import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.relays
+import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 
 @Composable
-fun RelaysTabHeader(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
+@Preview
+fun ProofOfWorkPillPreview() {
+    ThemeComparisonColumn(
+        toPreview = { ProofOfWorkPill(pow = 24, onClick = {}) },
+    )
+}
+
+/**
+ * Compact pill showing the proof of work a received note carries: a gear plus
+ * the difficulty in leading zero bits. Sits inline in note headers, so it stays
+ * at text height. [onClick] is where the host explains what the number means.
+ */
+@Composable
+fun ProofOfWorkPill(
+    pow: Int,
+    onClick: () -> Unit,
 ) {
-    Text(text = stringRes(Res.string.relays))
+    HeaderPill(
+        symbol = MaterialSymbols.Manufacturing,
+        text = pow.toString(),
+        contentDescription = stringRes(Res.string.pow_settings_title),
+        onClick = onClick,
+    )
 }

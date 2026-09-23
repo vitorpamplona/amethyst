@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.commons.nip28PublicChat.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -28,27 +28,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.edits_the_channel_metadata
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+/** Opens the channel-metadata editor; shown to the channel's owner in the long header. */
 @Composable
-fun EditButton(
-    channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+fun EditChannelButton(onClick: () -> Unit) {
     FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
-        onClick = { nav.nav(Route.ChannelMetadataEdit(channel.idHex)) },
+        onClick = onClick,
         contentPadding = ZeroPadding,
     ) {
         Icon(

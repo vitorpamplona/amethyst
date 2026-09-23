@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.NewProductButton
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
@@ -75,7 +76,7 @@ fun ProductsScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewProductButton(accountViewModel, nav)
+                NewProductButton(nav)
             }
         },
         accountViewModel = accountViewModel,

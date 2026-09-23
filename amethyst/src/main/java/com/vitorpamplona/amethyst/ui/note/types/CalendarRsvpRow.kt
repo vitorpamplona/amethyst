@@ -20,30 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_going
-import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_maybe
-import com.vitorpamplona.amethyst.commons.resources.calendar_rsvp_not_going
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarRsvpButtons
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -90,87 +72,8 @@ fun CalendarRsvpRow(
         )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        RsvpButton(
-            label = stringRes(Res.string.calendar_rsvp_going),
-            status = RSVPStatusTag.STATUS.ACCEPTED,
-            currentStatus = currentStatus,
-            modifier = Modifier.weight(1f),
-            onClick = onTap,
-        )
-        RsvpButton(
-            label = stringRes(Res.string.calendar_rsvp_maybe),
-            status = RSVPStatusTag.STATUS.TENTATIVE,
-            currentStatus = currentStatus,
-            modifier = Modifier.weight(1f),
-            onClick = onTap,
-        )
-        RsvpButton(
-            label = stringRes(Res.string.calendar_rsvp_not_going),
-            status = RSVPStatusTag.STATUS.DECLINED,
-            currentStatus = currentStatus,
-            modifier = Modifier.weight(1f),
-            onClick = onTap,
-        )
-    }
+    CalendarRsvpButtons(currentStatus, onTap)
 }
-
-@Composable
-private fun RsvpButton(
-    label: String,
-    status: RSVPStatusTag.STATUS,
-    currentStatus: RSVPStatusTag.STATUS?,
-    modifier: Modifier,
-    onClick: (RSVPStatusTag.STATUS) -> Unit,
-) {
-    val selected = status == currentStatus
-    if (selected) {
-        FilledTonalButton(
-            onClick = { onClick(status) },
-            modifier = modifier,
-            contentPadding = RsvpButtonPadding,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = colorFor(status),
-                    contentColor = Color.White,
-                ),
-        ) {
-            RsvpButtonLabel(label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = { onClick(status) },
-            modifier = modifier,
-            contentPadding = RsvpButtonPadding,
-        ) {
-            RsvpButtonLabel(label)
-        }
-    }
-}
-
-private val RsvpButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-
-@Composable
-private fun RsvpButtonLabel(label: String) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
-@Composable
-private fun colorFor(status: RSVPStatusTag.STATUS) =
-    when (status) {
-        RSVPStatusTag.STATUS.ACCEPTED -> MaterialTheme.colorScheme.primary
-        RSVPStatusTag.STATUS.TENTATIVE -> MaterialTheme.colorScheme.tertiary
-        RSVPStatusTag.STATUS.DECLINED -> MaterialTheme.colorScheme.error
-    }
 
 /**
  * Deterministic per-target d-tag so each user's RSVP for a given event is a single addressable.

@@ -20,33 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.git_status_close
-import com.vitorpamplona.amethyst.commons.resources.git_status_mark_merged
-import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusButtons
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -59,10 +40,6 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
 private enum class StatusTarget { OPEN, CLOSED, APPLIED }
-
-/** Compact sizing shared by the small action buttons on git cards. */
-internal val CompactButtonHeight = Modifier.height(32.dp)
-internal val CompactButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
 
 /**
  * NIP-34 status controls for an issue, patch or pull request. Visible only to the
@@ -88,42 +65,13 @@ fun GitStatusActions(
     val current = index?.get(note.idHex)
     val closedOrApplied = current is GitStatusClosedEvent || current is GitStatusAppliedEvent
 
-    FlowRow(
-        modifier = Modifier.padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (closedOrApplied) {
-            FilledTonalButton(
-                onClick = { sendStatus(accountViewModel, note, StatusTarget.OPEN) },
-                modifier = CompactButtonHeight,
-                contentPadding = CompactButtonPadding,
-            ) {
-                Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(Res.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
-            }
-        } else {
-            if (isPatchOrPr) {
-                FilledTonalButton(
-                    onClick = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) },
-                    modifier = CompactButtonHeight,
-                    contentPadding = CompactButtonPadding,
-                ) {
-                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(stringRes(Res.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
-            OutlinedButton(
-                onClick = { sendStatus(accountViewModel, note, StatusTarget.CLOSED) },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = CompactButtonHeight,
-                contentPadding = CompactButtonPadding,
-            ) {
-                Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
-            }
-        }
-    }
+    GitStatusButtons(
+        closedOrApplied = closedOrApplied,
+        isPatchOrPr = isPatchOrPr,
+        onReopen = { sendStatus(accountViewModel, note, StatusTarget.OPEN) },
+        onMarkMerged = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) },
+        onClose = { sendStatus(accountViewModel, note, StatusTarget.CLOSED) },
+    )
 }
 
 private fun repositoryAddressOf(event: Event): Address? =

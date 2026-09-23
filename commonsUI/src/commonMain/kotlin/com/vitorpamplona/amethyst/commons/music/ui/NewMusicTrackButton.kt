@@ -18,41 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.products
+package com.vitorpamplona.amethyst.commons.music.ui
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.new_product
+import com.vitorpamplona.amethyst.commons.resources.new_music_track
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 
 @Composable
-fun NewProductButton(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+fun NewMusicTrackButton(nav: INav) {
     FloatingActionButton(
-        onClick = {
-            nav.nav(Route.NewProduct())
-        },
+        onClick = { nav.nav(Route.NewMusicTrack()) },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = Res.string.new_product),
+            symbol = MaterialSymbols.MusicNote,
+            contentDescription = stringRes(Res.string.new_music_track),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )
+    }
+}
+
+@Preview
+@Composable
+private fun NewMusicTrackButtonPreview() {
+    ThemeComparisonRow {
+        NewMusicTrackButton(nav = EmptyNav())
     }
 }
