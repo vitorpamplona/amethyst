@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -61,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_cashu
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightning
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
@@ -315,8 +316,8 @@ fun ProfilePaymentChip(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val copyLabel = stringRes(R.string.copy_to_clipboard)
-    val copiedMessage = stringRes(R.string.copied_to_clipboard)
+    val copyLabel = stringRes(Res.string.copy_to_clipboard)
+    val copiedMessage = stringRes(Res.string.copied_to_clipboard)
 
     val clickModifier =
         if (copyValue != null) {

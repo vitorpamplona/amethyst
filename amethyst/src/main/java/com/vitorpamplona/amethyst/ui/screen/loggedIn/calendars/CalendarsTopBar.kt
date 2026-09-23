@@ -79,7 +79,7 @@ fun CalendarsTopBar(
                 followListsModel = accountViewModel.feedStates.feedListOptions,
                 listName = list,
                 accountViewModel = accountViewModel,
-                onChange = accountViewModel.account.settings::changeDefaultCalendarsFollowList,
+                onChange = { accountViewModel.account.settings.changeDefaultCalendarsFollowList(it.code) },
             )
         }
 

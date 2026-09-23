@@ -31,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.send_kind0_to_local_relay_description
+import com.vitorpamplona.amethyst.commons.resources.send_kind0_to_local_relay_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -97,8 +99,8 @@ fun LazyListScope.renderLocalItems(
         Spacer(modifier = StdVertSpacer)
         if (feedState.isNotEmpty()) {
             SettingsRow(
-                R.string.send_kind0_to_local_relay_title,
-                R.string.send_kind0_to_local_relay_description,
+                Res.string.send_kind0_to_local_relay_title,
+                Res.string.send_kind0_to_local_relay_description,
                 SettingsCategorySpacingWithHorzBorderModifier,
             ) {
                 val checked by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay

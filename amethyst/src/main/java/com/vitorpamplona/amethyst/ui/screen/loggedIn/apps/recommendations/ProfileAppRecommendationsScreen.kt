@@ -333,7 +333,7 @@ private fun AppRecommendationsTopBar(
                 placeholderCode = listName,
                 explainer = stringRes(Res.string.select_list_to_filter),
                 options = options,
-                onSelect = accountViewModel.account.settings::changeDefaultAppRecommendationsFollowList,
+                onSelect = { accountViewModel.account.settings.changeDefaultAppRecommendationsFollowList(it.code) },
                 accountViewModel = accountViewModel,
             )
         },
@@ -437,7 +437,7 @@ private fun supportedKindsLabel(kinds: List<Int>): String {
     val names =
         kinds.take(VISIBLE_KIND_NAMES).map { kind ->
             val nameRes = kindDisplayName(kind)
-            if (nameRes != -1) stringRes(nameRes) else (KindNames.nameFor(kind) ?: "k$kind")
+            if (nameRes != null) stringRes(nameRes) else (KindNames.nameFor(kind) ?: "k$kind")
         }
     val overflow = kinds.size - VISIBLE_KIND_NAMES
     val suffix = if (overflow > 0) " +$overflow" else ""

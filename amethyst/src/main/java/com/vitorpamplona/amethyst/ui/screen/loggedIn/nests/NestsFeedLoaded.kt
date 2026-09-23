@@ -355,7 +355,7 @@ private fun NestEndedCompactCard(
     val name = meetingEvent.room()?.ifBlank { null } ?: meetingEvent.dTag()
     val cover = meetingEvent.image()?.ifBlank { null }
     val endedAt = baseNote.createdAt()
-    val endedAgo = endedAt?.let { timeAgoNoDot(it, context) }.orEmpty()
+    val endedAgo = endedAt?.let { timeAgoNoDot(it) }.orEmpty()
 
     LongPressToQuickAction(baseNote, accountViewModel, nav) { showQuickAction ->
         Row(

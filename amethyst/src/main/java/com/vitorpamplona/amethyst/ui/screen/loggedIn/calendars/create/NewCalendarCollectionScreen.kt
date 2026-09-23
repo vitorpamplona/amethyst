@@ -54,7 +54,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete
@@ -66,6 +65,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_collection_invalid
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_no_events_yet
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
+import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -86,7 +88,7 @@ fun NewCalendarCollectionScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = if (editDTag == null) R.string.new_calendar_collection else R.string.edit_calendar_collection,
+                titleRes = if (editDTag == null) Res.string.new_calendar_collection else Res.string.edit_calendar_collection,
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {
@@ -183,7 +185,7 @@ private fun DeleteCalendarRow(
             },
             dismissButton = {
                 TextButton(onClick = { confirming = false }) {
-                    Text(stringRes(R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )

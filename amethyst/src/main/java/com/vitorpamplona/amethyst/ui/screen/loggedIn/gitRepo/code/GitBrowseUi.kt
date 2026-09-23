@@ -49,12 +49,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -62,8 +60,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_branches
 import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
 import com.vitorpamplona.amethyst.commons.resources.git_repo_default_branch
+import com.vitorpamplona.amethyst.commons.resources.git_repo_item_count
 import com.vitorpamplona.amethyst.commons.resources.git_repo_retry
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /** Centered spinner + caption while the repository or a file is loading. */
@@ -166,7 +166,7 @@ fun RepoInfoBar(
             }
             InfoChip(symbol = MaterialSymbols.Commit, label = headCommit.take(7), monospace = true)
             Text(
-                text = pluralStringResource(R.plurals.git_repo_item_count, entryCount, entryCount),
+                text = pluralStringRes(Res.plurals.git_repo_item_count, entryCount, entryCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             )

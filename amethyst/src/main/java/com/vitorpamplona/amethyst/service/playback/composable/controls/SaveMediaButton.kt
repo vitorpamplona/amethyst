@@ -46,9 +46,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.download_to_phone
+import com.vitorpamplona.amethyst.commons.resources.video_download_has_started_toast
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
@@ -100,7 +103,7 @@ fun rememberSaveMediaAction(onSaveClick: (Context) -> Unit): () -> Unit {
             Toast
                 .makeText(
                     context,
-                    stringRes(context, R.string.video_download_has_started_toast),
+                    loadStringRes(Res.string.video_download_has_started_toast),
                     Toast.LENGTH_SHORT,
                 ).show()
         }
@@ -131,7 +134,7 @@ fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
             Icon(
                 symbol = MaterialSymbols.Download,
                 modifier = Size20Modifier,
-                contentDescription = stringRes(R.string.download_to_phone),
+                contentDescription = stringRes(Res.string.download_to_phone),
             )
         }
     }

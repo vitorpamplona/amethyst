@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -52,9 +51,13 @@ import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_o
 import com.vitorpamplona.amethyst.commons.resources.accessibility_play_username
 import com.vitorpamplona.amethyst.commons.resources.accessibility_pushpin
 import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.boost_or_quote_description
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cashu
 import com.vitorpamplona.amethyst.commons.resources.change_reaction
 import com.vitorpamplona.amethyst.commons.resources.clear
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.enter_picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.following
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
@@ -65,7 +68,9 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_zap_pending
 import com.vitorpamplona.amethyst.commons.resources.record_a_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.search_button
+import com.vitorpamplona.amethyst.commons.resources.share_or_save
 import com.vitorpamplona.amethyst.commons.resources.website
+import com.vitorpamplona.amethyst.commons.resources.zap_description
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.LikedColor
@@ -77,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun AmethystIcon(iconSize: Dp) {
@@ -109,7 +115,7 @@ fun FollowingIcon(modifier: Modifier) {
 fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
     Icon(
         symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-        contentDescription = stringRes(R.string.back),
+        contentDescription = stringRes(Res.string.back),
         tint = tint,
     )
 }
@@ -233,7 +239,7 @@ fun ReactionRowIconPreview() {
 fun ZapIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-    contentDescriptor: Int = R.string.zap_description,
+    contentDescriptor: StringResource = Res.string.zap_description,
 ) {
     Icon(
         symbol = MaterialSymbols.Bolt,
@@ -247,7 +253,7 @@ fun ZapIcon(
 fun OutlinedZapIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
-    contentDescriptor: Int = R.string.zap_description,
+    contentDescriptor: StringResource = Res.string.zap_description,
 ) {
     Icon(
         imageVector = Zap,
@@ -265,7 +271,7 @@ fun ShareIcon(
     Icon(
         symbol = MaterialSymbols.Share,
         modifier = modifier,
-        contentDescription = stringRes(R.string.share_or_save),
+        contentDescription = stringRes(Res.string.share_or_save),
         tint = tint,
     )
 }
@@ -274,7 +280,7 @@ fun ShareIcon(
 fun CashuIcon(modifier: Modifier) {
     Icon(
         imageVector = CustomHashTagIcons.Cashu,
-        stringRes(R.string.cashu),
+        stringRes(Res.string.cashu),
         modifier = modifier,
     )
 }
@@ -283,7 +289,7 @@ fun CashuIcon(modifier: Modifier) {
 fun CopyIcon(modifier: Modifier) {
     Icon(
         symbol = MaterialSymbols.ContentCopy,
-        stringRes(id = R.string.copy_to_clipboard),
+        stringRes(id = Res.string.copy_to_clipboard),
         modifier = modifier,
     )
 }
@@ -292,7 +298,7 @@ fun CopyIcon(modifier: Modifier) {
 fun OpenInNewIcon(modifier: Modifier) {
     Icon(
         symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-        stringRes(id = R.string.copy_to_clipboard),
+        stringRes(id = Res.string.copy_to_clipboard),
         modifier = modifier,
     )
 }
@@ -300,7 +306,7 @@ fun OpenInNewIcon(modifier: Modifier) {
 @Composable
 fun ExpandLessIcon(
     modifier: Modifier,
-    contentDescriptor: Int,
+    contentDescriptor: StringResource,
 ) {
     Icon(
         symbol = MaterialSymbols.ExpandLess,
@@ -313,7 +319,7 @@ fun ExpandLessIcon(
 @Composable
 fun ExpandMoreIcon(
     modifier: Modifier,
-    contentDescriptor: Int,
+    contentDescriptor: StringResource,
 ) {
     Icon(
         symbol = MaterialSymbols.ExpandMore,
@@ -353,7 +359,7 @@ fun CommentIcon(
 fun CancelIcon() {
     Icon(
         symbol = MaterialSymbols.Cancel,
-        contentDescription = stringRes(id = R.string.cancel),
+        contentDescription = stringRes(id = Res.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -363,7 +369,7 @@ fun CancelIcon() {
 fun CloseIcon() {
     Icon(
         symbol = MaterialSymbols.Close,
-        contentDescription = stringRes(id = R.string.cancel),
+        contentDescription = stringRes(id = Res.string.cancel),
         modifier = Size20Modifier,
     )
 }

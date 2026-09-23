@@ -62,12 +62,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.firstToFind.FirstToFindResolver
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingRevision
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * The owner's lifecycle: edit, archive, lock in the first finder, and show the printable
@@ -111,7 +111,7 @@ fun GeocacheOwnerActions(
 
     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
         DropdownMenuItem(
-            text = { Text(stringResource(Res.string.geocache_owner_edit)) },
+            text = { Text(stringRes(Res.string.geocache_owner_edit)) },
             onClick = {
                 menuOpen = false
                 nav.nav(Route.EditGeocache(address))
@@ -120,7 +120,7 @@ fun GeocacheOwnerActions(
 
         if (!listing.isArchived()) {
             DropdownMenuItem(
-                text = { Text(stringResource(Res.string.geocache_owner_archive)) },
+                text = { Text(stringRes(Res.string.geocache_owner_archive)) },
                 onClick = {
                     menuOpen = false
                     confirmArchive = true
@@ -130,7 +130,7 @@ fun GeocacheOwnerActions(
 
         if (listing.isFirstToFind() && !FirstToFindResolver.isLockedIn(listing)) {
             DropdownMenuItem(
-                text = { Text(stringResource(Res.string.geocache_owner_lock_ftf)) },
+                text = { Text(stringRes(Res.string.geocache_owner_lock_ftf)) },
                 onClick = {
                     menuOpen = false
                     confirmLockIn = true
@@ -140,7 +140,7 @@ fun GeocacheOwnerActions(
 
         if (listing.requiresVerification()) {
             DropdownMenuItem(
-                text = { Text(stringResource(Res.string.geocache_owner_show_qr)) },
+                text = { Text(stringRes(Res.string.geocache_owner_show_qr)) },
                 onClick = {
                     menuOpen = false
                     showQr = true
@@ -151,7 +151,7 @@ fun GeocacheOwnerActions(
 
     if (confirmArchive) {
         ConfirmDialog(
-            body = stringResource(Res.string.geocache_owner_archive_confirm),
+            body = stringRes(Res.string.geocache_owner_archive_confirm),
             onConfirm = {
                 confirmArchive = false
                 scope.launch {
@@ -169,13 +169,13 @@ fun GeocacheOwnerActions(
     if (confirmLockIn) {
         if (provisionalWinner == null) {
             ConfirmDialog(
-                body = stringResource(Res.string.geocache_owner_no_finders),
+                body = stringRes(Res.string.geocache_owner_no_finders),
                 onConfirm = { confirmLockIn = false },
                 onDismiss = { confirmLockIn = false },
             )
         } else {
             ConfirmDialog(
-                body = stringResource(Res.string.geocache_owner_lock_ftf_explain, provisionalWinner.take(8)),
+                body = stringRes(Res.string.geocache_owner_lock_ftf_explain, provisionalWinner.take(8)),
                 onConfirm = {
                     confirmLockIn = false
                     scope.launch {
@@ -201,7 +201,7 @@ fun GeocacheOwnerActions(
                 if (key != null) QrCodeDrawer(key)
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = stringResource(Res.string.geocache_owner_qr_warning),
+                    text = stringRes(Res.string.geocache_owner_qr_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -221,7 +221,7 @@ private fun ConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         text = { Text(body) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.geocache_owner_archive)) } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringRes(Res.string.geocache_owner_archive)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

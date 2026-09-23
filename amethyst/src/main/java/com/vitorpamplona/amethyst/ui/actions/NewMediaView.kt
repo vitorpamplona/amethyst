@@ -52,18 +52,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_caption
 import com.vitorpamplona.amethyst.commons.resources.add_caption_example
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
+import com.vitorpamplona.amethyst.commons.resources.file_server
+import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
+import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
+import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -203,8 +210,8 @@ fun ImageVideoPost(
     )
 
     SettingSwitchItem(
-        title = R.string.add_sensitive_content_label,
-        description = R.string.add_sensitive_content_description,
+        title = Res.string.add_sensitive_content_label,
+        description = Res.string.add_sensitive_content_description,
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -213,7 +220,7 @@ fun ImageVideoPost(
         onCheckedChange = { postViewModel.sensitiveContent = it },
     )
 
-    SettingsRow(R.string.file_server, R.string.file_server_description) {
+    SettingsRow(Res.string.file_server, Res.string.file_server_description) {
         TextSpinner(
             label = "",
             placeholder =
@@ -274,8 +281,8 @@ fun ImageVideoPost(
     // Only show H.265 codec option if there are videos in the upload
     if (postViewModel.multiOrchestrator?.hasVideo() == true) {
         SettingSwitchItem(
-            title = R.string.video_codec_h265_label,
-            description = R.string.video_codec_h265_description,
+            title = Res.string.video_codec_h265_label,
+            description = Res.string.video_codec_h265_description,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -286,8 +293,8 @@ fun ImageVideoPost(
     }
 
     SettingSwitchItem(
-        title = R.string.strip_metadata_label,
-        description = R.string.strip_metadata_description,
+        title = Res.string.strip_metadata_label,
+        description = Res.string.strip_metadata_description,
         modifier =
             Modifier
                 .fillMaxWidth()

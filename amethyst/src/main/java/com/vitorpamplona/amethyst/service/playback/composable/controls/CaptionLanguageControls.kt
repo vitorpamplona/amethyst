@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,7 +40,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.captions_off
+import com.vitorpamplona.amethyst.commons.resources.captions_unnamed_track
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -130,7 +133,7 @@ internal fun CaptionLanguagePopup(
         val baseColors = ButtonDefaults.textButtonColors()
         val contentColor = MaterialTheme.colorScheme.onBackground
         val colors = remember(baseColors, contentColor) { baseColors.copy(contentColor = contentColor) }
-        val unnamed = stringRes(R.string.captions_unnamed_track)
+        val unnamed = stringRes(Res.string.captions_unnamed_track)
 
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -139,7 +142,7 @@ internal fun CaptionLanguagePopup(
         ) {
             TextButton(colors = colors, onClick = onSelectOff) {
                 Text(
-                    stringRes(R.string.captions_off),
+                    stringRes(Res.string.captions_off),
                     fontWeight = if (!captionsEnabled) FontWeight(1000) else FontWeight(400),
                 )
             }

@@ -67,7 +67,7 @@ fun VoicePresetSelector(
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
-                        Text(stringRes(context, preset.labelRes))
+                        Text(stringRes(preset.labelRes))
                     }
                 },
                 colors =

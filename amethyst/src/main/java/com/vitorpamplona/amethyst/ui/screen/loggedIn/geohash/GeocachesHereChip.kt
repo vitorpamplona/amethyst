@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocachesHereFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
-import org.jetbrains.compose.resources.stringResource
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * "N caches here", shown on a geohash feed when there are any.
@@ -121,7 +121,7 @@ private fun GeocachesHereCount(
             tint = palette.live,
         )
         Text(
-            text = stringResource(Res.string.geocache_caches_here, count),
+            text = stringRes(Res.string.geocache_caches_here, count),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,

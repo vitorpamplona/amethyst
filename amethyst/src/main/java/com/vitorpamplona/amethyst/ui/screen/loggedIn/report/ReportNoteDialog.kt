@@ -53,14 +53,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.block_only
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_label
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_additional_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_illegal
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_impersonation
@@ -129,14 +130,14 @@ fun ReportNoteDialog(
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
                 SpacerH16()
-                SectionHeader(text = stringRes(id = R.string.block_only))
+                SectionHeader(text = stringRes(id = Res.string.block_only))
                 SpacerH16()
                 Text(
                     text = stringRes(Res.string.report_dialog_blocking_a_user),
                 )
                 SpacerH16()
                 ActionButton(
-                    text = stringRes(R.string.report_dialog_block_hide_user_btn),
+                    text = stringRes(Res.string.report_dialog_block_hide_user_btn),
                     icon = MaterialSymbols.Block,
                     onClick = {
                         note.author?.let { accountViewModel.hide(it) }

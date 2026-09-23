@@ -27,7 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.name_is_required
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
@@ -73,7 +74,7 @@ class SignUpViewModel : ViewModel() {
         }
 
         if (displayName.text.isBlank()) {
-            errorManager.error(R.string.name_is_required)
+            errorManager.error(Res.string.name_is_required)
             return false
         }
 

@@ -57,6 +57,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets
+import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets_description
 import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
@@ -107,7 +110,7 @@ fun AddNwcWalletScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -155,8 +158,8 @@ fun AddNwcWalletScreen(
                             )
                         } catch (_: IllegalArgumentException) {
                             accountViewModel.toastManager.toast(
-                                R.string.couldnt_find_nwc_wallets,
-                                R.string.couldnt_find_nwc_wallets_description,
+                                Res.string.couldnt_find_nwc_wallets,
+                                Res.string.couldnt_find_nwc_wallets_description,
                             )
                         }
                     },

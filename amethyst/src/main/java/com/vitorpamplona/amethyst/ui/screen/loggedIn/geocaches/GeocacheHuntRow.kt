@@ -47,8 +47,8 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * A hunt as it appears in the Hunts tab: banner, title, how many caches, and how far along the
@@ -118,8 +118,8 @@ fun GeocacheHuntRow(
 
         Text(
             text =
-                stringResource(Res.string.geocache_hunt_progress, doneCount, caches.size) +
-                    " · " + stringResource(Res.string.geocache_hunt_caches, caches.size),
+                stringRes(Res.string.geocache_hunt_progress, doneCount, caches.size) +
+                    " · " + stringRes(Res.string.geocache_hunt_caches, caches.size),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

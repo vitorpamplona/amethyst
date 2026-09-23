@@ -40,28 +40,32 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_always_on
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_description
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_hidden
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_hidden_count
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_hide_all
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_sections
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_show_all
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_title
+import com.vitorpamplona.amethyst.commons.resources.drawer_settings_visible
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.navigation.drawer.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -85,7 +89,7 @@ fun DrawerSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.drawer_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.drawer_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
@@ -165,7 +169,7 @@ private fun SummaryCard(totalHidden: Int) {
         title = stringRes(Res.string.drawer_settings_title),
         trailing = {
             Text(
-                text = pluralStringResource(R.plurals.drawer_settings_hidden_count, totalHidden, totalHidden),
+                text = pluralStringRes(Res.plurals.drawer_settings_hidden_count, totalHidden, totalHidden),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
@@ -199,7 +203,7 @@ private fun SectionCard(
         trailing = {
             if (hiddenHere > 0) {
                 Text(
-                    text = pluralStringResource(R.plurals.drawer_settings_hidden_count, hiddenHere, hiddenHere),
+                    text = pluralStringRes(Res.plurals.drawer_settings_hidden_count, hiddenHere, hiddenHere),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -208,7 +212,7 @@ private fun SectionCard(
     ) {
         // Bulk actions: turning ~29 feed rows off one at a time is the kind of chore that makes
         // people give up halfway and leave the menu in a worse state than they found it.
-        if (DrawerItemVisibility.hasHideableRows(section)) {
+        if (DrawerSectionVisibility.hasHideableRows(section)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp),
                 horizontalArrangement = Arrangement.End,
@@ -251,9 +255,9 @@ private fun VisibilityPill(
     // One branch decides both halves of the pill, so a label can't drift away from its glyph.
     val (labelRes, icon) =
         when {
-            mandatory -> R.string.drawer_settings_always_on to MaterialSymbols.Lock
-            visible -> R.string.drawer_settings_visible to MaterialSymbols.Visibility
-            else -> R.string.drawer_settings_hidden to MaterialSymbols.VisibilityOff
+            mandatory -> Res.string.drawer_settings_always_on to MaterialSymbols.Lock
+            visible -> Res.string.drawer_settings_visible to MaterialSymbols.Visibility
+            else -> Res.string.drawer_settings_hidden to MaterialSymbols.VisibilityOff
         }
 
     TogglePill(

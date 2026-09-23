@@ -50,7 +50,7 @@ fun NestsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultNestsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultNestsFollowList(it.code) },
         )
     }
 }

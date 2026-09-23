@@ -55,15 +55,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_add_participant
+import com.vitorpamplona.amethyst.commons.resources.call_bluetooth
+import com.vitorpamplona.amethyst.commons.resources.call_camera_off
+import com.vitorpamplona.amethyst.commons.resources.call_camera_on
 import com.vitorpamplona.amethyst.commons.resources.call_dismiss
+import com.vitorpamplona.amethyst.commons.resources.call_earpiece
+import com.vitorpamplona.amethyst.commons.resources.call_hangup
+import com.vitorpamplona.amethyst.commons.resources.call_mute
+import com.vitorpamplona.amethyst.commons.resources.call_screen_share_start
+import com.vitorpamplona.amethyst.commons.resources.call_screen_share_stop
+import com.vitorpamplona.amethyst.commons.resources.call_screen_sharing
 import com.vitorpamplona.amethyst.commons.resources.call_search_users
+import com.vitorpamplona.amethyst.commons.resources.call_speaker
 import com.vitorpamplona.amethyst.commons.resources.call_switch_camera
+import com.vitorpamplona.amethyst.commons.resources.call_unmute
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -178,7 +188,7 @@ fun ConnectedCallUI(
             ) {
                 if (isScreenSharing) {
                     Text(
-                        text = stringRes(R.string.call_screen_sharing),
+                        text = stringRes(Res.string.call_screen_sharing),
                         color = Color.Cyan,
                         fontSize = 14.sp,
                     )
@@ -273,7 +283,7 @@ private fun CallControls(
             IconButton(onClick = onToggleMute, modifier = Modifier.size(56.dp)) {
                 Icon(
                     symbol = if (isAudioMuted) MaterialSymbols.MicOff else MaterialSymbols.Mic,
-                    contentDescription = stringRes(if (isAudioMuted) R.string.call_unmute else R.string.call_mute),
+                    contentDescription = stringRes(if (isAudioMuted) Res.string.call_unmute else Res.string.call_mute),
                     tint = if (isAudioMuted) Color.Red else Color.White,
                     modifier = Modifier.size(28.dp),
                 )
@@ -285,7 +295,7 @@ private fun CallControls(
             ) {
                 Icon(
                     symbol = if (isVideoEnabled) MaterialSymbols.Videocam else MaterialSymbols.VideocamOff,
-                    contentDescription = stringRes(if (isVideoEnabled) R.string.call_camera_off else R.string.call_camera_on),
+                    contentDescription = stringRes(if (isVideoEnabled) Res.string.call_camera_off else Res.string.call_camera_on),
                     tint =
                         when {
                             isScreenSharing -> Color.Gray
@@ -303,7 +313,7 @@ private fun CallControls(
                     symbol = MaterialSymbols.Cast,
                     contentDescription =
                         stringRes(
-                            if (isScreenSharing) R.string.call_screen_share_stop else R.string.call_screen_share_start,
+                            if (isScreenSharing) Res.string.call_screen_share_stop else Res.string.call_screen_share_start,
                         ),
                     tint = if (isScreenSharing) Color.Cyan else Color.White,
                     modifier = Modifier.size(28.dp),
@@ -335,9 +345,9 @@ private fun CallControls(
                     contentDescription =
                         stringRes(
                             when (currentAudioRoute) {
-                                AudioRoute.EARPIECE -> R.string.call_earpiece
-                                AudioRoute.SPEAKER -> R.string.call_speaker
-                                AudioRoute.BLUETOOTH -> R.string.call_bluetooth
+                                AudioRoute.EARPIECE -> Res.string.call_earpiece
+                                AudioRoute.SPEAKER -> Res.string.call_speaker
+                                AudioRoute.BLUETOOTH -> Res.string.call_bluetooth
                             },
                         ),
                     tint =
@@ -367,7 +377,7 @@ private fun CallControls(
         ) {
             Icon(
                 MaterialSymbols.CallEnd,
-                contentDescription = stringRes(R.string.call_hangup),
+                contentDescription = stringRes(Res.string.call_hangup),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp),
             )

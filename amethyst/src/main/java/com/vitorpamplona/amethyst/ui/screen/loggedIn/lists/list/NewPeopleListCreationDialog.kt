@@ -34,17 +34,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_action_btn_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun NewPeopleListCreationDialog(
-    title: Int = R.string.follow_set_creation_dialog_title,
+    title: StringResource = Res.string.follow_set_creation_dialog_title,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onCreateList: (name: String, description: String?) -> Unit,
@@ -105,7 +107,7 @@ fun NewPeopleListCreationDialog(
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

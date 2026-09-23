@@ -28,16 +28,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import kotlinx.collections.immutable.ImmutableList
@@ -110,13 +113,17 @@ class NewBadgeModel : ViewModel() {
         context: Context,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
-    ) = try {
-        uploadUnsafe(context, onSuccess, onError)
-    } catch (e: SignerExceptions.ReadOnlyException) {
-        onError(
-            stringRes(context, R.string.read_only_user),
-            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
-        )
+    ) {
+        try {
+            uploadUnsafe(context, onSuccess, onError)
+        } catch (e: SignerExceptions.ReadOnlyException) {
+            viewModelScope.launch {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+            }
+        }
     }
 
     private fun uploadUnsafe(
@@ -147,10 +154,10 @@ class NewBadgeModel : ViewModel() {
             if (!results.allGood) {
                 val messages =
                     results.errors
-                        .map { stringRes(context, it.errorResource, *it.params) }
+                        .map { loadStringRes(it.errorResource, *it.params) }
                         .distinct()
                         .joinToString(".\n")
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), messages)
+                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), messages)
                 isUploading = false
                 return@launch
             }
@@ -162,7 +169,7 @@ class NewBadgeModel : ViewModel() {
 
             if (uploaded == null) {
                 onError(
-                    stringRes(context, R.string.failed_to_upload_media_no_details),
+                    loadStringRes(Res.string.failed_to_upload_media_no_details),
                     "Upload succeeded but no image URL was returned by the server.",
                 )
                 isUploading = false

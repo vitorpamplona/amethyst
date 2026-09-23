@@ -62,10 +62,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_amount_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_copy_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_create_invoice
@@ -110,7 +110,7 @@ fun WalletReceiveScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -266,7 +266,7 @@ fun WalletReceiveScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { walletViewModel.resetReceiveState() }) {
-                            Text(stringRes(R.string.back))
+                            Text(stringRes(Res.string.back))
                         }
                     }
                 }

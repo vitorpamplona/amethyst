@@ -34,7 +34,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ots_explorer_settings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,7 +66,7 @@ fun OtsSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.ots_explorer_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.ots_explorer_settings), nav)
         },
     ) {
         Column(

@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_message_for
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
@@ -30,7 +33,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 
@@ -81,9 +83,9 @@ object ReactionNotification {
             val reactedContent = NotificationContent.excerpt(reactedNote?.event?.content, 140)
             val body =
                 if (reactedContent.isNotBlank()) {
-                    stringRes(context, R.string.app_notification_reactions_channel_message_for, reactedContent)
+                    loadStringRes(Res.string.app_notification_reactions_channel_message_for, reactedContent)
                 } else {
-                    stringRes(context, R.string.app_notification_reactions_channel_message, user)
+                    loadStringRes(Res.string.app_notification_reactions_channel_message, user)
                 }
             nm.postStandard(
                 category = NotificationCategory.REACTION,

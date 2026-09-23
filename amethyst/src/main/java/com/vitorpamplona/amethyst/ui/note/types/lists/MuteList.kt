@@ -26,8 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_mute_list
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -65,7 +66,7 @@ fun RenderMuteList(
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateMutes(it) }
 
     ListCard(
-        title = stringRes(R.string.kind_mute_list),
+        title = stringRes(Res.string.kind_mute_list),
         description = null,
         items = rememberAllMembers(public, private),
         hasUnreadablePrivateItems = noteEvent.hidesPrivateMembers(private),

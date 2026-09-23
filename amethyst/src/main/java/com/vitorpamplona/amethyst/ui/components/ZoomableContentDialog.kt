@@ -66,7 +66,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_image
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_pdf
+import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
+import com.vitorpamplona.amethyst.commons.resources.image_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.resources.pdf_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -76,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
@@ -357,12 +364,14 @@ private fun DialogContent(
     }
 }
 
+// Takes the resolved text, not the catalog entry: MediaSaverToDisk's onSuccess is a
+// plain callback, and the catalog's only non-composable accessor suspends.
 private fun showToastOnMain(
     context: Context,
-    resId: Int,
+    text: String,
 ) {
     Handler(Looper.getMainLooper()).post {
-        Toast.makeText(context.applicationContext, resId, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context.applicationContext, text, Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -376,16 +385,17 @@ internal suspend fun saveMediaToGallery(
 
     val success =
         when {
-            isImage -> R.string.image_saved_to_the_gallery
-            isPdf -> R.string.pdf_saved_to_the_gallery
-            else -> R.string.video_saved_to_the_gallery
+            isImage -> Res.string.image_saved_to_the_gallery
+            isPdf -> Res.string.pdf_saved_to_the_gallery
+            else -> Res.string.video_saved_to_the_gallery
         }
     val failure =
         when {
-            isImage -> R.string.failed_to_save_the_image
-            isPdf -> R.string.failed_to_save_the_pdf
-            else -> R.string.failed_to_save_the_video
+            isImage -> Res.string.failed_to_save_the_image
+            isPdf -> Res.string.failed_to_save_the_pdf
+            else -> Res.string.failed_to_save_the_video
         }
+    val successText = loadStringRes(success)
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(
@@ -405,7 +415,7 @@ internal suspend fun saveMediaToGallery(
                     ?.serverUrl
             },
             onSuccess = {
-                showToastOnMain(localContext, success)
+                showToastOnMain(localContext, successText)
             },
             onError = {
                 accountViewModel.toastManager.toast(failure, null, it)
@@ -418,7 +428,7 @@ internal suspend fun saveMediaToGallery(
                 content.mimeType,
                 localContext,
                 onSuccess = {
-                    showToastOnMain(localContext, success)
+                    showToastOnMain(localContext, successText)
                 },
                 onError = { innerIt ->
                     accountViewModel.toastManager.toast(failure, null, innerIt)

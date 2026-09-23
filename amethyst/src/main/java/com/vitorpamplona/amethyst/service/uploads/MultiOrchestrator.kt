@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

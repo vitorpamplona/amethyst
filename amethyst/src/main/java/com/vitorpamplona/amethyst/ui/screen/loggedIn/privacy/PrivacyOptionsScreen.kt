@@ -55,10 +55,39 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_setup_short
+import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
+import com.vitorpamplona.amethyst.commons.resources.privacy_options
+import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_engine
+import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_routing
+import com.vitorpamplona.amethyst.commons.resources.tor_preset
+import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_dm_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_images
+import com.vitorpamplona.amethyst.commons.resources.tor_use_images_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_media_uploads
+import com.vitorpamplona.amethyst.commons.resources.tor_use_media_uploads_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_money_operations
+import com.vitorpamplona.amethyst.commons.resources.tor_use_money_operations_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_new_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_new_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_nip05_verification
+import com.vitorpamplona.amethyst.commons.resources.tor_use_nip05_verification_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_onion_address
+import com.vitorpamplona.amethyst.commons.resources.tor_use_onion_address_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_trusted_relays
+import com.vitorpamplona.amethyst.commons.resources.tor_use_trusted_relays_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_url_previews
+import com.vitorpamplona.amethyst.commons.resources.tor_use_url_previews_explainer
+import com.vitorpamplona.amethyst.commons.resources.tor_use_videos
+import com.vitorpamplona.amethyst.commons.resources.tor_use_videos_explainer
+import com.vitorpamplona.amethyst.commons.resources.use_internal_tor
+import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
@@ -85,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.tor.explainerId
 import com.vitorpamplona.amethyst.ui.tor.resourceId
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +129,7 @@ fun PrivacyOptionsScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.privacy_options), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.privacy_options), nav) },
     ) { padding ->
         PrivacyOptionsContent(torSettings, Modifier.padding(padding))
     }
@@ -122,7 +152,7 @@ fun PrivacyOptionsContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        SettingsSection(R.string.settings_section_tor_engine) {
+        SettingsSection(Res.string.settings_section_tor_engine) {
             TorEngineTile(torSettings, torType)
             AnimatedVisibility(
                 visible = torType == TorType.EXTERNAL,
@@ -143,28 +173,28 @@ fun PrivacyOptionsContent(
         ) {
             Column {
                 Spacer(Modifier.height(20.dp))
-                SettingsSection(R.string.settings_section_tor_routing) {
+                SettingsSection(Res.string.settings_section_tor_routing) {
                     PresetTile(torSettings)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.onionRelaysViaTor, MaterialSymbols.Public, R.string.tor_use_onion_address, R.string.tor_use_onion_address_explainer)
+                    TorSwitchTile(torSettings.onionRelaysViaTor, MaterialSymbols.Public, Res.string.tor_use_onion_address, Res.string.tor_use_onion_address_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.dmRelaysViaTor, MaterialSymbols.Mail, R.string.tor_use_dm_relays, R.string.tor_use_dm_relays_explainer)
+                    TorSwitchTile(torSettings.dmRelaysViaTor, MaterialSymbols.Mail, Res.string.tor_use_dm_relays, Res.string.tor_use_dm_relays_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.newRelaysViaTor, MaterialSymbols.Dns, R.string.tor_use_new_relays, R.string.tor_use_new_relays_explainer)
+                    TorSwitchTile(torSettings.newRelaysViaTor, MaterialSymbols.Dns, Res.string.tor_use_new_relays, Res.string.tor_use_new_relays_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.trustedRelaysViaTor, MaterialSymbols.Shield, R.string.tor_use_trusted_relays, R.string.tor_use_trusted_relays_explainer)
+                    TorSwitchTile(torSettings.trustedRelaysViaTor, MaterialSymbols.Shield, Res.string.tor_use_trusted_relays, Res.string.tor_use_trusted_relays_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.moneyOperationsViaTor, MaterialSymbols.CurrencyBitcoin, R.string.tor_use_money_operations, R.string.tor_use_money_operations_explainer)
+                    TorSwitchTile(torSettings.moneyOperationsViaTor, MaterialSymbols.CurrencyBitcoin, Res.string.tor_use_money_operations, Res.string.tor_use_money_operations_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.nip05VerificationsViaTor, MaterialSymbols.AlternateEmail, R.string.tor_use_nip05_verification, R.string.tor_use_nip05_verification_explainer)
+                    TorSwitchTile(torSettings.nip05VerificationsViaTor, MaterialSymbols.AlternateEmail, Res.string.tor_use_nip05_verification, Res.string.tor_use_nip05_verification_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.urlPreviewsViaTor, MaterialSymbols.Link, R.string.tor_use_url_previews, R.string.tor_use_url_previews_explainer)
+                    TorSwitchTile(torSettings.urlPreviewsViaTor, MaterialSymbols.Link, Res.string.tor_use_url_previews, Res.string.tor_use_url_previews_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.imagesViaTor, MaterialSymbols.Image, R.string.tor_use_images, R.string.tor_use_images_explainer)
+                    TorSwitchTile(torSettings.imagesViaTor, MaterialSymbols.Image, Res.string.tor_use_images, Res.string.tor_use_images_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.videosViaTor, MaterialSymbols.Videocam, R.string.tor_use_videos, R.string.tor_use_videos_explainer)
+                    TorSwitchTile(torSettings.videosViaTor, MaterialSymbols.Videocam, Res.string.tor_use_videos, Res.string.tor_use_videos_explainer)
                     SettingsDivider()
-                    TorSwitchTile(torSettings.mediaUploadsViaTor, MaterialSymbols.CloudUpload, R.string.tor_use_media_uploads, R.string.tor_use_media_uploads_explainer)
+                    TorSwitchTile(torSettings.mediaUploadsViaTor, MaterialSymbols.CloudUpload, Res.string.tor_use_media_uploads, Res.string.tor_use_media_uploads_explainer)
                 }
             }
         }
@@ -180,8 +210,8 @@ private fun TorEngineTile(
 ) {
     SegmentedChoiceTile(
         icon = MaterialSymbols.Security,
-        title = R.string.use_internal_tor,
-        description = R.string.use_internal_tor_explainer,
+        title = Res.string.use_internal_tor,
+        description = Res.string.use_internal_tor_explainer,
         options = TorType.entries,
         labelRes = { it.resourceId },
         selected = torType,
@@ -198,8 +228,8 @@ private fun OrbotPortTile(torSettings: TorSettingsFlow) {
 
     SettingsBlockTile(
         icon = MaterialSymbols.Dns,
-        title = stringRes(R.string.orbot_socks_port),
-        description = stringRes(R.string.connect_through_your_orbot_setup_short),
+        title = stringRes(Res.string.orbot_socks_port),
+        description = stringRes(Res.string.connect_through_your_orbot_setup_short),
     ) {
         OutlinedTextField(
             value = text,
@@ -232,8 +262,8 @@ private fun PresetTile(torSettings: TorSettingsFlow) {
 
     SettingsControlRow(
         icon = MaterialSymbols.Tune,
-        title = stringRes(R.string.tor_preset),
-        description = stringRes(R.string.tor_preset_explainer),
+        title = stringRes(Res.string.tor_preset),
+        description = stringRes(Res.string.tor_preset_explainer),
         onClick = { showPicker = true },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -273,8 +303,8 @@ private fun PresetTile(torSettings: TorSettingsFlow) {
 private fun TorSwitchTile(
     flow: MutableStateFlow<Boolean>,
     icon: MaterialSymbol,
-    title: Int,
-    description: Int,
+    title: StringResource,
+    description: StringResource,
 ) {
     val checked by flow.collectAsStateWithLifecycle()
     SettingsSwitchTile(

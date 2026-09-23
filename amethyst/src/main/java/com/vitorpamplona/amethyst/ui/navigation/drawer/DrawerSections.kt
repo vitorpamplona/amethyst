@@ -22,11 +22,19 @@ package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import android.os.Build
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_create
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_navigate
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
+import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The drawer's layout: which destinations it lists, under which heading, in which order.
@@ -44,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 @Immutable
 data class DrawerSection(
     val id: DrawerSectionId,
-    val titleRes: Int,
+    val titleRes: StringResource,
     val icon: MaterialSymbol,
     val items: List<NavBarItem>,
     /**
@@ -77,7 +85,7 @@ private val DrawerSectionIdsByName = DrawerSectionId.entries.associateBy { it.na
 
 /**
  * Parses the persisted names of the headings the user has collapsed, silently dropping any this
- * build doesn't know. Mirrors [com.vitorpamplona.amethyst.ui.navigation.bottombars.navBarItemsFromNames]:
+ * build doesn't know. Mirrors [com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames]:
  * names rather than ordinals, so reordering this enum renames nothing by accident, and a value left
  * by a build with one more section costs that heading rather than the whole read.
  *
@@ -144,6 +152,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
         NavBarItem.CONCORD,
+        NavBarItem.MARMOT_GROUPS,
         NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
@@ -160,11 +169,11 @@ private val DrawerFeedsItems: List<NavBarItem> =
 
 val DrawerSections: List<DrawerSection> =
     listOf(
-        DrawerSection(DrawerSectionId.YOU, R.string.drawer_section_you, MaterialSymbols.AccountCircle, DrawerYouItems),
-        DrawerSection(DrawerSectionId.NAVIGATE, R.string.drawer_section_navigate, MaterialSymbols.Home, DrawerNavigateItems),
-        DrawerSection(DrawerSectionId.FEEDS, R.string.drawer_section_feeds, MaterialSymbols.Subscriptions, DrawerFeedsItems),
-        DrawerSection(DrawerSectionId.CREATE, R.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
-        DrawerSection(DrawerSectionId.SYSTEM, R.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
+        DrawerSection(DrawerSectionId.YOU, Res.string.drawer_section_you, MaterialSymbols.AccountCircle, DrawerYouItems),
+        DrawerSection(DrawerSectionId.NAVIGATE, Res.string.drawer_section_navigate, MaterialSymbols.Home, DrawerNavigateItems),
+        DrawerSection(DrawerSectionId.FEEDS, Res.string.drawer_section_feeds, MaterialSymbols.Subscriptions, DrawerFeedsItems),
+        DrawerSection(DrawerSectionId.CREATE, Res.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
+        DrawerSection(DrawerSectionId.SYSTEM, Res.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
     )
 
 /**

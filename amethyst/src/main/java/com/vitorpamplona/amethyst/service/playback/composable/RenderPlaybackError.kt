@@ -43,9 +43,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
@@ -109,7 +112,7 @@ fun RenderPlaybackError(
                 }
 
                 Text(
-                    text = stringRes(R.string.error_video_playback_failed),
+                    text = stringRes(Res.string.error_video_playback_failed),
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
@@ -119,7 +122,7 @@ fun RenderPlaybackError(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
-                        text = stringRes(R.string.error_video_playback_failed_description, errorCodeName),
+                        text = stringRes(Res.string.error_video_playback_failed_description, errorCodeName),
                         color = Color.White.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
@@ -143,7 +146,7 @@ fun RenderPlaybackError(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.size(8.dp))
-                Text(stringRes(R.string.error_video_open_in_browser))
+                Text(stringRes(Res.string.error_video_open_in_browser))
             }
         }
     }

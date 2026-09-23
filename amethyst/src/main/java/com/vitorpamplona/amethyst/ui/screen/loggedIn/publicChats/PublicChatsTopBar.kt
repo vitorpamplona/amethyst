@@ -50,7 +50,7 @@ fun PublicChatsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultPublicChatsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultPublicChatsFollowList(it.code) },
         )
     }
 }

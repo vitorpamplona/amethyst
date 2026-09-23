@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -263,7 +262,7 @@ private fun LeadConflictCard(
                 Column(Modifier.weight(1f)) {
                     Text(headlineOf(conflict, counts), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Text(
-                        stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt, LocalContext.current)),
+                        stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.placeholderText,
                     )

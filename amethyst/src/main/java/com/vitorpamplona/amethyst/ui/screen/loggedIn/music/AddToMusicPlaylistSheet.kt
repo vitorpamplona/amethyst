@@ -52,14 +52,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -68,12 +66,14 @@ import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_manage
 import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_title
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_create_action
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_new_title_placeholder
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count_short
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_untitled
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -244,7 +244,7 @@ private fun PlaylistPickerRow(
             )
             val count = summary.trackCount
             Text(
-                text = pluralStringResource(R.plurals.music_playlist_track_count_short, count, count),
+                text = pluralStringRes(Res.plurals.music_playlist_track_count_short, count, count),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.grayText,
             )

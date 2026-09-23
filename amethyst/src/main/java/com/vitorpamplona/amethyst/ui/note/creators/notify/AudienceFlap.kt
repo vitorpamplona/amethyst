@@ -63,24 +63,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.audience_empty_private
+import com.vitorpamplona.amethyst.commons.resources.audience_empty_public
 import com.vitorpamplona.amethyst.commons.resources.audience_group_chip
 import com.vitorpamplona.amethyst.commons.resources.audience_group_remove
 import com.vitorpamplona.amethyst.commons.resources.audience_manage
+import com.vitorpamplona.amethyst.commons.resources.audience_summary_others
 import com.vitorpamplona.amethyst.commons.resources.audience_summary_two
+import com.vitorpamplona.amethyst.commons.resources.notify_mute_user
+import com.vitorpamplona.amethyst.commons.resources.notify_unmute_user
+import com.vitorpamplona.amethyst.commons.resources.private_note_visible_to
+import com.vitorpamplona.amethyst.commons.resources.reply_notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -169,7 +175,7 @@ fun AudienceFlap(
             FlapLock(isPrivate, accent)
 
             Text(
-                text = stringRes(if (isPrivate) R.string.private_note_visible_to else R.string.reply_notify),
+                text = stringRes(if (isPrivate) Res.string.private_note_visible_to else Res.string.reply_notify),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = accent,
@@ -272,7 +278,7 @@ private fun AudienceInvitation(
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = stringRes(if (isPrivate) R.string.audience_empty_private else R.string.audience_empty_public),
+            text = stringRes(if (isPrivate) Res.string.audience_empty_private else Res.string.audience_empty_public),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
@@ -376,7 +382,7 @@ private fun AudienceSummary(
             users.size == 2 -> stringRes(Res.string.audience_summary_two, first, second)
             else -> {
                 val others = users.size - AudienceSelection.SUMMARY_NAMES
-                pluralStringResource(R.plurals.audience_summary_others, others, first, second, others)
+                pluralStringRes(Res.plurals.audience_summary_others, others, first, second, others)
             }
         }
 
@@ -492,7 +498,7 @@ private fun AudienceMemberChip(
         trailingIcon = {
             Icon(
                 symbol = if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Notifications,
-                contentDescription = stringRes(if (isMuted) R.string.notify_unmute_user else R.string.notify_mute_user),
+                contentDescription = stringRes(if (isMuted) Res.string.notify_unmute_user else Res.string.notify_mute_user),
                 modifier = Modifier.size(InputChipDefaults.IconSize),
             )
         },

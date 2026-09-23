@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.stringRes
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun SettingSwitchItem(
@@ -46,8 +47,8 @@ fun SettingSwitchItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    title: Int,
-    description: Int,
+    title: StringResource,
+    description: StringResource,
     enabled: Boolean = true,
 ) {
     Row(

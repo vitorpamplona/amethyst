@@ -51,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -60,15 +59,19 @@ import com.vitorpamplona.amethyst.commons.resources.avatar_url
 import com.vitorpamplona.amethyst.commons.resources.banner_url
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_label
 import com.vitorpamplona.amethyst.commons.resources.display_name
+import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.github_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
 import com.vitorpamplona.amethyst.commons.resources.lnurl
+import com.vitorpamplona.amethyst.commons.resources.mastodon
 import com.vitorpamplona.amethyst.commons.resources.mastodon_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.my_display_name
 import com.vitorpamplona.amethyst.commons.resources.my_name
 import com.vitorpamplona.amethyst.commons.resources.nip_05
+import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.pronouns
 import com.vitorpamplona.amethyst.commons.resources.social_proof
+import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.username
 import com.vitorpamplona.amethyst.commons.resources.website_url
@@ -104,7 +107,7 @@ fun NewUserMetadataScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.profile,
+                titleRes = Res.string.profile,
                 onCancel = {
                     nav.popBack()
                 },
@@ -343,7 +346,7 @@ fun NewUserMetadataScreen(
                     expanded = socialExpanded,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.twitter)) },
+                        label = { Text(text = stringRes(Res.string.twitter)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.twitter.value,
                         onValueChange = { postViewModel.twitter.value = it },
@@ -358,7 +361,7 @@ fun NewUserMetadataScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.mastodon)) },
+                        label = { Text(text = stringRes(Res.string.mastodon)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.mastodon.value,
                         onValueChange = { postViewModel.mastodon.value = it },
@@ -373,7 +376,7 @@ fun NewUserMetadataScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.github)) },
+                        label = { Text(text = stringRes(Res.string.github)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.github.value,
                         onValueChange = { postViewModel.github.value = it },

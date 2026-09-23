@@ -67,17 +67,21 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
+import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
+import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_caption
+import com.vitorpamplona.amethyst.commons.resources.private_message
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.take_a_picture
 import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.write_a_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
@@ -189,7 +193,7 @@ fun NewGroupDMScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
-                titleRes = R.string.private_message,
+                titleRes = Res.string.private_message,
                 isActive = postViewModel::canPost,
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
@@ -368,7 +372,7 @@ fun MessageFieldRow(
             Size35dp,
             accountViewModel,
         )
-        MessageField(R.string.write_a_message, postViewModel, requestFocus, onContentReceived)
+        MessageField(Res.string.write_a_message, postViewModel, requestFocus, onContentReceived)
     }
 }
 
@@ -435,7 +439,7 @@ private fun BottomRowActions(
             }
         } else {
             IconButton(
-                onClick = { accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer) },
+                onClick = { accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer) },
             ) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
@@ -453,7 +457,7 @@ private fun BottomRowActions(
         } else {
             IconButton(
                 onClick = {
-                    accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer)
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
                 },
             ) {
                 Icon(
@@ -472,7 +476,7 @@ private fun BottomRowActions(
         } else {
             IconButton(
                 onClick = {
-                    accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer)
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
                 },
             ) {
                 Icon(
@@ -582,7 +586,7 @@ fun SendDirectMessageTo(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringRes(R.string.messages_new_message_subject),
+                text = stringRes(Res.string.messages_new_message_subject),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )

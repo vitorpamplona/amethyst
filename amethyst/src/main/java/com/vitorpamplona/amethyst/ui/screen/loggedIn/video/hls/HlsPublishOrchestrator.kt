@@ -29,13 +29,13 @@ import com.davotoula.lightcompressor.hls.HlsUploadResult
 import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.davotoula.lightcompressor.hls.SimpleHlsListener
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsKind1SiblingBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventBuilder
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoEventTemplate
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsVideoPublishInput
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.Log

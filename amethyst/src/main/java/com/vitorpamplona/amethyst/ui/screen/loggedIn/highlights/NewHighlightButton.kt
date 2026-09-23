@@ -26,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_highlight_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -45,7 +47,7 @@ fun NewHighlightButton(nav: INav) {
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose, 4),
-            contentDescription = stringRes(R.string.new_highlight_title),
+            contentDescription = stringRes(Res.string.new_highlight_title),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,
         )

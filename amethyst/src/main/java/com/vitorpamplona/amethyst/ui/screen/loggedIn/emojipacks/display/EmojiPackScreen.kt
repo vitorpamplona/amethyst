@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
@@ -65,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.add_emoji_fab
 import com.vitorpamplona.amethyst.commons.resources.emoji_long_press_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_private_badge
 import com.vitorpamplona.amethyst.commons.resources.emoji_remove_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -202,7 +202,7 @@ private fun EmojiPackScreenView(
             M3ActionSection {
                 M3ActionRow(
                     icon = MaterialSymbols.Delete,
-                    text = stringRes(R.string.quick_action_delete),
+                    text = stringRes(Res.string.quick_action_delete),
                     isDestructive = true,
                 ) {
                     accountViewModel.launchSigner {

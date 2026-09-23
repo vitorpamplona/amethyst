@@ -35,9 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.video_credit_accepted
+import com.vitorpamplona.amethyst.commons.resources.video_credit_audio_from
+import com.vitorpamplona.amethyst.commons.resources.video_credit_featuring
+import com.vitorpamplona.amethyst.commons.resources.video_credit_inspired_by
+import com.vitorpamplona.amethyst.commons.resources.video_credit_references
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -177,7 +182,7 @@ private fun AcceptedCollaboration(
     if (response?.isAccepted() == true) {
         Icon(
             symbol = MaterialSymbols.CheckCircle,
-            contentDescription = stringRes(R.string.video_credit_accepted),
+            contentDescription = stringRes(Res.string.video_credit_accepted),
             modifier = Modifier.padding(start = 2.dp),
             tint = MaterialTheme.colorScheme.lessImportantLink,
         )
@@ -220,8 +225,8 @@ private fun CreditRow(
 @Composable
 private fun personLabel(marker: String?): String =
     when (marker) {
-        INSPIRED_BY_MARKER -> stringRes(R.string.video_credit_inspired_by)
-        MENTION_MARKER, null -> stringRes(R.string.video_credit_featuring)
+        INSPIRED_BY_MARKER -> stringRes(Res.string.video_credit_inspired_by)
+        MENTION_MARKER, null -> stringRes(Res.string.video_credit_featuring)
         // Anything else is a role the video's author typed ("Collaborator", "Director"): print it.
         else -> marker
     }
@@ -232,8 +237,8 @@ private fun personLabel(marker: String?): String =
 @Composable
 private fun workLabel(marker: String?): String =
     when (marker) {
-        AUDIO_MARKER -> stringRes(R.string.video_credit_audio_from)
-        MENTION_MARKER, null -> stringRes(R.string.video_credit_references)
+        AUDIO_MARKER -> stringRes(Res.string.video_credit_audio_from)
+        MENTION_MARKER, null -> stringRes(Res.string.video_credit_references)
         else -> marker
     }
 

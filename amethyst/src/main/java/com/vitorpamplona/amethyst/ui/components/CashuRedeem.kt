@@ -49,12 +49,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cashu
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_label
+import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
@@ -160,10 +162,12 @@ fun CashuPreviewNew(
     melt: (CashuToken, Context, (String, String) -> Unit) -> Unit,
     toast: (String, String) -> Unit,
 ) {
+    val cashuStr = stringRes(Res.string.cashu)
+    val cashuNoWalletFoundStr = stringRes(Res.string.cashu_no_wallet_found)
     val context = LocalContext.current
 
     PaymentCard(
-        title = stringRes(R.string.cashu),
+        title = stringRes(Res.string.cashu),
         icon = {
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
@@ -174,7 +178,7 @@ fun CashuPreviewNew(
         },
         copyValue = token.token,
     ) {
-        val satsLabel = stringRes(R.string.sats)
+        val satsLabel = stringRes(Res.string.sats)
         val (amount, unit) = remember(token) { cashuAmountLabel(token, satsLabel) }
 
         PaymentCardAmount(amount = amount, unit = unit)
@@ -238,7 +242,7 @@ fun CashuPreviewNew(
                         context.startActivity(intent)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
+                        toast(cashuStr, cashuNoWalletFoundStr)
                     }
                 },
                 shape = ButtonBorder,

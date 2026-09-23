@@ -60,9 +60,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hidden_words
 import com.vitorpamplona.amethyst.commons.resources.hide_new_word_label
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_hide_word
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_show_word
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.security_hidden_words_empty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
@@ -92,14 +96,14 @@ fun HiddenWordsScreen(
     Scaffold(
         topBar = {
             BlockListTopBar(
-                title = R.string.hidden_words,
+                title = Res.string.hidden_words,
                 selectedCount = selected.size,
                 onCancel = { selected = emptySet() },
                 onUnblock = {
                     if (!accountViewModel.isWriteable()) {
                         accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_show_word,
+                            Res.string.read_only_user,
+                            Res.string.login_with_a_private_key_to_be_able_to_show_word,
                         )
                     } else {
                         accountViewModel.showWords(selected.toList())
@@ -146,7 +150,7 @@ private fun HiddenWordsList(
             is StringFeedState.Loaded -> {
                 val items by state.feed.collectAsStateWithLifecycle()
                 if (items.isEmpty()) {
-                    EmptyState(R.string.security_hidden_words_empty)
+                    EmptyState(Res.string.security_hidden_words_empty)
                 } else {
                     val listState = rememberLazyListState()
                     LazyColumn(
@@ -168,7 +172,7 @@ private fun HiddenWordsList(
             }
 
             is StringFeedState.Empty -> {
-                EmptyState(R.string.security_hidden_words_empty)
+                EmptyState(Res.string.security_hidden_words_empty)
             }
 
             is StringFeedState.Loading -> {
@@ -266,8 +270,8 @@ private fun showWordIfWritable(
 ) {
     if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            R.string.read_only_user,
-            R.string.login_with_a_private_key_to_be_able_to_show_word,
+            Res.string.read_only_user,
+            Res.string.login_with_a_private_key_to_be_able_to_show_word,
         )
     } else {
         accountViewModel.showWord(word)
@@ -280,8 +284,8 @@ private fun hideIfWritable(
 ) {
     if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
-            R.string.read_only_user,
-            R.string.login_with_a_private_key_to_be_able_to_hide_word,
+            Res.string.read_only_user,
+            Res.string.login_with_a_private_key_to_be_able_to_hide_word,
         )
     } else {
         accountViewModel.hide(currentWordToAdd.value.trim())

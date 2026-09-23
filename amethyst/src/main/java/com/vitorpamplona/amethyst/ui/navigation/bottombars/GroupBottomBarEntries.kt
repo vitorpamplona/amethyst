@@ -32,12 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.ChannelState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -183,7 +185,7 @@ fun rememberConcordEntryDisplay(
     val metadata = state.takeIf { revision >= 0 }?.metadata
 
     val fallbackName = remember(communities, entry.communityId) { communities.firstOrNull { it.id == entry.communityId }?.name?.ifBlank { null } }
-    val label = metadata?.name?.takeIf { it.isNotBlank() } ?: fallbackName ?: stringRes(R.string.concord_home_title)
+    val label = metadata?.name?.takeIf { it.isNotBlank() } ?: fallbackName ?: stringRes(Res.string.concord_home_title)
     val model = rememberConcordImageModel(metadata?.icon, accountViewModel)
 
     return GroupEntryDisplay(

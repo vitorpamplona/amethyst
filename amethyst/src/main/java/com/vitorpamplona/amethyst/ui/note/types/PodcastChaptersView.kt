@@ -37,16 +37,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.podcasts.PodcastRemoteContent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_chapters_count
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -78,7 +79,7 @@ fun PodcastChaptersView(
     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         CollapsibleHeader(
             symbol = MaterialSymbols.AutoMirrored.FormatListBulleted,
-            title = pluralStringResource(R.plurals.podcast_chapters_count, chapters.size, chapters.size),
+            title = pluralStringRes(Res.plurals.podcast_chapters_count, chapters.size, chapters.size),
             expanded = expanded,
             onToggle = { expanded = !expanded },
         )

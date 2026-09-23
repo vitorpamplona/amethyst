@@ -56,7 +56,7 @@ fun LongsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultLongsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultLongsFollowList(it.code) },
         )
     }
 }

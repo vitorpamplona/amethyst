@@ -42,13 +42,18 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.about_us
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_name_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
+import com.vitorpamplona.amethyst.commons.resources.follow_set_edit_list_metadata
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.people_list_explainer
+import com.vitorpamplona.amethyst.commons.resources.people_list_title
 import com.vitorpamplona.amethyst.commons.resources.picture_url
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -136,8 +141,8 @@ private fun PeopleListMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    R.string.people_list_title,
-                    R.string.people_list_explainer,
+                    Res.string.people_list_title,
+                    Res.string.people_list_explainer,
                     SettingsCategoryFirstModifier,
                 )
 
@@ -163,7 +168,7 @@ fun PeopleListMetadataTopBar(
 ) {
     if (postViewModel.isNewList) {
         CreatingTopBar(
-            titleRes = R.string.follow_set_creation_dialog_title,
+            titleRes = Res.string.follow_set_creation_dialog_title,
             isActive = postViewModel::canPost,
             onCancel = {
                 postViewModel.clear()
@@ -175,15 +180,15 @@ fun PeopleListMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },
         )
     } else {
         SavingTopBar(
-            titleRes = R.string.follow_set_edit_list_metadata,
+            titleRes = Res.string.follow_set_edit_list_metadata,
             isActive = postViewModel::canPost,
             onCancel = {
                 postViewModel.clear()
@@ -195,8 +200,8 @@ fun PeopleListMetadataTopBar(
                     nav.popBack()
                 } catch (e: SignerExceptions.ReadOnlyException) {
                     accountViewModel.toastManager.toast(
-                        R.string.read_only_user,
-                        R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        Res.string.read_only_user,
+                        Res.string.login_with_a_private_key_to_be_able_to_sign_events,
                     )
                 }
             },

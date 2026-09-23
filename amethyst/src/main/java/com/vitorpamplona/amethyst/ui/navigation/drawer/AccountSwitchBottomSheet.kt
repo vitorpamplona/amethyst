@@ -43,11 +43,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -65,9 +64,14 @@ import com.vitorpamplona.amethyst.commons.resources.account_switch_active_accoun
 import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_btn
 import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
 import com.vitorpamplona.amethyst.commons.resources.are_you_sure_you_want_to_log_out
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.log_out
 import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast_zero
+import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -272,8 +276,10 @@ private fun LogoutButton(
     acc: AccountInfo,
     accountSessionManager: AccountSessionManager,
 ) {
+    val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
     var logoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     if (logoutDialog) {
         val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
         val allPosts by Amethyst.instance.scheduledPostStore.flow
@@ -300,8 +306,8 @@ private fun LogoutButton(
                 if (unpublishedCount > 0) {
                     Text(
                         text =
-                            pluralStringResource(
-                                id = R.plurals.scheduled_posts_logout_warning,
+                            pluralStringRes(
+                                id = Res.plurals.scheduled_posts_logout_warning,
                                 count = unpublishedCount,
                                 unpublishedCount,
                             ),
@@ -323,20 +329,23 @@ private fun LogoutButton(
                         // claim "Logged out" when logOff's coroutine bails early.
                         if (accountHex == null) return@TextButton
                         accountSessionManager.logOff(acc)
-                        val toastMessage =
-                            if (confirmedCount > 0) {
-                                pluralStringRes(
-                                    context,
-                                    R.plurals.scheduled_posts_logout_toast,
-                                    confirmedCount,
-                                    confirmedCount,
-                                )
-                            } else {
-                                stringRes(context, R.string.scheduled_posts_logout_toast_zero)
-                            }
-                        android.widget.Toast
-                            .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
-                            .show()
+                        // The plural depends on the snapshot taken above, so it cannot be
+                        // read in composition; this onClick borrows the screen's scope.
+                        scope.launch {
+                            val toastMessage =
+                                if (confirmedCount > 0) {
+                                    loadPluralStringRes(
+                                        Res.plurals.scheduled_posts_logout_toast,
+                                        confirmedCount,
+                                        confirmedCount,
+                                    )
+                                } else {
+                                    scheduledPostsLogoutToastZeroStr
+                                }
+                            android.widget.Toast
+                                .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
+                                .show()
+                        }
                     },
                 ) {
                     Text(text = stringRes(Res.string.log_out))
@@ -346,7 +355,7 @@ private fun LogoutButton(
                 TextButton(
                     onClick = { logoutDialog = false },
                 ) {
-                    Text(text = stringRes(R.string.cancel))
+                    Text(text = stringRes(Res.string.cancel))
                 }
             },
         )

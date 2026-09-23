@@ -53,7 +53,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -399,7 +398,7 @@ private fun BackupConflictIntro(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            text = stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt, LocalContext.current)),
+            text = stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt)),
             style = MaterialTheme.typography.labelLarge,
             color = conflictTones().removed,
         )

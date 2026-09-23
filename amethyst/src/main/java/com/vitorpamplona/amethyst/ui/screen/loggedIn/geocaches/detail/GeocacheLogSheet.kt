@@ -52,11 +52,11 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_dnf
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.GeocacheLogComment
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * The three non-found logs NIP-CC defines.
@@ -92,15 +92,15 @@ fun GeocacheLogSheet(
 
     val title =
         when (type) {
-            GeocacheLogSheetType.DNF -> stringResource(Res.string.geocache_log_type_dnf)
-            GeocacheLogSheetType.NOTE -> stringResource(Res.string.geocache_log_type_note)
-            GeocacheLogSheetType.MAINTENANCE -> stringResource(Res.string.geocache_log_type_maintenance)
+            GeocacheLogSheetType.DNF -> stringRes(Res.string.geocache_log_type_dnf)
+            GeocacheLogSheetType.NOTE -> stringRes(Res.string.geocache_log_type_note)
+            GeocacheLogSheetType.MAINTENANCE -> stringRes(Res.string.geocache_log_type_maintenance)
         }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             Text(
-                text = stringResource(Res.string.geocache_log_comment_title) + " · " + title,
+                text = stringRes(Res.string.geocache_log_comment_title) + " · " + title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -111,7 +111,7 @@ fun GeocacheLogSheet(
                 value = message,
                 onValueChange = { message = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(Res.string.geocache_log_placeholder)) },
+                label = { Text(stringRes(Res.string.geocache_log_placeholder)) },
                 minLines = 3,
             )
 
@@ -138,7 +138,7 @@ fun GeocacheLogSheet(
                             onDismiss()
                         }
                     },
-                ) { Text(stringResource(Res.string.geocache_log_post)) }
+                ) { Text(stringRes(Res.string.geocache_log_post)) }
             }
 
             Spacer(Modifier.navigationBarsPadding().height(20.dp))

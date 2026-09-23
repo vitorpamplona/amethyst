@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_edit
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -230,7 +230,7 @@ private fun CanvasEditor(
                 title = { Text(stringRes(Res.string.buzz_canvas_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onClose, enabled = !saving) {
-                        Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.cancel))
+                        Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
                     }
                 },
             )

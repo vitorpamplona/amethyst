@@ -66,12 +66,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.request_to_vanish
 import com.vitorpamplona.amethyst.commons.resources.request_to_vanish_description
 import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays
 import com.vitorpamplona.amethyst.commons.resources.vanish_all_relays_warning
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_date_explainer
 import com.vitorpamplona.amethyst.commons.resources.vanish_date_label
 import com.vitorpamplona.amethyst.commons.resources.vanish_reason_label
 import com.vitorpamplona.amethyst.commons.resources.vanish_reason_placeholder
+import com.vitorpamplona.amethyst.commons.resources.vanish_request_sent
 import com.vitorpamplona.amethyst.commons.resources.vanish_select_date
 import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
 import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
@@ -167,7 +169,7 @@ fun RequestToVanishScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.request_to_vanish), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.request_to_vanish), nav)
         },
     ) { padding ->
         Column(
@@ -411,8 +413,8 @@ fun RequestToVanishScreen(
                     }
                 }
                 accountViewModel.toastManager.toast(
-                    R.string.request_to_vanish,
-                    R.string.vanish_request_sent,
+                    Res.string.request_to_vanish,
+                    Res.string.vanish_request_sent,
                 )
                 nav.popBack()
             },
@@ -473,7 +475,7 @@ private fun ConfirmVanishDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )

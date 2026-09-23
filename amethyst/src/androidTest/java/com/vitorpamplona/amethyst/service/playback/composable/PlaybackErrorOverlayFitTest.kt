@@ -40,9 +40,14 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -107,7 +112,7 @@ class PlaybackErrorOverlayFitTest {
 
     private fun assertButtonUsable() {
         rule
-            .onNodeWithText(stringRes(targetContext, R.string.error_video_open_in_browser))
+            .onNodeWithText(runBlocking { loadStringRes(Res.string.error_video_open_in_browser) })
             .assertIsDisplayed()
             .assertHeightIsAtLeast(ButtonDefaults.MinHeight)
     }
@@ -117,7 +122,7 @@ class PlaybackErrorOverlayFitTest {
         renderInBox(width = 322.dp, height = 181.dp)
         assertButtonUsable()
         rule
-            .onNodeWithText(stringRes(targetContext, R.string.error_video_playback_failed))
+            .onNodeWithText(runBlocking { loadStringRes(Res.string.error_video_playback_failed) })
             .assertIsDisplayed()
     }
 
@@ -137,8 +142,7 @@ class PlaybackErrorOverlayFitTest {
         rule
             .onNodeWithText(
                 stringRes(
-                    targetContext,
-                    R.string.error_video_playback_failed_description,
+                    Res.string.error_video_playback_failed_description,
                     "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
                 ),
             ).assertDoesNotExist()
@@ -225,7 +229,7 @@ class PlaybackErrorOverlayFitTest {
     private fun titleHeight(): Dp {
         val bounds =
             rule
-                .onNodeWithText(stringRes(targetContext, R.string.error_video_playback_failed))
+                .onNodeWithText(runBlocking { loadStringRes(Res.string.error_video_playback_failed) })
                 .getUnclippedBoundsInRoot()
         return bounds.bottom - bounds.top
     }
@@ -233,7 +237,7 @@ class PlaybackErrorOverlayFitTest {
     private fun buttonHeight(): Dp {
         val bounds =
             rule
-                .onNodeWithText(stringRes(targetContext, R.string.error_video_open_in_browser))
+                .onNodeWithText(runBlocking { loadStringRes(Res.string.error_video_open_in_browser) })
                 .getUnclippedBoundsInRoot()
         return bounds.bottom - bounds.top
     }

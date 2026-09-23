@@ -116,7 +116,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
 
         val base =
             current?.let {
-                pluralStringRes(this, R.plurals.pow_mining_job, it.difficulty, stringRes(this, powKindLabelRes(it.kind)), it.difficulty)
+                pluralStringRes(this, R.plurals.pow_mining_job, it.difficulty, stringRes(this, powKindLabelResId(it.kind)), it.difficulty)
             } ?: stringRes(this, R.string.pow_mining_title)
         val text =
             if (expectedSec != null && elapsedSec != null) {

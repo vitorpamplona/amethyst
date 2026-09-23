@@ -48,9 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.award_badge
 import com.vitorpamplona.amethyst.commons.resources.award_badge_loading
 import com.vitorpamplona.amethyst.commons.resources.award_badge_remove_recipient
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
@@ -100,7 +100,7 @@ fun AwardBadgeScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.award_badge,
+                titleRes = Res.string.award_badge,
                 isActive = { vm.definition != null && selectedUsers.isNotEmpty() },
                 onCancel = { nav.popBack() },
                 onPost = {

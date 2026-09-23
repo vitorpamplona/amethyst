@@ -56,7 +56,7 @@ fun CommunitiesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultCommunitiesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultCommunitiesFollowList(it.code) },
         )
     }
 }

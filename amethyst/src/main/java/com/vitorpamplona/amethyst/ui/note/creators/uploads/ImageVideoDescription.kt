@@ -61,25 +61,37 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_content
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description
+import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_dismiss
 import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_hint
 import com.vitorpamplona.amethyst.commons.resources.content_description
+import com.vitorpamplona.amethyst.commons.resources.content_description_add_document
+import com.vitorpamplona.amethyst.commons.resources.content_description_add_image
+import com.vitorpamplona.amethyst.commons.resources.content_description_add_media
+import com.vitorpamplona.amethyst.commons.resources.content_description_add_video
 import com.vitorpamplona.amethyst.commons.resources.content_description_example
+import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_description
+import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
+import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
+import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
+import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
+import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -193,16 +205,16 @@ fun ImageVideoDescription(
                 val text =
                     if (uris.size() == 1) {
                         if (uris.first().media.isImage() == true) {
-                            R.string.content_description_add_image
+                            Res.string.content_description_add_image
                         } else {
                             if (uris.first().media.isVideo() == true) {
-                                R.string.content_description_add_video
+                                Res.string.content_description_add_video
                             } else {
-                                R.string.content_description_add_document
+                                Res.string.content_description_add_document
                             }
                         }
                     } else {
-                        R.string.content_description_add_media
+                        Res.string.content_description_add_media
                     }
 
                 Text(
@@ -245,7 +257,7 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TextSpinner(
-                    label = stringRes(id = R.string.file_server),
+                    label = stringRes(id = Res.string.file_server),
                     placeholder =
                         fileServers
                             .firstOrNull { it == defaultServer }
@@ -272,8 +284,8 @@ fun ImageVideoDescription(
                             .padding(vertical = 8.dp),
                     checked = sensitiveContent,
                     onCheckedChange = { sensitiveContent = it },
-                    title = R.string.add_sensitive_content_label,
-                    description = R.string.add_sensitive_content_description,
+                    title = Res.string.add_sensitive_content_label,
+                    description = Res.string.add_sensitive_content_description,
                 )
             }
 
@@ -353,8 +365,8 @@ fun ImageVideoDescription(
 
             if (!isVideoWithCompression) {
                 SettingSwitchItem(
-                    title = R.string.strip_metadata_label,
-                    description = R.string.strip_metadata_description,
+                    title = Res.string.strip_metadata_label,
+                    description = Res.string.strip_metadata_description,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -417,8 +429,8 @@ fun ImageVideoDescription(
 
             if (uris.first().media.isVideo() == true && mediaQualitySlider != 3) {
                 SettingSwitchItem(
-                    title = R.string.video_codec_h265_label,
-                    description = R.string.video_codec_h265_description,
+                    title = Res.string.video_codec_h265_label,
+                    description = Res.string.video_codec_h265_description,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -430,8 +442,8 @@ fun ImageVideoDescription(
 
             if (uris.hasGif()) {
                 SettingSwitchItem(
-                    title = R.string.convert_gif_to_mp4_label,
-                    description = R.string.convert_gif_to_mp4_description,
+                    title = Res.string.convert_gif_to_mp4_label,
+                    description = Res.string.convert_gif_to_mp4_description,
                     modifier =
                         Modifier
                             .fillMaxWidth()

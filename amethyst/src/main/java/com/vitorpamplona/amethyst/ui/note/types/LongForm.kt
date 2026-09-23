@@ -45,12 +45,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.long_form_reading_minutes
+import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -170,7 +170,7 @@ private fun LongFormCoverImage(
         if (image != null) {
             MyAsyncImage(
                 imageUrl = image,
-                contentDescription = stringRes(R.string.preview_card_image_for, image),
+                contentDescription = stringRes(Res.string.preview_card_image_for, image),
                 contentScale = ContentScale.Crop,
                 mainImageModifier = Modifier.fillMaxWidth(),
                 loadedImageModifier = imageModifier,

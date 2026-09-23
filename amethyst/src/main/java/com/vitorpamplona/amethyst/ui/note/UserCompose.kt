@@ -32,8 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
+import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
@@ -101,19 +105,19 @@ fun ShowFollowingOrUnfollowingButton(
         UnfollowButton(true) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
             } else {
                 accountViewModel.unfollow(baseAuthor)
             }
         }
     } else {
-        FollowButton(R.string.follow, true) {
+        FollowButton(Res.string.follow, true) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_follow,
+                    Res.string.read_only_user,
+                    Res.string.login_with_a_private_key_to_be_able_to_follow,
                 )
             } else {
                 accountViewModel.follow(baseAuthor)

@@ -56,7 +56,7 @@ fun SoftwareAppsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultSoftwareAppsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultSoftwareAppsFollowList(it.code) },
         )
     }
 }

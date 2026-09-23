@@ -72,7 +72,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -81,9 +80,13 @@ import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_example
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_nonzap
 import com.vitorpamplona.amethyst.commons.resources.custom_zaps_add_a_message_private
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.manual_zaps
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.paid
+import com.vitorpamplona.amethyst.commons.resources.pay
+import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.resources.send_onchain_instead
 import com.vitorpamplona.amethyst.commons.resources.send_zap
 import com.vitorpamplona.amethyst.commons.resources.wallet_number
@@ -282,7 +285,7 @@ fun ZapCustomDialog(
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
-                    suffix = { Text(text = stringRes(id = R.string.sats)) },
+                    suffix = { Text(text = stringRes(id = Res.string.sats)) },
                     singleLine = true,
                     modifier =
                         Modifier
@@ -482,6 +485,7 @@ fun DisplayPayable(
     payable: ZapPaymentHandler.Payable,
     accountViewModel: AccountViewModel,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val paid = rememberSaveable(payable) { mutableStateOf(false) }
 
     Row(
@@ -518,7 +522,7 @@ fun DisplayPayable(
                 )
                 Spacer(modifier = StdHorzSpacer)
                 Text(
-                    text = stringRes(id = R.string.sats),
+                    text = stringRes(id = Res.string.sats),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
@@ -531,9 +535,9 @@ fun DisplayPayable(
         val context = LocalContext.current
 
         PayButton(isActive = !paid.value) {
-            payViaIntent(payable.invoice, context, { paid.value = true }) {
+            payViaIntent(payable.invoice, context, noWalletFoundStr, { paid.value = true }) {
                 accountViewModel.toastManager.toast(
-                    R.string.error_dialog_zap_error,
+                    Res.string.error_dialog_zap_error,
                     UserBasedErrorMessage(it, payable.info.user),
                 )
             }
@@ -544,6 +548,7 @@ fun DisplayPayable(
 fun payViaIntent(
     invoice: String,
     context: Context,
+    noWalletFound: String,
     onPaid: () -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -557,9 +562,9 @@ fun payViaIntent(
         if (e is CancellationException) throw e
         // don't display ugly error messages
         // if (e.message != null) {
-        //   onError(stringRes(context, R.string.no_wallet_found_with_error, e.message!!))
+        //   onError(stringRes(Res.string.no_wallet_found_with_error, e.message!!))
         // } else {
-        onError(stringRes(context, R.string.no_wallet_found))
+        onError(noWalletFound)
         // }
     }
 }
@@ -576,6 +581,7 @@ fun payViaIntent(
 fun payViaBolt12Intent(
     offer: String,
     context: Context,
+    noWalletFound: String,
     onPaid: () -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -587,7 +593,7 @@ fun payViaBolt12Intent(
         onPaid()
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        onError(stringRes(context, R.string.no_wallet_found))
+        onError(noWalletFound)
     }
 }
 
@@ -608,7 +614,7 @@ fun PayButton(
         contentPadding = ZeroPadding,
     ) {
         if (isActive) {
-            Text(text = stringRes(R.string.pay), color = Color.White)
+            Text(text = stringRes(Res.string.pay), color = Color.White)
         } else {
             Text(text = stringRes(Res.string.paid), color = Color.White)
         }

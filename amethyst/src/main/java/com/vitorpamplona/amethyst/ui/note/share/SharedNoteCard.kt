@@ -42,13 +42,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.article
 import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
+import com.vitorpamplona.amethyst.commons.resources.kind_video
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_kind_picture
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_thumbnail_hidden_sensitive
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -277,7 +277,7 @@ private fun secondaryLineFor(
 
     return when {
         event is PictureEvent -> stringRes(Res.string.share_as_qr_kind_picture)
-        event is VideoEvent -> stringRes(R.string.kind_video)
+        event is VideoEvent -> stringRes(Res.string.kind_video)
         event is LongTextNoteEvent -> stringRes(Res.string.article)
         hasContentImage -> stringRes(Res.string.share_as_qr_kind_picture)
         else -> ""

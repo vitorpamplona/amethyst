@@ -27,13 +27,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -424,12 +425,12 @@ class NewMusicTrackViewModel : ViewModel() {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private fun formatUploadErrors(
+    private suspend fun formatUploadErrors(
         errors: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Error>,
         context: Context,
     ): String =
         errors
-            .map { context.getString(it.errorResource, *it.params) }
+            .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()
             .joinToString(".\n")
 

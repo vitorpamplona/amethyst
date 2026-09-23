@@ -31,12 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.expiration_date_label
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -178,13 +178,13 @@ fun ChatDisplayExpiration(expirationDate: Long) {
         Spacer(modifier = StdHorzSpacer)
         Icon(
             symbol = MaterialSymbols.Timer,
-            contentDescription = stringRes(R.string.expiration_date_label),
+            contentDescription = stringRes(Res.string.expiration_date_label),
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         val context = LocalContext.current
         Text(
-            text = timeAheadNoDot(expirationDate, context),
+            text = timeAheadNoDot(expirationDate),
             color = MaterialTheme.colorScheme.placeholderText,
             fontSize = Font12SP,
             maxLines = 1,

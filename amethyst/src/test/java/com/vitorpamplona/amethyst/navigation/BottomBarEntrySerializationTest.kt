@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -68,8 +68,8 @@ class BottomBarEntrySerializationTest {
         val legacy =
             """
             [
-              {"type":"com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn","item":"HOME"},
-              {"type":"com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite","favoriteId":"url:https://example.com"}
+              {"type":"com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry.BuiltIn","item":"HOME"},
+              {"type":"com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry.Favorite","favoriteId":"url:https://example.com"}
             ]
             """.trimIndent()
 
@@ -85,8 +85,8 @@ class BottomBarEntrySerializationTest {
             )
         val migrated =
             legacy
-                .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn", "builtIn")
-                .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite", "favorite")
+                .replace("com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry.BuiltIn", "builtIn")
+                .replace("com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry.Favorite", "favorite")
         assertEquals(expected, JsonMapper.fromJson<List<BottomBarEntry>>(migrated))
     }
 }

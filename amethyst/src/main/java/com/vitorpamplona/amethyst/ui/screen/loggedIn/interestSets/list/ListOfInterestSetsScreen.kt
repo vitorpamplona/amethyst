@@ -44,12 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.interest_set_create_btn_label
 import com.vitorpamplona.amethyst.commons.resources.interest_sets_empty
+import com.vitorpamplona.amethyst.commons.resources.interest_sets_title
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -74,7 +74,7 @@ fun ListOfInterestSetsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = stringRes(R.string.interest_sets_title), nav)
+            TopBarWithBackButton(caption = stringRes(Res.string.interest_sets_title), nav)
         },
         bottomBar = {
             AppBottomBar(Route.InterestSets, nav, accountViewModel) { route ->

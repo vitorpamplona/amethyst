@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,16 +44,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.description
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_footer
 import com.vitorpamplona.amethyst.commons.resources.marmot_create_group_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_create_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_message
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -137,7 +141,7 @@ fun CreateGroupScreen(
                     Toast
                         .makeText(
                             context,
-                            stringRes(context, R.string.marmot_failed_to_create_group, e.message),
+                            loadStringRes(Res.string.marmot_failed_to_create_group, e.message),
                             Toast.LENGTH_LONG,
                         ).show()
                 }
@@ -166,6 +170,11 @@ fun CreateGroupScreen(
                     .padding(padding)
                     .consumeWindowInsets(padding)
                     .imePaddingSafe()
+                    // The form is taller than the window once the IME is up, so
+                    // `imePaddingSafe` alone just clips the retention picker and
+                    // the footer off the bottom. Scrolling is what makes them
+                    // reachable while the keyboard covers half the screen.
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
         ) {
             Text(
@@ -201,7 +210,7 @@ fun CreateGroupScreen(
             OutlinedTextField(
                 value = groupDescription,
                 onValueChange = { groupDescription = it },
-                label = { Text(stringRes(R.string.description)) },
+                label = { Text(stringRes(Res.string.description)) },
                 placeholder = { Text(stringRes(Res.string.marmot_group_description_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
@@ -219,7 +228,7 @@ fun CreateGroupScreen(
 
             Text(
                 stringRes(Res.string.marmot_create_group_footer),
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -122,9 +122,16 @@ open class MarmotNewMessageViewModel : ViewModel() {
         uploadState?.load(media)
     }
 
-    /** Sends the field's text. Mention rewriting and p-tagging happen in
-     * AccountViewModel.sendMarmotGroupMessage. Throws on send failure so
-     * the caller can surface the error. */
+    /**
+     * Sends the field's text. Mention rewriting and p-tagging happen in
+     * AccountViewModel.sendMarmotGroupMessage.
+     *
+     * Returns once the message is on screen, not once it has been published:
+     * encryption and the relay hand-off run on the account scope and report
+     * themselves on the bubble. Only a failure to even build the message
+     * throws here — anything later shows up as a failed bubble the user can
+     * retry, so the composer is free to clear as soon as this returns.
+     */
     suspend fun sendPost() {
         val groupId = nostrGroupId ?: return
         val text = message.text.toString().trim()

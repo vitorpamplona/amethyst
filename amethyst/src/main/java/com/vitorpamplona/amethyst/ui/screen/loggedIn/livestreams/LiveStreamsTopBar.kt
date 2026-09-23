@@ -58,7 +58,7 @@ fun LiveStreamsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultLiveStreamsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultLiveStreamsFollowList(it.code) },
         )
     }
 }

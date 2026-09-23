@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -57,8 +56,14 @@ import com.vitorpamplona.amethyst.commons.resources.meeting_space_open_tag
 import com.vitorpamplona.amethyst.commons.resources.meeting_space_planned_starts_at
 import com.vitorpamplona.amethyst.commons.resources.meeting_space_planned_tag
 import com.vitorpamplona.amethyst.commons.resources.meeting_space_private_tag
+import com.vitorpamplona.amethyst.commons.resources.nest_chat_send_failed_title
 import com.vitorpamplona.amethyst.commons.resources.nest_listen_to_recording
 import com.vitorpamplona.amethyst.commons.resources.nest_no_app_to_open_link
+import com.vitorpamplona.amethyst.commons.resources.nest_presence_left
+import com.vitorpamplona.amethyst.commons.resources.nest_presence_listening
+import com.vitorpamplona.amethyst.commons.resources.nest_presence_on_stage
+import com.vitorpamplona.amethyst.commons.resources.nest_presence_raised_hand
+import com.vitorpamplona.amethyst.commons.resources.nest_presence_speaking
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -220,7 +225,7 @@ private fun ListenToRecordingButton(
             }.isSuccess
         if (!launched) {
             accountViewModel.toastManager.toast(
-                R.string.nest_chat_send_failed_title,
+                Res.string.nest_chat_send_failed_title,
                 noAppMessage,
                 user = null,
             )
@@ -393,11 +398,11 @@ fun RenderMeetingRoomPresence(
 
     val stateRes =
         when {
-            !publishing && !onstage && !handRaised -> R.string.nest_presence_left
-            handRaised -> R.string.nest_presence_raised_hand
-            onstage && publishing -> R.string.nest_presence_speaking
-            onstage -> R.string.nest_presence_on_stage
-            else -> R.string.nest_presence_listening
+            !publishing && !onstage && !handRaised -> Res.string.nest_presence_left
+            handRaised -> Res.string.nest_presence_raised_hand
+            onstage && publishing -> Res.string.nest_presence_speaking
+            onstage -> Res.string.nest_presence_on_stage
+            else -> Res.string.nest_presence_listening
         }
 
     val user =

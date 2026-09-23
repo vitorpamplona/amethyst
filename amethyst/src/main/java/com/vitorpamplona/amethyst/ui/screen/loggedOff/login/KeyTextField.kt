@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
 import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
 import com.vitorpamplona.amethyst.commons.resources.show_password
@@ -94,7 +95,7 @@ fun KeyTextField(
                                 stringRes(Res.string.show_password)
                             } else {
                                 stringRes(
-                                    R.string.hide_password,
+                                    Res.string.hide_password,
                                 )
                             },
                     )

@@ -61,7 +61,7 @@ fun createMuteAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_volume_off)
         }
-    val title = if (isMuted) stringRes(context, R.string.muted_button) else stringRes(context, R.string.mute_button)
+    val title = stringRes(context, if (isMuted) R.string.muted_button else R.string.mute_button)
 
     val intent =
         PendingIntent.getBroadcast(
@@ -83,7 +83,7 @@ fun createPlayPauseAction(
         } else {
             Icon.createWithResource(context, androidx.media3.session.R.drawable.media3_icon_pause)
         }
-    val title = if (!isPlaying) stringRes(context, R.string.play) else stringRes(context, R.string.pause)
+    val title = stringRes(context, if (!isPlaying) R.string.play else R.string.pause)
     val intent =
         PendingIntent.getBroadcast(
             context,

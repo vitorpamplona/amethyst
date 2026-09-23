@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.preferences
 
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import com.vitorpamplona.quartz.utils.Log
@@ -29,6 +30,7 @@ import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
 class KeyStoreEncryption {
@@ -45,12 +47,65 @@ class KeyStoreEncryption {
         private const val GCM_TAG_LENGTH_BITS = 128
     }
 
-    private val cipher = Cipher.getInstance(TRANSFORMATION)
+    // One Cipher per thread rather than one shared instance. A Cipher carries
+    // the state of the operation in progress, so two coroutines encrypting on
+    // different Dispatchers.IO threads through the same object would corrupt
+    // each other's output.
+    private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(TRANSFORMATION) }
+
     private val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
 
-    private fun getKey(): SecretKey {
+    // The key handle never changes for the life of the alias, but fetching it
+    // is a round trip to the keystore daemon. Every encrypted store here reads
+    // and writes through this class, so doing that per operation put an IPC in
+    // front of every Marmot group-state write and every message appended.
+    @Volatile
+    private var cachedKey: SecretKey? = null
+
+    private fun getKey(): SecretKey =
+        cachedKey ?: synchronized(this) {
+            cachedKey ?: loadOrCreateKey().also { cachedKey = it }
+        }
+
+    private fun loadOrCreateKey(): SecretKey {
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
-        return existingKey?.secretKey ?: createKey()
+        return (existingKey?.secretKey ?: createKey()).also { logSecurityLevel(it) }
+    }
+
+    /**
+     * Say once, per process, where this key actually lives.
+     *
+     * It decides the cost of everything encrypted at rest here, and it is not
+     * knowable from the code: [createKeyStrongBoxIfAvailable] is tried first, so
+     * a device with a secure element gets one, and `getEntry` then returns
+     * whatever that device created — possibly years ago, under different code.
+     *
+     * The difference is not small. A secure element runs AES-GCM at roughly
+     * 68 KB/s (1 MiB in ~15s on a Pixel 8), against tens of MB/s for the TEE.
+     * Anything bulk that shows up slow on one device and fine on another is
+     * explained by this line.
+     */
+    private fun logSecurityLevel(key: SecretKey) {
+        try {
+            val factory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEY_STORE)
+            val info = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+            val level =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    when (info.securityLevel) {
+                        KeyProperties.SECURITY_LEVEL_STRONGBOX -> "STRONGBOX (bulk crypto here is ~68 KB/s)"
+                        KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> "TEE"
+                        KeyProperties.SECURITY_LEVEL_SOFTWARE -> "SOFTWARE"
+                        else -> "UNKNOWN(${info.securityLevel})"
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    if (info.isInsideSecureHardware) "SECURE_HARDWARE (TEE or StrongBox)" else "SOFTWARE"
+                }
+            Log.i(TAG) { "$KEY_ALIAS security level: $level" }
+        } catch (e: Exception) {
+            // Purely diagnostic — never let it interfere with having a key.
+            Log.d(TAG) { "Could not determine the security level of $KEY_ALIAS: ${e.message}" }
+        }
     }
 
     private fun createKeyStrongBoxIfAvailable(): SecretKey? =
@@ -95,11 +150,15 @@ class KeyStoreEncryption {
     fun encrypt(bytes: ByteArray): ByteArray {
         try {
             // Initializes the cipher in encrypt mode and encrypts data
+            val cipher = ciphers.get()
             cipher.init(Cipher.ENCRYPT_MODE, getKey())
             val iv = cipher.iv
             val encrypted = cipher.doFinal(bytes)
             return iv + encrypted
         } catch (e: Exception) {
+            // A key the system has retired (a wipe, a credential reset) keeps
+            // failing until it is re-read, so the cached handle goes with it.
+            cachedKey = null
             Log.e(TAG, "encrypt() failed: ${e.message}", e)
             throw e
         }
@@ -112,9 +171,11 @@ class KeyStoreEncryption {
             // IvParameterSpec), so we must pass the 128-bit auth tag length.
             val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
             val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
+            val cipher = ciphers.get()
             cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {
+            cachedKey = null
             Log.e(TAG, "decrypt() failed (input ${bytes.size} bytes): ${e.message}", e)
             throw e
         }

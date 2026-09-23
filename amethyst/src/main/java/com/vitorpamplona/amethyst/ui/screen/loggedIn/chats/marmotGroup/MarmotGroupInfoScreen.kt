@@ -63,35 +63,52 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_member_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_add_to_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_adding_user
+import com.vitorpamplona.amethyst.commons.resources.marmot_admin_granted
+import com.vitorpamplona.amethyst.commons.resources.marmot_admin_revoked
 import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_action
 import com.vitorpamplona.amethyst.commons.resources.marmot_disband_group_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_edit_group_info
 import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media
 import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media_explainer
+import com.vitorpamplona.amethyst.commons.resources.marmot_enable_encrypted_media_needs_server
+import com.vitorpamplona.amethyst.commons.resources.marmot_encrypted_media_enabled_toast
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_add_user
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_disband
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_enable_encrypted_media
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_grant_admin
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_leave_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_remove_member
+import com.vitorpamplona.amethyst.commons.resources.marmot_failed_to_revoke_admin
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_privileges
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_disbanded_toast
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_disbanding_toast
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_required
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_disband
+import com.vitorpamplona.amethyst.commons.resources.marmot_member_count
+import com.vitorpamplona.amethyst.commons.resources.marmot_member_removed
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_admin
 import com.vitorpamplona.amethyst.commons.resources.marmot_member_suffix_you
 import com.vitorpamplona.amethyst.commons.resources.marmot_relay_last_event
@@ -105,8 +122,11 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_confirm
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_privileges
 import com.vitorpamplona.amethyst.commons.resources.marmot_revoke_admin_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_this_group
+import com.vitorpamplona.amethyst.commons.resources.marmot_unknown_error
 import com.vitorpamplona.amethyst.commons.resources.marmot_user_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.members
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
@@ -117,6 +137,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -138,6 +159,7 @@ fun MarmotGroupInfoScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val marmotEnableEncryptedMediaNeedsServerStr = stringRes(Res.string.marmot_enable_encrypted_media_needs_server)
     val chatroom =
         remember(nostrGroupId) {
             accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
@@ -182,7 +204,7 @@ fun MarmotGroupInfoScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
+                            contentDescription = stringRes(Res.string.back),
                         )
                     }
                 },
@@ -262,7 +284,7 @@ fun MarmotGroupInfoScreen(
                             )
                         }
                         Text(
-                            text = pluralStringResource(R.plurals.marmot_member_count, members.size, members.size),
+                            text = pluralStringRes(Res.plurals.marmot_member_count, members.size, members.size),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp),
@@ -321,7 +343,7 @@ fun MarmotGroupInfoScreen(
                                         Toast
                                             .makeText(
                                                 context,
-                                                stringRes(context, R.string.marmot_enable_encrypted_media_needs_server),
+                                                marmotEnableEncryptedMediaNeedsServerStr,
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                         return@Button
@@ -334,7 +356,7 @@ fun MarmotGroupInfoScreen(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        stringRes(context, R.string.marmot_encrypted_media_enabled_toast),
+                                                        loadStringRes(Res.string.marmot_encrypted_media_enabled_toast),
                                                         Toast.LENGTH_SHORT,
                                                     ).show()
                                             }
@@ -343,9 +365,8 @@ fun MarmotGroupInfoScreen(
                                                 Toast
                                                     .makeText(
                                                         context,
-                                                        stringRes(
-                                                            context,
-                                                            R.string.marmot_failed_to_enable_encrypted_media,
+                                                        loadStringRes(
+                                                            Res.string.marmot_failed_to_enable_encrypted_media,
                                                             e.message,
                                                         ),
                                                         Toast.LENGTH_LONG,
@@ -445,10 +466,10 @@ fun MarmotGroupInfoScreen(
                 onAdd = { user ->
                     isAdding = true
                     isAddError = false
-                    addStatus = stringRes(context, R.string.marmot_adding_user, user.toBestDisplayName())
                     val targetPubkey = user.pubkeyHex
                     val targetName = user.toBestDisplayName()
                     scope.launch(Dispatchers.IO) {
+                        addStatus = loadStringRes(Res.string.marmot_adding_user, targetName)
                         try {
                             val result = accountViewModel.addMarmotGroupMember(nostrGroupId, targetPubkey)
                             if (result.startsWith("Success")) {
@@ -457,11 +478,11 @@ fun MarmotGroupInfoScreen(
                                 addSearchInput = ""
                                 userSuggestions.reset()
                             } else {
-                                addStatus = stringRes(context, R.string.marmot_failed_to_add_user, targetName, result.removePrefix("Error: "))
+                                addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, result.removePrefix("Error: "))
                                 isAddError = true
                             }
                         } catch (e: Exception) {
-                            addStatus = stringRes(context, R.string.marmot_failed_to_add_user, targetName, e.message ?: stringRes(context, R.string.marmot_unknown_error))
+                            addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, e.message ?: loadStringRes(Res.string.marmot_unknown_error))
                             isAddError = true
                         } finally {
                             isAdding = false
@@ -488,7 +509,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.marmot_failed_to_leave_group, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_leave_group, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -518,12 +539,11 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(
-                                        context,
+                                    loadStringRes(
                                         if (ended) {
-                                            R.string.marmot_group_disbanded_toast
+                                            Res.string.marmot_group_disbanded_toast
                                         } else {
-                                            R.string.marmot_group_disbanding_toast
+                                            Res.string.marmot_group_disbanding_toast
                                         },
                                     ),
                                     Toast.LENGTH_SHORT,
@@ -539,7 +559,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.marmot_failed_to_disband, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_disband, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -561,7 +581,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(context, R.string.marmot_member_removed), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_member_removed), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -569,7 +589,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.marmot_failed_to_remove_member, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_remove_member, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -591,7 +611,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.grantMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(context, R.string.marmot_admin_granted), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_admin_granted), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -599,7 +619,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.marmot_failed_to_grant_admin, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -621,7 +641,7 @@ fun MarmotGroupInfoScreen(
                         accountViewModel.revokeMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
                             Toast
-                                .makeText(context, stringRes(context, R.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
+                                .makeText(context, loadStringRes(Res.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
                                 .show()
                         }
                     } catch (e: Exception) {
@@ -629,7 +649,7 @@ fun MarmotGroupInfoScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    stringRes(context, R.string.marmot_failed_to_revoke_admin, e.message),
+                                    loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message),
                                     Toast.LENGTH_LONG,
                                 ).show()
                         }
@@ -801,12 +821,12 @@ fun LeaveGroupDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -838,7 +858,7 @@ fun DisbandGroupDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -862,12 +882,12 @@ private fun ConfirmRemoveMemberDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(R.string.remove), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.remove), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -896,7 +916,7 @@ private fun ConfirmGrantAdminDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -925,7 +945,7 @@ private fun ConfirmRevokeAdminDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -1098,7 +1118,7 @@ private fun RelayHealthRow(
         if (lastSeen == null) {
             stringRes(Res.string.marmot_relay_no_events)
         } else {
-            stringRes(Res.string.marmot_relay_last_event, timeAgo(lastSeen, context))
+            stringRes(Res.string.marmot_relay_last_event, timeAgo(lastSeen))
         }
     Row(
         modifier =

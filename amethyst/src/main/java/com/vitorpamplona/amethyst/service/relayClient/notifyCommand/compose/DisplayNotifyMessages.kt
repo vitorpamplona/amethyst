@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.payment_required_title
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -50,7 +51,7 @@ fun DisplayNotifyMessages(
         NotifyRequestDialog(
             title =
                 stringRes(
-                    id = R.string.payment_required_title,
+                    id = Res.string.payment_required_title,
                     request.relayUrl.displayUrl(),
                 ),
             textContent = request.description,

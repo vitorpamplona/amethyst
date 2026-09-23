@@ -51,14 +51,17 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -70,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 @Preview
 @Composable
@@ -111,11 +115,15 @@ fun AllSettingsScreen(
             )
         }
 
+    // stringRes reads from composition, so every label the filter could touch is
+    // resolved up front and handed over as a plain map lookup. That keeps
+    // filterSettings itself Compose-free and unit-testable.
+    val labels = rememberCatalogLabels(catalog)
     val filtered =
         filterSettings(
             catalog = catalog,
             query = query,
-            stringLookup = { stringRes(context, it) },
+            stringLookup = { labels[it].orEmpty() },
         )
 
     Scaffold(
@@ -167,7 +175,7 @@ fun AllSettingsScreen(
                 showResetMarmotDialog = false
                 isResettingMarmot = true
                 scope.launch(Dispatchers.IO) {
-                    val successMessage = stringRes(context, R.string.reset_marmot_success)
+                    val successMessage = loadStringRes(Res.string.reset_marmot_success)
                     try {
                         accountViewModel.resetMarmotState()
                         launch(Dispatchers.Main) {
@@ -175,7 +183,7 @@ fun AllSettingsScreen(
                         }
                     } catch (e: Exception) {
                         val failureMessage =
-                            stringRes(context, R.string.reset_marmot_failure, e.message ?: "")
+                            loadStringRes(Res.string.reset_marmot_failure, e.message ?: "")
                         launch(Dispatchers.Main) {
                             Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
                         }
@@ -273,8 +281,22 @@ private fun ResetMarmotStateDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
+}
+
+/** Resolves every title and keyword string in [catalog] so the filter can run outside composition. */
+@Composable
+private fun rememberCatalogLabels(catalog: List<SettingsCategory>): Map<StringResource, String> {
+    val out = mutableMapOf<StringResource, String>()
+    catalog.forEach { category ->
+        out[category.titleRes] = stringRes(category.titleRes)
+        category.entries.forEach { entry ->
+            out[entry.titleRes] = stringRes(entry.titleRes)
+            entry.keywordsRes?.let { out[it] = stringRes(it) }
+        }
+    }
+    return out
 }

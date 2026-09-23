@@ -39,10 +39,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,11 +55,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.battery_optimization_description
@@ -66,7 +70,18 @@ import com.vitorpamplona.amethyst.commons.resources.battery_optimization_title
 import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_off
 import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_on
 import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_silent
+import com.vitorpamplona.amethyst.commons.resources.notification_service_accounts_title
+import com.vitorpamplona.amethyst.commons.resources.notification_service_master_description
+import com.vitorpamplona.amethyst.commons.resources.notification_service_master_title
+import com.vitorpamplona.amethyst.commons.resources.notification_settings
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_categories_explainer
+import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_categories
+import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_delivery
+import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_display
+import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_description
+import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_title
+import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_description
+import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_title
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
@@ -85,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationSettingsScreen(
@@ -92,7 +108,7 @@ fun NotificationSettingsScreen(
     nav: INav,
 ) {
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(id = R.string.notification_settings), nav) },
+        topBar = { TopBarWithBackButton(stringRes(id = Res.string.notification_settings), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -119,15 +135,15 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
         }
     }
 
-    SettingsSection(R.string.notification_settings_section_delivery) {
+    SettingsSection(Res.string.notification_settings_section_delivery) {
         if (hasPushNotificationProvider()) {
             PushNotificationProviderTile(accountViewModel.settings.uiSettingsFlow)
             SettingsDivider()
         }
         SettingsSwitchTile(
             icon = MaterialSymbols.Notifications,
-            title = R.string.notification_service_master_title,
-            description = R.string.notification_service_master_description,
+            title = Res.string.notification_service_master_title,
+            description = Res.string.notification_service_master_description,
             checked = master,
             onCheckedChange = { LocalPreferences.setNotificationServiceEnabled(it) },
         )
@@ -162,7 +178,7 @@ private fun BackgroundAccountsSection(accountViewModel: AccountViewModel) {
 
     if (accounts.isEmpty()) return
 
-    SettingsSection(R.string.notification_service_accounts_title) {
+    SettingsSection(Res.string.notification_service_accounts_title) {
         accounts.forEachIndexed { index, (info, settings) ->
             if (index > 0) SettingsDivider()
             AccountParticipationRow(info, settings, accountViewModel)
@@ -245,19 +261,19 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
     val showMessages by accountViewModel.account.settings.showMessagesInNotifications
         .collectAsStateWithLifecycle()
 
-    SettingsSection(R.string.notification_settings_section_display) {
+    SettingsSection(Res.string.notification_settings_section_display) {
         SettingsSwitchTile(
             icon = MaterialSymbols.Forum,
-            title = R.string.split_notifications_setting_title,
-            description = R.string.split_notifications_setting_description,
+            title = Res.string.split_notifications_setting_title,
+            description = Res.string.split_notifications_setting_description,
             checked = splitByFollows,
             onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
         )
         SettingsDivider()
         SettingsSwitchTile(
             icon = MaterialSymbols.Mail,
-            title = R.string.show_messages_in_notifications_setting_title,
-            description = R.string.show_messages_in_notifications_setting_description,
+            title = Res.string.show_messages_in_notifications_setting_title,
+            description = Res.string.show_messages_in_notifications_setting_description,
             checked = showMessages,
             onCheckedChange = { accountViewModel.account.settings.toggleShowMessagesInNotifications() },
         )
@@ -268,6 +284,7 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
 private fun CategoriesSection() {
     val context = LocalContext.current
     val entries = NotificationChannels.contentChannels
+    val scope = rememberCoroutineScope()
 
     // Read each channel's importance after every resume so toggling
     // sound/importance in the system page reflects back here. The map IS
@@ -275,19 +292,26 @@ private fun CategoriesSection() {
     var statuses by remember {
         mutableStateOf<Map<String, NotificationChannels.ChannelStatus>>(emptyMap())
     }
-    LifecycleResumeEffect(Unit) {
-        statuses =
-            entries.associate {
-                val id = it.channelId(context)
-                id to NotificationChannels.statusOf(context, id)
-            }
-        onPauseOrDispose {}
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        // Re-read each channel's importance on every resume, so toggling
+        // sound/importance in the system page reflects back here. The map IS
+        // the state - no key-bump trick needed. Reading a channel id is a
+        // suspend call now (Compose resources), hence a coroutine rather than
+        // LifecycleResumeEffect.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            statuses =
+                entries.associate {
+                    val id = it.channelId(context)
+                    id to NotificationChannels.statusOf(context, id)
+                }
+        }
     }
 
-    SettingsSection(R.string.notification_settings_section_categories) {
+    SettingsSection(Res.string.notification_settings_section_categories) {
         entries.forEachIndexed { index, entry ->
             if (index > 0) SettingsDivider()
-            val channelId = remember(entry) { entry.channelId(context) }
+            val channelId by produceState("", entry) { value = entry.channelId(context) }
             // Default to ON for channels not yet created — matches Android's
             // own default importance, so the badge isn't misleading before the
             // user has interacted with the channel.
@@ -297,10 +321,12 @@ private fun CategoriesSection() {
                 icon = entry.icon,
                 trailing = { ChannelStatusBadge(status) },
                 onClick = {
-                    // Lazy-create the channel right before opening so the system
-                    // per-channel page has something to display; idempotent.
-                    entry.ensure(context)
-                    NotificationChannels.openChannelSettings(context, channelId)
+                    scope.launch {
+                        // Lazy-create the channel right before opening so the system
+                        // per-channel page has something to display; idempotent.
+                        entry.ensure(context)
+                        NotificationChannels.openChannelSettings(context, channelId)
+                    }
                 },
             )
         }

@@ -58,10 +58,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reactions_settings
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_boost
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_boost_description
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_description
@@ -107,7 +107,7 @@ fun ReactionsSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.reactions_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.reactions_settings), nav)
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {

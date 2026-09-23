@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
@@ -48,18 +49,21 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.dvm_looking_for_app
 import com.vitorpamplona.amethyst.commons.resources.dvm_pay_amount_to_dvm
 import com.vitorpamplona.amethyst.commons.resources.dvm_pay_invoice_from_dvm
 import com.vitorpamplona.amethyst.commons.resources.dvm_requesting_job
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_status
 import com.vitorpamplona.amethyst.commons.resources.dvm_waiting_to_confirm_payment
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.nwc_payment_request
+import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -90,6 +94,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import kotlinx.coroutines.launch
 
 @Composable
 fun DvmContentDiscoveryScreen(
@@ -374,6 +379,11 @@ fun DvmPaymentActions(
     nav: INav,
     onStatusUpdate: (String) -> Unit,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
+    val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
+    // The NIP-47 callbacks below are invoked by the relay dispatcher, not by
+    // composition, so their bodies run in this scope to read their messages.
+    val scope = rememberCoroutineScope()
     val status = latestStatus.status() ?: return
 
     if (status.code != "payment-required") return
@@ -397,7 +407,7 @@ fun DvmPaymentActions(
                                 thankYou
                             } else {
                                 response?.error?.takeIf { it.isNotBlank() }
-                                    ?: stringRes(context, R.string.clink_debit_no_response)
+                                    ?: clinkDebitNoResponseStr
                             },
                         )
                     }
@@ -410,13 +420,15 @@ fun DvmPaymentActions(
                         onSent = {
                             onStatusUpdate(nwcPaymentRequest)
                         },
-                        onTimeout = { onStatusUpdate(nwcTimeoutMessage(context)) },
+                        onTimeout = { scope.launch { onStatusUpdate(nwcTimeoutMessage()) } },
                         onResponse = { response ->
-                            onStatusUpdate(
-                                response.nwcFailureDetail(context)?.let { detail ->
-                                    stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail)
-                                } ?: thankYou,
-                            )
+                            scope.launch {
+                                onStatusUpdate(
+                                    response.nwcFailureDetail()?.let { detail ->
+                                        loadStringRes(Res.string.wallet_connect_pay_invoice_error_error, detail)
+                                    } ?: thankYou,
+                                )
+                            }
                         },
                     )
                 }
@@ -425,6 +437,7 @@ fun DvmPaymentActions(
                     payViaIntent(
                         invoice,
                         context,
+                        noWalletFoundStr,
                         onPaid = {
                             onStatusUpdate(thankYou)
                         },

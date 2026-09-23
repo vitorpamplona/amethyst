@@ -21,12 +21,16 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.explicit_content
 import com.vitorpamplona.amethyst.commons.resources.harassment
+import com.vitorpamplona.amethyst.commons.resources.illegal_behavior
+import com.vitorpamplona.amethyst.commons.resources.impersonation
 import com.vitorpamplona.amethyst.commons.resources.malware
+import com.vitorpamplona.amethyst.commons.resources.nudity
 import com.vitorpamplona.amethyst.commons.resources.other
+import com.vitorpamplona.amethyst.commons.resources.profanity_hateful_speech
+import com.vitorpamplona.amethyst.commons.resources.spam
 import com.vitorpamplona.amethyst.commons.resources.violence
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -43,11 +47,11 @@ fun reportTypeLabels(types: Collection<ReportType?>): List<String> = types.map {
 fun reportTypeLabel(type: ReportType?): String =
     when (type) {
         ReportType.EXPLICIT -> stringRes(Res.string.explicit_content)
-        ReportType.NUDITY -> stringRes(R.string.nudity)
-        ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
-        ReportType.SPAM -> stringRes(R.string.spam)
-        ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
-        ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
+        ReportType.NUDITY -> stringRes(Res.string.nudity)
+        ReportType.PROFANITY -> stringRes(Res.string.profanity_hateful_speech)
+        ReportType.SPAM -> stringRes(Res.string.spam)
+        ReportType.IMPERSONATION -> stringRes(Res.string.impersonation)
+        ReportType.ILLEGAL -> stringRes(Res.string.illegal_behavior)
         ReportType.MALWARE -> stringRes(Res.string.malware)
         ReportType.OTHER -> stringRes(Res.string.other)
         ReportType.HARASSMENT -> stringRes(Res.string.harassment)

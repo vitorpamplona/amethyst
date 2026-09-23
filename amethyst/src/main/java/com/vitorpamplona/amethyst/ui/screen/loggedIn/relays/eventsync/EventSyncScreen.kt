@@ -66,7 +66,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.event_sync_activity_log
 import com.vitorpamplona.amethyst.commons.resources.event_sync_activity_log_finished
@@ -101,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.resources.event_sync_status_error
 import com.vitorpamplona.amethyst.commons.resources.event_sync_step1
 import com.vitorpamplona.amethyst.commons.resources.event_sync_step2
 import com.vitorpamplona.amethyst.commons.resources.event_sync_step3
+import com.vitorpamplona.amethyst.commons.resources.event_sync_title
 import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_body
 import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_title
 import com.vitorpamplona.amethyst.commons.resources.event_sync_wifi_warning
@@ -127,7 +127,7 @@ fun EventSyncScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(
-                caption = stringRes(R.string.event_sync_title),
+                caption = stringRes(Res.string.event_sync_title),
                 nav = nav,
             )
         },
@@ -685,7 +685,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             untilPage?.let {
                 Text(
-                    text = stringRes(Res.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context)),
+                    text = stringRes(Res.string.event_sync_less_than_until, timeAgoNoDotNoDay(it)),
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor,
                     modifier = Modifier.weight(0.3f),

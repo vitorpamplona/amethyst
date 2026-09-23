@@ -51,10 +51,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.resources.nest_chat_send_failed_title
 import com.vitorpamplona.amethyst.commons.resources.nest_confirm_cancel
 import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_body
 import com.vitorpamplona.amethyst.commons.resources.nest_confirm_force_mute_confirm
@@ -65,8 +66,14 @@ import com.vitorpamplona.amethyst.commons.resources.nest_confirm_kick_title
 import com.vitorpamplona.amethyst.commons.resources.nest_demote_listener
 import com.vitorpamplona.amethyst.commons.resources.nest_force_mute
 import com.vitorpamplona.amethyst.commons.resources.nest_force_mute_note
+import com.vitorpamplona.amethyst.commons.resources.nest_hush_local
+import com.vitorpamplona.amethyst.commons.resources.nest_hush_local_restore
 import com.vitorpamplona.amethyst.commons.resources.nest_kick_action
 import com.vitorpamplona.amethyst.commons.resources.nest_no_app_to_open_link
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_follow
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_mute
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_unfollow
+import com.vitorpamplona.amethyst.commons.resources.nest_participant_unmute
 import com.vitorpamplona.amethyst.commons.resources.nest_participant_view_profile
 import com.vitorpamplona.amethyst.commons.resources.nest_participant_zap
 import com.vitorpamplona.amethyst.commons.resources.nest_participant_zap_split_unsupported
@@ -74,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_promote_moderator
 import com.vitorpamplona.amethyst.commons.resources.nest_promote_speaker
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_template_null
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -288,7 +296,7 @@ private fun AudienceActions(
     ActionRow(
         text =
             stringRes(
-                if (isFollowing) R.string.nest_participant_unfollow else R.string.nest_participant_follow,
+                if (isFollowing) Res.string.nest_participant_unfollow else Res.string.nest_participant_follow,
             ),
     ) {
         if (isFollowing) {
@@ -302,7 +310,7 @@ private fun AudienceActions(
     ActionRow(
         text =
             stringRes(
-                if (isHidden) R.string.nest_participant_unmute else R.string.nest_participant_mute,
+                if (isHidden) Res.string.nest_participant_unmute else Res.string.nest_participant_mute,
             ),
     ) {
         if (isHidden) {
@@ -324,7 +332,7 @@ private fun AudienceActions(
         ActionRow(
             text =
                 stringRes(
-                    if (isHushedLocally) R.string.nest_hush_local_restore else R.string.nest_hush_local,
+                    if (isHushedLocally) Res.string.nest_hush_local_restore else Res.string.nest_hush_local,
                 ),
         ) {
             nestViewModel.setLocalHushed(target, !isHushedLocally)
@@ -427,6 +435,7 @@ private fun ParticipantZapDialog(
     zapSplitUnsupported: String,
     onClose: () -> Unit,
 ) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
     val targetMetadataNote =
         remember(target) {
@@ -437,7 +446,7 @@ private fun ParticipantZapDialog(
         onClose = onClose,
         onError = { _, message, user ->
             accountViewModel.toastManager.toast(
-                R.string.error_dialog_zap_error,
+                Res.string.error_dialog_zap_error,
                 UserBasedErrorMessage(message, user),
             )
         },
@@ -445,9 +454,9 @@ private fun ParticipantZapDialog(
         onPayViaIntent = { payables ->
             if (payables.size == 1) {
                 val payable = payables.first()
-                payViaIntent(payable.invoice, context, { }) { error ->
+                payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
                     accountViewModel.toastManager.toast(
-                        R.string.error_dialog_zap_error,
+                        Res.string.error_dialog_zap_error,
                         UserBasedErrorMessage(error, payable.info.user),
                     )
                 }
@@ -457,7 +466,7 @@ private fun ParticipantZapDialog(
                 // we route the user back to the profile screen instead
                 // of half-implementing the split flow here.
                 accountViewModel.toastManager.toast(
-                    R.string.error_dialog_zap_error,
+                    Res.string.error_dialog_zap_error,
                     UserBasedErrorMessage(zapSplitUnsupported, null),
                 )
             }
@@ -572,7 +581,7 @@ private fun openProfileInMainActivity(
         }.isSuccess
     if (!launched) {
         accountViewModel.toastManager.toast(
-            R.string.nest_chat_send_failed_title,
+            Res.string.nest_chat_send_failed_title,
             noAppMessage,
             user = null,
         )

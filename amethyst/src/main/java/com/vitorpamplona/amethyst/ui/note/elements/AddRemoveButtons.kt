@@ -30,10 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 @Preview
@@ -56,7 +59,7 @@ fun AddButtonPreview() {
 @Composable
 fun AddButton(
     modifier: Modifier = Modifier,
-    text: Int = R.string.add,
+    text: StringResource = Res.string.add,
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {
@@ -74,7 +77,7 @@ fun AddButton(
 @Composable
 fun RemoveButton(
     modifier: Modifier = Modifier,
-    text: Int = R.string.remove,
+    text: StringResource = Res.string.remove,
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {

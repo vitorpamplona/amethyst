@@ -31,11 +31,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_close
+import com.vitorpamplona.amethyst.commons.resources.git_repositories_search_open
 import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -94,7 +95,7 @@ fun GitRepositoriesTopBar(
                     followListsModel = accountViewModel.feedStates.feedListOptions,
                     listName = list,
                     accountViewModel = accountViewModel,
-                    onChange = accountViewModel.account.settings::changeDefaultGitRepositoriesFollowList,
+                    onChange = { accountViewModel.account.settings.changeDefaultGitRepositoriesFollowList(it.code) },
                 )
             }
         },
@@ -111,9 +112,9 @@ fun GitRepositoriesTopBar(
                     contentDescription =
                         stringRes(
                             if (isSearchOpen) {
-                                R.string.git_repositories_search_close
+                                Res.string.git_repositories_search_close
                             } else {
-                                R.string.git_repositories_search_open
+                                Res.string.git_repositories_search_open
                             },
                         ),
                 )

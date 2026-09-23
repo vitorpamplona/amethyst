@@ -46,8 +46,13 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_mark_read_label
+import com.vitorpamplona.amethyst.commons.resources.app_notification_me
+import com.vitorpamplona.amethyst.commons.resources.app_notification_private_message
+import com.vitorpamplona.amethyst.commons.resources.app_notification_reply_label
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -243,7 +248,7 @@ object NotificationUtils {
                 .setSmallIcon(category.smallIcon)
                 .setColor(category.color)
                 .setContentTitle(messageTitle)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(loadStringRes(Res.string.app_notification_private_message))
                 .setContentIntent(contentPendingIntent)
                 .setPriority(category.priority())
                 .setAutoCancel(true)
@@ -330,7 +335,7 @@ object NotificationUtils {
         val me =
             Person
                 .Builder()
-                .setName(stringRes(applicationContext, R.string.app_notification_me))
+                .setName(loadStringRes(Res.string.app_notification_me))
                 .apply { accountAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
                 .build()
 
@@ -373,7 +378,7 @@ object NotificationUtils {
                 .setSmallIcon(category.smallIcon)
                 .setColor(category.color)
                 .setContentTitle(senderName)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentText(loadStringRes(Res.string.app_notification_private_message))
                 .setLargeIcon(avatar)
                 .setContentIntent(contentPendingIntent)
                 .setPriority(category.priority())
@@ -469,13 +474,13 @@ object NotificationUtils {
         )
     }
 
-    private fun replyRemoteInput(applicationContext: Context): RemoteInput =
+    private suspend fun replyRemoteInput(applicationContext: Context): RemoteInput =
         RemoteInput
             .Builder(KEY_REPLY_TEXT)
-            .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+            .setLabel(loadStringRes(Res.string.app_notification_reply_label))
             .build()
 
-    private fun buildReplyAction(
+    private suspend fun buildReplyAction(
         applicationContext: Context,
         notId: Int,
         intent: Intent,
@@ -488,14 +493,14 @@ object NotificationUtils {
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_action_reply, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+            .Builder(R.drawable.ic_action_reply, loadStringRes(Res.string.app_notification_reply_label), replyPendingIntent)
             .addRemoteInput(replyRemoteInput(applicationContext))
             .setAllowGeneratedReplies(true)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
             .build()
     }
 
-    private fun dmReplyAction(
+    private suspend fun dmReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -512,7 +517,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun marmotReplyAction(
+    private suspend fun marmotReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -531,7 +536,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun publicReplyAction(
+    private suspend fun publicReplyAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -548,7 +553,7 @@ object NotificationUtils {
         return buildReplyAction(applicationContext, notId, intent)
     }
 
-    private fun markReadAction(
+    private suspend fun markReadAction(
         applicationContext: Context,
         notId: Int,
         eventId: String,
@@ -567,7 +572,7 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_action_mark_read, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+            .Builder(R.drawable.ic_action_mark_read, loadStringRes(Res.string.app_notification_mark_read_label), markReadPendingIntent)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
             .build()
     }
@@ -676,7 +681,7 @@ object NotificationUtils {
      * it alone. It costs nothing visually: the shade hides any group with fewer than
      * two children and shows the child on its own.
      */
-    private fun NotificationManager.sendGroupSummary(
+    private suspend fun NotificationManager.sendGroupSummary(
         category: NotificationCategory,
         groupKey: String,
         summaryId: Int,
@@ -703,7 +708,7 @@ object NotificationUtils {
                 .setStyle(
                     NotificationCompat
                         .InboxStyle()
-                        .setSummaryText(stringRes(applicationContext, category.summaryTextRes)),
+                        .setSummaryText(loadStringRes(category.summaryTextRes)),
                 )
 
         notify(summaryId, summaryBuilder.build())

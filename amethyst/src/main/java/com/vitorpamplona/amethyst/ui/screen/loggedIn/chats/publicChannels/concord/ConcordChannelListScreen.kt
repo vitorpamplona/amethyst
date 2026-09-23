@@ -68,6 +68,36 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_name
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_create
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_message
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_title
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_name_label
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_no_messages
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename_save
+import com.vitorpamplona.amethyst.commons.resources.concord_channels_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_action
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_action
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_title
+import com.vitorpamplona.amethyst.commons.resources.concord_leave_community
+import com.vitorpamplona.amethyst.commons.resources.concord_leave_message
+import com.vitorpamplona.amethyst.commons.resources.concord_leave_owner_warning
+import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_title
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
+import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
+import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -137,7 +167,7 @@ fun ConcordChannelListScreen(
     val communityName =
         state?.metadata?.name
             ?: session?.entry?.name?.ifBlank { null }
-            ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name)
+            ?: stringRes(Res.string.app_name)
 
     // Owner from the list entry, not the folded authority: a community whose relays are dead never
     // folds a Control Plane, and that is exactly the case where leaving matters most.
@@ -211,19 +241,19 @@ fun ConcordChannelListScreen(
         val id = target.channelIdHex ?: return@let
         AlertDialog(
             onDismissRequest = { channelToDelete = null },
-            title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_title)) },
-            text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_message, target.initialName)) },
+            title = { Text(stringRes(Res.string.concord_channel_delete_title)) },
+            text = { Text(stringRes(Res.string.concord_channel_delete_message, target.initialName)) },
             confirmButton = {
                 TextButton(onClick = {
                     channelToDelete = null
                     scope.launch { account.concord.deleteConcordChannel(communityId, id, target.initialName) }
                 }) {
-                    Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_confirm))
+                    Text(stringRes(Res.string.concord_channel_delete_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { channelToDelete = null }) {
-                    Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+                    Text(stringRes(Res.string.cancel))
                 }
             },
         )
@@ -237,7 +267,7 @@ fun ConcordChannelListScreen(
                     // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
                     if (canPop) {
                         IconButton(onClick = { nav.popBack() }) {
-                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                         }
                     }
                 },
@@ -260,11 +290,11 @@ fun ConcordChannelListScreen(
                         } == true
 
                     IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
-                        SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_members_title))
+                        SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(Res.string.concord_members_title))
                     }
                     if (canEdit) {
                         IconButton(onClick = { nav.nav(Route.ConcordEdit(communityId)) }) {
-                            SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_edit_title))
+                            SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.concord_edit_title))
                         }
                     }
                     if (canInvite) {
@@ -283,7 +313,7 @@ fun ConcordChannelListScreen(
                                 }
                             },
                         ) {
-                            SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                            SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(Res.string.concord_invite_action))
                         }
                     }
 
@@ -291,7 +321,7 @@ fun ConcordChannelListScreen(
                     // actions live behind the menu, never as a one-tap icon.
                     var menuOpen by remember { mutableStateOf(false) }
                     IconButton(onClick = { menuOpen = true }) {
-                        SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options))
+                        SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         // Deliberately not gated on CREATE_INVITE, unlike minting: the links listed
@@ -299,7 +329,7 @@ fun ConcordChannelListScreen(
                         // Gating on the bit would mean a demoted admin could no longer retire the
                         // links they had already handed out — exactly when that matters most.
                         DropdownMenuItem(
-                            text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_links_action)) },
+                            text = { Text(stringRes(Res.string.concord_invite_links_action)) },
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.ConcordInviteLinks(communityId))
@@ -308,7 +338,7 @@ fun ConcordChannelListScreen(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_community),
+                                    stringRes(Res.string.concord_leave_community),
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             },
@@ -334,7 +364,7 @@ fun ConcordChannelListScreen(
                     onClick = { channelEditor = ConcordChannelEditor(channelIdHex = null, initialName = "") },
                     shape = CircleShape,
                 ) {
-                    SymbolIcon(symbol = MaterialSymbols.Add, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_create))
+                    SymbolIcon(symbol = MaterialSymbols.Add, contentDescription = stringRes(Res.string.concord_channel_create))
                 }
             }
         },
@@ -348,7 +378,7 @@ fun ConcordChannelListScreen(
         if (channels.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringRes(com.vitorpamplona.amethyst.R.string.concord_channels_empty),
+                    stringRes(Res.string.concord_channels_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -463,7 +493,7 @@ private fun ConcordChannelListRow(
                 )
                 lastNote?.createdAt()?.let { ts ->
                     Text(
-                        timeAgo(ts, LocalContext.current, prefix = ""),
+                        timeAgo(ts, prefix = ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -509,14 +539,14 @@ private fun ConcordChannelPreviewLine(
     if (typingAuthors.isNotEmpty()) {
         val label =
             when (typingAuthors.size) {
-                1 -> stringRes(com.vitorpamplona.amethyst.R.string.concord_typing_one, rememberConcordDisplayName(typingAuthors[0], accountViewModel))
+                1 -> stringRes(Res.string.concord_typing_one, rememberConcordDisplayName(typingAuthors[0], accountViewModel))
                 2 ->
                     stringRes(
-                        com.vitorpamplona.amethyst.R.string.concord_typing_two,
+                        Res.string.concord_typing_two,
                         rememberConcordDisplayName(typingAuthors[0], accountViewModel),
                         rememberConcordDisplayName(typingAuthors[1], accountViewModel),
                     )
-                else -> stringRes(com.vitorpamplona.amethyst.R.string.concord_typing_many)
+                else -> stringRes(Res.string.concord_typing_many)
             }
         Text(
             label,
@@ -541,7 +571,7 @@ private fun ConcordChannelPreviewLine(
         } else {
             // Voice channels never carry chat notes, so "No messages yet" would read oddly — leave blank.
             if (isVoice) return
-            stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_no_messages)
+            stringRes(Res.string.concord_channel_no_messages)
         }
     Text(
         preview,
@@ -579,13 +609,13 @@ internal fun ConcordLeaveDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_title)) },
+        title = { Text(stringRes(Res.string.concord_leave_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_message, communityName))
+                Text(stringRes(Res.string.concord_leave_message, communityName))
                 if (isOwner) {
                     Text(
-                        stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_owner_warning),
+                        stringRes(Res.string.concord_leave_owner_warning),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -594,14 +624,14 @@ internal fun ConcordLeaveDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    stringRes(com.vitorpamplona.amethyst.R.string.leave),
+                    stringRes(Res.string.leave),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -624,13 +654,13 @@ private fun ConcordChannelRowMenu(
         IconButton(onClick = { expanded = true }) {
             SymbolIcon(
                 symbol = MaterialSymbols.MoreVert,
-                contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options),
+                contentDescription = stringRes(Res.string.more_options),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_rename)) },
+                text = { Text(stringRes(Res.string.concord_channel_rename)) },
                 onClick = {
                     expanded = false
                     onRename()
@@ -639,7 +669,7 @@ private fun ConcordChannelRowMenu(
             DropdownMenuItem(
                 text = {
                     Text(
-                        stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete),
+                        stringRes(Res.string.concord_channel_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 },
@@ -667,9 +697,9 @@ private fun ConcordChannelEditDialog(
             Text(
                 stringRes(
                     if (isCreate) {
-                        com.vitorpamplona.amethyst.R.string.concord_channel_create
+                        Res.string.concord_channel_create
                     } else {
-                        com.vitorpamplona.amethyst.R.string.concord_channel_rename
+                        Res.string.concord_channel_rename
                     },
                 ),
             )
@@ -679,7 +709,7 @@ private fun ConcordChannelEditDialog(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                label = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_name_label)) },
+                label = { Text(stringRes(Res.string.concord_channel_name_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         },
@@ -691,9 +721,9 @@ private fun ConcordChannelEditDialog(
                 Text(
                     stringRes(
                         if (isCreate) {
-                            com.vitorpamplona.amethyst.R.string.concord_channel_create
+                            Res.string.concord_channel_create
                         } else {
-                            com.vitorpamplona.amethyst.R.string.concord_channel_rename_save
+                            Res.string.concord_channel_rename_save
                         },
                     ),
                 )
@@ -701,7 +731,7 @@ private fun ConcordChannelEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
         },
     )
@@ -713,12 +743,13 @@ private fun InviteLinkDialog(
     link: String,
     onDismiss: () -> Unit,
 ) {
+    val concordInviteTitleStr = stringRes(Res.string.concord_invite_title)
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_title)) },
+        title = { Text(stringRes(Res.string.concord_invite_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 QrCodeDrawer(contents = link, modifier = Modifier.size(220.dp))
@@ -740,10 +771,10 @@ private fun InviteLinkDialog(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, link)
                     }
-                context.startActivity(Intent.createChooser(send, stringRes(context, com.vitorpamplona.amethyst.R.string.concord_invite_title)))
+                context.startActivity(Intent.createChooser(send, concordInviteTitleStr))
                 onDismiss()
             }) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.quick_action_share))
+                Text(stringRes(Res.string.quick_action_share))
             }
         },
         dismissButton = {
@@ -751,7 +782,7 @@ private fun InviteLinkDialog(
                 scope.launch { clipboard.setText(link) }
                 onDismiss()
             }) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.copy_to_clipboard))
+                Text(stringRes(Res.string.copy_to_clipboard))
             }
         },
     )

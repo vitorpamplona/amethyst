@@ -30,7 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_error
+import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -66,13 +68,14 @@ fun MayBeWithdrawal(
 
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
+    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val context = LocalContext.current
 
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringRes(context, R.string.error_dialog_pay_withdraw_error),
+            title = stringRes(Res.string.error_dialog_pay_withdraw_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )
@@ -80,6 +83,6 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     ClickableTextPrimary(
         text = "$withdrawalString ",
-        onClick = { payViaIntent(withdrawalString, context, { }) { showErrorMessageDialog = it } },
+        onClick = { payViaIntent(withdrawalString, context, noWalletFoundStr, { }) { showErrorMessageDialog = it } },
     )
 }

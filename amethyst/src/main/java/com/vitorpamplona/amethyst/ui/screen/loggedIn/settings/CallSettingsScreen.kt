@@ -52,10 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.call_settings
 import com.vitorpamplona.amethyst.commons.resources.call_settings_add_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_custom_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_default_servers
@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_servers
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_url
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_username
 import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.model.CallTurnServer
 import com.vitorpamplona.amethyst.model.CallVideoResolution
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -84,7 +85,7 @@ fun CallSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.call_settings), nav)
+            TopBarWithBackButton(stringRes(id = Res.string.call_settings), nav)
         },
     ) { padding ->
         Column(
@@ -426,7 +427,7 @@ private fun AddTurnServerForm(
                 onClick = onCancel,
                 colors = ButtonDefaults.textButtonColors(),
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringRes(Res.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(

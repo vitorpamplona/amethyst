@@ -57,7 +57,11 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.github
+import com.vitorpamplona.amethyst.commons.resources.mastodon
 import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
+import com.vitorpamplona.amethyst.commons.resources.telegram
+import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -92,6 +96,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -326,7 +331,7 @@ fun DisplayLastSeen(
     lastSeen?.let { timestamp ->
         val context = LocalContext.current
         Text(
-            text = lastSeenSentence(timestamp, context),
+            text = lastSeenSentence(timestamp),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -376,11 +381,11 @@ fun getIdentityClaimIcon(identity: IdentityClaimTag): Int =
         else -> R.drawable.github
     }
 
-fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
+fun getIdentityClaimDescription(identity: IdentityClaimTag): StringResource =
     when (identity) {
-        is TwitterIdentity -> R.string.twitter
-        is TelegramIdentity -> R.string.telegram
-        is MastodonIdentity -> R.string.mastodon
-        is GitHubIdentity -> R.string.github
-        else -> R.string.github
+        is TwitterIdentity -> Res.string.twitter
+        is TelegramIdentity -> Res.string.telegram
+        is MastodonIdentity -> Res.string.mastodon
+        is GitHubIdentity -> Res.string.github
+        else -> Res.string.github
     }
