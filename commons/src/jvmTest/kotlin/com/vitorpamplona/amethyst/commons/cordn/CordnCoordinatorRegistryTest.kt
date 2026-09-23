@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -254,5 +255,79 @@ class CordnCoordinatorRegistryTest : CordnTransportHarness() {
             assertEquals(2, factory.closed)
             assertTrue(registry.coordinators.value.isEmpty())
             assertNull(registry.sessionOrNull(config.pubKey))
+        }
+
+    /**
+     * A scope whose handshake the test decides: an answer, silence, or a throw.
+     */
+    private inner class InfoFactory(
+        private val info: CoordinatorServerInfo?,
+        private val blowUp: Boolean = false,
+    ) : CordnCoordinatorScopeFactory {
+        override suspend fun open(
+            accountPubKey: HexKey,
+            config: CoordinatorConfig,
+        ): CordnCoordinatorScope =
+            object : CordnCoordinatorScope {
+                override val coordinator: ICoordinator = account.clientFor(config.pubKey)
+                override val groupStore: CordnGroupStore = InMemoryCordnGroupStore()
+                override val keyPackageStore: CordnKeyPackageStore = InMemoryCordnKeyPackageStore()
+
+                override suspend fun serverInfo(): CoordinatorServerInfo? {
+                    if (blowUp) throw IllegalStateException("coordinator unreachable")
+                    return info
+                }
+
+                override suspend fun close() = Unit
+            }
+    }
+
+    private val anInfo = CoordinatorServerInfo(name = "cordn-server", version = "0.1.0", protocolVersion = "2025-11-25", capabilities = null)
+
+    /**
+     * The settings screen offers "ask who it is" so someone can find out
+     * whether a coordinator answers. Before this, a successful handshake left
+     * the health line reading "Nothing asked of it yet" directly above the
+     * answer it had just printed.
+     */
+    @Test
+    fun `a handshake that answers counts as a healthy call`() =
+        runTest {
+            val registry = registry(InfoFactory(anInfo))
+            val session = driving { registry.session(config) }
+
+            assertTrue(session.health.state.value.isUnknown, "nothing has been asked yet")
+
+            assertNotNull(driving { session.serverInfo() })
+
+            assertTrue(!session.health.state.value.isUnknown, "the handshake should have been observed")
+            assertNotNull(session.health.state.value.lastSuccessAt)
+        }
+
+    @Test
+    fun `a handshake that throws counts against health`() =
+        runTest {
+            val registry = registry(InfoFactory(null, blowUp = true))
+            val session = driving { registry.session(config) }
+
+            runCatching { driving { session.serverInfo() } }
+
+            assertEquals(1, session.health.state.value.consecutiveFailures)
+            assertEquals("coordinator unreachable", session.health.state.value.lastFailure)
+        }
+
+    /**
+     * A scope that did no handshake returns null, and a call that never left
+     * the device must not report the coordinator as reachable.
+     */
+    @Test
+    fun `silence is neither a success nor a failure`() =
+        runTest {
+            val registry = registry(InfoFactory(null))
+            val session = driving { registry.session(config) }
+
+            assertNull(driving { session.serverInfo() })
+
+            assertTrue(session.health.state.value.isUnknown, "silence should leave health unknown")
         }
 }

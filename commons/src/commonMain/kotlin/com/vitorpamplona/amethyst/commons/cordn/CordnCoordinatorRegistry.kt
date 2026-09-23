@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,6 +71,8 @@ class CordnSession(
     val keyPackages: CordnKeyPackages,
     val health: CoordinatorHealth,
     private val scope: CordnCoordinatorScope,
+    /** Seconds. Injected so tests are not at the mercy of the wall clock. */
+    private val clock: () -> Long = { TimeUtils.now() },
 ) {
     val coordinatorPubKey: HexKey get() = config.pubKey
 
@@ -85,8 +88,28 @@ class CordnSession(
      */
     suspend fun exposure(gid: String): GroupExposure = manager.exposure(gid, publishedKeyPackage = keyPackages.hasPublished())
 
-    /** What this coordinator says about itself. Claims, never identity (§8.5). */
-    suspend fun serverInfo(): CoordinatorServerInfo? = scope.serverInfo()
+    /**
+     * What this coordinator says about itself. Claims, never identity (§8.5).
+     *
+     * Counts against [health] like any other call. It is a real round trip to
+     * the coordinator, and it is usually the *first* one a reader makes — the
+     * settings screen offers it precisely so someone can find out whether a
+     * coordinator they just added answers at all. Leaving it out had that
+     * screen say "Nothing asked of it yet" directly underneath what the
+     * coordinator had just answered.
+     *
+     * An answer counts as a success and a throw as a failure; `null` counts as
+     * neither. A scope returns `null` when it did no handshake at all, so
+     * treating that as a success would report a coordinator as reachable on
+     * the strength of a call that never left the device.
+     */
+    suspend fun serverInfo(): CoordinatorServerInfo? =
+        try {
+            scope.serverInfo()?.also { health.recordSuccess(clock()) }
+        } catch (e: Exception) {
+            health.recordFailure(clock(), e.message)
+            throw e
+        }
 
     /** How many of this session's responses arrived reassembled over CEP-22. */
     val oversizedTransfers: Int get() = scope.coordinator.oversizedTransfers

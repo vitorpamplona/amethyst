@@ -60,15 +60,32 @@ stack_up() {
         sleep 1
     done
 
-    # --network host so the container reaches a relay on the host's loopback.
+    # The container has to reach geode, which is on the host's loopback.
+    #
+    # On Linux `--network host` puts it there. On Docker Desktop (macOS,
+    # Windows) the daemon is inside a VM, so `--network host` is the *VM's*
+    # loopback and 127.0.0.1:$PORT is nothing at all: the coordinator retries
+    # "Relay connection error" until stack_up gives up on a pubkey that was
+    # never going to arrive. There the host is reachable by name instead, over
+    # the default bridge.
+    #
     # A stable key so the coordinator pubkey survives a re-run against the
     # same WORK directory.
+    if [ "$(uname -s)" = "Linux" ]; then
+        COORD_NET="--network host"
+        COORD_RELAY="$RELAY"
+    else
+        COORD_NET="--add-host=host.docker.internal:host-gateway"
+        COORD_RELAY="ws://host.docker.internal:$PORT"
+    fi
+
     [ -f "$WORK/coordinator.key" ] || openssl rand -hex 32 >"$WORK/coordinator.key"
     docker rm -f "$CONTAINER" >/dev/null 2>&1
-    docker run -d --name "$CONTAINER" --network host \
+    # shellcheck disable=SC2086  # COORD_NET is two words on purpose
+    docker run -d --name "$CONTAINER" $COORD_NET \
         -e CORDN_STORAGE_BACKEND=memory \
         -e CORDN_ANNOUNCED=false \
-        -e CORDN_RELAY_URLS="$RELAY" \
+        -e CORDN_RELAY_URLS="$COORD_RELAY" \
         -e CORDN_SERVER_PRIVATE_KEY="$(cat "$WORK/coordinator.key")" \
         -e CORDN_SERVER_NAME="cordn-test" \
         "$IMAGE" >/dev/null || { echo "could not start $CONTAINER"; exit 1; }
