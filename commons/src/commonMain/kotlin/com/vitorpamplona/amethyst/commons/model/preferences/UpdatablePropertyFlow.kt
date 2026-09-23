@@ -18,12 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 
-class RelayFeedsListDecryptionCache(
-    signer: NostrSigner,
-) : GenericRelayListCache<RelayFeedsListEvent>(signer)
+class UpdatablePropertyFlow<T>(
+    flow: Flow<T?>,
+    val update: suspend (T?) -> Unit,
+    val scope: CoroutineScope,
+) {
+    val stateFlow =
+        flow
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = null,
+            )
+}

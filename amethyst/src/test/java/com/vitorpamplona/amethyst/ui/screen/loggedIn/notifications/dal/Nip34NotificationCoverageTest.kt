@@ -49,7 +49,7 @@ import org.junit.Test
  *    you close the app and come back an hour later.
  * 2. [RepliesAndReactionsKinds2] — the `#e`=<targetId> engagement subscription
  *    that fires when a patch/PR/issue row is on screen. This is what makes
- *    [com.vitorpamplona.amethyst.model.GitStatusIndex] actually see status
+ *    [com.vitorpamplona.amethyst.commons.model.GitStatusIndex] actually see status
  *    events so the closed/merged pill can render on the repo page.
  * 3. [NotificationFeedFilter.NOTIFICATION_KINDS] — the in-app Notifications tab
  *    kind gate. Without this, the event arrives from (1), sits in LocalCache,
