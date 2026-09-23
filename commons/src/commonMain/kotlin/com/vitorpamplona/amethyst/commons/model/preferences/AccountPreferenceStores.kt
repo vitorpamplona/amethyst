@@ -26,6 +26,11 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import okio.Path
 
 /**
@@ -48,26 +53,48 @@ class AccountPreferenceStores(
     val rootFilesDir: () -> Path,
     private val migrations: (npub: String) -> List<DataMigration<Preferences>> = { emptyList() },
 ) {
-    private val storeCache = LargeCache<String, DataStore<Preferences>>()
+    /**
+     * One store per account, each on a scope this class can cancel.
+     *
+     * DataStore keeps a process-wide registry keyed by file path and only
+     * releases an entry when the owning scope ends. Left to create its own
+     * internal scope, a store is never released, and deleting an account then
+     * adding it again in the same session throws "multiple DataStores active
+     * for the same file".
+     */
+    private class Entry(
+        val scope: CoroutineScope,
+        val store: DataStore<Preferences>,
+    )
+
+    private val storeCache = LargeCache<String, Entry>()
 
     fun file(npub: String): Path = rootFilesDir() / "datastore" / "$npub.preferences_pb"
 
     fun getDataStore(npub: String): DataStore<Preferences> =
-        storeCache.getOrCreate(npub) {
-            PreferenceDataStoreFactory.createWithPath(
-                migrations = migrations(npub),
-                produceFile = { file(npub) },
-            )
-        }
+        storeCache
+            .getOrCreate(npub) {
+                val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+                Entry(
+                    scope,
+                    PreferenceDataStoreFactory.createWithPath(
+                        scope = scope,
+                        migrations = migrations(npub),
+                        produceFile = { file(npub) },
+                    ),
+                )
+            }.store
 
     /**
      * Drops the account's stored preferences.
      *
-     * The cached handle goes first: deleting the file under a live DataStore
-     * would leave that instance writing the account's settings back out on the
-     * next edit, re-creating what this call is meant to erase.
+     * The live store is shut down first: deleting the file underneath one
+     * would leave it writing the account's settings back out on the next edit,
+     * re-creating what this call is meant to erase — and would keep the path
+     * registered, so the same account could not be added again.
      */
     fun removeAccount(npub: String): Boolean {
+        storeCache.get(npub)?.scope?.cancel()
         storeCache.remove(npub)
         val path = file(npub)
         if (!platformFileSystem.exists(path)) return false

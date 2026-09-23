@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
 import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissal
 import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissalStore
@@ -623,6 +624,7 @@ object LocalPreferences {
             mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
             accountKeyStore.delete(accountInfo.npub)
+            accountSecretsStore.delete(accountInfo.npub)
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
 
@@ -761,6 +763,31 @@ object LocalPreferences {
                 // Mirrored into the key store after the legacy write, not
                 // instead of it: both stores carry the key during the
                 // transition so a rollback still loads the account.
+                accountSecretsStore.mirror(
+                    npub = settings.keyPair.pubKey.toNpub(),
+                    value =
+                        AccountSecrets(
+                            nip46SignerEnabled = settings.nip46SignerEnabled.value,
+                            nip46BunkerSecret = settings.nip46BunkerSecret.value,
+                            nip46TransportKey = settings.nip46TransportKey.value,
+                            nip46SeenRequestIds = settings.nip46SeenRequestIds.value,
+                            nwcWalletsJson =
+                                settings.nwcWallets.value
+                                    .mapNotNull { it.denormalize() }
+                                    .takeIf { it.isNotEmpty() }
+                                    ?.let { JsonMapper.toJson(it) },
+                            // .map { denormalize() } and not the raw wallets: the legacy
+                            // write stores the denormalized shape, and the read path parses
+                            // that shape. Serializing the raw value here would write JSON
+                            // the loader cannot understand.
+                            clinkDebitWalletsJson =
+                                settings.clinkDebitWallets.value
+                                    .map { it.denormalize() }
+                                    .takeIf { it.isNotEmpty() }
+                                    ?.let { JsonMapper.toJson(it) },
+                            defaultPaymentSourceId = settings.defaultPaymentSourceId.value,
+                        ),
+                )
                 accountKeyStore.mirrorSave(
                     npub = settings.keyPair.pubKey.toNpub(),
                     usesExternalSigner = settings.externalSignerPackageName != null,
@@ -998,10 +1025,6 @@ object LocalPreferences {
                     val mirrorUploadsToAllServers = stores.uploadSettings.mirrorUploadsToAllServers
                     val optimizeMediaOnUpload = stores.uploadSettings.optimizeMediaOnUpload
                     val hideCommunityRulesViolations = stores.dialogDismissal.hideCommunityRulesViolations
-                    val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
-                    val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
-                    val nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: ""
-                    val nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf()
                     val hideDeleteRequestDialog = stores.dialogDismissal.hideDeleteRequestDialog
                     val hideBlockAlertDialog = stores.dialogDismissal.hideBlockAlertDialog
                     val hideNIP17WarningDialog = stores.dialogDismissal.hideNip17WarningDialog
@@ -1022,11 +1045,33 @@ object LocalPreferences {
 
                     val followListPrefs = toFollowListPrefs(stores.followLists)
 
-                    val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
-                    val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
-                    val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
-                    val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
-                    val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
+                    // The secrets that used to live in this file now come from the
+                    // encrypted DataStore, falling back to what is still here.
+                    val secrets =
+                        accountSecretsStore.read(
+                            npub = keyPair.pubKey.toNpub(),
+                            legacy =
+                                AccountSecrets(
+                                    nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false),
+                                    nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: "",
+                                    nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: "",
+                                    nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf(),
+                                    nwcWalletsJson = getString(PrefKeys.NWC_WALLETS, null),
+                                    clinkDebitWalletsJson = getString(PrefKeys.CLINK_DEBIT_WALLETS, null),
+                                    defaultPaymentSourceId = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null),
+                                    legacyDefaultNwcWalletId = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null),
+                                    legacyZapPaymentRequestServer = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null),
+                                ),
+                        )
+                    val nip46SignerEnabled = secrets.nip46SignerEnabled
+                    val nip46BunkerSecret = secrets.nip46BunkerSecret
+                    val nip46TransportKey = secrets.nip46TransportKey
+                    val nip46SeenRequestIds = secrets.nip46SeenRequestIds
+                    val zapPaymentRequestServerStr = secrets.legacyZapPaymentRequestServer
+                    val nwcWalletsStr = secrets.nwcWalletsJson
+                    val defaultNwcWalletIdStr = secrets.legacyDefaultNwcWalletId
+                    val clinkDebitWalletsStr = secrets.clinkDebitWalletsJson
+                    val defaultPaymentSourceIdStr = secrets.defaultPaymentSourceId
                     val defaultFileServerStr = stores.uploadSettings.defaultFileServerJson
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)

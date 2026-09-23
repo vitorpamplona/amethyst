@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import okio.Path
 
 /**
@@ -53,18 +56,42 @@ class AccountSecretsEncryptedStores(
         val nwc = stringPreferencesKey("nwc")
     }
 
-    private val storeCache = LargeCache<String, EncryptedDataStore>()
+    /**
+     * One store per account, each on its own child scope.
+     *
+     * The scope matters: DataStore keeps a process-wide registry keyed by file
+     * path and only releases an entry when the owning scope is cancelled. On a
+     * shared scope, deleting an account and re-adding it in the same session
+     * would throw "multiple DataStores active for the same file".
+     */
+    private class Entry(
+        val scope: CoroutineScope,
+        val store: EncryptedDataStore,
+    )
 
-    fun file(npub: String): Path = rootFilesDir() / "datastore" / "$npub.secrets_pb"
+    private val storeCache = LargeCache<String, Entry>()
+
+    /**
+     * The `.preferences_pb` suffix is required, not decorative: DataStore's
+     * Preferences factory rejects any other extension at open time. The
+     * `.secrets` part is what keeps this file distinct from the account's
+     * plain preference store.
+     */
+    fun file(npub: String): Path = rootFilesDir() / "datastore" / "$npub.secrets.preferences_pb"
 
     fun getDataStore(npub: String): EncryptedDataStore =
-        storeCache.getOrCreate(npub) {
-            EncryptedDataStore(
-                PreferenceDataStoreFactory.createWithPath(produceFile = { file(npub) }),
-                encryption,
-                scope = scope,
-            )
-        }
+        storeCache
+            .getOrCreate(npub) {
+                val child = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
+                Entry(
+                    child,
+                    EncryptedDataStore(
+                        PreferenceDataStoreFactory.createWithPath(scope = child, produceFile = { file(npub) }),
+                        encryption,
+                        scope = child,
+                    ),
+                )
+            }.store
 
     fun nwc(npub: String): UpdatablePropertyFlow<Nip47WalletConnect.Nip47URI> =
         getDataStore(npub).getProperty(
@@ -73,12 +100,85 @@ class AccountSecretsEncryptedStores(
             serializer = Nip47WalletConnect.Nip47URI::serializer,
         )
 
-    /** See [AccountPreferenceStores.removeAccount] — the cached handle goes first. */
+    /**
+     * Drops the account's secrets.
+     *
+     * Cancels the store's scope before deleting, so DataStore releases the
+     * path and the same account can be added again in this session.
+     */
     fun removeAccount(npub: String): Boolean {
+        storeCache.get(npub)?.scope?.cancel()
         storeCache.remove(npub)
         val path = file(npub)
         if (!platformFileSystem.exists(path)) return false
         platformFileSystem.delete(path)
         return true
     }
+
+    // ── the per-account secret group ──────────────────────────────────
+
+    /**
+     * Reads [AccountSecrets], or null when this account has not been migrated
+     * out of the legacy encrypted file yet.
+     *
+     * Null and "all defaults" are deliberately different answers: the caller
+     * uses null to decide whether to run the one-off copy, and an account that
+     * genuinely holds no secrets must not trigger it forever.
+     */
+    suspend fun loadSecrets(npub: String): AccountSecrets? {
+        val store = getDataStore(npub)
+        if (store.get(AccountSecretKeys.migrated) == null) return null
+
+        return AccountSecrets(
+            nip46SignerEnabled = store.get(AccountSecretKeys.nip46SignerEnabled).toBoolean(),
+            nip46BunkerSecret = store.get(AccountSecretKeys.nip46BunkerSecret) ?: "",
+            nip46TransportKey = store.get(AccountSecretKeys.nip46TransportKey) ?: "",
+            nip46SeenRequestIds = decodeSet(store.get(AccountSecretKeys.nip46SeenRequestIds)),
+            nwcWalletsJson = store.get(AccountSecretKeys.nwcWallets),
+            clinkDebitWalletsJson = store.get(AccountSecretKeys.clinkDebitWallets),
+            defaultPaymentSourceId = store.get(AccountSecretKeys.defaultPaymentSourceId),
+            legacyDefaultNwcWalletId = store.get(AccountSecretKeys.legacyDefaultNwcWalletId),
+            legacyZapPaymentRequestServer = store.get(AccountSecretKeys.legacyZapPaymentRequestServer),
+        )
+    }
+
+    /**
+     * Writes the group, then the marker.
+     *
+     * Marker last on purpose: a crash midway leaves the account looking
+     * unmigrated, so the next load copies from the legacy file again rather
+     * than reading a half-written set of secrets as complete.
+     */
+    suspend fun saveSecrets(
+        npub: String,
+        value: AccountSecrets,
+    ) {
+        val store = getDataStore(npub)
+
+        store.save(AccountSecretKeys.nip46SignerEnabled, value.nip46SignerEnabled.toString())
+        store.save(AccountSecretKeys.nip46BunkerSecret, value.nip46BunkerSecret)
+        store.save(AccountSecretKeys.nip46TransportKey, value.nip46TransportKey)
+        store.save(AccountSecretKeys.nip46SeenRequestIds, value.nip46SeenRequestIds.joinToString(AccountSecretKeys.SET_SEPARATOR))
+        store.putOrRemove(AccountSecretKeys.nwcWallets, value.nwcWalletsJson)
+        store.putOrRemove(AccountSecretKeys.clinkDebitWallets, value.clinkDebitWalletsJson)
+        store.putOrRemove(AccountSecretKeys.defaultPaymentSourceId, value.defaultPaymentSourceId)
+        store.putOrRemove(AccountSecretKeys.legacyDefaultNwcWalletId, value.legacyDefaultNwcWalletId)
+        store.putOrRemove(AccountSecretKeys.legacyZapPaymentRequestServer, value.legacyZapPaymentRequestServer)
+
+        store.save(AccountSecretKeys.migrated, "true")
+    }
+
+    private suspend fun EncryptedDataStore.putOrRemove(
+        key: androidx.datastore.preferences.core.Preferences.Key<String>,
+        value: String?,
+    ) {
+        if (value != null) save(key, value) else remove(key)
+    }
+
+    private fun decodeSet(raw: String?): Set<String> =
+        raw
+            ?.split(AccountSecretKeys.SET_SEPARATOR)
+            ?.filter { it.isNotEmpty() }
+            ?.toSet()
+            ?: emptySet()
 }

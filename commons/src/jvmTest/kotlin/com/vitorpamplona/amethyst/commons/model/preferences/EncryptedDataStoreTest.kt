@@ -176,4 +176,39 @@ class EncryptedDataStoreTest {
             )
             readScope.cancel()
         }
+
+    /**
+     * A stock DataMigration writes values as-is, but this store decrypts on
+     * read — so plaintext put there by one cannot survive the trip, and the
+     * read raises rather than returning something wrong.
+     *
+     * This is why secrets migrate lazily, through [save], instead of through a
+     * DataMigration the way the plain preference stores do. Getting it wrong
+     * would leave an account's wallet strings unreadable rather than obviously
+     * missing.
+     */
+    @Test
+    fun aRawMigrationIntoAnEncryptedStoreIsNotReadable() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val n = seq++
+            val dataFile = File(folder.root, "rawmig_$n.preferences_pb")
+            val keyFile = File(folder.root, "rawmig_$n.key")
+            val subject =
+                EncryptedDataStore(
+                    PreferenceDataStoreFactory.createWithPath(
+                        scope = scope,
+                        migrations = listOf(CopyOnceMigration("probe") { out -> out[key] = "plaintext-secret" }),
+                        produceFile = { dataFile.toOkioPath() },
+                    ),
+                    SecretEncryption(keyFile),
+                    scope = scope,
+                )
+
+            assertTrue(
+                "a raw-migrated value must not read back as if it were valid",
+                runCatching { subject.get(key) }.isFailure,
+            )
+            scope.cancel()
+        }
 }
