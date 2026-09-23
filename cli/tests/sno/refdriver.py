@@ -14,6 +14,8 @@ and payment reference), and just re-emits what they answer.
   refdriver.py verify  < event       {"ok":…, "required":…, "committed":…, "zeros":…, "reason":…}
   refdriver.py region COORD HEIGHT   {"key":…, "lookup_id":…, "x":…, "y":…, "z":…, "plane":…}
   refdriver.py hints                 §7.7's golden hint vectors, one per line
+  refdriver.py encrypt COORD HEIGHT  seal stdin into a kind-33330 bag at that region
+  refdriver.py box COORD HX HY HZ    the §7.7 hint tag for the box around that coord
 
 Paths come from $CYBERSPACE_DIR and $CYBERSPACE_CLI_DIR.
 """
@@ -144,8 +146,75 @@ def cmd_hints():
         emit({"name": name, **vector})
 
 
+def cmd_encrypt():
+    """Seal stdin into a §8.6 bag, using cyberspace-cli's own cipher and event builder.
+
+    The point of the round trip is that nothing on this side is ours: the key
+    comes from `location_encryption`, the sealing from `encrypt_with_location_key`
+    and the tags from `make_encrypted_content_event`. What `amy cyberspace open`
+    then has to do is derive the same key from the same coordinate and read a
+    ciphertext it never saw made.
+
+    A fixed nonce keeps the fixture reproducible; §7.6 wants a fresh one per
+    bag, which matters for a hider and not for a test that seals once.
+    """
+    sys.path.insert(0, os.path.join(os.environ["CYBERSPACE_CLI_DIR"], "src"))
+    import base64
+
+    from cyberspace_core.coords import coord_to_xyz
+    from cyberspace_cli.nostr_event import make_encrypted_content_event
+    from cyberspace_core.location_encryption import (
+        derive_region_key_material_for_height,
+        encrypt_with_location_key,
+    )
+
+    coord_hex, height = sys.argv[2], int(sys.argv[3])
+    x, y, z, _plane = coord_to_xyz(int(coord_hex, 16))
+    material = derive_region_key_material_for_height(x=x, y=y, z=z, height=height)
+    payload = encrypt_with_location_key(
+        sys.stdin.buffer.read(),
+        location_decryption_key=material.location_decryption_key,
+        nonce=bytes(range(12)),
+    )
+    event = make_encrypted_content_event(
+        pubkey_hex="b" * 64,
+        created_at=1,
+        lookup_id_hex=material.lookup_id_hex,
+        algorithm="aes-256-gcm",
+        ciphertext_b64=base64.b64encode(payload).decode("ascii"),
+        height_hint=height,
+        content="",
+        kind=33330,
+    )
+    emit({
+        "event": event,
+        "key": material.location_decryption_key.hex(),
+        "lookup_id": material.lookup_id_hex,
+    })
+
+
+def cmd_box():
+    """The §7.7 `hint` tag naming the aligned box around a coordinate.
+
+    Built from the reference's own interleave so a sweep test is not marking
+    its own homework: the box comes from their `coord_to_xyz`/`xyz_to_coord`,
+    and if our alignment disagreed the bag would simply not be in the box we
+    were handed.
+    """
+    sys.path.insert(0, os.path.join(os.environ["CYBERSPACE_CLI_DIR"], "src"))
+    from cyberspace_core.coords import coord_to_xyz, xyz_to_coord
+
+    coord_hex = sys.argv[2]
+    hx, hy, hz = (int(v) for v in sys.argv[3:6])
+    x, y, z, plane = coord_to_xyz(int(coord_hex, 16))
+    base = xyz_to_coord((x >> hx) << hx, (y >> hy) << hy, (z >> hz) << hz, plane)
+    emit({"tag": ["hint", f"{base:064x}", str(hx), str(hy), str(hz)]})
+
+
 COMMANDS = {
+    "box": cmd_box,
     "cases": cmd_cases,
+    "encrypt": cmd_encrypt,
     "region": cmd_region,
     "hints": cmd_hints,
     "vectors": cmd_vectors,

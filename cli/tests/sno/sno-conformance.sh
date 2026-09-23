@@ -3,7 +3,7 @@
 # sno-conformance.sh — diffs amy's DECK-0003 reader against the cyberspace
 # project's own reference implementations. No relay, no account, no device.
 #
-# Three comparisons, each driven by the reference's own fixtures rather than
+# Eight comparisons, each driven by the reference's own fixtures rather than
 # by anything we wrote:
 #
 #   1. §1.9 verdicts     — the deck's rejection table (`_rejections()` in
@@ -19,6 +19,12 @@
 #   4. Reader divergence — where we knowingly differ from the §1.9 arbiter,
 #                          and one place we used to and no longer do, pinned so
 #                          neither can drift quietly.
+#   5. Region keys       — §2.2 decodes and §7.2 keys against cyberspace-cli.
+#   6. Hint boxes        — §7.7's golden vectors through `amy cyberspace hint`.
+#   7. Bags              — a ciphertext cyberspace-cli sealed, opened by
+#                          `amy cyberspace open` from the coordinate alone.
+#   8. Sweeps            — the same bag found by `amy cyberspace sweep` from
+#                          its hint box, with no coordinate at all.
 #
 # Divergences we already know about are asserted as divergences, not ignored:
 # a reader that silently stopped diverging would be just as interesting as one
@@ -47,7 +53,7 @@ NO_BUILD=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-build) NO_BUILD=1 ;;
-    -h|--help) sed -n '3,27p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; exit 0 ;;
+    -h|--help) sed -n '3,33p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
   shift
@@ -379,6 +385,122 @@ else
     record_result "cyberspace-hints" pass "$AGREE golden vectors agree"
   else
     record_result "cyberspace-hints" fail "$DISAGREE of $((AGREE+DISAGREE)) diverged"
+  fi
+fi
+
+# ---- 7. §7.6 bags, round-tripped through the reference's cipher -------------
+
+banner "7. bags — sealed by cyberspace-cli, opened by amy"
+
+# The strongest statement this harness can make about §7: a ciphertext nobody
+# here produced. cyberspace-cli derives the region key with its own modules,
+# seals a plaintext with its own AES-GCM and writes the §8.6 tags with its own
+# event builder; amy is handed nothing but that event and a coordinate, and has
+# to arrive at the same 32 bytes to read it. Every link in §2.2 -> §4.7 -> §7.2
+# -> §7.6 is inside that one assertion.
+if [[ $HAVE_AVATAR_REF -eq 0 ]]; then
+  skip_msg "cyberspace-cli unavailable"
+  record_result "cyberspace-bags" skip "no cyberspace-cli checkout"
+else
+  AGREE=0; DISAGREE=0
+  for COORD in \
+    c492492492492492492492edf5bee7267451c787d95ba4d7840c76d1e33c9940 \
+    a4b64924924924924924924924924924924924924924924924924d84b60d9c8f
+  do
+    for H in 0 4; do
+      PLAIN="a bag at ${COORD:0:8} height $H"
+      SEALED="$(printf '%s' "$PLAIN" | ref encrypt "$COORD" "$H")"
+      BAG="$(jq -c .event <<<"$SEALED")"
+
+      # Opened from the coordinate alone: our decode, our Cantor roots, our
+      # §7.2 derivation, their ciphertext.
+      GOT="$(printf '%s' "$BAG" | amy cyberspace open - --coord "$COORD")"
+      OPENED="$(jq -r .opened <<<"$GOT")"
+      TEXT="$(jq -r '.text // ""' <<<"$GOT")"
+
+      # And the negative §7.6 insists on: the wrong key is a verdict, not an
+      # error. "A failed decryption therefore means only that the reader does
+      # not hold this region's key; it MUST NOT be treated as an error."
+      WRONG="$(printf '%s' "$BAG" | amy cyberspace open - --key "$(printf 'ab%.0s' $(seq 32))")"
+      WRONG_EXIT=$?
+      WRONG_OPENED="$(jq -r '.opened' <<<"$WRONG")"
+
+      if [[ "$OPENED" == "true" && "$TEXT" == "$PLAIN" && "$WRONG_OPENED" == "false" && $WRONG_EXIT -eq 0 ]]; then
+        AGREE=$((AGREE+1))
+        info "${COORD:0:8}… h$H: opened their ciphertext from the coordinate"
+      else
+        DISAGREE=$((DISAGREE+1))
+        fail_msg "${COORD:0:8}… h$H: opened=$OPENED text='$TEXT' want='$PLAIN'; wrong-key opened=$WRONG_OPENED exit=$WRONG_EXIT"
+      fi
+    done
+  done
+
+  if [[ $DISAGREE -eq 0 && $AGREE -gt 0 ]]; then
+    record_result "cyberspace-bags" pass "$AGREE bags sealed there, opened here"
+  else
+    record_result "cyberspace-bags" fail "$DISAGREE of $((AGREE+DISAGREE)) failed to round-trip"
+  fi
+fi
+
+# ---- 8. §7.7 sweeps ---------------------------------------------------------
+
+banner "8. sweeps — finding a bag from its hint box alone"
+
+# The same bag, this time without being told where it is. amy gets the box and
+# the bag's height, derives every candidate region key inside it and looks for
+# the one whose lookup_id is the `d` tag the hider published — §7.7's
+# position-free search, end to end. The box itself comes from the reference's
+# interleave, so a disagreement about alignment shows up as a bag that is not
+# in the box rather than as a test grading its own arithmetic.
+if [[ $HAVE_AVATAR_REF -eq 0 ]]; then
+  skip_msg "cyberspace-cli unavailable"
+  record_result "cyberspace-sweeps" skip "no cyberspace-cli checkout"
+else
+  AGREE=0; DISAGREE=0
+  COORD=c492492492492492492492edf5bee7267451c787d95ba4d7840c76d1e33c9940
+  SEALED="$(printf 'found by sweeping' | ref encrypt "$COORD" 4)"
+  WANT_KEY="$(jq -r .key <<<"$SEALED")"
+
+  # A cube (gap 6), a slab with one axis pinned to the bag's own height (gap 4),
+  # and the degenerate box that is a destination rather than a search (gap 0).
+  for BOX in "6 6 6" "4 6 6" "4 4 4"; do
+    # shellcheck disable=SC2086
+    HINT="$(ref box "$COORD" $BOX | jq -c .tag)"
+    BAG="$(jq -c --argjson hint "$HINT" '.event | .tags += [$hint]' <<<"$SEALED")"
+
+    GOT="$(printf '%s' "$BAG" | amy cyberspace sweep -)"
+    FOUND="$(jq -r .found <<<"$GOT")"
+    GOT_KEY="$(jq -r '.key // ""' <<<"$GOT")"
+    EXAMINED="$(jq -r .examined <<<"$GOT")"
+    CANDIDATES="$(jq -r .candidates <<<"$GOT")"
+
+    # A sweep that found it must not have walked past the box it was given.
+    if [[ "$FOUND" == "true" && "$GOT_KEY" == "$WANT_KEY" && "$EXAMINED" -le "$CANDIDATES" ]]; then
+      AGREE=$((AGREE+1))
+      info "box [$BOX]: found after $EXAMINED of $CANDIDATES candidates"
+    else
+      DISAGREE=$((DISAGREE+1))
+      fail_msg "box [$BOX]: found=$FOUND key=${GOT_KEY:0:16} want=${WANT_KEY:0:16} examined=$EXAMINED/$CANDIDATES"
+    fi
+  done
+
+  # And the refusal §7.7 exists for: a hint is a stranger's choice of
+  # difficulty, so a box nobody asked to pay for is quoted and declined rather
+  # than swept. 2^33 keys is hours.
+  HUGE="$(ref box "$COORD" 15 15 15 | jq -c .tag)"
+  BAG="$(jq -c --argjson hint "$HUGE" '.event | .tags += [$hint]' <<<"$SEALED")"
+  if printf '%s' "$BAG" | amy cyberspace sweep - >/dev/null 2>&1; then
+    DISAGREE=$((DISAGREE+1))
+    fail_msg "a gap-33 hint was swept without being asked for"
+  else
+    AGREE=$((AGREE+1))
+    info "a gap-33 hint is quoted and declined, not swept"
+  fi
+
+  if [[ $DISAGREE -eq 0 && $AGREE -gt 0 ]]; then
+    record_result "cyberspace-sweeps" pass "$AGREE boxes swept as §7.7 describes"
+  else
+    record_result "cyberspace-sweeps" fail "$DISAGREE of $((AGREE+DISAGREE)) diverged"
   fi
 fi
 

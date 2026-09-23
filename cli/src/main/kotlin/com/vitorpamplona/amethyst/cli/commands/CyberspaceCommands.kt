@@ -23,11 +23,18 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.cyberspace.CantorTree
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagContents
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
 import com.vitorpamplona.quartz.cyberspace.CyberspaceHint
 import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
 import com.vitorpamplona.quartz.cyberspace.RegionKey
+import com.vitorpamplona.quartz.cyberspace.RegionKeyMaterial
+import com.vitorpamplona.quartz.cyberspace.RegionSweep
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import kotlin.io.encoding.Base64
 
 /**
  * `amy cyberspace …` — places and the keys they derive, local and accountless.
@@ -48,23 +55,38 @@ object CyberspaceCommands {
         |  cyberspace coord COORD_HEX             decode a coordinate: axes, plane, sectors (§2.2)
         |  cyberspace region COORD_HEX --height H the region key at that height (§7.2)
         |  cyberspace hint [EVENT|-]              read a bag's hint and price its sweep (§7.7)
+        |  cyberspace open [EVENT|-] --key HEX    open a bag with a region key (§7.6)
+        |  cyberspace sweep [EVENT|-]             sweep a bag's hint box for its key (§7.7)
         |
         |COORD_HEX is 32 bytes of lowercase hex, as a `C` or `hint` tag carries it.
         |
         |  --height H        the aligned subtree height, 0..20 (default 0)
         |  --max-height H    raise the refusal ceiling; the cost doubles and then
         |                    some with every height, so this is deliberate work
+        |
+        |open:
+        |  --key HEX         the 32-byte region key (§7.2)
+        |  --coord COORD_HEX derive the key from a coordinate instead of naming it
+        |  --height H        the height to derive at; defaults to the bag's `h` tag
+        |
+        |sweep:
+        |  --max-gap G       refuse a hint whose gap exceeds G bits (default 20).
+        |                    The gap is the exponent: 2^G region keys to derive.
+        |  --limit N         stop after N candidates, found or not
+        |  --ids             print every candidate's lookup_id, not only the match
         """.trimMargin()
 
     suspend fun dispatch(tail: Array<String>): Int =
         route(
             "cyberspace",
             tail,
-            "cyberspace <coord|region|hint>",
+            "cyberspace <coord|region|hint|open|sweep>",
             mapOf(
                 "coord" to { rest -> coord(rest) },
                 "region" to { rest -> region(rest) },
                 "hint" to { rest -> hint(rest) },
+                "open" to { rest -> open(rest) },
+                "sweep" to { rest -> sweep(rest) },
             ),
             USAGE,
         )
@@ -182,6 +204,226 @@ object CyberspaceCommands {
         )
         return 0
     }
+
+    /**
+     * Open a bag with a region key (§7.6).
+     *
+     * The key can be named outright (`--key`) or derived here from a
+     * coordinate (`--coord`), which is the shape that proves the whole chain in
+     * one line: our §2.2 decode, our Cantor roots and our §7.2 derivation
+     * against a ciphertext somebody else produced.
+     *
+     * **A bag that will not open exits 0.** §7.6: "A failed decryption
+     * therefore means only that the reader does not hold this region's key; it
+     * MUST NOT be treated as an error in the bag." So the wrong key is a
+     * verdict — `opened: false` — the same way `sno validate` reports an
+     * invalid payload rather than failing. What does fail is a bag this cannot
+     * attempt at all: an unknown `version`, or no `aes-256-gcm` payload to try.
+     */
+    private fun open(rest: Array<String>): Int {
+        val args = Args(rest)
+        val json = RawEventSupport.readArgOrStdin(args)
+        val keyHex = args.flag("key")
+        val coordHex = args.flag("coord")
+        val heightRaw = args.flag("height")
+        val maxHeight = args.intFlag("max-height", CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
+        args.rejectUnknown()
+
+        if ((keyHex == null) == (coordHex == null)) {
+            return Output.error("bad_args", "give exactly one of --key HEX or --coord COORD_HEX")
+        }
+
+        val bag = bagOf(json) ?: return Output.error("bad_event", "not a kind ${CyberspaceBagEvent.KIND} bag")
+        if (!bag.isKnownVersion()) {
+            // §8.6: "A reader MUST ignore a bag whose version it does not know."
+            return Output.error("unsupported_version", "not a version ${CyberspaceBagEvent.VERSION} bag (§8.6)")
+        }
+        if (bag.payload() == null) {
+            return Output.error("bad_event", "no [\"encrypted\", \"${CyberspaceBagEvent.ALGORITHM}\", …] tag to open")
+        }
+
+        val height =
+            if (heightRaw == null) {
+                bag.height() ?: 0
+            } else {
+                heightRaw.toIntOrNull() ?: return Output.error("bad_args", "--height expects a number, got '$heightRaw'")
+            }
+
+        val key =
+            if (keyHex != null) {
+                keyHex.hexToByteArrayOrNull()?.takeIf { it.size == CyberspaceBagEvent.KEY_BYTES }
+                    ?: return Output.error("bad_args", "--key must be ${CyberspaceBagEvent.KEY_BYTES} bytes of hex")
+            } else {
+                val point =
+                    CyberspaceCoordinate.decode(coordHex!!)
+                        ?: return Output.error("bad_args", "not a coordinate: 32 bytes of lowercase hex")
+                if (height < 0) return Output.error("bad_args", "--height must be >= 0")
+                if (height > maxHeight) return Output.error("too_big", "height $height exceeds max-height $maxHeight")
+                RegionKey.at(point, height, maxHeight).decryptionKey
+            }
+
+        val contents = bag.open(key)
+        if (contents == null) {
+            Output.emit(mapOf("opened" to false, "height" to height, "lookup_id" to bag.lookupId()))
+            return 0
+        }
+
+        val common = mapOf("opened" to true, "height" to height, "lookup_id" to bag.lookupId())
+        when (contents) {
+            is CyberspaceBagContents.Items ->
+                Output.emit(
+                    common +
+                        mapOf(
+                            "shape" to "items",
+                            "dropped" to contents.dropped,
+                            "items" to
+                                contents.items.map { item ->
+                                    mapOf(
+                                        "kind" to item.event.kind,
+                                        "id" to item.event.id,
+                                        "pubkey" to item.event.pubKey,
+                                        // §7.6: authorship only when this is true.
+                                        "verified" to item.verified,
+                                        "coord" to item.coordinate(),
+                                        "event" to Output.mapper.readTree(item.event.toJson()),
+                                    )
+                                },
+                        ),
+                )
+
+            is CyberspaceBagContents.Opaque ->
+                Output.emit(
+                    common +
+                        mapOf(
+                            "shape" to "opaque",
+                            "bytes" to contents.bytes.size,
+                            "base64" to Base64.encode(contents.bytes),
+                            "text" to asText(contents.bytes),
+                        ),
+                )
+        }
+        return 0
+    }
+
+    /**
+     * Sweep the box a bag's hint names until its own `lookup_id` comes up
+     * (§7.7) — the position-free search, priced before it starts.
+     *
+     * The price is the point. A hint is a stranger's choice of difficulty, and
+     * the gap it declares is the exponent of the work: 2^gap region keys. So
+     * the gap is read and checked against `--max-gap` before the first tree is
+     * built, and a hint asking for more says so and stops rather than running
+     * for a day. Raising the ceiling is how a caller spends it on purpose.
+     */
+    private fun sweep(rest: Array<String>): Int {
+        val args = Args(rest)
+        val json = RawEventSupport.readArgOrStdin(args)
+        val maxGap = args.intFlag("max-gap", DEFAULT_MAX_GAP)
+        val limit = args.longFlag("limit", Long.MAX_VALUE)
+        val wantIds = args.bool("ids")
+        val maxHeight = args.intFlag("max-height", CantorTree.DEFAULT_MAX_COMPUTE_HEIGHT)
+        args.rejectUnknown()
+
+        val bag = bagOf(json) ?: return Output.error("bad_event", "not a kind ${CyberspaceBagEvent.KIND} bag")
+        val height = bag.height() ?: return Output.error("no_hint", "a sweep needs the bag's `h` tag (§8.6)")
+        val hint = bag.hint() ?: return Output.error("no_hint", "no usable `hint` tag to sweep (§7.7)")
+
+        val gap = hint.gapBits(height)
+        if (gap > maxGap) {
+            return Output.error(
+                "too_big",
+                "a gap of $gap bits is 2^$gap region keys; pass --max-gap $gap to spend it",
+                extra = mapOf("gap_bits" to gap, "max_gap" to maxGap),
+            )
+        }
+        if (limit < 1) return Output.error("bad_args", "--limit must be >= 1")
+
+        // What the hider published as the address, and therefore the only thing
+        // a sweep can recognise when it walks past the right region.
+        val target = bag.lookupId()
+        val ids = if (wantIds) mutableListOf<String>() else null
+
+        var examined = 0L
+        var exhausted = true
+        var found: RegionKeyMaterial? = null
+        val candidates =
+            try {
+                RegionSweep.of(hint, height, maxHeight)
+            } catch (e: IllegalArgumentException) {
+                return Output.error("too_big", e.message)
+            }
+
+        for (material in candidates) {
+            examined++
+            ids?.add(material.lookupId)
+            if (target != null && material.lookupId == target) {
+                found = material
+                exhausted = false
+                break
+            }
+            if (examined >= limit) {
+                exhausted = false
+                break
+            }
+        }
+
+        Output.emit(
+            mapOf(
+                "height" to height,
+                "gap_bits" to gap,
+                "candidates" to hint.candidates(height),
+                "axis_trees" to hint.axisTrees(height),
+                "target" to target,
+                "examined" to examined,
+                "exhausted" to exhausted,
+                "found" to (found != null),
+                "key" to found?.decryptionKey?.toHexKey(),
+                "lookup_id" to found?.lookupId,
+                "lookup_ids" to ids,
+            ),
+        )
+        return 0
+    }
+
+    /**
+     * Read a kind-33330 bag out of raw JSON.
+     *
+     * [Event.fromJson] already answers with a [CyberspaceBagEvent] for a
+     * registered kind; the rebuild is for the caller that hands us an event
+     * from a factory that did not, so the verb behaves the same either way.
+     */
+    private fun bagOf(json: String): CyberspaceBagEvent? {
+        val event =
+            try {
+                Event.fromJson(json)
+            } catch (_: Exception) {
+                return null
+            }
+        if (event is CyberspaceBagEvent) return event
+        if (event.kind != CyberspaceBagEvent.KIND) return null
+        return CyberspaceBagEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
+    }
+
+    /**
+     * These bytes as text, or null when they are not UTF-8 — §7.6's opaque
+     * shape is "a text note or a file", and a file should not be printed as a
+     * field of replacement characters.
+     */
+    private fun asText(bytes: ByteArray): String? {
+        val text = bytes.decodeToString()
+        return if (text.encodeToByteArray().contentEquals(bytes)) text else null
+    }
+
+    /**
+     * The gap a sweep spends without being told to.
+     *
+     * 2^20 is about a million region keys — a minute or so of a laptop, and the
+     * scale §7.7's own table calls a reasonable search. Everything past it is
+     * the caller's decision to make in the command line, because §7.7's larger
+     * boxes run from "hours" to "days to never" and nothing about a bag tells
+     * you which one a stranger meant.
+     */
+    private const val DEFAULT_MAX_GAP = 20
 
     /** An 85-bit axis as decimal, from its two halves, without a big integer. */
     private fun decimal(
