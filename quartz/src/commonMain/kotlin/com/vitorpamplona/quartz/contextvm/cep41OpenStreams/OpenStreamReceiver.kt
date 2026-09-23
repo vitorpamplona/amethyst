@@ -111,7 +111,11 @@ class OpenStreamReceiver(
 
     /** Nonces of pings we sent that are still awaiting a pong, with their send time. */
     private val outstandingPings = mutableMapOf<String, Long>()
-    private var lastActivityMs = 0L
+
+    // Starts now, not at zero. Against a real clock `now() - 0` is thirty-odd
+    // years, so a receiver that had not yet seen a single frame reported
+    // itself idle and due a probe the instant it was built.
+    private var lastActivityMs = now()
 
     val isTerminal get() = terminal
 

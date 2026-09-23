@@ -26,19 +26,17 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStoreEncryption
  * The Android [CordnBlobCipher]: AES-GCM under a key held in the Android
  * KeyStore (StrongBox-backed where the device has it).
  *
- * ## Why the lock
+ * ## Why there is no lock here any more
  *
- * [KeyStoreEncryption] keeps one `Cipher` instance in a field and runs
- * `init(...)` then `doFinal(...)` against it. That pair is not atomic, and the
- * stores that use this cipher run on `Dispatchers.IO`, which is a thread pool
- * — two groups saving at once is ordinary, not a corner case. Interleaved, one
- * call's `init` lands between the other's `init` and `doFinal`, and the bytes
- * that reach disk are encrypted under the wrong IV or simply garbage. For an
- * `MlsGroupState` that is not a recoverable error: the group cannot be
- * re-derived from anywhere else on the device.
+ * There used to be one. [KeyStoreEncryption] kept a single `Cipher` in a field
+ * and ran `init(...)` then `doFinal(...)` against it, which is not atomic, so
+ * two groups saving at once on `Dispatchers.IO` could interleave and write
+ * bytes encrypted under the wrong IV — unrecoverable for an `MlsGroupState`.
  *
- * Serialising here rather than fixing [KeyStoreEncryption] keeps this change
- * off code that Marmot and the account storage already depend on.
+ * [KeyStoreEncryption] now holds its `Cipher` in a `ThreadLocal`, so the pair
+ * can no longer interleave and the lock guards nothing. Keeping it would
+ * serialise every cordn group save and load on this device for no reason,
+ * which is the opposite of what a thread pool is for.
  */
 class KeyStoreCordnBlobCipher : CordnBlobCipher {
     // Not a constructor parameter: KeyStoreEncryption is internal to commons,
@@ -52,9 +50,8 @@ class KeyStoreCordnBlobCipher : CordnBlobCipher {
     // already guards it (AccountCacheState falls back to an in-memory Marmot
     // store); deferring keeps a cordn-only failure inside cordn.
     private val encryption by lazy { KeyStoreEncryption() }
-    private val lock = Any()
 
-    override fun encrypt(bytes: ByteArray): ByteArray = synchronized(lock) { encryption.encrypt(bytes) }
+    override fun encrypt(bytes: ByteArray): ByteArray = encryption.encrypt(bytes)
 
-    override fun decrypt(bytes: ByteArray): ByteArray = synchronized(lock) { encryption.decrypt(bytes) }
+    override fun decrypt(bytes: ByteArray): ByteArray = encryption.decrypt(bytes)
 }
