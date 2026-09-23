@@ -95,11 +95,11 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_select_no
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_as
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.call.CallSessionBridge
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event

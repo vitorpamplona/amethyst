@@ -37,6 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
@@ -154,11 +155,3 @@ fun MyAsyncImage(
         }
     }
 }
-
-fun isAnimatedMediaUrl(url: String): Boolean =
-    url.endsWith(".gif", ignoreCase = true) ||
-        url.contains(".gif?", ignoreCase = true) ||
-        url.contains(".gif#", ignoreCase = true) ||
-        url.endsWith(".avif", ignoreCase = true) ||
-        url.contains(".avif?", ignoreCase = true) ||
-        url.contains(".avif#", ignoreCase = true)
