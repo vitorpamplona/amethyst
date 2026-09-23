@@ -2837,7 +2837,6 @@
     <string name="backup_conflict_private_changed">You also changed private (encrypted) items. They can\'t be compared here.</string>
     <string name="backup_conflict_private_added">You added private (encrypted) items.</string>
     <string name="backup_conflict_restore_mine">Restore saved version</string>
-    <string name="backup_conflict_review">Review changes</string>
     <string name="backup_review_saved">On this device</string>
     <string name="backup_review_new">New version</string>
     <string name="backup_review_not_set">Not set</string>
@@ -2848,6 +2847,9 @@
         <item quantity="one">You unfollowed %1$d person</item>
         <item quantity="other">You unfollowed %1$d people</item>
     </plurals>
+    <string name="backup_card_accept">Accept</string>
+    <string name="backup_review_title_updated">%1$s updated</string>
+    <string name="backup_review_title_cleared">%1$s cleared</string>
     <string name="backup_review_changed_by_other_app">Changed in another app · %1$s</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_restore_count">Restore %1$s</string>

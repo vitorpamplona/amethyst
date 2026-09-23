@@ -26,12 +26,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -93,6 +96,7 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 fun BackupConflictCards(
     conflictMap: Map<String, ReplaceableBackupConflict>,
     nav: INav,
+    onAccept: (ReplaceableBackupConflict) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (conflictMap.isEmpty()) return
@@ -106,8 +110,9 @@ fun BackupConflictCards(
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        LeadConflictCard(conflicts.first()) { open(conflicts.first()) }
-        conflicts.drop(1).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
+        val lead = conflicts.first()
+        LeadConflictCard(lead, onAccept = { onAccept(lead) }) { open(lead) }
+        conflicts.drop(1).forEach { conflict -> ConflictPill(conflict, onAccept = { onAccept(conflict) }) { open(conflict) } }
     }
 }
 
@@ -236,6 +241,7 @@ private fun encryptedHeadline(
 @Composable
 private fun LeadConflictCard(
     conflict: ReplaceableBackupConflict,
+    onAccept: () -> Unit,
     onClick: () -> Unit,
 ) {
     val tones = conflictTones()
@@ -263,7 +269,7 @@ private fun LeadConflictCard(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
-                Icon(symbol = MaterialSymbols.ChevronRight, contentDescription = stringRes(R.string.backup_conflict_review), tint = MaterialTheme.colorScheme.placeholderText)
+                AcceptButton(onAccept)
             }
             val diff = conflict.diff
             if (diff is ContactListDiff) {
@@ -302,6 +308,7 @@ private fun CountChips(counts: ConflictCounts) {
 @Composable
 private fun ConflictPill(
     conflict: ReplaceableBackupConflict,
+    onAccept: () -> Unit,
     onClick: () -> Unit,
 ) {
     val tones = conflictTones()
@@ -322,8 +329,22 @@ private fun ConflictPill(
                 Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
             }
             Text(headlineOf(conflict, counts), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (counts.removed > 0) StatusTag("\u2212" + counts.removed, tones.removed)
-            if (counts.added > 0) StatusTag("+" + counts.added, tones.added)
+            AcceptButton(onAccept)
         }
+    }
+}
+
+/**
+ * Confirms the change right from Home: the change was made on purpose in another app, so
+ * keeping it is the quick path. Reverting needs the review screen, one tap on the card away.
+ */
+@Composable
+private fun AcceptButton(onAccept: () -> Unit) {
+    FilledTonalButton(
+        onClick = onAccept,
+        modifier = Modifier.height(36.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+    ) {
+        Text(stringRes(R.string.backup_card_accept), fontWeight = FontWeight.SemiBold)
     }
 }

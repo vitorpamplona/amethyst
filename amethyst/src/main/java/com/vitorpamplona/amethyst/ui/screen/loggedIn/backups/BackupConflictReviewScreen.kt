@@ -331,9 +331,14 @@ private fun ReviewActions(
     }
 }
 
-/** "Follow list", "Mute list"…: the event's name as a title. */
+/** "Follow list updated", "Mute list cleared"…: the event and what happened to it, as a title. */
 @Composable
-internal fun eventTitle(conflict: ReplaceableBackupConflict): String = stringRes(eventTypeName(conflict.eventType)).replaceFirstChar { it.uppercase() }
+internal fun eventTitle(conflict: ReplaceableBackupConflict): String {
+    val name = stringRes(eventTypeName(conflict.eventType)).replaceFirstChar { it.uppercase() }
+    // Says what happened to it, not just what it is: "Community list updated".
+    val emptied = conflict.incoming.tags.isEmpty() && conflict.incoming.content.isEmpty()
+    return stringRes(if (emptied) R.string.backup_review_title_cleared else R.string.backup_review_title_updated, name)
+}
 
 /** The two choices, worded for what they do to this event: "Keep 120" / "Restore 523". */
 @Composable

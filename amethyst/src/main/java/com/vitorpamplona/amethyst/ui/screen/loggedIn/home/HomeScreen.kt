@@ -446,7 +446,7 @@ fun FeedLoaded(
         // scroll position anchors when new posts arrive) is unchanged the rest of the time.
         if (backupConflicts.isNotEmpty()) {
             item(key = "backupConflicts", contentType = "backupConflicts") {
-                BackupConflictCards(backupConflicts, nav)
+                BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel.account::acceptExternalVersion)
             }
         }
         if (liveSection != null) {
@@ -552,6 +552,7 @@ private fun WithBackupConflicts(
         BackupConflictCards(
             backupConflicts,
             nav,
+            onAccept = accountViewModel.account::acceptExternalVersion,
             Modifier
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())

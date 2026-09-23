@@ -91,6 +91,10 @@ only surviving copy of the user's data is gone.
    per-service before/after table, payment targets and BOLT12 offers as cards, and the
    encrypted-only Cashu wallet and Concord list as one explained panel. Only NIP-78 app
    settings still uses the generic removed / added / changed sections.
+   Each card has an Accept button that keeps the new version right from Home (the change
+   was made on purpose; reverting needs the review screen, a tap on the card away). The
+   review screen is titled with the event and what happened to it ("Community list
+   updated", "Mute list cleared").
    Buttons are worded per event ("Keep 120" / "Restore 523", "Re-mute 37", "Rejoin 3").
    Keeping the new version is the default (the filled button, on the right); restoring
    always reverts another app's change, so it is an outlined red button on every screen.
