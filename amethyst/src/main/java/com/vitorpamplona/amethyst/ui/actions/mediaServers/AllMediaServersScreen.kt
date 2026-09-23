@@ -212,7 +212,7 @@ fun MediaCacheSection(accountViewModel: AccountViewModel) {
  */
 @Composable
 private fun CacheDetectionChip(accountViewModel: AccountViewModel) {
-    val probeAvailable by accountViewModel.useLocalBlossomBridgeForProfilePics
+    val probeAvailable by accountViewModel.localBlossomCacheDetected
         .collectAsStateWithLifecycle()
 
     val color = if (probeAvailable) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.grayText

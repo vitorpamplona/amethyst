@@ -87,9 +87,10 @@ class ImageLoaderSetup {
             // coordinates through a map of in-flight fetches that it owns, so it only
             // works when every fetcher shares the same instance -- a fresh one per
             // request can never see anybody else's fetch and the de-dupe silently
-            // no-ops. Shared across all three network-backed factories so a feed
-            // image and the same blob reached through `blossom:` (or a profile
-            // picture) still collapse onto one download.
+            // no-ops. Shared across all three network-backed factories so the same
+            // key requested through any of them (e.g. a feed image and a profile
+            // picture with the same URL) collapses onto one download. `blossom:`
+            // blobs are keyed by their sha256 instead (see BlossomFetcher.diskCacheKey).
             val concurrentRequests = DeDupeConcurrentRequestStrategy()
 
             SingletonImageLoader.setUnsafe(
