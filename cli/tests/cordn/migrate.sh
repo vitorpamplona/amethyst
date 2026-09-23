@@ -28,7 +28,9 @@ CONTAINER="cordn-migrate"
 
 export AMY_PASSPHRASE="${AMY_PASSPHRASE:-migrate}"
 
-BLOB_PORT="${BLOB_PORT:-877}"
+# Above 1024: binding below it needs root, and this test has no business
+# asking for that. 877 was the default and bound for nobody.
+BLOB_PORT="${BLOB_PORT:-8877}"
 BLOB="http://127.0.0.1:$BLOB_PORT"
 BLOB_DIR="$WORK/blobs"
 BLOB_PID=""
@@ -49,7 +51,20 @@ blob_up() {
   mkdir -p "$BLOB_DIR"
   python3 - "$BLOB_PORT" "$BLOB_DIR" >"$WORK/blob.log" 2>&1 &
   BLOB_PID=$!
-  sleep 1
+  # Wait for the port, and say so here if it never opens. Letting a dead blob
+  # server through costs three misleading failures later — export reports "no
+  # server accepted the document", and the group/blob assertions all fall over
+  # behind it — none of which name the thing that is actually wrong.
+  for _ in $(seq 20); do
+    if python3 -c "import socket,sys; s=socket.socket(); s.settimeout(0.3); sys.exit(0 if s.connect_ex(('127.0.0.1',$BLOB_PORT))==0 else 1)"; then
+      return 0
+    fi
+    kill -0 "$BLOB_PID" 2>/dev/null || break
+    sleep 0.5
+  done
+  echo "the blob server never came up on $BLOB — see $WORK/blob.log"
+  tail -3 "$WORK/blob.log" 2>/dev/null
+  exit 2
 } <<'PYEOF'
 import hashlib, os, sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

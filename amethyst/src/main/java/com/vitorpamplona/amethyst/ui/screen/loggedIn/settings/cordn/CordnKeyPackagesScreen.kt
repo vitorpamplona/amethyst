@@ -47,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnKeyPackageRow
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
@@ -178,7 +180,7 @@ private fun CoordinatorKeyPackages(
         val hasLastResort = loaded.any { it.lastResort }
 
         Text(
-            text = stringRes(R.string.cordn_keypackages_summary, single),
+            text = pluralStringRes(LocalContext.current, R.plurals.cordn_keypackages_summary, single, single),
             style = MaterialTheme.typography.bodyMedium,
         )
         Text(
@@ -199,7 +201,7 @@ private fun CoordinatorKeyPackages(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = stringRes(R.string.cordn_keypackages_orphans, orphans.size),
+                        text = pluralStringRes(LocalContext.current, R.plurals.cordn_keypackages_orphans, orphans.size, orphans.size),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
