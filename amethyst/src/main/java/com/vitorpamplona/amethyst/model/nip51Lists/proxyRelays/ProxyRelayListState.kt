@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

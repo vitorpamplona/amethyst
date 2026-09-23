@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityEntry
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityLog
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

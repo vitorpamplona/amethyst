@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip65RelayList
+
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+
+/** Changes to the NIP-65 relay list: relays added, removed, or switched between read, write and both. */
+@Immutable
+class AdvertisedRelayListDiff(
+    val relays: ListDiff<AdvertisedRelayInfo>,
+) : EventDiff {
+    // A relay that stops being read (inbox) or write (outbox) loses that role even though it
+    // is still listed: going from read+write to write-only drops the user's inbox there.
+    override fun removesData() =
+        relays.hasRemovals() ||
+            relays.changed.any { (it.before.type.isRead() && !it.after.type.isRead()) || (it.before.type.isWrite() && !it.after.type.isWrite()) }
+}

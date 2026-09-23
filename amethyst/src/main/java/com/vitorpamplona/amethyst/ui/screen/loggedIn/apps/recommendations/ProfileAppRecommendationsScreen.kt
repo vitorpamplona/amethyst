@@ -333,7 +333,7 @@ private fun AppRecommendationsTopBar(
                 placeholderCode = listName,
                 explainer = stringRes(Res.string.select_list_to_filter),
                 options = options,
-                onSelect = accountViewModel.account.settings::changeDefaultAppRecommendationsFollowList,
+                onSelect = { accountViewModel.account.settings.changeDefaultAppRecommendationsFollowList(it.code) },
                 accountViewModel = accountViewModel,
             )
         },

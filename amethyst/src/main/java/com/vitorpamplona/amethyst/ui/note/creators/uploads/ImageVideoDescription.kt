@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_content
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_description
@@ -90,8 +92,6 @@ import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.TextSpinner

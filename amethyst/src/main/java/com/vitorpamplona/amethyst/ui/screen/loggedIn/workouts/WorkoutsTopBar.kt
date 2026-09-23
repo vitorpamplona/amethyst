@@ -56,7 +56,7 @@ fun WorkoutsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultWorkoutsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultWorkoutsFollowList(it.code) },
         )
     }
 }

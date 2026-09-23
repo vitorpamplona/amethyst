@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
-import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold

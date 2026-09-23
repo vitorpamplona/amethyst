@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_caption
 import com.vitorpamplona.amethyst.commons.resources.add_caption_example
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge

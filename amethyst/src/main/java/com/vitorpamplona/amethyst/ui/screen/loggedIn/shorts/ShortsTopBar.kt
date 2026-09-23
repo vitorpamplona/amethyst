@@ -56,7 +56,7 @@ fun ShortsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultShortsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultShortsFollowList(it.code) },
         )
     }
 }

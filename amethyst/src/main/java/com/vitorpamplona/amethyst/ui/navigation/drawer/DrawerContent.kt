@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.drafts
@@ -124,7 +125,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -680,7 +680,7 @@ fun CatalogSection(
     val primary = MaterialTheme.colorScheme.primary
     val onBackground = MaterialTheme.colorScheme.onBackground
 
-    val visible = remember(section, hidden) { DrawerItemVisibility.visibleItems(section, hidden) }
+    val visible = remember(section, hidden) { DrawerSectionVisibility.visibleItems(section, hidden) }
     if (visible.isEmpty() && !section.hasFixedRows) return
 
     CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {

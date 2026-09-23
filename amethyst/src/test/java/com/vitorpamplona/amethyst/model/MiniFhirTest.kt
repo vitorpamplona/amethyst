@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Bundle
+import com.vitorpamplona.amethyst.commons.model.Patient
+import com.vitorpamplona.amethyst.commons.model.Practitioner
+import com.vitorpamplona.amethyst.commons.model.UnknownResource
+import com.vitorpamplona.amethyst.commons.model.VisionPrescription
+import com.vitorpamplona.amethyst.commons.model.findReferenceInDb
+import com.vitorpamplona.amethyst.commons.model.parseResourceBundleOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

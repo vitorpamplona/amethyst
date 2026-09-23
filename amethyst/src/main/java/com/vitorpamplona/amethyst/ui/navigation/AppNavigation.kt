@@ -45,6 +45,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.TabReselectCoordinator
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.MediaFeedRoute
@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictReviewScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.ProfileBadgesScreen
@@ -680,6 +681,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.BackupConflictReview> { BackupConflictReviewScreen(it.slot, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayManagement> { RelayManagementScreen(it.url, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayMembers> { RelayMembersScreen(it.url, accountViewModel, nav) }
         composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }

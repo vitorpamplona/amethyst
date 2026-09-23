@@ -56,7 +56,7 @@ fun FollowPacksTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultFollowPacksFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultFollowPacksFollowList(it.code) },
         )
     }
 }

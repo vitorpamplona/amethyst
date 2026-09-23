@@ -47,4 +47,39 @@ interface CashuKeysetCounterStore {
         keysetId: String,
         count: Int,
     ): Long
+
+    /**
+     * Carry a counter forward from a host's pre-existing storage, never backwards.
+     *
+     * The default advances through [reserve] so the durability guarantee above is
+     * kept whatever the backing store; a host whose store can write the value in
+     * one atomic op should override it.
+     */
+    fun seedIfMissing(
+        keysetId: String,
+        legacyValue: Long,
+    ) {
+        if (legacyValue <= 0L) return
+        val current = peek(keysetId)
+        if (current >= legacyValue) return
+        reserve(keysetId, (legacyValue - current).toInt())
+    }
+}
+
+/**
+ * The stand-in for a host that has not wired a durable store.
+ *
+ * It throws rather than answering 0: a zeroed counter is a *reused* counter, and
+ * the mint answers `outputs already signed` and strands the wallet. Failing at the
+ * first reservation is recoverable; silently handing out slot 0 again is not.
+ */
+object UnavailableCashuKeysetCounterStore : CashuKeysetCounterStore {
+    private fun fail(): Nothing = error("No durable NUT-13 counter store is wired for this account; refusing to reuse counters.")
+
+    override fun peek(keysetId: String): Long = fail()
+
+    override fun reserve(
+        keysetId: String,
+        count: Int,
+    ): Long = fail()
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBasicAccountInfoFromKeys
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBookmarksAndReportsFromKey
@@ -37,6 +38,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+
+/**
+ * Which relays to ask for an account's own events, in order of what we actually know.
+ *
+ * Split out from the manager so the precedence can be tested without standing up an account:
+ * the rule is the whole fix, and the case that broke — every set but [defaults] empty — is the
+ * one no live account reproduces on demand.
+ */
+fun pickAccountDataRelays(
+    home: Set<NormalizedRelayUrl>,
+    inbox: Set<NormalizedRelayUrl>,
+    defaults: Set<NormalizedRelayUrl>,
+): Set<NormalizedRelayUrl> =
+    when {
+        home.isNotEmpty() -> home
+        inbox.isNotEmpty() -> inbox
+        else -> defaults
+    }
 
 /**
  * Each account's own profile, lists and recent posts — for **every** logged-in account, in one
@@ -59,13 +78,40 @@ class AccountMetadataEoseManager(
 
     fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
 
+    /**
+     * Where to look for an account's **own** profile, follow list and lists.
+     *
+     * Normally its home relays: where it publishes is where its own events are. But home relays
+     * are NIP-65 write relays (plus private storage and local ones), and a kind:10002 that lists
+     * none — read-only, or simply wrong — is a statement about publishing, not about where the
+     * account's existing events can be found. Keyed on that set alone, such an account joined no
+     * relay bucket at all and this subscription asked **nothing** on its behalf: its profile,
+     * follows and every backed-up list stayed frozen at whatever was last stored, forever, with
+     * nothing on screen to say why. A follow list replaced from another client never arrived, so
+     * the backup guard could not even raise the conflict it exists to raise.
+     *
+     * The fallbacks only widen where we *read*; they never redirect a publish. Its inbox relays
+     * come first — a client that rewrote these lists most likely also put them where the account
+     * says to reach it — and the app's event finders last, which is what "we don't know" means
+     * everywhere else.
+     *
+     * Deliberately not fixed in [relayListOrDefaultsWhenUnknown]: an empty list there means "they
+     * told us: nothing", and defaulting it would override an explicit choice about publishing.
+     */
+    fun relaysToQuery(query: AccountQueryState): Set<NormalizedRelayUrl> =
+        pickAccountDataRelays(
+            home = relayFlow(query).value,
+            inbox = query.account.nip65RelayList.inboxFlow.value,
+            defaults = Constants.eventFinderRelays,
+        )
+
     override fun updateFilter(
         keys: List<AccountQueryState>,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val accountsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableList<AccountQueryState>>()
         keys.forEach { key ->
-            relayFlow(key).value.forEach { relay ->
+            relaysToQuery(key).forEach { relay ->
                 accountsPerRelay.getOrPut(relay) { mutableListOf() }.add(key)
             }
         }
@@ -116,6 +162,13 @@ class AccountMetadataEoseManager(
                     listOf(
                         key.account.scope.launch(Dispatchers.IO) {
                             relayFlow(key).collectLatest { invalidateFilters() }
+                        },
+                        // The inbox list is watched too because [relaysToQuery] falls back to it:
+                        // an account with no home relays would otherwise keep querying whatever
+                        // the fallback resolved to at startup, deaf to its own NIP-65 changing.
+                        key.account.scope.launch(Dispatchers.IO) {
+                            key.account.nip65RelayList.inboxFlow
+                                .collectLatest { invalidateFilters() }
                         },
                     )
             }

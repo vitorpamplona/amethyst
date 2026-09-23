@@ -61,7 +61,7 @@ fun GeocachesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultGeocachesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultGeocachesFollowList(it.code) },
         )
     }
 }

@@ -72,6 +72,9 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.stableKey
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_add
@@ -86,15 +89,12 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_remove
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_reorder_hint
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryAvatar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCategory
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberFavoriteIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberGroupEntryDisplay
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.stableKey
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton

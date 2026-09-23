@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.blossom_payment_required
@@ -40,8 +42,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent

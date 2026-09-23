@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nip72ModCommunities.follow
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -45,7 +48,16 @@ class CommunityListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<CommunityListDiff>,
     AddressHintProvider {
+    override fun diffFrom(older: Event): CommunityListDiff? {
+        if (older !is CommunityListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return CommunityListDiff(
+            ListDiff.of(older.publicCommunities(), publicCommunities(), { it.address }, { a, b -> a.relayHint == b.relayHint }),
+            privateItemsChangeFrom(older),
+        )
+    }
+
     override fun addressHints() = tags.mapNotNull(CommunityTag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(CommunityTag::parseAddressId)

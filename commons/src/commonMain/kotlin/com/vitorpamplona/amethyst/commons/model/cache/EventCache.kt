@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.RelayGroupTargetCandidate
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserContext
+import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
@@ -3387,7 +3388,10 @@ open class EventCache :
         justConsume(event, null, false)
     }
 
-    override fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)
+    override fun justConsumeMyOwnEvent(event: Event): Boolean {
+        LocallySignedEvents.mark(event)
+        return justConsumeAndUpdateIndexes(event, null, true)
+    }
 
     fun justConsume(
         event: Event,

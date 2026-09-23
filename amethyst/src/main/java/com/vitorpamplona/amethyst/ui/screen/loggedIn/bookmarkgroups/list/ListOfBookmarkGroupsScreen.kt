@@ -37,11 +37,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
 import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
-import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

@@ -81,6 +81,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_background_hint
@@ -116,7 +117,6 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_status_no_relay
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_turn_on
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

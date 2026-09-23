@@ -64,6 +64,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.badge_description_label
 import com.vitorpamplona.amethyst.commons.resources.badge_description_placeholder
@@ -83,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.resources.new_badge
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge

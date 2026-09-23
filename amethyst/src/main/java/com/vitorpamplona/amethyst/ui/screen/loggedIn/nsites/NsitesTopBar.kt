@@ -56,7 +56,7 @@ fun NsitesTopBar(
             placeholderCode = listName,
             explainer = stringRes(Res.string.select_list_to_filter),
             options = allLists,
-            onSelect = { selected: FeedDefinition -> accountViewModel.account.settings.changeDefaultNsitesFollowList(selected) },
+            onSelect = { selected: FeedDefinition -> accountViewModel.account.settings.changeDefaultNsitesFollowList(selected.code) },
             accountViewModel = accountViewModel,
         )
     }

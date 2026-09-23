@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

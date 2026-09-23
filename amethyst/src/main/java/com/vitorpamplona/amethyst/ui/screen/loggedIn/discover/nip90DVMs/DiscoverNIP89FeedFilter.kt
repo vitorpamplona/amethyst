@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.hasFreshDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
@@ -33,8 +35,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.amethyst.model.hasFreshDvmHeartbeat
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent

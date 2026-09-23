@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
+import com.vitorpamplona.amethyst.commons.model.backups.BackupRestore
+import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -52,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDec
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -66,16 +70,27 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList.BlockPeopleListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayFeeds.RelayFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
@@ -131,38 +146,27 @@ import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
-import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
-import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
-import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
-import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedListState
-import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedsListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
-import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
-import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
@@ -174,8 +178,6 @@ import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
@@ -849,7 +851,7 @@ class Account(
      * relay subscription only runs while at least one opener is active.
      */
     val cashuMintDirectoryState =
-        com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryState(
+        com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuMintDirectoryState(
             cache = cache,
             scope = scope,
             assembler = cashuMintDirectoryFilterAssembler(),
@@ -1888,6 +1890,40 @@ class Account(
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) = broadcaster.sendMyPublicAndPrivateOutbox(events)
 
     fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
+
+    /**
+     * Resolves a [ReplaceableBackupConflict] in favor of this device: re-signs the saved
+     * version (same kind, tags and content, so NIP-44 private items stay readable, minus the
+     * old client, proof-of-work and past expiration tags; see [BackupRestore.tagsToResign])
+     * with a timestamp newer than the current one, and publishes it so it replaces that version.
+     *
+     * Does nothing if the conflict is stale (already resolved, replaced by a newer one, or
+     * dropped because the event was deleted), which also makes a double tap harmless.
+     */
+    suspend fun restoreBackupOver(conflict: ReplaceableBackupConflict) {
+        val token = settings.backupGuard.startRestoring(conflict) ?: return
+        var restored = false
+        try {
+            val saved = conflict.saved
+            val now = TimeUtils.now()
+            // Newer than the version it replaces, but never far in the future: relays reject
+            // those, and later edits signed at "now" would lose to it. A far-future external
+            // version can't be outranked safely, and a restore signed at "now" would lose to it
+            // everywhere, so it isn't sent: the conflict reopens and only keeping it works.
+            val createdAt = (conflict.incoming.createdAt + 1).coerceAtLeast(now)
+            if (createdAt > now + maxRestoreFutureSeconds) return
+            val resigned = signer.sign<Event>(createdAt, saved.kind, BackupRestore.tagsToResign(saved, now), saved.content)
+            broadcaster.sendRestoredVersion(resigned)
+            restored = true
+        } finally {
+            settings.backupGuard.finishRestoring(conflict, token, restored)
+        }
+    }
+
+    private val maxRestoreFutureSeconds = 15 * 60L
+
+    /** Resolves a [ReplaceableBackupConflict] in favor of the current version. No-op when stale. */
+    fun acceptExternalVersion(conflict: ReplaceableBackupConflict) = settings.backupGuard.keepIncoming(conflict)
 
     suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,

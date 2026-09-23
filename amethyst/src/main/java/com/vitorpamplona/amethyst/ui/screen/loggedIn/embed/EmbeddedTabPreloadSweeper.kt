@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
