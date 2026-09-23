@@ -233,7 +233,12 @@ content addressing, the highest-epoch-wins reconciliation rule, the `{gid, epoch
 the sibling-skip rule, and the tip format. Amethyst-device ↔ Amethyst-device sync would work with
 `MlsGroupState` in that one field.
 
-**Why it stays a non-goal anyway**, which is the honest reason and not the one above:
+**Status: the fleet stays a non-goal; migration LANDED.** A handoff — one phone
+publishing a snapshot and standing down, another seeding from it — has one writer, so
+§10's race is out of reach by construction rather than by mitigation. That shipped; see
+`amethyst/plans/2026-09-19-cordn-ui.md` §5.3 for what was built and what was deliberately
+left out. The reasoning below is why a *live fleet* is still not worth it, and it is
+unchanged:
 
 - It buys Amethyst-only device sync. A user who mixes clients gets nothing.
 - §10's **symmetric commit race is unresolved in the spec**. Two devices committing inside one
@@ -1287,9 +1292,11 @@ The original scope, for reference:
 
 ### Non-goals
 
-- Multi-device (§4.6). Cross-client sync is impossible by design — `clientState` is
-  deliberately library-private — and our own fleet is buildable but not worth it: it would
-  ship §10's unresolved equal-epoch commit race, for an Amethyst-only feature, on a Draft spec.
+- A live multi-device **fleet** (§4.6) — it would ship §10's unresolved equal-epoch commit
+  race. Device **migration** is a different shape and landed: a handoff has one writer, so
+  that race is out of reach by construction. See `amethyst/plans/2026-09-19-cordn-ui.md` §5.3.
+- Cross-client migration, which stays impossible by design: `clientState` is deliberately
+  library-private (§4.2), so an Amethyst device and a cordn-web device can never share a leaf.
 - Reusing any `Marmot*`/`Mip*` type for cordn.
 - A production Kotlin ContextVM *server*. The Tier C fixture (§6.4) plays the server role for
   tests only. For a real coordinator, `cordn-rs` exists, is faster, and shares the SQLite schema —
