@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,10 +61,12 @@ import com.vitorpamplona.amethyst.commons.resources.sno_light_off
 import com.vitorpamplona.amethyst.commons.resources.sno_light_on
 import com.vitorpamplona.amethyst.commons.service.image.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.sno.SnoLighting
+import com.vitorpamplona.amethyst.commons.sno.SnoRasterScratch
 import com.vitorpamplona.amethyst.commons.sno.SnoRasterizer
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoMode
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
@@ -201,20 +204,41 @@ fun SnoObjectViewer(
         // the turn coarse instead of freezing the gesture.
         var bitmap by remember(eventId) { mutableStateOf<ImageBitmap?>(null) }
 
-        LaunchedEffect(payload, rasterPx, yaw, pitch, backgroundArgb, lit) {
-            bitmap =
-                withContext(Dispatchers.Default) {
-                    val pixels =
-                        SnoRasterizer.render(
-                            payload = payload,
-                            width = rasterPx,
-                            height = rasterPx,
-                            yawDegrees = yaw,
-                            pitchDegrees = pitch,
-                            background = backgroundArgb,
-                            lighting = if (lit) lighting.of(payload) else null,
-                        )
-                    PlatformImage.create(pixels, rasterPx, rasterPx).toComposeImageBitmap()
+        // The buffers every frame of the turn draws into. Held here rather than
+        // allocated per frame: see [SnoRasterScratch] — a drag that allocates
+        // them spends more of the device on collecting the last frame's pair
+        // than on drawing the next one.
+        val scratch = remember(eventId) { SnoRasterScratch() }
+
+        // One collector, and angles conflated into it. A finger produces a new
+        // angle far faster than this device draws one, and `render` runs to
+        // completion whether or not anyone still wants it, so an effect
+        // restarted per angle would leave several frames in flight at once —
+        // all but one of them discarded, and all of them writing over each
+        // other's `scratch`. Conflating keeps only the newest angle waiting, so
+        // exactly one frame is ever being drawn and the turn still lands on
+        // wherever the finger actually stopped.
+        LaunchedEffect(eventId, payload, rasterPx, backgroundArgb) {
+            snapshotFlow { Triple(yaw, pitch, lit) }
+                .conflate()
+                .collect { (atYaw, atPitch, isLit) ->
+                    bitmap =
+                        withContext(Dispatchers.Default) {
+                            val pixels =
+                                SnoRasterizer.render(
+                                    payload = payload,
+                                    width = rasterPx,
+                                    height = rasterPx,
+                                    yawDegrees = atYaw,
+                                    pitchDegrees = atPitch,
+                                    background = backgroundArgb,
+                                    lighting = if (isLit) lighting.of(payload) else null,
+                                    scratch = scratch,
+                                )
+                            // Copies into the bitmap, so `scratch` is free to be
+                            // drawn over by the next frame.
+                            PlatformImage.create(pixels, rasterPx, rasterPx).toComposeImageBitmap()
+                        }
                 }
         }
 
