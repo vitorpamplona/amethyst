@@ -81,8 +81,16 @@ class MarmotPolicySeamTest {
         val marmot = groupAdminedBy(creator = alice, admins = listOf(bob))
         val epochBefore = marmot.epoch
 
-        // Same state, same proposal, no binding rules.
-        val plain = MlsGroup.restore(marmot.saveState(), MlsGroupPolicy.Permissive)
+        // Same state, same proposal, no binding AUTHORIZATION rules — but the
+        // same extension types still declared. A Marmot group carries types its
+        // older leaves do not advertise, and RFC 9420 §13.4 is enforced from
+        // leaf capabilities, so dropping the declaration too would fail this
+        // commit for a reason that has nothing to do with who may commit.
+        val noAuthorizationRules =
+            object : MlsGroupPolicy {
+                override val knownExtensionTypes = MarmotGroupPolicy.knownExtensionTypes
+            }
+        val plain = MlsGroup.restore(marmot.saveState(), noAuthorizationRules)
         plain.proposeGroupContextExtensions(plain.extensions)
         plain.commit()
 

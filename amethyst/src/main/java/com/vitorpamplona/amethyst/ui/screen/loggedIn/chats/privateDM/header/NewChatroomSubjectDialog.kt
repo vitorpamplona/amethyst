@@ -20,42 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
-import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
-import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message
-import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message_placeholder
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.nip17Dm.ui.ChatroomSubjectDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -67,103 +35,27 @@ fun NewChatroomSubjectDialog(
     accountViewModel: AccountViewModel,
     room: ChatroomKey,
 ) {
-    Dialog(
-        onDismissRequest = { onClose() },
-        properties =
-            DialogProperties(
-                dismissOnClickOutside = false,
-            ),
-    ) {
-        Surface {
-            val groupName =
-                remember {
-                    mutableStateOf(
-                        accountViewModel.account.chatroomList.rooms
-                            .get(room)
-                            ?.subject
-                            ?.value ?: "",
-                    )
-                }
-            val message = remember { mutableStateOf("") }
-            val scope = rememberCoroutineScope()
+    ChatroomSubjectDialog(
+        initialSubject =
+            remember(room) {
+                accountViewModel.account.chatroomList.rooms
+                    .get(room)
+                    ?.subject
+                    ?.value ?: ""
+            },
+        onPost = { subject, message ->
+            accountViewModel.launchSigner {
+                val template =
+                    ChatMessageEvent.build(
+                        message,
+                        room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                    ) {
+                        subject.ifBlank { null }?.let { changeSubject(it) }
+                    }
 
-            Column(
-                modifier =
-                    Modifier
-                        .padding(10.dp)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CloseButton(onPress = { onClose() })
-
-                    PostButton(
-                        onPost = {
-                            accountViewModel.launchSigner {
-                                val template =
-                                    ChatMessageEvent.build(
-                                        message.value,
-                                        room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
-                                    ) {
-                                        groupName.value.ifBlank { null }?.let { changeSubject(it) }
-                                    }
-
-                                accountViewModel.account.sendNip17PrivateMessage(template)
-                            }
-
-                            onClose()
-                        },
-                        true,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(15.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringRes(Res.string.messages_new_message_subject)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = groupName.value,
-                    onValueChange = { groupName.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(Res.string.messages_new_message_subject_caption),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    keyboardOptions =
-                        KeyboardOptions.Default.copy(
-                            capitalization = KeyboardCapitalization.Sentences,
-                        ),
-                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                )
-
-                Spacer(modifier = Modifier.height(15.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringRes(Res.string.messages_new_subject_message)) },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                    value = message.value,
-                    onValueChange = { message.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(Res.string.messages_new_subject_message_placeholder),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    keyboardOptions =
-                        KeyboardOptions.Default.copy(
-                            capitalization = KeyboardCapitalization.Sentences,
-                        ),
-                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                    maxLines = 10,
-                )
+                accountViewModel.account.sendNip17PrivateMessage(template)
             }
-        }
-    }
+        },
+        onClose = onClose,
+    )
 }

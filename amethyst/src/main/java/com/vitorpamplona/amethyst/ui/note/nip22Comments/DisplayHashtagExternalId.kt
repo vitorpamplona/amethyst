@@ -20,31 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.LinkInteractionListener
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withLink
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.hashtag_exclusive
+import com.vitorpamplona.amethyst.commons.nip73ExternalIds.ui.HashtagExternalIdCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
@@ -54,40 +33,7 @@ fun DisplayHashtagExternalId(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisplayHashtagExternalId(externalId.topic) {
+    HashtagExternalIdCard(externalId.topic) {
         nav.nav(Route.Hashtag(externalId.topic.lowercase()))
-    }
-}
-
-@Composable
-fun DisplayHashtagExternalId(
-    topic: String,
-    linkInteractionListener: LinkInteractionListener,
-) {
-    Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            symbol = MaterialSymbols.Tag,
-            contentDescription = stringRes(id = Res.string.hashtag_exclusive),
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(StdHorzSpacer)
-
-        Text(
-            text =
-                buildAnnotatedString {
-                    withLink(
-                        LinkAnnotation.Clickable("hashtag", null, linkInteractionListener),
-                    ) {
-                        append(topic)
-                    }
-                },
-            style =
-                LocalTextStyle.current.copy(
-                    fontWeight = FontWeight.Bold,
-                ),
-            maxLines = 1,
-        )
     }
 }

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CordnCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
+import com.vitorpamplona.amethyst.cli.commands.CyberspaceCommands
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
 import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
+import com.vitorpamplona.amethyst.cli.commands.SnoCommands
 import com.vitorpamplona.amethyst.cli.commands.StatusCommand
 import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.StreamCommands
@@ -243,6 +245,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "filter" -> return FilterCommand.run(tail)
         "nip" -> return NipCommand.run(tail)
         "kind" -> return KindCommand.run(tail)
+        "sno" -> return SnoCommands.dispatch(tail)
+        "cyberspace" -> return CyberspaceCommands.dispatch(tail)
         "namecoin" -> return NamecoinCommand.dispatch(tail)
     }
 
@@ -514,6 +518,9 @@ private fun printUsage() {
         |  nip N                        show a NIP (repo first, then a Nostr wiki/long-form fallback)
         |  nip list                     fetch the NIP index (README) from the repo
         |  kind N|NAME                  look up an event kind's label + NIP (number, or search by name)
+        |  sno <parse|work|verify>      Simple Nostr Objects (DECK-0003): validate, price, verify an avatar
+        |  cyberspace <coord|region>    Cyberspace places (§2), region keys (§7.2), hint boxes
+        |    <hint|open|sweep>          (§7.7), and opening or sweeping for a bag (§7.6)
         |  namecoin resolve IDENT       resolve a Namecoin identifier (.bit, d/, id/, alice@x.bit)
         |    [--server URL[,URL]]         to a Nostr pubkey + relays via the Namecoin blockchain
         |    [--timeout SECS]             (no account, talks to ElectrumX over TLS)

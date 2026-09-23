@@ -210,6 +210,8 @@ class MlsGroup private constructor(
      */
     internal fun groupContextExtensionsSnapshot(): List<Extension> = groupContext.extensions.toList()
 
+    private fun allMembersSupportExtension(extensionType: Int): Boolean = (0 until tree.leafCount).all { i -> tree.getLeaf(i)?.let { extensionType in it.capabilities.extensions } ?: true }
+
     /**
      * Encode the current ratchet tree the same way it's serialized into
      * the GroupInfo's `ratchet_tree` extension on a Welcome — a freshly-
@@ -469,6 +471,8 @@ class MlsGroup private constructor(
         leafExtensions: List<Extension> = emptyList(),
         capabilities: Capabilities = policy.defaultLeafCapabilities,
         keyPackageExtensions: List<Extension> = emptyList(),
+        /** The leaf's lifetime. Null uses the Marmot window (84 days, backdated an hour for clock skew). */
+        lifetime: Lifetime? = null,
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
         val encKp = X25519.generateKeyPair()
@@ -483,6 +487,7 @@ class MlsGroup private constructor(
                 signingKey = sigKp.privateKey,
                 capabilities = capabilities,
                 leafExtensions = leafExtensions,
+                lifetime = lifetime,
             )
 
         val unsigned =
@@ -1067,6 +1072,10 @@ class MlsGroup private constructor(
      *
      * The signature is computed with `SignWithLabel(., "FramedContentTBS",
      * FramedContentTBS)` using the member's signature private key.
+     *
+     * [authenticatedData] is sent in the clear as the message's
+     * `authenticated_data` (RFC 9420 §6.3.2). It is bound to the message by the
+     * AEAD and the signature, and returned by [decrypt].
      */
     fun encrypt(
         plaintext: ByteArray,
@@ -1445,6 +1454,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = commitBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
 
@@ -1532,6 +1542,7 @@ class MlsGroup private constructor(
                     contentType = privMsg.contentType,
                     content = proposalBytes,
                     epoch = privMsg.epoch,
+                    authenticatedData = privMsg.authenticatedData,
                 )
             }
         }
@@ -2757,18 +2768,28 @@ class MlsGroup private constructor(
             }
 
             is Proposal.GroupContextExtensions -> {
-                // RFC 9420 §12.1.7: a wholesale replacement, not a merge. The
-                // proposal's only validity rule concerns `required_capabilities`
-                // and is checked in [enforceRequiredCapabilities] once every
-                // proposal in the commit has been applied -- the membership it
-                // must hold over is the post-commit one.
+                // RFC 9420 §12.1.7: a wholesale replacement, not a merge. Its
+                // own validity rule concerns `required_capabilities` and is
+                // checked in [enforceRequiredCapabilities] once every proposal
+                // in the commit has been applied -- the membership it must hold
+                // over is the post-commit one.
                 //
-                // Note there is deliberately no check that we recognise these
-                // extension types. This used to reject anything outside a
-                // hardcoded list, which is a rule RFC 9420 does not have: it
-                // made the engine refuse valid groups built on any extension we
-                // had not enumerated, and `required_capabilities` is how a group
-                // that genuinely needs an extension understood enforces it.
+                // §13.4 adds the rule enforced here: "an extension in use by
+                // the group MUST be supported by all members of the group".
+                // That is a statement about member capabilities, not about a
+                // list of types this implementation happens to recognise, so
+                // the escape hatch is the RFC's own default types (§7.2, which
+                // forbids listing those in capabilities at all) plus whatever
+                // the binding declares -- never "types we have heard of".
+                for (ext in proposal.extensions) {
+                    require(
+                        ext.extensionType in DEFAULT_EXTENSION_TYPES ||
+                            ext.extensionType in policy.knownExtensionTypes ||
+                            allMembersSupportExtension(ext.extensionType),
+                    ) {
+                        "Unsupported extension type: ${ext.extensionType}"
+                    }
+                }
                 groupContext = groupContext.copy(extensions = proposal.extensions)
             }
 
@@ -3155,7 +3176,30 @@ class MlsGroup private constructor(
         // (0x0003 is required_capabilities — using it here makes
         // external-join GroupInfos unreadable to OpenMLS/MDK.)
         private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0004
-        private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
+
+        // 0x0005, not 0x0004: the two sat on the same value here, which made
+        // the pair indistinguishable anywhere they were compared as a set.
+        private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0005
+
+        private const val APPLICATION_ID_EXTENSION_TYPE = 0x0001
+
+        /**
+         * The extension types RFC 9420 §7.2 calls "default".
+         *
+         * A capabilities field MUST NOT list them, so they can never satisfy
+         * the §13.4 all-members-support rule and have to be exempt from it
+         * instead. This is the whole exemption: a type being one the code
+         * happens to recognise is not a reason to skip the check, and a
+         * binding's own extension types come from [MlsGroupPolicy.knownExtensionTypes].
+         */
+        private val DEFAULT_EXTENSION_TYPES =
+            setOf(
+                APPLICATION_ID_EXTENSION_TYPE,
+                RATCHET_TREE_EXTENSION_TYPE,
+                REQUIRED_CAPABILITIES_EXTENSION_TYPE,
+                EXTERNAL_PUB_EXTENSION_TYPE,
+                EXTERNAL_SENDERS_EXTENSION_TYPE,
+            )
 
         /** MLS self_remove proposal type (MIP-00 / MIP-03). */
         const val SELF_REMOVE_PROPOSAL_TYPE = 0x000A
@@ -4011,6 +4055,7 @@ class MlsGroup private constructor(
             parentHash: ByteArray? = null,
             capabilities: Capabilities,
             leafExtensions: List<Extension> = emptyList(),
+            lifetime: Lifetime? = null,
         ): LeafNode {
             val unsigned =
                 LeafNode(
@@ -4022,7 +4067,9 @@ class MlsGroup private constructor(
                     capabilities = capabilities,
                     leafNodeSource = source,
                     lifetime =
-                        if (source == LeafNodeSource.KEY_PACKAGE) {
+                        if (source == LeafNodeSource.KEY_PACKAGE && lifetime != null) {
+                            lifetime
+                        } else if (source == LeafNodeSource.KEY_PACKAGE) {
                             // A real, bounded window. `Lifetime(0, Long.MAX_VALUE)`
                             // used to go here, which any receiver enforcing
                             // `foundation/key-packages.md` rejects outright: the

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import androidx.compose.ui.graphics.ImageBitmap
 import coil3.Image
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 
@@ -28,3 +29,9 @@ expect fun PlatformImage.toCoilImage(): Image
 
 /** Decodes a base64 `data:` image URI into a Coil image; throws on malformed input. */
 expect fun base64DataUriToCoilImage(dataUri: String): Image
+
+/**
+ * Converts a decoded [PlatformImage] straight into a Compose image, for a
+ * drawing that changes every frame and so has no business in an image cache.
+ */
+expect fun PlatformImage.toComposeImageBitmap(): ImageBitmap

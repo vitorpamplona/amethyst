@@ -56,6 +56,20 @@ object MarmotGroupPolicy : MlsGroupPolicy {
     override val defaultRequiredCapabilities: Extension get() = MarmotCapabilities.mipRequired()
 
     /**
+     * Marmot's two group-context extension types, exempted from the §13.4
+     * all-members-support check.
+     *
+     * Both are advertised by [MarmotCapabilities.mipLeaf] and by the current
+     * profile, so a group built entirely by this client passes the check on
+     * capabilities alone. The exemption is for the groups that are already out
+     * there, whose older leaves predate the advertisement - dropping it would
+     * make this client refuse to apply a GroupContextExtensions proposal in a
+     * group it is happily a member of.
+     */
+    override val knownExtensionTypes: Set<Int> =
+        setOf(MarmotCapabilities.MARMOT_GROUP_DATA_EXTENSION_TYPE, AppDataDictionary.EXTENSION_TYPE)
+
+    /**
      * `MLS-Exporter("marmot", "group-event", 32)` — the outer
      * ChaCha20-Poly1305 key for a kind:445 GroupEvent. A commit must be sealed
      * under the PRE-commit epoch so members still at epoch N can open it.

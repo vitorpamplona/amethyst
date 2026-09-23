@@ -20,41 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.relay_join_request
-import com.vitorpamplona.amethyst.commons.resources.relay_leave_request
-import com.vitorpamplona.amethyst.commons.resources.relay_member_added
-import com.vitorpamplona.amethyst.commons.resources.relay_member_removed
-import com.vitorpamplona.amethyst.commons.resources.relay_members_added
-import com.vitorpamplona.amethyst.commons.resources.relay_members_count
-import com.vitorpamplona.amethyst.commons.resources.relay_members_removed
-import com.vitorpamplona.amethyst.commons.resources.relay_membership_list
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayAddMemberCard
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayJoinRequestCard
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayLeaveRequestCard
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayMembershipListCard
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRemoveMemberCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+
+// Dispatcher entries for the NIP-43 relay-membership kinds. The cards draw only from the event,
+// so the entries just decode the note; the rendering is in commonsUI nip43RelayMembers/ui.
 
 @Composable
 fun RenderRelayMembershipList(
@@ -63,15 +43,7 @@ fun RenderRelayMembershipList(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayMembershipListEvent ?: return
-    val memberCount = remember(noteEvent) { noteEvent.members().size }
-
-    RelayMemberEventCard(
-        icon = MaterialSymbols.People,
-        title = stringRes(Res.string.relay_membership_list),
-        subtitle = stringRes(Res.string.relay_members_count, memberCount),
-        nav = nav,
-        relayPubKey = noteEvent.pubKey,
-    )
+    RelayMembershipListCard(noteEvent)
 }
 
 @Composable
@@ -81,21 +53,7 @@ fun RenderRelayAddMember(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayAddMemberEvent ?: return
-    val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
-    val title =
-        if (memberKeys.size == 1) {
-            stringRes(Res.string.relay_member_added)
-        } else {
-            stringRes(Res.string.relay_members_added, memberKeys.size)
-        }
-    val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
-
-    RelayMemberEventCard(
-        icon = MaterialSymbols.PersonAdd,
-        title = title,
-        subtitle = subtitle,
-        relayPubKey = noteEvent.pubKey,
-    )
+    RelayAddMemberCard(noteEvent)
 }
 
 @Composable
@@ -105,21 +63,7 @@ fun RenderRelayRemoveMember(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayRemoveMemberEvent ?: return
-    val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
-    val title =
-        if (memberKeys.size == 1) {
-            stringRes(Res.string.relay_member_removed)
-        } else {
-            stringRes(Res.string.relay_members_removed, memberKeys.size)
-        }
-    val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
-
-    RelayMemberEventCard(
-        icon = MaterialSymbols.PersonRemove,
-        title = title,
-        subtitle = subtitle,
-        relayPubKey = noteEvent.pubKey,
-    )
+    RelayRemoveMemberCard(noteEvent)
 }
 
 @Composable
@@ -127,129 +71,11 @@ fun RenderRelayJoinRequest(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-) {
-    RelayMemberEventCard(
-        icon = MaterialSymbols.PersonAdd,
-        title = stringRes(Res.string.relay_join_request),
-        subtitle = null,
-        nav = nav,
-        relayPubKey = null,
-    )
-}
+) = RelayJoinRequestCard()
 
 @Composable
 fun RenderRelayLeaveRequest(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-) {
-    RelayMemberEventCard(
-        icon = MaterialSymbols.AutoMirrored.ExitToApp,
-        title = stringRes(Res.string.relay_leave_request),
-        subtitle = null,
-        nav = nav,
-        relayPubKey = null,
-    )
-}
-
-@Composable
-private fun RelayMemberEventCard(
-    icon: MaterialSymbol,
-    title: String,
-    subtitle: String?,
-    nav: INav? = null,
-    relayPubKey: String? = null,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                symbol = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun RelayMembershipListCardPreview() {
-    ThemeComparisonColumn {
-        RelayMemberEventCard(
-            icon = MaterialSymbols.People,
-            title = "Relay membership list",
-            subtitle = "42 members",
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun RelayAddMemberCardPreview() {
-    ThemeComparisonColumn {
-        RelayMemberEventCard(
-            icon = MaterialSymbols.PersonAdd,
-            title = "Member added to relay",
-            subtitle = "a1b2c3d4e5f6a7b8...",
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun RelayRemoveMemberCardPreview() {
-    ThemeComparisonColumn {
-        RelayMemberEventCard(
-            icon = MaterialSymbols.PersonRemove,
-            title = "Member removed from relay",
-            subtitle = "a1b2c3d4e5f6a7b8...",
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun RelayJoinRequestCardPreview() {
-    ThemeComparisonColumn {
-        RelayMemberEventCard(
-            icon = MaterialSymbols.PersonAdd,
-            title = "Relay join request",
-            subtitle = null,
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun RelayLeaveRequestCardPreview() {
-    ThemeComparisonColumn {
-        RelayMemberEventCard(
-            icon = MaterialSymbols.AutoMirrored.ExitToApp,
-            title = "Relay leave request",
-            subtitle = null,
-        )
-    }
-}
+) = RelayLeaveRequestCard()

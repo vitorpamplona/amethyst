@@ -20,25 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzPinDropdownItem
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.add_to_messages
-import com.vitorpamplona.amethyst.commons.resources.buzz_pin
-import com.vitorpamplona.amethyst.commons.resources.buzz_unpin
-import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayGroupMessagesDropdownItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
@@ -55,21 +43,11 @@ fun BuzzPinDropdownItem(
 ) {
     val stars = accountViewModel.account.buzzChannelStars
     val starred by stars.flow.collectAsStateWithLifecycle()
-    val isStarred = groupId.id in starred
-    DropdownMenuItem(
-        leadingIcon = {
-            Icon(
-                symbol = MaterialSymbols.PushPin,
-                contentDescription = null,
-                tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        },
-        text = { Text(stringRes(if (isStarred) Res.string.buzz_unpin else Res.string.buzz_pin)) },
-        onClick = {
-            closeMenu()
-            stars.toggle(groupId.id)
-        },
+
+    BuzzPinDropdownItem(
+        isPinned = groupId.id in starred,
+        closeMenu = closeMenu,
+        onToggle = { stars.toggle(groupId.id) },
     )
 }
 
@@ -88,18 +66,11 @@ fun RelayGroupMessagesDropdownItem(
     val joinedGroupIds by accountViewModel.account.relayGroupList.liveRelayGroupIds
         .collectAsStateWithLifecycle()
     val onMyList = channel.groupId in joinedGroupIds
-    DropdownMenuItem(
-        leadingIcon = {
-            Icon(
-                symbol = if (onMyList) MaterialSymbols.VisibilityOff else MaterialSymbols.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        },
-        text = { Text(stringRes(if (onMyList) Res.string.remove_from_messages else Res.string.add_to_messages)) },
-        onClick = {
-            closeMenu()
+
+    RelayGroupMessagesDropdownItem(
+        onMyList = onMyList,
+        closeMenu = closeMenu,
+        onToggle = {
             if (onMyList) {
                 accountViewModel.removeRelayGroupFromMessages(channel)
             } else {
