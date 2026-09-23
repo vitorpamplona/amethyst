@@ -86,7 +86,7 @@ private class ChangeLatch {
  */
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun <T> DeferredCrossfade(
+internal fun <T> DeferredCrossfade(
     targetState: T,
     modifier: Modifier,
     contentAlignment: Alignment,

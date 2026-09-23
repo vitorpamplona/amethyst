@@ -43,8 +43,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_status_reopen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /** Compact sizing shared by the small action buttons on git cards. */
-val CompactButtonHeight = Modifier.height(32.dp)
-val CompactButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+val GitCardButtonHeight = Modifier.height(32.dp)
+val GitCardButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
 
 /**
  * NIP-34 status buttons for an issue, patch or pull request: "Reopen" when it is
@@ -67,8 +67,8 @@ fun GitStatusButtons(
         if (closedOrApplied) {
             FilledTonalButton(
                 onClick = onReopen,
-                modifier = CompactButtonHeight,
-                contentPadding = CompactButtonPadding,
+                modifier = GitCardButtonHeight,
+                contentPadding = GitCardButtonPadding,
             ) {
                 Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(16.dp))
                 Text(stringRes(Res.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
@@ -77,8 +77,8 @@ fun GitStatusButtons(
             if (isPatchOrPr) {
                 FilledTonalButton(
                     onClick = onMarkMerged,
-                    modifier = CompactButtonHeight,
-                    contentPadding = CompactButtonPadding,
+                    modifier = GitCardButtonHeight,
+                    contentPadding = GitCardButtonPadding,
                 ) {
                     Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Text(stringRes(Res.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
@@ -87,8 +87,8 @@ fun GitStatusButtons(
             OutlinedButton(
                 onClick = onClose,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = CompactButtonHeight,
-                contentPadding = CompactButtonPadding,
+                modifier = GitCardButtonHeight,
+                contentPadding = GitCardButtonPadding,
             ) {
                 Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
                 Text(stringRes(Res.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))

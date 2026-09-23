@@ -124,7 +124,7 @@ fun RelayLeaveRequestCard() {
 }
 
 @Composable
-fun RelayMemberEventCard(
+private fun RelayMemberEventCard(
     icon: MaterialSymbol,
     title: String,
     subtitle: String?,

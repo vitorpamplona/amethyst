@@ -198,7 +198,7 @@ fun LongChannelActionOptions(
 
     EditButtonIfIamCreator(channel, accountViewModel, nav)
 
-    LeaveButtonIfFollowing(channel, accountViewModel, nav)
+    LeaveButtonIfFollowing(channel, accountViewModel)
 }
 
 @Composable
@@ -221,7 +221,6 @@ fun EditButtonIfIamCreator(
 fun LeaveButtonIfFollowing(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
-    nav: INav,
 ) {
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
