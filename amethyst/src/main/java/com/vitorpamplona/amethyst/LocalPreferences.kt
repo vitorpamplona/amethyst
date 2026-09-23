@@ -467,11 +467,15 @@ object LocalPreferences {
         globalSettingsPrefs().edit { putBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, enabled) }
     }
 
+    private fun legacyCurrentAccount(): String? = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+
+    private fun legacyAllAccountInfo(): String? = encryptedPreferences().getString(PrefKeys.ALL_ACCOUNT_INFO, null)
+
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {
             currentAccount =
                 withContext(Dispatchers.IO) {
-                    encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+                    accountRoster.currentAccount(::legacyCurrentAccount, ::legacyAllAccountInfo)
                 }
         }
         return currentAccount
@@ -482,12 +486,14 @@ object LocalPreferences {
             currentAccount = null
             withContext(Dispatchers.IO) {
                 encryptedPreferences().edit { clear() }
+                accountRoster.clear()
             }
         } else if (currentAccount != info.npub) {
             currentAccount = info.npub
             if (!info.isTransient) {
                 withContext(Dispatchers.IO) {
                     encryptedPreferences().edit { putString(PrefKeys.CURRENT_ACCOUNT, info.npub) }
+                    accountRoster.mirrorCurrentAccount(info.npub)
                 }
             }
         }
@@ -507,7 +513,7 @@ object LocalPreferences {
         withContext(Dispatchers.IO) {
             with(encryptedPreferences()) {
                 val newSystemOfAccounts =
-                    getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                    (accountRoster.allAccountInfoJson(::legacyCurrentAccount, ::legacyAllAccountInfo) ?: "[]").let {
                         JsonMapper.fromJson<List<AccountInfo>>(it)
                     }
 
@@ -545,13 +551,9 @@ object LocalPreferences {
             if (savedAccounts != accounts) {
                 savedAccounts.emit(accounts)
 
-                encryptedPreferences()
-                    .edit {
-                        putString(
-                            PrefKeys.ALL_ACCOUNT_INFO,
-                            JsonMapper.toJson(accounts.filter { !it.isTransient }),
-                        )
-                    }
+                val json = JsonMapper.toJson(accounts.filter { !it.isTransient })
+                encryptedPreferences().edit { putString(PrefKeys.ALL_ACCOUNT_INFO, json) }
+                accountRoster.mirrorAllAccountInfoJson(json)
             }
         }
 
