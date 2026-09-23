@@ -2894,7 +2894,7 @@ class MlsGroup private constructor(
                 require(
                     verifyLeafNodeSignature(proposal.leafNode, groupId, senderLeafIndex),
                 ) { "Invalid LeafNode signature in Update proposal" }
-                tree.setLeaf(senderLeafIndex, proposal.leafNode)
+                tree.updateLeaf(senderLeafIndex, proposal.leafNode)
             }
 
             is Proposal.GroupContextExtensions -> {

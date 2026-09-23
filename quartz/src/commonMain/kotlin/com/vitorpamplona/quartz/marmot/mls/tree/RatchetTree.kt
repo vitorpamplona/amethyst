@@ -148,6 +148,23 @@ class RatchetTree(
     }
 
     /**
+     * Apply an Update proposal (RFC 9420 §12.1.2): replace the sender's LeafNode AND blank the intermediate nodes on its
+     * direct path. Replacing only the leaf keeps the sender's old path keys where the RFC (and the tree-operations test
+     * vectors) have blanks — a different tree hash whenever those nodes are not overwritten by the committer's UpdatePath.
+     */
+    fun updateLeaf(
+        leafIndex: Int,
+        leafNode: LeafNode,
+    ) {
+        setLeaf(leafIndex, leafNode)
+        for (nodeIdx in BinaryTree.directPath(leafIndex, _leafCount)) {
+            if (nodeIdx < nodes.size) {
+                nodes[nodeIdx] = null
+            }
+        }
+    }
+
+    /**
      * Remove a member by blanking their leaf and all parent nodes on the direct path.
      *
      * RFC 9420 §7.8: trailing blank leaves MUST be trimmed so every participant

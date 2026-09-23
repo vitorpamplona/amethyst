@@ -99,6 +99,41 @@ class TreeOperationsInteropTest {
     }
 
     /**
+     * Apply each vector's proposal to `tree_before` with the tree operations the group uses, and compare with
+     * `tree_after` byte for byte. The two tests above check both trees in isolation, never the operation in between.
+     */
+    @Test
+    fun testApplyProposal() {
+        assertTrue(vectors.isNotEmpty(), "No cipher_suite==1 tree-operations vectors found")
+        val mismatches = ArrayList<String>()
+        for ((idx, v) in vectors.withIndex()) {
+            val tree = RatchetTree.decodeTls(TlsReader(v.treeBefore.hexToByteArray()))
+            val kind =
+                when (val p = Proposal.decodeTls(TlsReader(v.proposal.hexToByteArray()))) {
+                    is Proposal.Add -> {
+                        tree.addLeaf(p.keyPackage.leafNode)
+                        "add"
+                    }
+                    is Proposal.Remove -> {
+                        tree.removeLeaf(p.removedLeafIndex)
+                        "remove"
+                    }
+                    is Proposal.Update -> {
+                        tree.updateLeaf(v.proposalSender, p.leafNode)
+                        "update"
+                    }
+                    else -> error("unexpected proposal in vector $idx: $p")
+                }
+            val writer = TlsWriter()
+            tree.encodeTls(writer)
+            if (writer.toByteArray().toHexKey() != v.treeAfter || tree.treeHash().toHexKey() != v.treeHashAfter) {
+                mismatches.add("vector $idx ($kind by leaf ${v.proposalSender})")
+            }
+        }
+        assertTrue(mismatches.isEmpty(), "tree_after mismatch after applying the proposal: $mismatches")
+    }
+
+    /**
      * RFC 9420 §7.7 for `addLeaf`, on every tree in the vectors: each non-blank parent on the new leaf's direct path keeps
      * its key and records the new leaf in `unmerged_leaves`; blank ones stay blank. The tree-operations vectors never add
      * under a populated parent that the add itself must preserve, so applying them cannot catch a blanking `addLeaf`;
