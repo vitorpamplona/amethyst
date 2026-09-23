@@ -5392,4 +5392,45 @@
     <string name="new_conversation_cordn_con_1">The coordinator learns who is in the group and when you talk, even though it cannot read what you say.</string>
     <string name="cordn_invitations_entry">Invited to a cordn group?</string>
     <string name="cordn_invitations_entry_action">Review invitations</string>
+
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <string name="cordn_hub_title">cordn</string>
+    <string name="cordn_hub_search_keywords" translatable="false">cordn coordinator group mls chat migrate backup key package link move device</string>
+    <string name="cordn_hub_explainer">Groups delivered by a coordinator you choose, instead of by relays.</string>
+    <string name="cordn_hub_link">Inspect a group link</string>
+    <string name="cordn_hub_link_desc">See what a cordn1… link points at before you act on it</string>
+    <string name="cordn_hub_coordinators">Coordinators</string>
+    <string name="cordn_hub_coordinators_desc">The servers that carry your groups</string>
+    <string name="cordn_hub_keypackages">Key packages</string>
+    <string name="cordn_hub_keypackages_desc">What lets people add you to a group</string>
+    <string name="cordn_hub_backup">Backup and restore</string>
+    <string name="cordn_hub_backup_desc">A passphrase-encrypted file you keep</string>
+    <string name="cordn_hub_migrate">Move to a new phone</string>
+    <string name="cordn_hub_migrate_desc">Hand your groups to a device you are switching to</string>
+
+    <string name="cordn_migrate_title">Move to a new phone</string>
+    <string name="cordn_migrate_search_keywords" translatable="false">cordn migrate move new phone device transfer handoff switch qr</string>
+    <string name="cordn_migrate_explainer">Your cordn groups live on this device. Moving them takes one code: this phone publishes them, the new phone reads them, and this phone stops.</string>
+    <string name="cordn_migrate_sign_in_first">Sign in with the same account on the new phone first. This moves your groups, never your key.</string>
+    <string name="cordn_migrate_export">Start the handoff</string>
+    <string name="cordn_migrate_exporting">Publishing…</string>
+    <string name="cordn_migrate_scan_this">Scan this on the new phone</string>
+    <string name="cordn_migrate_code_note">The code is only a pointer. Anyone who photographs it learns nothing — what it points at is encrypted to you.</string>
+    <string name="cordn_migrate_handed_off">This device has handed its groups over</string>
+    <string name="cordn_migrate_handed_off_desc">It has stopped sending and receiving, because two phones sending from one group would break it for everyone in it. Your groups are still on this device and nothing was deleted.</string>
+    <string name="cordn_migrate_cancel">Take this device back</string>
+    <string name="cordn_migrate_cancel_desc">Use this if the move did not finish. Only do it if the new phone has not started sending.</string>
+    <string name="cordn_migrate_receive">Receive from another phone</string>
+    <string name="cordn_migrate_scan">Scan the code</string>
+    <string name="cordn_migrate_paste">or paste it</string>
+    <string name="cordn_migrate_import">Bring the groups here</string>
+    <string name="cordn_migrate_importing">Fetching…</string>
+    <string name="cordn_migrate_replaces_warning">This replaces any cordn groups already on this phone. They cannot be merged.</string>
+    <string name="cordn_migrate_done">%1$d groups moved</string>
+    <string name="cordn_migrate_no_groups">There are no cordn groups on this device to move.</string>
+    <string name="cordn_migrate_no_server">Set a media server first — the encrypted documents need somewhere to sit while the other phone fetches them.</string>
+    <string name="cordn_migrate_exposure_title">What leaves this device</string>
+    <string name="cordn_migrate_exposure_body">Your group state is encrypted and uploaded to your media server so the other phone can fetch it. It is unreadable to that server, which sees only a size and a time. Delete the blobs afterwards if you want nothing left behind.</string>
 </resources>

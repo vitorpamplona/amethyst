@@ -667,6 +667,11 @@ sealed class Route {
 
     @Serializable object CordnBackup : Route()
 
+    /** The one cordn entry in settings; everything else hangs off it. */
+    @Serializable object CordnHub : Route()
+
+    @Serializable object CordnMigrate : Route()
+
     @Serializable
     data class AgentConsole(
         val relayUrl: String,

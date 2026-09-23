@@ -43,14 +43,8 @@ import com.vitorpamplona.amethyst.commons.resources.call_settings
 import com.vitorpamplona.amethyst.commons.resources.call_settings_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.compose_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.compose_settings
-import com.vitorpamplona.amethyst.commons.resources.cordn_backup_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
-import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
-import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_title
-import com.vitorpamplona.amethyst.commons.resources.cordn_link_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_hub_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.cordn_hub_title
 import com.vitorpamplona.amethyst.commons.resources.danger_zone
 import com.vitorpamplona.amethyst.commons.resources.drawer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings
@@ -170,10 +164,14 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.napplet_permissions_title, MaterialSymbols.Apps, Res.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
                     symEntry(Res.string.relay_auth_settings_title, MaterialSymbols.Lock, Res.string.relay_auth_search_keywords, Route.RelayAuthSettings),
                     symEntry(Res.string.call_settings, MaterialSymbols.Phone, Res.string.call_settings_search_keywords, Route.CallSettings),
-                    symEntry(Res.string.cordn_link_title, MaterialSymbols.Dns, Res.string.cordn_link_search_keywords, Route.CordnLink),
-                    symEntry(Res.string.cordn_coordinators_title, MaterialSymbols.Dns, Res.string.cordn_coordinators_search_keywords, Route.CordnCoordinators),
-                    symEntry(Res.string.cordn_keypackages_title, MaterialSymbols.Key, Res.string.cordn_keypackages_search_keywords, Route.CordnKeyPackages),
-                    symEntry(Res.string.cordn_backup_title, MaterialSymbols.Dns, Res.string.cordn_backup_search_keywords, Route.CordnBackup),
+                    // One entry, not five. cordn's screens are coordinators,
+                    // key packages, link inspection, backup and migration —
+                    // each a page a user visits rarely and only because they
+                    // are already thinking about cordn. Five flat rows made it
+                    // the largest feature in this list by count and the least
+                    // used by far; the hub keeps them all reachable and
+                    // searchable under one name.
+                    symEntry(Res.string.cordn_hub_title, MaterialSymbols.Dns, Res.string.cordn_hub_search_keywords, Route.CordnHub),
                 ),
         )
 
