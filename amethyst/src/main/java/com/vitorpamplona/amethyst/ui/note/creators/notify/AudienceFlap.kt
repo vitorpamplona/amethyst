@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceGroupChip
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_empty_private
 import com.vitorpamplona.amethyst.commons.resources.audience_empty_public
@@ -83,8 +85,6 @@ import com.vitorpamplona.amethyst.commons.resources.notify_mute_user
 import com.vitorpamplona.amethyst.commons.resources.notify_unmute_user
 import com.vitorpamplona.amethyst.commons.resources.private_note_visible_to
 import com.vitorpamplona.amethyst.commons.resources.reply_notify
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceGroupChip
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp

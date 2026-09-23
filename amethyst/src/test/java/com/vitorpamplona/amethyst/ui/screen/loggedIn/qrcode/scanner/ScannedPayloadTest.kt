@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.ScannedPayload
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNsec

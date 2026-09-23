@@ -62,6 +62,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceCap
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceList
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceListKind
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceMember
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_add_anyway
@@ -83,11 +88,6 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.num_selected
 import com.vitorpamplona.amethyst.commons.resources.select_all
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceCap
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceListKind
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceMember
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness

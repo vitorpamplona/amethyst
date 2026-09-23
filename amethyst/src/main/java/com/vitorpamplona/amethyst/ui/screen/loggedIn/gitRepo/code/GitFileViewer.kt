@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.git_repo_binary_file
@@ -70,8 +72,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_plain_text
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitLoadingBox
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitMessageBox
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.setText

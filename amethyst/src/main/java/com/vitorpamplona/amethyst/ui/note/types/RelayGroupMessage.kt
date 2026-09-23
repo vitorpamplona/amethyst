@@ -44,11 +44,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayNameChip
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayNameChip
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -106,7 +106,7 @@ fun RenderRelayGroupMessage(
 /**
  * A compact, tappable header naming the Buzz group (or DM participant) a message belongs to, plus a
  * [RelayNameChip] naming its host relay — the same pairing the Messages row uses, and the NIP-29
- * analog of the [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill]
+ * analog of the [com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill]
  * a Concord message wears on these same cards. A group id is only unique within its host relay, so
  * without the relay a notification from `#general` doesn't say *which* `#general` it came from. The
  * chip taps through to the relay's channel list, while the name/avatar open the room itself.

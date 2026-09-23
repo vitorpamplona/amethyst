@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.navigation.bottombars
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.badges
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
@@ -83,8 +85,6 @@ import com.vitorpamplona.amethyst.commons.resources.software_apps
 import com.vitorpamplona.amethyst.commons.resources.wallet
 import com.vitorpamplona.amethyst.commons.resources.web_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.workouts
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.GeocacheTab
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 

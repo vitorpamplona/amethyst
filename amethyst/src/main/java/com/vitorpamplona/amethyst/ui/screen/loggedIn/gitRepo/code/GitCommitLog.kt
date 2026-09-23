@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitLoadingBox
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitMessageBox
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
 import com.vitorpamplona.amethyst.commons.resources.git_repo_code_error
@@ -66,8 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitLoadingBox
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitMessageBox
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot

@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_already_saved
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_backup_now
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_body
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_dismiss
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_nudge_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer

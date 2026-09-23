@@ -38,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.buzz.ui.DropdownOption
+import com.vitorpamplona.amethyst.commons.buzz.ui.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_avatar
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_display_name
@@ -53,8 +55,6 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.DropdownOption
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 

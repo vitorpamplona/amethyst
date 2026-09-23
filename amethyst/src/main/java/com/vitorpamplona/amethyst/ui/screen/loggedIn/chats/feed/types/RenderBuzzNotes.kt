@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_job_requested
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_result
 import com.vitorpamplona.amethyst.commons.resources.buzz_message_edited
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

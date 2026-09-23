@@ -695,7 +695,7 @@ class ScreenTimeIntegratorTest {
 
     @Test
     fun routeNamesLoseTheirArgumentsBeforeAnythingIsRecorded() {
-        assertEquals("Profile", ScreenTimeIntegrator.screenNameOf("com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route.Profile/{userId}"))
+        assertEquals("Profile", ScreenTimeIntegrator.screenNameOf("com.vitorpamplona.amethyst.commons.model.navigation.Route.Profile/{userId}"))
         assertEquals("Hashtag", ScreenTimeIntegrator.screenNameOf("routes.Route.Hashtag/{tag}?extra={extra}"))
         assertEquals("Home", ScreenTimeIntegrator.screenNameOf("routes.Route.Home"))
         assertNull(ScreenTimeIntegrator.screenNameOf(null))

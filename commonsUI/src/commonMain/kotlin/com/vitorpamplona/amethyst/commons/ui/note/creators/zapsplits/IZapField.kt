@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 
 @Stable
 interface IZapField {

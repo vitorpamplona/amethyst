@@ -62,6 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.mediaServers.ui.MediaServerEditField
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_a_blossom_server
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_add_url_label
@@ -81,9 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_secti
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
-import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.MediaServerEditField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes

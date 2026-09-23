@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.import_follow_list
 import com.vitorpamplona.amethyst.commons.resources.import_follows_tips
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_f
 import com.vitorpamplona.amethyst.commons.resources.supports_npub_nip_05_hex_and_namecoin_bit_d_id
 import com.vitorpamplona.amethyst.commons.resources.tip
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness

@@ -24,7 +24,6 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 
 /**
  * [zonedDrawerSwipe] gated on the drawer actually being modal. With the drawer permanently

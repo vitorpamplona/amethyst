@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
+import com.vitorpamplona.amethyst.commons.nip56Reports.ui.reportTypeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_dismiss
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_more_coun
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_subtitle
 import com.vitorpamplona.amethyst.commons.resources.dm_sender_reported_who
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.types.reportTypeLabels
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer

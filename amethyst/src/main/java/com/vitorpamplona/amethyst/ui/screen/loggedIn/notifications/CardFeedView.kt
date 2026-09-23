@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.OpenPollsSectionHeader
+import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding

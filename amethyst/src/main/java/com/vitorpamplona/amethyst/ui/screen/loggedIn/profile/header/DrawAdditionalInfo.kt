@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.resources.telegram
 import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy3dp

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.ui.connectedAppRoute
 import com.vitorpamplona.amethyst.ui.isConnectedAppRoute
 import com.vitorpamplona.amethyst.ui.urlRoute

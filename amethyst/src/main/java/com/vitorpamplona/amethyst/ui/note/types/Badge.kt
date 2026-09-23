@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accept_badge
 import com.vitorpamplona.amethyst.commons.resources.award_badge
@@ -74,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.resources.badge_untitled
 import com.vitorpamplona.amethyst.commons.resources.reject_badge
 import com.vitorpamplona.amethyst.commons.resources.unaccept_badge
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow

@@ -26,7 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_archived
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_created
@@ -53,9 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.duration_days
 import com.vitorpamplona.amethyst.commons.resources.duration_hours
 import com.vitorpamplona.amethyst.commons.resources.duration_minutes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName

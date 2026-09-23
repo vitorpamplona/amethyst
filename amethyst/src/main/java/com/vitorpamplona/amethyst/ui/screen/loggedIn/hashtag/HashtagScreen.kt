@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
+import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_hide_word
@@ -54,10 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.unmute_hashtag
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.FollowButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag

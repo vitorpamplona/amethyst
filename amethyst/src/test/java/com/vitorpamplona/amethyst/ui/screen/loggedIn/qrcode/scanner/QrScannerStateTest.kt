@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlin.reflect.KClass
 
 inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true

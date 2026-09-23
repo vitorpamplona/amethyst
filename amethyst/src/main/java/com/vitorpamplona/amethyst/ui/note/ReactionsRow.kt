@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -153,7 +154,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandLessIcon

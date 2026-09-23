@@ -73,10 +73,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier

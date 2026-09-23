@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.commons.ui.theme.DefaultPrimary
+import com.vitorpamplona.amethyst.commons.ui.theme.Primary80
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -51,8 +51,8 @@ object PlatformAccent {
             Platform.GNOME -> gnomeAccent()
             Platform.KDE -> kdeAccent()
             Platform.WINDOWS -> windowsAccent()
-            else -> DefaultPrimary
-        } ?: DefaultPrimary
+            else -> Primary80
+        } ?: Primary80
     }
 
     private fun forcedAccent(): Color? {

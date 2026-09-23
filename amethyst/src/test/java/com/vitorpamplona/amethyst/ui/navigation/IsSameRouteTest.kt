@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isSameRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

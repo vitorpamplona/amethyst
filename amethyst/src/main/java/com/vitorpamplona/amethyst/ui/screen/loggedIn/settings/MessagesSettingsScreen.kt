@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
+import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_type_concord_desc
 import com.vitorpamplona.amethyst.commons.resources.chat_type_concord_title
@@ -89,7 +90,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_view_mode_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

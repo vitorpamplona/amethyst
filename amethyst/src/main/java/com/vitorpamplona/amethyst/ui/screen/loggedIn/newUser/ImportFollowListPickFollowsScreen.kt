@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accounts_found
 import com.vitorpamplona.amethyst.commons.resources.fetching_follow_list
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.resources.select_users_to_follow
 import com.vitorpamplona.amethyst.commons.resources.skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap

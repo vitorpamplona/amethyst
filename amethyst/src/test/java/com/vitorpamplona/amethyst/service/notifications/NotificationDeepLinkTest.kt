@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.chatroomRoute
 import com.vitorpamplona.amethyst.ui.isChatroomRoute

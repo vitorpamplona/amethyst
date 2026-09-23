@@ -25,11 +25,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.profile.ui.EditButton
+import com.vitorpamplona.amethyst.commons.profile.ui.ListButton
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.ListButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.EditButton
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 

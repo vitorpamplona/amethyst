@@ -78,15 +78,17 @@ in `commonsUI`, under the same package.
 | `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
+`model/navigation` also holds the headless navigation identifiers: `NavBarItem`, `BottomBarEntry` and the app's `@Serializable` `Route` catalog (`Routes.kt`). `model/composer` holds post-composer state that is not UI (`AudienceSelection`, `SplitBuilder`, `IZapRaiser`).
+
 ¹ `model` uses only the `@Stable`/`@Immutable` runtime annotations — CLI-safe.
 
 ### Protocol-adjacent business logic (CLI-safe)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
 | `actions`      | no  | Event builders for user actions (follow, zap…). The canonical entry point for non-UI callers. |
-| `account`      | no  | New-account bootstrap events. |
-| `onchain`      | no  | On-chain zap splitting/broadcasting. |
-| `marmot`       | no  | MLS group-chat event processing. |
+| `account`      | mixed | New-account bootstrap events; the logged-off login/sign-up buttons in `commonsUI` `account/ui/login` and `account/ui/signup`. |
+| `onchain`      | mixed | On-chain zap splitting/broadcasting; user-facing failure strings in `commonsUI` `onchain/ui`. |
+| `marmot`       | mixed | MLS group-chat event processing; group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
@@ -94,7 +96,9 @@ in `commonsUI`, under the same package.
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |
 | `blurhash`     | no  | BlurHash encode/decode (pure math; platform image bridge in platform sets). |
 | `thumbhash`    | no  | ThumbHash encode/decode. |
-| `nipACWebRtcCalls` | no | NIP-AC WebRTC **call state machine** + peer-session abstraction. See `nipACWebRtcCalls/ARCHITECTURE.md`. (Mirrors `quartz/.../nipACWebRtcCalls`.) |
+| `nipACWebRtcCalls` | mixed | NIP-AC WebRTC **call state machine** + peer-session abstraction. See `nipACWebRtcCalls/ARCHITECTURE.md`. (Mirrors `quartz/.../nipACWebRtcCalls`.) Call-screen previews in `commonsUI` `nipACWebRtcCalls/ui`. |
+| `qrcode`       | mixed | Scanned-payload classification (`classifyScannedPayload`: NIP-19, `nostr:` URIs, relays, NWC/LN) here; scanner sheets in `commonsUI` `qrcode/ui`. |
+| `scheduledposts` | mixed | Scheduled-post model + signed-event parsers (`extractFirstMediaUrl`, `extractEventId`, `extractContentPreview`); the `MediaThumbnail` composable in `commonsUI` `scheduledposts/ui`. |
 
 ### State holders & ViewModels
 | Package        | UI? | Purpose |
@@ -113,7 +117,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
 | `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. See the `relay-client` skill. |
-| `relays`       | no  | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`). |
+| `relays`       | mixed | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`); relay-list settings composables (`DraggableRelayList`, `RelayEventCountRow`, the NIP-45 count result types) in `commonsUI` `relays/ui`. |
 
 ### Platform abstractions (`expect`/`actual`)
 | Package        | UI? | Purpose |
@@ -126,7 +130,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### UI (Compose — lives in **`commonsUI`**)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. Nothing under `ui.*` lives in *this* module any more: the feed DAL that used to sit in `ui/feeds` is now `feeds/`, and the reply-context logic that sat in `ui/note` (`replyingDirectlyTo`, `ReplyContext`) is now in `model/` next to `ThreadAssembler`. |
+| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/note`, `ui/richtext`, `ui/search`, `ui/notifications`, `ui/screens`, `ui/layouts`, `ui/feeds` (feed shell: empty/error/loading states, refresh box, remembered scroll states), `ui/navigation` (`INav`, `EmptyNav`, top bars, drawer swipe), `ui/markdown`, `ui/privacylock`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. Nothing under `ui.*` lives in *this* module any more: the feed DAL that used to sit in `ui/feeds` is now `feeds/`, and the reply-context logic that sat in `ui/note` (`replyingDirectlyTo`, `ReplyContext`) is now in `model/` next to `ThreadAssembler`. |
 | `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent` (here). |
 | `icons`        | yes | `ImageVector` icon definitions + builders, Material Symbols codepoints, the icon-font glyph tables. |
 | `hashtags`     | yes | Custom hashtag `ImageVector`s. |
@@ -135,6 +139,8 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 | `service/image` | mixed | `CoilImageBridge` + the BlurHash/ThumbHash/Base64/Blossom Coil fetchers are `commonsUI` (they are Coil); the headless image helpers stay here. |
 | `napplet`      | mixed | Protocol/permission logic here; `NappletWebContract` (serves the shell/shim from `composeResources`) in `commonsUI`. |
 | `favorites`, `nip30CustomEmojis`, `nip34Git`, `nip85TrustedAssertions`, `nip53LiveActivities` | mixed | Logic here; each feature's `ui/` (or the flat `FavoriteAppIcon`, `EmojiSuggestionState`) in `commonsUI`. |
+| `chats` | yes | Composables shared by every chat kind (DMs, public chats, relay groups, concord): unread badge, divisors, system messages, author line, send button, reply toggle, new-conversation screen. Chat *models* are in `model/chats`. |
+| `nip17Dm`, `nip23LongContent`, `nip28PublicChat`, `nip29RelayGroups`, `nip51Lists`, `nip52Calendar`, `nip56Reports`, `nip72ModCommunities`, `nipC0CodeSnippets`, `nipCCGeocaching`, `birdstar`, `buzz`, `cashu`, `concord`, `ephemChat`, `music`, `mediaServers`, `browser`, `profile`, `napplet` | yes / mixed | Single-feature UI under `<feature>/ui` (named after the `quartz` package, or its concern name when `quartz` has none). Where the package also has logic (`cashu`, `browser`, `napplet`, `profile`) that part stays here; the `buzz` and `concord` models are in `model/buzz` and `model/concord`. |
 
 ### Mixed (documented debt — see §4)
 | Package        | UI? | Purpose |

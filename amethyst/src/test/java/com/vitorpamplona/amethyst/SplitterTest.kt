@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import android.os.Looper
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.SpyK

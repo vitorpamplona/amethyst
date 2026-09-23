@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 
 /**
  * Bridges the shell-level [AppNavigationRail] to the per-screen re-tap behaviors that live in

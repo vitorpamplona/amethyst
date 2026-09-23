@@ -25,7 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.navOptions
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import io.mockk.every
 import io.mockk.mockk

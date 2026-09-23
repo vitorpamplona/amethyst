@@ -608,7 +608,9 @@ fun testNavigationToProfile() {
 
 ## File Locations
 
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/routes/Routes.kt`
+- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/navigation/Routes.kt` (route catalog)
+- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/navigation/navs/INav.kt`
+- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/routes/RouteNavController.kt` (NavHost helpers)
 - `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/AppNavigation.kt`
 - `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/Nav.kt`
 - `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/bottombars/AppBottomBar.kt`

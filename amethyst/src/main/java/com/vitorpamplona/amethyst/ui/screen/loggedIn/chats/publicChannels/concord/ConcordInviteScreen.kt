@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_unkno
 import com.vitorpamplona.amethyst.commons.resources.concord_redeeming_invite
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

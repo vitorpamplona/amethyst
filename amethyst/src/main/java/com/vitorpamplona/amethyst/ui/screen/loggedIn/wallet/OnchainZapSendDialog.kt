@@ -75,6 +75,9 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
+import com.vitorpamplona.amethyst.commons.onchain.ui.labelRes
+import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
+import com.vitorpamplona.amethyst.commons.onchain.ui.userMessageText
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
@@ -114,9 +117,6 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.labelRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.technicalDetail
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.userMessageText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS

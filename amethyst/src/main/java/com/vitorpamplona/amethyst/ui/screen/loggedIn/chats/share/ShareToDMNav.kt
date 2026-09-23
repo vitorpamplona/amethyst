@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 
 /**
  * Wraps an [INav] so that navigating to a chatroom ([Route.Room]) from the

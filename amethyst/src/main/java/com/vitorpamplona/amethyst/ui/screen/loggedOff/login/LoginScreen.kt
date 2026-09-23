@@ -66,6 +66,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginButton
+import com.vitorpamplona.amethyst.commons.account.ui.login.SignUpButton
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -77,8 +79,6 @@ import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.login.LoginButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedOff.login.SignUpButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp

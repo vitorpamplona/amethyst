@@ -90,7 +90,7 @@ private val MarkerAccent = Color(0xFFF5C518)
 /**
  * The "New Highlight" composer. Reached either from the "Add highlight" action, a browser
  * share, or the "Highlight" note-action, routed in as
- * [com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route.NewHighlight].
+ * [com.vitorpamplona.amethyst.commons.model.navigation.Route.NewHighlight].
  *
  * A NIP-84 highlight is a quoted passage, its source, and an optional annotation:
  * - the passage is a pull-quote you craft (accent bar + quotation-mark watermark),

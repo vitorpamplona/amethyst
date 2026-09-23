@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import kotlin.concurrent.Volatile
 
 // Contrast colour (black or white) for content drawn on top of an accent swatch.
 fun contentColorOnAccent(color: Color): Color = onAccent(color)
@@ -351,20 +352,31 @@ val lightBlackTagModifier =
         .background(LightColorPalette.onBackground)
         .padding(horizontal = 5.dp)
 
-// Compared against the dark palette's background instead of a fixed primary so the check keeps
-// working when the user picks a non-purple accent (accent only changes primary/secondary, never
-// background). Kept as a single reference comparison because this getter fans out to hundreds of
-// themed-color call sites on hot rendering paths — luminance()/etc. would add real per-frame cost.
-//
-// Other front ends (desktop) ship their own neutral ramp, so a background that is neither of the
-// two Amethyst ones falls back to a luminance test.
+// Hot path: this getter fans out to hundreds of themed-color call sites during rendering, so the
+// two Amethyst backgrounds (accent choice never changes them) are answered with one reference
+// comparison each. Any other ramp - desktop's own palette, or an audio room that overrides the
+// background with its theme colour - is decided by luminance, which is memoized for the last
+// background seen: those screens keep asking about the same colour, so they pay for
+// luminance() once per background instead of once per call.
 val ColorScheme.isLight: Boolean
-    get() =
-        when (background) {
-            Color.Black -> false
-            LightColorPalette.background -> true
-            else -> background.luminance() > 0.5f
-        }
+    get() {
+        val bg = background
+        if (bg == Color.Black) return false
+        if (bg == LightColorPalette.background) return true
+        val memo = lastIsLightMemo
+        if (memo != null && memo.background == bg) return memo.isLight
+        return (bg.luminance() > 0.5f).also { lastIsLightMemo = IsLightMemo(bg, it) }
+    }
+
+private class IsLightMemo(
+    val background: Color,
+    val isLight: Boolean,
+)
+
+// One immutable pair behind a volatile reference, so a reader never sees a background from one
+// write paired with the answer from another.
+@Volatile
+private var lastIsLightMemo: IsLightMemo? = null
 
 // The accent-derived tints below are computed from the live scheme's primary so they follow
 // the selected accent color. Color is an inline value class, so these copies don't allocate.

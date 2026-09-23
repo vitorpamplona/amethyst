@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.resources.create
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.resources.send
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding

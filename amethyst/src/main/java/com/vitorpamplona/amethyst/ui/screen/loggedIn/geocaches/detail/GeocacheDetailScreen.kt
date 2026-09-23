@@ -71,6 +71,7 @@ import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.geocache_add_note
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
 import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpoilerHint

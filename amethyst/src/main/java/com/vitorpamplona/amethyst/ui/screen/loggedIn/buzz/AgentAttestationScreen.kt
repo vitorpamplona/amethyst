@@ -59,6 +59,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.buzz.ui.DropdownOption
+import com.vitorpamplona.amethyst.commons.buzz.ui.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -90,8 +92,6 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_topbar
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_warning
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.DropdownOption
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText

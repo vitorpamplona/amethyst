@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.model.Account
 import io.mockk.every
 import io.mockk.mockk

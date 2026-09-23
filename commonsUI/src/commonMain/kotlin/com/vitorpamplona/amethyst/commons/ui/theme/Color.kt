@@ -69,3 +69,44 @@ val DarkAllGoodColor = Color(0xFF99cc33)
 
 val LightFundraiserProgressColor = Color(0xFF3DB601)
 val DarkFundraiserProgressColor = Color(0xFF61A229)
+
+// Brand colors used by desktop chrome.
+val AmethystBlue = Color(0xFF0096FF)
+val AmethystBlueDark = Color(0xFF4DB8FF)
+val AmethystPurple = Color(0xFF9A82DB)
+
+// Tonal steps of the default purple (desktop's accent picker falls back to Primary80).
+val Primary50 = Color(red = 127, green = 103, blue = 190)
+val Primary60 = Color(red = 154, green = 130, blue = 219)
+val Primary70 = Color(red = 182, green = 157, blue = 248)
+val Primary80 = Color(red = 208, green = 188, blue = 255)
+
+val Purple700 = Color(0xFF3700B3)
+
+val FollowsFollow = Color.Yellow
+val Nip05Verified = Color.Blue
+
+// NIP-05 email colors
+val Nip05EmailColor = Color(0xFFb198ec)
+val Nip05EmailColorDark = Color(0xFF6e5490)
+val Nip05EmailColorLight = Color(0xFFa770f3)
+
+val DarkerGreen = Color.Green.copy(alpha = 0.32f)
+val LighterRedColor = Color(0xFFFF0E0E)
+
+// Semantic status colors for desktop
+val StatusGreen = Color(0xFF4CAF50)
+val StatusGreenDark = Color(0xFF81C784)
+val StatusRed = Color(0xFFF44336)
+val StatusRedDark = Color(0xFFEF9A9A)
+val StatusAmber = Color(0xFFFFB300)
+val StatusAmberDark = Color(0xFFFFD54F)
+val StatusBlue = Color(0xFF2196F3)
+
+// Relay status colors
+object RelayStatusColors {
+    val Connected = Color.Green
+    val Connecting = Color.Yellow
+    val Disconnected = Color.Red
+    val Unknown = Color.Gray
+}

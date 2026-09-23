@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.onchain.ui.labelRes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_amount_sats
@@ -50,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.resources.clink_budget_one_time
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_request
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_title
 import com.vitorpamplona.amethyst.commons.resources.clink_budget_weekly
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.labelRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import org.jetbrains.compose.resources.StringResource

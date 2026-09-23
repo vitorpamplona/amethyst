@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -81,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.MarkAs
 import com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDateButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
-import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton

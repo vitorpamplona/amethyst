@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived
 import com.vitorpamplona.amethyst.commons.resources.geocache_found_it
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenanc
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
 import com.vitorpamplona.amethyst.commons.resources.geocache_verified_find
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChip
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.commons.ui.stringRes

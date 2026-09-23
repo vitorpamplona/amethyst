@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.scheduledposts
 
-import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
-import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged

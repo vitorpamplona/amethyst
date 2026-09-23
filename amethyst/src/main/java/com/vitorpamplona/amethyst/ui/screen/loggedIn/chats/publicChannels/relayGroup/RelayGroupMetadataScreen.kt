@@ -69,6 +69,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_create_title
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discover
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes

@@ -90,6 +90,9 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
+import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code
@@ -100,9 +103,6 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_grant_camera
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_settings
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.QrImageCodeChooser
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.ScanOutcomeSheet
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.scanner.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.call.openAppSettings
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_active_days
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_avg_heart_rate
@@ -94,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_window_note
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_workouts
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
