@@ -29,14 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByGeohash
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsGlobal
-import com.vitorpamplona.amethyst.commons.relayClient.nests.filterNestsPresence
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

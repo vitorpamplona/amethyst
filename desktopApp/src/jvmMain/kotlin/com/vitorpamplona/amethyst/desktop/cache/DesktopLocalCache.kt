@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserContext
+import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
@@ -1033,6 +1034,7 @@ class DesktopLocalCache : ICacheProvider {
 
     override fun justConsumeMyOwnEvent(event: Event): Boolean {
         if (!justVerify(event)) return false
+        LocallySignedEvents.mark(event)
         // For addressable/replaceable events, store in the addressable note cache
         // so state holders (Nip65RelayListState, etc.) pick it up via their flows
         if (event is AddressableEvent) {

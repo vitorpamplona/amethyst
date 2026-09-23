@@ -58,16 +58,22 @@ amethyst/                    # Android app module
 │   │   │   │   ├── MainActivity.kt          # Entry point
 │   │   │   │   ├── navigation/
 │   │   │   │   │   ├── AppNavigation.kt     # NavHost
-│   │   │   │   │   ├── routes/Routes.kt     # @Serializable routes
+│   │   │   │   │   ├── routes/RouteNavController.kt  # NavHost-bound route helpers
 │   │   │   │   │   └── bottombars/AppBottomBar.kt
 │   │   │   │   ├── screen/                  # 80+ screens
-│   │   │   │   └── theme/Theme.kt           # Material3 theme
+│   │   │   │   └── theme/Theme.kt           # AmethystTheme (accent, prefs, window insets)
 │   │   │   └── Amethyst.kt                  # Application class
 │   │   └── AndroidManifest.xml              # Permissions, intent filters
 │   └── androidMain/                         # KMP Android source set
 │       └── kotlin/                          # Platform-specific code
 └── build.gradle                             # Android config
 ```
+
+The `@Serializable` `Route` catalog is headless and lives in
+`commons/.../commons/model/navigation/Routes.kt`; `INav`/`EmptyNav` and the top bars are
+in `commonsUI/.../commons/ui/navigation/`. The palettes, `ColorScheme.*` tokens, sizes and
+typography are in `commonsUI/.../commons/ui/theme/` (markdown styles in its `jvmAndroid`).
+Add a route to the commons `Routes.kt`; wire its destination in the app's `AppNavigation.kt`.
 
 ## 1. Type-Safe Navigation
 
@@ -953,9 +959,11 @@ fun testPermissionRequest() {
 
 **Key Android Files:**
 - `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/MainActivity.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/routes/Routes.kt`
+- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/navigation/Routes.kt` (route catalog)
+- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/navigation/navs/INav.kt`
 - `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/AppNavigation.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/theme/Theme.kt`
+- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/theme/Theme.kt` (`AmethystTheme`)
+- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/theme/AmethystColorScheme.kt` (palettes + `ColorScheme.*` tokens)
 - `amethyst/src/main/AndroidManifest.xml`
 - `amethyst/build.gradle`
 

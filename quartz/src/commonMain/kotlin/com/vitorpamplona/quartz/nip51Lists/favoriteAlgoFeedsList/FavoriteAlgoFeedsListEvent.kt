@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -42,7 +45,16 @@ class FavoriteAlgoFeedsListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<FavoriteAlgoFeedsListDiff> {
+    override fun diffFrom(older: Event): FavoriteAlgoFeedsListDiff? {
+        if (older !is FavoriteAlgoFeedsListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return FavoriteAlgoFeedsListDiff(
+            ListDiff.of(older.publicFavoriteAlgoFeeds(), publicFavoriteAlgoFeeds(), { it.address }, { a, b -> a.relayHint == b.relayHint }),
+            privateItemsChangeFrom(older),
+        )
+    }
+
     fun publicFavoriteAlgoFeeds(): List<AddressBookmark> = tags.mapNotNull(AddressBookmark::parse)
 
     suspend fun privateFavoriteAlgoFeeds(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)

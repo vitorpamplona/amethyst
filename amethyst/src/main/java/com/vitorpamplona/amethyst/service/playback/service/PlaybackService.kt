@@ -39,6 +39,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
@@ -59,7 +60,11 @@ class PlaybackService : MediaSessionService() {
         okHttpClient: DynamicCallFactory,
         blossomServerResolver: BlossomServerResolver,
     ): MediaSessionPool {
-        val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+        // Marked as media so the local Blossom cache may serve these downloads.
+        val dataSourceFactory =
+            OkHttpDataSource
+                .Factory(okHttpClient)
+                .setDefaultRequestProperties(mapOf(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER to LocalBlossomCacheRedirectInterceptor.MEDIA))
 
         val resolvingDataSourceFactory: DataSource.Factory =
             ResolvingDataSource.Factory(

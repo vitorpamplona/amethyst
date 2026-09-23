@@ -56,8 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.health_connect_rationale_pri
 import com.vitorpamplona.amethyst.commons.resources.health_connect_rationale_steps
 import com.vitorpamplona.amethyst.commons.resources.health_connect_rationale_title
 import com.vitorpamplona.amethyst.commons.resources.health_connect_rationale_what_title
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Static, account-free explanation of what Amethyst reads from Health Connect and why. Shown both

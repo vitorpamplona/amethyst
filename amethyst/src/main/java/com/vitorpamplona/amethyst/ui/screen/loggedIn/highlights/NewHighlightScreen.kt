@@ -71,18 +71,18 @@ import com.vitorpamplona.amethyst.commons.resources.new_highlight_note_placehold
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_passage_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_source_label
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 
 /** A warm highlighter amber — the highlight metaphor reads as yellow regardless of theme. */
 private val MarkerAccent = Color(0xFFF5C518)
@@ -90,7 +90,7 @@ private val MarkerAccent = Color(0xFFF5C518)
 /**
  * The "New Highlight" composer. Reached either from the "Add highlight" action, a browser
  * share, or the "Highlight" note-action, routed in as
- * [com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewHighlight].
+ * [com.vitorpamplona.amethyst.commons.model.navigation.Route.NewHighlight].
  *
  * A NIP-84 highlight is a quoted passage, its source, and an optional annotation:
  * - the passage is a pull-quote you craft (accent bar + quotation-mark watermark),

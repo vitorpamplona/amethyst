@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nip51Lists.muteList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -46,7 +49,16 @@ class MuteListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<MuteListDiff>,
     PubKeyHintProvider {
+    override fun diffFrom(older: Event): MuteListDiff? {
+        if (older !is MuteListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return MuteListDiff(
+            ListDiff.of(older.publicMutes(), publicMutes(), { it.toTagIdOnly().toList() }, { a, b -> a.toTagArray().contentEquals(b.toTagArray()) }),
+            privateItemsChangeFrom(older),
+        )
+    }
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)

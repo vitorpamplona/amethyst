@@ -206,7 +206,13 @@ class LocalBlossomCacheRedirectInterceptorTest {
         url: String,
         captured: MutableList<String>,
     ): Interceptor.Chain {
-        val request = Request.Builder().url(url.toHttpUrl()).build()
+        // Marked the way the media loaders mark their downloads; only those are bridged.
+        val request =
+            Request
+                .Builder()
+                .url(url.toHttpUrl())
+                .header(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.MEDIA)
+                .build()
         return Proxy.newProxyInstance(
             Interceptor.Chain::class.java.classLoader,
             arrayOf(Interceptor.Chain::class.java),

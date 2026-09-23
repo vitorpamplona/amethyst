@@ -27,6 +27,7 @@ import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.amethyst.commons.richtext.normalizeMimeType
+import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -93,7 +94,7 @@ object ShareHelper {
     ): Pair<Uri, String> =
         withContext(Dispatchers.IO) {
             // Safely get snapshot and file
-            Amethyst.instance.diskCache.openSnapshot(imageUrl)?.use { snapshot ->
+            Amethyst.instance.diskCache.openSnapshot(BlossomFetcher.diskCacheKey(imageUrl))?.use { snapshot ->
                 val file = snapshot.data.toFile()
 
                 // Determine file extension and prepare sharable file

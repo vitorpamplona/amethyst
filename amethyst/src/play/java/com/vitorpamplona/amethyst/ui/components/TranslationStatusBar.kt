@@ -51,12 +51,12 @@ import com.vitorpamplona.amethyst.commons.resources.translations_show_in_lang_fi
 import com.vitorpamplona.amethyst.commons.resources.translations_to
 import com.vitorpamplona.amethyst.commons.resources.translations_translated_from
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import java.util.Locale
 
 /**

@@ -24,9 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -43,7 +46,16 @@ class EphemeralChatListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<EphemeralChatListDiff> {
+    override fun diffFrom(older: Event): EphemeralChatListDiff? {
+        if (older !is EphemeralChatListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return EphemeralChatListDiff(
+            ListDiff.of(older.publicRooms(), publicRooms(), { it }),
+            privateItemsChangeFrom(older),
+        )
+    }
+
     fun publicRooms() = tags.rooms()
 
     fun publicRoomSet() = tags.roomSet()

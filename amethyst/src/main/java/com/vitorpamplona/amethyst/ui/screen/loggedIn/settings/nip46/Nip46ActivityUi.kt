@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_connected
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_decrypted
@@ -52,9 +53,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_ping
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_shared_pubkey
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_act_signed_kind
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_denied
-import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.stringRes
 
 private val LiveGreen = Color(0xFF3DDC84)
 

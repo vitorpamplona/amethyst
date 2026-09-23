@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_cashu_description
@@ -58,10 +59,9 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Wallet-type chooser. Each card routes to a dedicated setup screen for the

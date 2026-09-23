@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
-import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
@@ -56,13 +56,18 @@ class ServerHeadCache {
 
             client(url).newCall(request).executeAsync().use { response ->
                 if (!response.isSuccessful) {
-                    cache.put(url, HasFile.NoFile)
+                    // Only a definitive answer is remembered. A 5xx, 429 or auth challenge is
+                    // transient: caching it would hide this server for the app's lifetime.
+                    if (response.code == 404 || response.code == 410) {
+                        cache.put(url, HasFile.NoFile)
+                    }
                     return HasFile.NoFile
                 }
 
                 // Retrieve the "Content-Length" header
                 val contentLength = response.header("Content-Length")?.toLongOrNull()
-                val mimeType = response.header("Content-Type")?.toMediaType()?.toString()
+                // type/subtype only: a `; charset=binary` parameter must not fail the match below.
+                val mimeType = response.header("Content-Type")?.toMediaTypeOrNull()?.let { "${it.type}/${it.subtype}" }
 
                 return if (contentLength != null && mimeType != null) {
                     val result = HasFile.TypeAndSize(mimeType, contentLength)
@@ -75,7 +80,8 @@ class ServerHeadCache {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            cache.put(url, HasFile.NoFile)
+            // Offline, DNS failure, timeout: says nothing about the server having the file,
+            // so it is not cached — a brief outage must not hide the blob until eviction.
             return HasFile.NoFile
         }
     }
@@ -104,7 +110,7 @@ class ServerHeadCache {
                 if (result.size == expectedSize) {
                     return url
                 }
-                if (expectedSize == null && result.size > 0 && result.mimeType == expectedMimeType) {
+                if (expectedSize == null && result.size > 0 && result.mimeType.equals(expectedMimeType, ignoreCase = true)) {
                     return url
                 }
             }

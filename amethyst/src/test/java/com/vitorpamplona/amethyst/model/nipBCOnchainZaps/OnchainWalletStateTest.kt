@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nipBCOnchainZaps
 
+import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainBalanceStatus
+import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinAddressTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx

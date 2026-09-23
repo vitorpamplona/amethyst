@@ -60,7 +60,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
 // COPIED FROM TEXT FIELD
 // The only change is the contentPadding below

@@ -36,8 +36,8 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer.Area
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer.Line
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.RoyalBlue
 
 fun makeLine(color: Color): Line =
     Line(

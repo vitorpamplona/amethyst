@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.stableKey
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.stableKey
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarEditing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsState
 import org.junit.Assert.assertEquals

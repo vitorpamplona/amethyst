@@ -27,12 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsByGeohashes
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsByMutedAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.calendars.filterCalendarsGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

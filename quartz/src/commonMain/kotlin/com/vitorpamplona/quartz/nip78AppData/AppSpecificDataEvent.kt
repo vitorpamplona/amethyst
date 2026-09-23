@@ -22,8 +22,11 @@ package com.vitorpamplona.quartz.nip78AppData
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -36,7 +39,13 @@ class AppSpecificDataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<AppSpecificDataDiff> {
+    override fun diffFrom(older: Event): AppSpecificDataDiff? {
+        if (older !is AppSpecificDataEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
+        return AppSpecificDataDiff(ContentChange.between(older.content, content))
+    }
+
     override fun isContentEncoded() = true
 
     companion object {

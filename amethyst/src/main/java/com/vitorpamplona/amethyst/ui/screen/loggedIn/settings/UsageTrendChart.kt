@@ -52,12 +52,12 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_legend_cellular
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_legend_wifi
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.LastWeekLabelFormatter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.makeLine
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import org.jetbrains.compose.resources.StringResource
 import kotlin.math.roundToInt
 

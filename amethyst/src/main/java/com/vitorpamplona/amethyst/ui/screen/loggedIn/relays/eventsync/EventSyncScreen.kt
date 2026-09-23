@@ -104,14 +104,14 @@ import com.vitorpamplona.amethyst.commons.resources.event_sync_title
 import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_body
 import com.vitorpamplona.amethyst.commons.resources.event_sync_what_happens_title
 import com.vitorpamplona.amethyst.commons.resources.event_sync_wifi_warning
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.note.formatMediumDate
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable

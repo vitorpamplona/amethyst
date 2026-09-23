@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relays
 
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 open class EOSEByKey<U : Any>(

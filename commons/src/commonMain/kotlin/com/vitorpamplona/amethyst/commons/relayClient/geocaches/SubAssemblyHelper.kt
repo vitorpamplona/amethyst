@@ -29,14 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByAllCommunities
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByCommunity
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByFollows
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByGeohashes
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByHashtag
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesByMutedAuthors
-import com.vitorpamplona.amethyst.commons.relayClient.geocaches.filterGeocachesGlobal
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

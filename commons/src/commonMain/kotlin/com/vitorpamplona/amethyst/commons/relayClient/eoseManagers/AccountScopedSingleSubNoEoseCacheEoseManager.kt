@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 /**

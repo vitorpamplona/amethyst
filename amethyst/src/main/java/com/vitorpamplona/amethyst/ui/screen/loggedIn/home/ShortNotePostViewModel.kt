@@ -38,6 +38,9 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -56,6 +59,9 @@ import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
 import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -74,7 +80,6 @@ import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -84,13 +89,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
@@ -228,9 +228,13 @@ open class ShortNotePostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    draftNote = account.getOrCreateDraftNote(draftTag.current)
+                    val tag = draftTag.current
+                    draftNote = account.getOrCreateDraftNote(tag)
                     accountViewModel.launchSigner {
-                        sendDraftSync()
+                        // Post rotates the tag and then clears the composer. A save still queued from
+                        // before that would see the empty text and delete the draft Post just saved
+                        // for the post that is still mining, so it's skipped once the tag has moved on.
+                        if (draftTag.current == tag) sendDraftSync()
                     }
                 }
             }
@@ -1140,13 +1144,27 @@ open class ShortNotePostViewModel :
             }
         }
 
+        // captured before cancel() resets the chip
+        val chosenPow = powOverride
+
+        // A mined post leaves the phone minutes after this returns — much later if the
+        // app is backgrounded and frozen — and the draft is its only user-visible copy
+        // until then. The auto-save is debounced and cancel() below drops the pending
+        // save, so the last second of typing would never reach it: flush it now.
+        // A private note mines its gift wraps, not the kind-1 itself.
+        val minedKind = if (wantsPrivateNote && template.kind == TextNoteEvent.KIND) GiftWrapEvent.KIND else template.kind
+        if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
+            draftNote = account.getOrCreateDraftNote(draftTag.current)
+            // the same template sendDraftSync() would rebuild; reuse it.
+            val attachments = nip95attachments.flatMapTo(mutableSetOf()) { listOf(it.first, it.second) }
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+        }
+
         val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
         val privately = wantsPrivateNote
         val threadTarget = groupThreadTarget
-        // captured before cancel() resets the chip
-        val chosenPow = powOverride
         onUiThread { cancel() }
 
         // Draft deletion lives INSIDE each publish continuation: when the post
@@ -1170,10 +1188,12 @@ open class ShortNotePostViewModel :
             // reply must never fall through to a public publish path (the UI
             // hides those toggles while private mode is on). The inner note and
             // seals are signed inline; only wrap mining is queued — the content
-            // is committed (and checkpointed) by the time this returns.
+            // is committed (and checkpointed) by the time this returns. The draft
+            // goes only once the wraps are sent, like the public paths.
             @Suppress("UNCHECKED_CAST")
-            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>, chosenPow)
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>, chosenPow) {
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
             return
         }
 

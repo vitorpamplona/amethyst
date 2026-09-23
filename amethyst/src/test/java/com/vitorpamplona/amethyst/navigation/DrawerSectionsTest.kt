@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
+import com.vitorpamplona.amethyst.commons.model.navigation.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.navigation.drawer.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.drawer.SdkGatedDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.drawer.drawerSectionIdsFromNames
 import com.vitorpamplona.amethyst.ui.navigation.drawer.toNames

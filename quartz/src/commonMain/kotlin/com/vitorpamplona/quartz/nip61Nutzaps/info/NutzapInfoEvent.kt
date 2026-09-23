@@ -23,8 +23,12 @@ package com.vitorpamplona.quartz.nip61Nutzaps.info
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
@@ -38,7 +42,17 @@ class NutzapInfoEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    DiffableEvent<NutzapInfoDiff> {
+    override fun diffFrom(older: Event): NutzapInfoDiff? {
+        if (older !is NutzapInfoEvent || older.pubKey != pubKey) return null
+        return NutzapInfoDiff(
+            ListDiff.of(older.mints(), mints(), { it.mintUrl.trimEnd('/').lowercase() }, { a, b -> a.units.toSet() == b.units.toSet() }),
+            ListDiff.of(older.relays(), relays(), { it }),
+            ValueChange.of(older.p2pkPubkey(), p2pkPubkey()),
+        )
+    }
+
     fun mints() = tags.mints()
 
     fun relays() = tags.relays()

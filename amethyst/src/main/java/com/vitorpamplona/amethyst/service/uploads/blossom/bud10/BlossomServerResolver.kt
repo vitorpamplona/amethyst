@@ -28,17 +28,23 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.firstNotNullOrNullAsync
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transformLatest
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class BlossomServerResolver(
     val loggedInUsers: () -> List<HexKey>,
@@ -46,9 +52,19 @@ class BlossomServerResolver(
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
     val useLocalBlossomCache: () -> Boolean = { false },
     val localCacheProbe: LocalBlossomCacheProbe? = null,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
     val blossomHitCache: ServerHeadCache = ServerHeadCache()
     val uriToUrlCache = LruCache<String, BlossomUriServer>(200)
+
+    // Unresolvable URIs, with when they failed. Without this every retry — each ExoPlayer
+    // load attempt blocks a loader thread on it — paid the full resolution timeout again.
+    private val missCache = LruCache<String, Long>(200)
+
+    // One resolution per URI at a time: the feed preview, Coil and the player asking for the
+    // same `blossom:` URI together share it instead of each firing its own HEADs and relay
+    // subscriptions. Runs in [scope] so a caller that goes away doesn't cancel it for the rest.
+    private val inFlight = ConcurrentHashMap<String, Deferred<BlossomUriServer?>>()
 
     class BlossomUriServer(
         val uri: BlossomUri,
@@ -57,41 +73,71 @@ class BlossomServerResolver(
 
     fun cachedFindServer(uriStr: String): BlossomUriServer? = uriToUrlCache[uriStr]
 
+    // Bumped by [clearCaches]. A resolution that started before a clear (e.g. it picked the
+    // local cache just before the cache went down) must not write its stale answer back.
+    private val generation = AtomicInteger(0)
+
+    /** Forgets every resolution, e.g. when the local cache comes up or goes down. */
+    fun clearCaches() {
+        generation.incrementAndGet()
+        uriToUrlCache.evictAll()
+        missCache.evictAll()
+        blossomHitCache.cache.evictAll()
+    }
+
     suspend fun findServers(uriStr: String): BlossomUriServer? {
         uriToUrlCache[uriStr]?.let { return it }
+        missCache[uriStr]?.let { failedAt ->
+            if (TimeUtils.nowMillis() - failedAt < MISS_TTL_MS) return null
+        }
 
-        // Confined to Dispatchers.IO: this is reached from Compose
-        // `produceState`/`LaunchedEffect` (RichTextViewer, MarmotGroupIconDisplay),
-        // which run on the main dispatcher. The pre-suspension work here —
-        // BlossomUri parsing, LruCache lookups, the local-cache probe's client
-        // build, and the server-list flow setup — must stay off the UI thread.
-        val result =
-            withContext(Dispatchers.IO) {
-                withTimeoutOrNull(10000) {
-                    findServersInner(uriStr)
+        val resolution =
+            inFlight.computeIfAbsent(uriStr) {
+                // Confined to Dispatchers.IO: this is reached from Compose
+                // `produceState`/`LaunchedEffect` (RichTextViewer, MarmotGroupIconDisplay),
+                // which run on the main dispatcher. The pre-suspension work here —
+                // BlossomUri parsing, LruCache lookups, the local-cache probe's client
+                // build, and the server-list flow setup — must stay off the UI thread.
+                scope.async(Dispatchers.IO) {
+                    val startedAt = generation.get()
+                    try {
+                        val result = withTimeoutOrNull(RESOLVE_TIMEOUT_MS) { findServersInner(uriStr) }
+                        // Cleared while resolving: answer the waiting callers, remember nothing.
+                        if (startedAt == generation.get()) {
+                            if (result != null) {
+                                uriToUrlCache.put(uriStr, result)
+                            } else {
+                                missCache.put(uriStr, TimeUtils.nowMillis())
+                            }
+                        }
+                        result
+                    } finally {
+                        inFlight.remove(uriStr)
+                    }
                 }
             }
 
-        if (result != null) {
-            uriToUrlCache.put(uriStr, result)
-        }
-
-        return result
+        return resolution.await()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun findServersInner(uriStr: String): BlossomUriServer? {
         val uri = BlossomUri.parse(uriStr) ?: return null
 
-        if (useLocalBlossomCache() && localCacheProbe?.isAvailable() == true) {
+        val expectedMimeType = mimeTypeMap[uri.extension]
+
+        // Same rule as the HTTP-level bridge, which Tor-routed clients don't carry: media the
+        // user sends through Tor must not be handed to the local cache, which would fetch it
+        // from the origin outside Tor.
+        if (useLocalBlossomCache() && !isTorRouted(uri, expectedMimeType) && localCacheProbe?.isAvailable() == true) {
             return BlossomUriServer(uri, uri.toLocalCacheUrl(LocalBlossomCacheProbe.LOCAL_CACHE_BASE))
         }
-
-        val expectedMimeType = mimeTypeMap[uri.extension]
         val filename = uri.filename()
 
         if (uri.servers.isNotEmpty()) {
-            val workingUrl = firstWorkingUrl(uri.servers, filename, expectedMimeType, uri.size)
+            // Bounded well under RESOLVE_TIMEOUT_MS so a hint server that drops packets
+            // leaves time for the author's own server list below.
+            val workingUrl = firstWorkingUrl(uri.servers, filename, expectedMimeType, uri.size, XS_TIMEOUT_MS)
             if (workingUrl != null) {
                 return BlossomUriServer(uri, workingUrl)
             }
@@ -135,12 +181,19 @@ class BlossomServerResolver(
         filename: String,
         expectedMimeType: String?,
         expectedSize: Long?,
+        timeoutMs: Long = RESOLVE_TIMEOUT_MS,
     ): String? =
-        firstNotNullOrNullAsync(servers, 10000) {
+        firstNotNullOrNullAsync(servers, timeoutMs) {
             blossomHitCache.urlIfServerHasFile(it, filename, expectedMimeType, expectedSize) { url ->
                 client(url, expectedMimeType)
             }
         }
+
+    /** Whether this blob's media type would be fetched through Tor from a regular (clearnet) server. */
+    private fun isTorRouted(
+        uri: BlossomUri,
+        mimeType: String?,
+    ): Boolean = client(uri.toServerUrl() ?: "https://blossom.invalid/${uri.filename()}", mimeType).proxy != null
 
     fun client(
         url: String,
@@ -153,9 +206,13 @@ class BlossomServerResolver(
             else -> httpClientBuilder.okHttpClientForPreview(url)
         }
 
-    fun canResolve(scheme: String) = scheme == SCHEME
+    fun canResolve(scheme: String) = scheme.equals(SCHEME, ignoreCase = true)
 
     companion object {
         const val SCHEME = "blossom"
+
+        private const val RESOLVE_TIMEOUT_MS = 10_000L
+        private const val XS_TIMEOUT_MS = 4_000L
+        private const val MISS_TTL_MS = 30_000L
     }
 }

@@ -24,6 +24,9 @@ import android.os.Build
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
+import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_create
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
@@ -31,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_navigate
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -83,7 +85,7 @@ private val DrawerSectionIdsByName = DrawerSectionId.entries.associateBy { it.na
 
 /**
  * Parses the persisted names of the headings the user has collapsed, silently dropping any this
- * build doesn't know. Mirrors [com.vitorpamplona.amethyst.ui.navigation.bottombars.navBarItemsFromNames]:
+ * build doesn't know. Mirrors [com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames]:
  * names rather than ordinals, so reordering this enum renames nothing by accident, and a value left
  * by a build with one more section costs that heading rather than the whole read.
  *

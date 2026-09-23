@@ -22,14 +22,23 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictGuard
+import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mergeMutedPublicChats
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -39,25 +48,18 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
-import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -236,6 +238,14 @@ class AccountSettings(
      * keysets is fine because the derivation includes the keyset id.
      */
     var cashuKeysetCounters: MutableMap<String, Long> = mutableMapOf(),
+    /**
+     * Durable NUT-13 counter store for this account, supplied by the host.
+     *
+     * Defaulted to the failing stand-in rather than an in-memory map: the preview
+     * and test factories below never mint, and a host that does mint must wire a
+     * real store or hear about it on the first reservation.
+     */
+    val cashuCounters: CashuKeysetCounterStore = UnavailableCashuKeysetCounterStore,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -769,19 +779,11 @@ class AccountSettings(
         if (changed) saveAccountSettings()
     }
 
-    fun changeDefaultHomeFollowList(name: FeedDefinition) {
-        changeDefaultHomeFollowList(name.code)
-    }
-
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultStoriesFollowList(name: FeedDefinition) {
-        changeDefaultStoriesFollowList(name.code)
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
@@ -791,19 +793,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNotificationFollowList(name: FeedDefinition) {
-        changeDefaultNotificationFollowList(name.code)
-    }
-
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
@@ -813,19 +807,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPollsFollowList(name: FeedDefinition) {
-        changeDefaultPollsFollowList(name.code)
-    }
-
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
-        changeDefaultCommunitiesFollowList(name.code)
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
@@ -835,19 +821,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPicturesFollowList(name: FeedDefinition) {
-        changeDefaultPicturesFollowList(name.code)
-    }
-
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultRelayGroupsDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultRelayGroupsDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
@@ -857,19 +835,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNappletsFollowList(name: FeedDefinition) {
-        changeDefaultNappletsFollowList(name.code)
-    }
-
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNsitesFollowList(name: FeedDefinition) {
-        changeDefaultNsitesFollowList(name.code)
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
@@ -879,19 +849,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
-        changeDefaultWorkoutsFollowList(name.code)
-    }
-
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGitRepositoriesFollowList(name: FeedDefinition) {
-        changeDefaultGitRepositoriesFollowList(name.code)
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
@@ -901,19 +863,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultHighlightsFollowList(name: FeedDefinition) {
-        changeDefaultHighlightsFollowList(name.code)
-    }
-
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCalendarsFollowList(name: FeedDefinition) {
-        changeDefaultCalendarsFollowList(name.code)
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
@@ -923,19 +877,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultProductsFollowList(name: FeedDefinition) {
-        changeDefaultProductsFollowList(name.code)
-    }
-
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGeocachesFollowList(name: FeedDefinition) {
-        changeDefaultGeocachesFollowList(name.code)
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
@@ -945,19 +891,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultShortsFollowList(name: FeedDefinition) {
-        changeDefaultShortsFollowList(name.code)
-    }
-
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPublicChatsFollowList(name: FeedDefinition) {
-        changeDefaultPublicChatsFollowList(name.code)
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
@@ -967,19 +905,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLiveStreamsFollowList(name: FeedDefinition) {
-        changeDefaultLiveStreamsFollowList(name.code)
-    }
-
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNestsFollowList(name: FeedDefinition) {
-        changeDefaultNestsFollowList(name.code)
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
@@ -989,19 +919,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLongsFollowList(name: FeedDefinition) {
-        changeDefaultLongsFollowList(name.code)
-    }
-
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
-        changeDefaultArticlesFollowList(name.code)
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
@@ -1011,19 +933,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultMusicTracksFollowList(name: FeedDefinition) {
-        changeDefaultMusicTracksFollowList(name.code)
-    }
-
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultMusicPlaylistsFollowList(name: FeedDefinition) {
-        changeDefaultMusicPlaylistsFollowList(name.code)
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
@@ -1033,19 +947,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPodcastEpisodesFollowList(name: FeedDefinition) {
-        changeDefaultPodcastEpisodesFollowList(name.code)
-    }
-
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPodcastsFollowList(name: FeedDefinition) {
-        changeDefaultPodcastsFollowList(name.code)
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
@@ -1055,19 +961,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultSoftwareAppsFollowList(name: FeedDefinition) {
-        changeDefaultSoftwareAppsFollowList(name.code)
-    }
-
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
-        changeDefaultBadgesFollowList(name.code)
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
@@ -1077,10 +975,6 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultBrowseEmojiSetsFollowList(name: FeedDefinition) {
-        changeDefaultBrowseEmojiSetsFollowList(name.code)
-    }
-
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
@@ -1088,19 +982,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultFollowPacksFollowList(name: FeedDefinition) {
-        changeDefaultFollowPacksFollowList(name.code)
-    }
-
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultAppRecommendationsFollowList(name: FeedDefinition) {
-        changeDefaultAppRecommendationsFollowList(name.code)
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
@@ -1158,6 +1044,69 @@ class AccountSettings(
     // Backup Lists
     // ----
 
+    /**
+     * Holds back external rewrites that dropped data from a backup, see [BackupConflictGuard].
+     * Home shows a card for each open conflict until the user keeps the new version or
+     * restores the saved one. Open conflicts are saved with the backups they hold back.
+     */
+    val backupGuard =
+        BackupConflictGuard(
+            onChange = { saveAccountSettings() },
+            reapply = { reapplyBackup(it) },
+        )
+
+    val backupConflicts get() = backupGuard.conflicts
+
+    /** Re-seeds the open conflicts read back from storage, see [BackupConflictGuard.restore]. */
+    fun restoreBackupConflicts(saved: List<Triple<Event, Event, Event>>) = backupGuard.restore(saved)
+
+    /** The open conflicts, as the three events storage needs to rebuild each one. */
+    fun openBackupConflicts(): List<Triple<Event, Event, Event>> = backupGuard.open()
+
+    /**
+     * Re-runs the update that a restored conflict no longer carries.
+     *
+     * The guard's retries are closures, so they cannot be written to disk; a conflict read
+     * back after a restart has none until its version happens to arrive again. Keeping the new
+     * version must work regardless, and every update is the same shape — hand the event to the
+     * function that owns its slot — so the slot can be recovered from the event's own type.
+     */
+    private fun reapplyBackup(incoming: Event) {
+        when (incoming) {
+            is MetadataEvent -> updateUserMetadata(incoming)
+            is ContactListEvent -> updateContactListTo(incoming)
+            is ChatMessageRelayListEvent -> updateDMRelayList(incoming)
+            is KeyPackageRelayListEvent -> updateKeyPackageRelayList(incoming)
+            is AdvertisedRelayListEvent -> updateNIP65RelayList(incoming)
+            is CashuWalletEvent -> updateCashuWallet(incoming)
+            is NutzapInfoEvent -> updateNutzapInfo(incoming)
+            is PaymentTargetsEvent -> updateNIPA3PaymentTargets(incoming)
+            is Bolt12OfferListEvent -> updateBolt12Offers(incoming)
+            is SearchRelayListEvent -> updateSearchRelayList(incoming)
+            is IndexerRelayListEvent -> updateIndexRelayList(incoming)
+            is RelayFeedsListEvent -> updateRelayFeedList(incoming)
+            is BlockedRelayListEvent -> updateBlockedRelayList(incoming)
+            is TrustedRelayListEvent -> updateTrustedRelayList(incoming)
+            is PrivateOutboxRelayListEvent -> updatePrivateHomeRelayList(incoming)
+            is ChannelListEvent -> updateChannelListTo(incoming)
+            is GeohashListEvent -> updateGeohashListTo(incoming)
+            is HashtagListEvent -> updateHashtagListTo(incoming)
+            is FavoriteAlgoFeedsListEvent -> updateFavoriteAlgoFeedsListTo(incoming)
+            is CommunityListEvent -> updateCommunityListTo(incoming)
+            is EphemeralChatListEvent -> updateEphemeralChatListTo(incoming)
+            is SimpleGroupListEvent -> updateRelayGroupListTo(incoming)
+            is ConcordCommunityListEvent -> updateConcordListTo(incoming)
+            is TrustProviderListEvent -> updateTrustProviderListTo(incoming)
+            is MuteListEvent -> updateMuteList(incoming)
+            // NIP-78 only raises a conflict when its blob was emptied, and an empty blob is
+            // stored without merging the settings handed with it, so defaults are safe here.
+            // A non-empty one needs the decrypted settings only the caller has; it lands when
+            // the event next arrives, already recorded as accepted.
+            is AppSpecificDataEvent -> if (incoming.content.isBlank()) updateAppSpecificData(incoming, AccountSyncedSettingsInternal())
+            else -> Unit
+        }
+    }
+
     fun updateLocalRelayServers(servers: Set<String>) {
         if (localRelayServers.value != servers) {
             localRelayServers.update { servers }
@@ -1176,48 +1125,43 @@ class AccountSettings(
     fun updateUserMetadata(newMetadata: MetadataEvent?) {
         if (newMetadata == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupUserMetadata?.id != newMetadata.id) {
+        if (backupGuard.accept(backupUserMetadata, newMetadata) { updateUserMetadata(newMetadata) }) {
             backupUserMetadata = newMetadata
             saveAccountSettings()
         }
     }
 
     fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList == null || newContactList.tags.isEmpty()) return
+        if (newContactList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList.id) {
+        if (backupGuard.accept(backupContactList, newContactList, isEmpty = newContactList.tags.isEmpty()) { updateContactListTo(newContactList) }) {
             backupContactList = newContactList
             saveAccountSettings()
         }
     }
 
     fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
-        if (newDMRelayList == null || newDMRelayList.tags.isEmpty()) return
+        if (newDMRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupDMRelayList?.id != newDMRelayList.id) {
+        if (backupGuard.accept(backupDMRelayList, newDMRelayList, isEmpty = newDMRelayList.tags.isEmpty()) { updateDMRelayList(newDMRelayList) }) {
             backupDMRelayList = newDMRelayList
             saveAccountSettings()
         }
     }
 
     fun updateKeyPackageRelayList(newKeyPackageRelayList: KeyPackageRelayListEvent?) {
-        if (newKeyPackageRelayList == null || newKeyPackageRelayList.tags.isEmpty()) return
+        if (newKeyPackageRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupKeyPackageRelayList?.id != newKeyPackageRelayList.id) {
+        if (backupGuard.accept(backupKeyPackageRelayList, newKeyPackageRelayList, isEmpty = newKeyPackageRelayList.tags.isEmpty()) { updateKeyPackageRelayList(newKeyPackageRelayList) }) {
             backupKeyPackageRelayList = newKeyPackageRelayList
             saveAccountSettings()
         }
     }
 
     fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
-        if (newNIP65RelayList == null || newNIP65RelayList.tags.isEmpty()) return
+        if (newNIP65RelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
+        if (backupGuard.accept(backupNIP65RelayList, newNIP65RelayList, isEmpty = newNIP65RelayList.tags.isEmpty()) { updateNIP65RelayList(newNIP65RelayList) }) {
             backupNIP65RelayList = newNIP65RelayList
             saveAccountSettings()
         }
@@ -1226,14 +1170,17 @@ class AccountSettings(
     fun updateCashuWallet(newWallet: CashuWalletEvent?) {
         if (newWallet == null) return
         // Replaceable: keep the latest by id (id changes on each re-sign).
-        if (backupCashuWallet?.id != newWallet.id) {
+        if (backupGuard.accept(backupCashuWallet, newWallet) { updateCashuWallet(newWallet) }) {
             backupCashuWallet = newWallet
             saveAccountSettings()
         }
     }
 
     fun updateNutzapInfo(newNutzapInfo: NutzapInfoEvent?) {
-        if (newNutzapInfo == null || newNutzapInfo.tags.isEmpty()) return
+        if (newNutzapInfo == null) return
+        // The guard runs first, so another app wiping the nutzap info is questioned like any
+        // other lossy rewrite instead of silently clearing the backup.
+        if (!backupGuard.accept(backupNutzapInfo, newNutzapInfo) { updateNutzapInfo(newNutzapInfo) }) return
         // A mints-less kind:10019 is the "stop receiving nutzaps" tombstone
         // (an empty replacement carrying only an `alt` tag). Don't restore it
         // on next launch — backing it up would undo clearNutzapInfo() once the
@@ -1242,10 +1189,8 @@ class AccountSettings(
             clearNutzapInfo()
             return
         }
-        if (backupNutzapInfo?.id != newNutzapInfo.id) {
-            backupNutzapInfo = newNutzapInfo
-            saveAccountSettings()
-        }
+        backupNutzapInfo = newNutzapInfo
+        saveAccountSettings()
     }
 
     /**
@@ -1255,6 +1200,8 @@ class AccountSettings(
      * LocalCache on next launch and resurrect the deleted wallet.
      */
     fun clearCashuWallet() {
+        // A deleted wallet must not be restorable from an open conflict.
+        backupGuard.drop(backupSlotOf(CashuWalletEvent.KIND))
         if (backupCashuWallet != null) {
             backupCashuWallet = null
             saveAccountSettings()
@@ -1263,6 +1210,7 @@ class AccountSettings(
 
     /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
     fun clearNutzapInfo() {
+        backupGuard.drop(backupSlotOf(NutzapInfoEvent.KIND))
         if (backupNutzapInfo != null) {
             backupNutzapInfo = null
             saveAccountSettings()
@@ -1270,23 +1218,10 @@ class AccountSettings(
     }
 
     /**
-     * NUT-13 keyset counters live in [CashuPreferences], a dedicated
-     * SharedPreferences file with synchronous (`commit = true`) writes.
-     * AccountSettings goes through a 1-second debounce on its own save
-     * path; the cashu counter cannot tolerate that window because the
-     * mint persists signed (keyset, blind_message) pairs the moment it
-     * sees them, so any local lag → "outputs already signed" on retry.
-     * See [CashuPreferences] for the full rationale.
-     */
-    private val cashuPrefs: CashuPreferences by lazy {
-        CashuPreferences.forAccount(keyPair.pubKey.toNpub())
-    }
-
-    /**
      * Reserve [count] consecutive NUT-13 counters for [keysetId],
      * returning the first one. Caller derives `(secret, r)` from
      * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
-     * Persisted synchronously before returning — see [CashuPreferences].
+     * Persisted synchronously before returning — see [CashuKeysetCounterStore].
      *
      * One-time migration: when this keyset has a non-zero value in the
      * legacy [cashuKeysetCounters] map (from a build that persisted
@@ -1299,95 +1234,87 @@ class AccountSettings(
         count: Int,
     ): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.reserveCounters(keysetId, count)
+        return cashuCounters.reserve(keysetId, count)
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
     fun peekCashuCounter(keysetId: String): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.peekCounter(keysetId)
+        return cashuCounters.peek(keysetId)
     }
 
     private fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
-        cashuPrefs.seedCounterIfMissing(keysetId, legacy)
+        cashuCounters.seedIfMissing(keysetId, legacy)
     }
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
-        if (newNIPA3PaymentTargets == null || newNIPA3PaymentTargets.tags.isEmpty()) return
+        if (newNIPA3PaymentTargets == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupNipA3PaymentTargets?.id != newNIPA3PaymentTargets.id) {
+        if (backupGuard.accept(backupNipA3PaymentTargets, newNIPA3PaymentTargets, isEmpty = newNIPA3PaymentTargets.tags.isEmpty()) { updateNIPA3PaymentTargets(newNIPA3PaymentTargets) }) {
             backupNipA3PaymentTargets = newNIPA3PaymentTargets
             saveAccountSettings()
         }
     }
 
     fun updateBolt12Offers(newBolt12Offers: Bolt12OfferListEvent?) {
-        if (newBolt12Offers == null || newBolt12Offers.tags.isEmpty()) return
+        if (newBolt12Offers == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupBolt12Offers?.id != newBolt12Offers.id) {
+        if (backupGuard.accept(backupBolt12Offers, newBolt12Offers, isEmpty = newBolt12Offers.tags.isEmpty()) { updateBolt12Offers(newBolt12Offers) }) {
             backupBolt12Offers = newBolt12Offers
             saveAccountSettings()
         }
     }
 
     fun updateSearchRelayList(newSearchRelayList: SearchRelayListEvent?) {
-        if (newSearchRelayList == null || newSearchRelayList.tags.isEmpty()) return
+        if (newSearchRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupSearchRelayList?.id != newSearchRelayList.id) {
+        if (backupGuard.accept(backupSearchRelayList, newSearchRelayList, isEmpty = newSearchRelayList.tags.isEmpty()) { updateSearchRelayList(newSearchRelayList) }) {
             backupSearchRelayList = newSearchRelayList
             saveAccountSettings()
         }
     }
 
     fun updateIndexRelayList(newIndexRelayList: IndexerRelayListEvent?) {
-        if (newIndexRelayList == null || newIndexRelayList.tags.isEmpty()) return
+        if (newIndexRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupIndexRelayList?.id != newIndexRelayList.id) {
+        if (backupGuard.accept(backupIndexRelayList, newIndexRelayList, isEmpty = newIndexRelayList.tags.isEmpty()) { updateIndexRelayList(newIndexRelayList) }) {
             backupIndexRelayList = newIndexRelayList
             saveAccountSettings()
         }
     }
 
     fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
-        if (newRelayFeedList == null || newRelayFeedList.tags.isEmpty()) return
+        if (newRelayFeedList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupRelayFeedsList?.id != newRelayFeedList.id) {
+        if (backupGuard.accept(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
             backupRelayFeedsList = newRelayFeedList
             saveAccountSettings()
         }
     }
 
     fun updateBlockedRelayList(newBlockedRelayList: BlockedRelayListEvent?) {
-        if (newBlockedRelayList == null || newBlockedRelayList.tags.isEmpty()) return
+        if (newBlockedRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupBlockedRelayList?.id != newBlockedRelayList.id) {
+        if (backupGuard.accept(backupBlockedRelayList, newBlockedRelayList, isEmpty = newBlockedRelayList.tags.isEmpty()) { updateBlockedRelayList(newBlockedRelayList) }) {
             backupBlockedRelayList = newBlockedRelayList
             saveAccountSettings()
         }
     }
 
     fun updateTrustedRelayList(newTrustedRelayList: TrustedRelayListEvent?) {
-        if (newTrustedRelayList == null || newTrustedRelayList.tags.isEmpty()) return
+        if (newTrustedRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupTrustedRelayList?.id != newTrustedRelayList.id) {
+        if (backupGuard.accept(backupTrustedRelayList, newTrustedRelayList, isEmpty = newTrustedRelayList.tags.isEmpty()) { updateTrustedRelayList(newTrustedRelayList) }) {
             backupTrustedRelayList = newTrustedRelayList
             saveAccountSettings()
         }
     }
 
     fun updatePrivateHomeRelayList(newPrivateHomeRelayList: PrivateOutboxRelayListEvent?) {
-        if (newPrivateHomeRelayList == null || newPrivateHomeRelayList.tags.isEmpty()) return
+        if (newPrivateHomeRelayList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupPrivateHomeRelayList?.id != newPrivateHomeRelayList.id) {
+        if (backupGuard.accept(backupPrivateHomeRelayList, newPrivateHomeRelayList, isEmpty = newPrivateHomeRelayList.tags.isEmpty()) { updatePrivateHomeRelayList(newPrivateHomeRelayList) }) {
             backupPrivateHomeRelayList = newPrivateHomeRelayList
             saveAccountSettings()
         }
@@ -1396,50 +1323,45 @@ class AccountSettings(
     override fun channelList() = backupChannelList
 
     override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
-        if (newChannelList == null || newChannelList.tags.isEmpty()) return
+        if (newChannelList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupChannelList?.id != newChannelList.id) {
+        if (backupGuard.accept(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
             backupChannelList = newChannelList
             saveAccountSettings()
         }
     }
 
     fun updateGeohashListTo(newGeohashList: GeohashListEvent?) {
-        if (newGeohashList == null || newGeohashList.tags.isEmpty()) return
+        if (newGeohashList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupGeohashList?.id != newGeohashList.id) {
+        if (backupGuard.accept(backupGeohashList, newGeohashList, isEmpty = newGeohashList.tags.isEmpty()) { updateGeohashListTo(newGeohashList) }) {
             backupGeohashList = newGeohashList
             saveAccountSettings()
         }
     }
 
     fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
-        if (newHashtagList == null || newHashtagList.tags.isEmpty()) return
+        if (newHashtagList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupHashtagList?.id != newHashtagList.id) {
+        if (backupGuard.accept(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {
             backupHashtagList = newHashtagList
             saveAccountSettings()
         }
     }
 
     fun updateFavoriteAlgoFeedsListTo(newFavoriteDvmList: FavoriteAlgoFeedsListEvent?) {
-        if (newFavoriteDvmList == null || newFavoriteDvmList.tags.isEmpty()) return
+        if (newFavoriteDvmList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupFavoriteAlgoFeedsList?.id != newFavoriteDvmList.id) {
+        if (backupGuard.accept(backupFavoriteAlgoFeedsList, newFavoriteDvmList, isEmpty = newFavoriteDvmList.tags.isEmpty()) { updateFavoriteAlgoFeedsListTo(newFavoriteDvmList) }) {
             backupFavoriteAlgoFeedsList = newFavoriteDvmList
             saveAccountSettings()
         }
     }
 
     fun updateCommunityListTo(newCommunityList: CommunityListEvent?) {
-        if (newCommunityList == null || newCommunityList.tags.isEmpty()) return
+        if (newCommunityList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupCommunityList?.id != newCommunityList.id) {
+        if (backupGuard.accept(backupCommunityList, newCommunityList, isEmpty = newCommunityList.tags.isEmpty()) { updateCommunityListTo(newCommunityList) }) {
             backupCommunityList = newCommunityList
             saveAccountSettings()
         }
@@ -1448,10 +1370,9 @@ class AccountSettings(
     override fun ephemeralChatList() = backupEphemeralChatList
 
     override fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
-        if (newEphemeralChatList == null || newEphemeralChatList.tags.isEmpty()) return
+        if (newEphemeralChatList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupEphemeralChatList?.id != newEphemeralChatList.id) {
+        if (backupGuard.accept(backupEphemeralChatList, newEphemeralChatList, isEmpty = newEphemeralChatList.tags.isEmpty()) { updateEphemeralChatListTo(newEphemeralChatList) }) {
             backupEphemeralChatList = newEphemeralChatList
             saveAccountSettings()
         }
@@ -1464,8 +1385,7 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newRelayGroupList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupRelayGroupList?.id != newRelayGroupList.id) {
+        if (backupGuard.accept(backupRelayGroupList, newRelayGroupList) { updateRelayGroupListTo(newRelayGroupList) }) {
             backupRelayGroupList = newRelayGroupList
             saveAccountSettings()
         }
@@ -1478,27 +1398,25 @@ class AccountSettings(
         // so an empty `tags` is NOT an empty list — guard only on null.
         if (newConcordList == null) return
 
-        if (backupConcordList?.id != newConcordList.id) {
+        if (backupGuard.accept(backupConcordList, newConcordList) { updateConcordListTo(newConcordList) }) {
             backupConcordList = newConcordList
             saveAccountSettings()
         }
     }
 
     fun updateTrustProviderListTo(trustProviderList: TrustProviderListEvent?) {
-        if (trustProviderList == null || trustProviderList.tags.isEmpty()) return
+        if (trustProviderList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupTrustProviderList?.id != trustProviderList.id) {
+        if (backupGuard.accept(backupTrustProviderList, trustProviderList, isEmpty = trustProviderList.tags.isEmpty()) { updateTrustProviderListTo(trustProviderList) }) {
             backupTrustProviderList = trustProviderList
             saveAccountSettings()
         }
     }
 
     fun updateMuteList(newMuteList: MuteListEvent?) {
-        if (newMuteList == null || newMuteList.tags.isEmpty()) return
+        if (newMuteList == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupMuteList?.id != newMuteList.id) {
+        if (backupGuard.accept(backupMuteList, newMuteList, isEmpty = newMuteList.tags.isEmpty()) { updateMuteList(newMuteList) }) {
             backupMuteList = newMuteList
             saveAccountSettings()
         }
@@ -1508,11 +1426,15 @@ class AccountSettings(
         appSettings: AppSpecificDataEvent?,
         newSyncedSettings: AccountSyncedSettingsInternal,
     ) {
-        if (appSettings == null || appSettings.content.isEmpty()) return
+        if (appSettings == null) return
 
-        // Events might be different objects, we have to compare their ids.
-        if (backupAppSpecificData?.id != appSettings.id) {
+        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isBlank()) { updateAppSpecificData(appSettings, newSyncedSettings) }) {
             backupAppSpecificData = appSettings
+            // An emptied blob (signed here or accepted by the user) has no settings to merge.
+            if (appSettings.content.isBlank()) {
+                saveAccountSettings()
+                return
+            }
             syncedSettings.updateFrom(newSyncedSettings)
 
             // Null means an older client rewrote the blob without this key — leave the

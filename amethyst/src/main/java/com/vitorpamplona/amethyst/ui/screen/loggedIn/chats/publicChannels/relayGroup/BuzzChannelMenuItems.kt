@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.buzz_pin
 import com.vitorpamplona.amethyst.commons.resources.buzz_unpin
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**

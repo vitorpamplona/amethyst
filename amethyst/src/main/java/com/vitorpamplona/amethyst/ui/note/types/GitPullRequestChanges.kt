@@ -47,8 +47,8 @@ import com.vitorpamplona.amethyst.commons.resources.git_pr_loading_changes
 import com.vitorpamplona.amethyst.commons.resources.git_pr_no_changes
 import com.vitorpamplona.amethyst.commons.resources.git_pr_view_changes
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.Dispatchers

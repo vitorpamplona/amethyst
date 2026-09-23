@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsState
 import org.junit.Assert.assertEquals
@@ -43,10 +44,10 @@ class DrawerItemVisibilityTest {
 
     @Test
     fun nothingHiddenMeansEverythingVisible() {
-        val visible = DrawerItemVisibility.visibleItems(you, emptySet())
+        val visible = DrawerSectionVisibility.visibleItems(you, emptySet())
 
         assertEquals(you.items, visible)
-        assertEquals(0, DrawerItemVisibility.hiddenCount(you, emptySet()))
+        assertEquals(0, DrawerSectionVisibility.hiddenCount(you, emptySet()))
     }
 
     @Test
@@ -63,10 +64,10 @@ class DrawerItemVisibilityTest {
     @Test
     fun aHiddenRowDropsOutOfItsSectionKeepingTheOrderOfTheRest() {
         val hidden = setOf(NavBarItem.DRAFTS)
-        val visible = DrawerItemVisibility.visibleItems(you, hidden)
+        val visible = DrawerSectionVisibility.visibleItems(you, hidden)
 
         assertEquals(you.items.filter { it != NavBarItem.DRAFTS }, visible)
-        assertEquals(1, DrawerItemVisibility.hiddenCount(you, hidden))
+        assertEquals(1, DrawerSectionVisibility.hiddenCount(you, hidden))
     }
 
     @Test
@@ -96,35 +97,35 @@ class DrawerItemVisibilityTest {
 
     @Test
     fun hideAllLeavesTheMandatoryRowsOfASection() {
-        val hidden = DrawerItemVisibility.hideAll(emptySet(), system)
+        val hidden = DrawerSectionVisibility.hideAll(emptySet(), system)
 
         assertTrue(DrawerItemVisibility.isVisible(hidden, NavBarItem.SETTINGS))
-        assertEquals(0, DrawerItemVisibility.hiddenCount(system, hidden))
+        assertEquals(0, DrawerSectionVisibility.hiddenCount(system, hidden))
     }
 
     @Test
     fun aSectionOfOnlyMandatoryRowsHasNothingToHide() {
         // What gates the section's bulk Show all / Hide all actions.
-        assertFalse(DrawerItemVisibility.hasHideableRows(system))
-        assertTrue(DrawerItemVisibility.hasHideableRows(you))
+        assertFalse(DrawerSectionVisibility.hasHideableRows(system))
+        assertTrue(DrawerSectionVisibility.hasHideableRows(you))
     }
 
     @Test
     fun hideAllThenShowAllRoundTripsASection() {
-        val hidden = DrawerItemVisibility.hideAll(emptySet(), you)
-        assertEquals(you.items.size, DrawerItemVisibility.hiddenCount(you, hidden))
+        val hidden = DrawerSectionVisibility.hideAll(emptySet(), you)
+        assertEquals(you.items.size, DrawerSectionVisibility.hiddenCount(you, hidden))
 
-        val shown = DrawerItemVisibility.showAll(hidden, you)
+        val shown = DrawerSectionVisibility.showAll(hidden, you)
         assertEquals(emptySet<NavBarItem>(), shown)
     }
 
     @Test
     fun showAllOnlyTouchesItsOwnSection() {
-        val hidden = DrawerItemVisibility.hideAll(DrawerItemVisibility.hideAll(emptySet(), you), system)
+        val hidden = DrawerSectionVisibility.hideAll(DrawerSectionVisibility.hideAll(emptySet(), you), system)
 
-        val shown = DrawerItemVisibility.showAll(hidden, system)
+        val shown = DrawerSectionVisibility.showAll(hidden, system)
 
-        assertEquals(you.items.size, DrawerItemVisibility.hiddenCount(you, shown))
+        assertEquals(you.items.size, DrawerSectionVisibility.hiddenCount(you, shown))
     }
 
     @Test

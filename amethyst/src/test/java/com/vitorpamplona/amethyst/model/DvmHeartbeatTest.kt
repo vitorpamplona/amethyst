@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cachedDvmAnnouncements
+import com.vitorpamplona.amethyst.commons.model.dvmHeartbeatOf
+import com.vitorpamplona.amethyst.commons.model.hasFreshDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent

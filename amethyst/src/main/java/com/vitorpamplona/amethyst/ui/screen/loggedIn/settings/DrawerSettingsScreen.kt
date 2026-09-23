@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_always_on
@@ -56,20 +57,19 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_settings_sections
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_show_all
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_title
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings_visible
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.navigation.drawer.MandatoryDrawerItems
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -212,7 +212,7 @@ private fun SectionCard(
     ) {
         // Bulk actions: turning ~29 feed rows off one at a time is the kind of chore that makes
         // people give up halfway and leave the menu in a worse state than they found it.
-        if (DrawerItemVisibility.hasHideableRows(section)) {
+        if (DrawerSectionVisibility.hasHideableRows(section)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp),
                 horizontalArrangement = Arrangement.End,

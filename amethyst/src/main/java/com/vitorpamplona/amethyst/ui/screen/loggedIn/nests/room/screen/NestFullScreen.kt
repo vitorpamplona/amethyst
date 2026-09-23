@@ -74,12 +74,13 @@ import com.vitorpamplona.amethyst.commons.resources.nest_tab_audience
 import com.vitorpamplona.amethyst.commons.resources.nest_tab_chat
 import com.vitorpamplona.amethyst.commons.resources.nest_tab_hands
 import com.vitorpamplona.amethyst.commons.resources.nests
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPanel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestSheet
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.Par
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.AudienceGrid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.HandRaiseQueueSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.StageGrid
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent

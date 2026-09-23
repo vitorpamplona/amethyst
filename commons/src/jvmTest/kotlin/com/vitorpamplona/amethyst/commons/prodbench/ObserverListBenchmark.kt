@@ -269,7 +269,7 @@ class ObserverListBenchmark {
      */
     private fun allocatedBytes(): Long {
         val bean = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
-        return bean.getThreadAllocatedBytes(Thread.currentThread().id)
+        return bean.getThreadAllocatedBytes(Thread.currentThread().threadId())
     }
 
     private fun measureAllocation(
@@ -400,14 +400,14 @@ class ObserverListBenchmark {
             repeat(threads) { t ->
                 thread {
                     start.await()
-                    val before = bean.getThreadAllocatedBytes(Thread.currentThread().id)
+                    val before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId())
                     var i = t
                     while (i < ops) {
                         val (e, note) = fx[i % fx.size]
                         subject.new(e, note)
                         i += threads
                     }
-                    total.addAndGet(bean.getThreadAllocatedBytes(Thread.currentThread().id) - before)
+                    total.addAndGet(bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before)
                     done.countDown()
                 }
             }

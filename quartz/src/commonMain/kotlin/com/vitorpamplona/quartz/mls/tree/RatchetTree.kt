@@ -118,40 +118,50 @@ class RatchetTree(
     /**
      * Add a new leaf to the tree. Returns the leaf index.
      * First tries to reuse a blank leaf slot, otherwise appends.
+     *
+     * RFC 9420 §7.7: every non-blank intermediate node on the new leaf's direct path records the leaf in its
+     * `unmerged_leaves`; the path is NOT blanked (that is what a removal does, §7.8). Blanking it gives a different tree
+     * hash than other implementations whenever such a parent is not also on the committer's UpdatePath — e.g. an
+     * add-only commit without a path (ts-mls sends those) into a group whose parents are populated — and every receiver
+     * then fails the commit with "Confirmation tag verification failed". Path encryption and decryption already exclude
+     * the leaves added in the same commit from copath resolutions, as the RFC requires.
      */
     fun addLeaf(leafNode: LeafNode): Int {
         requireUniqueEncryptionKey(leafNode)
-        // Find first blank leaf
-        for (i in 0 until _leafCount) {
-            if (getLeaf(i) == null) {
-                setLeaf(i, leafNode)
-                // Blank the direct path (RFC 9420 Section 7.7)
-                val directPath = BinaryTree.directPath(i, _leafCount)
-                for (nodeIdx in directPath) {
-                    if (nodeIdx < nodes.size) {
-                        nodes[nodeIdx] = null
-                    }
+        // the leftmost blank leaf, else extend the tree by one leaf
+        val leafIndex =
+            (0 until _leafCount).firstOrNull { getLeaf(it) == null } ?: run {
+                val appended = _leafCount
+                _leafCount++
+                val newNodeCount = BinaryTree.nodeCount(_leafCount)
+                while (nodes.size < newNodeCount) {
+                    nodes.add(null)
                 }
-                return i
+                appended
             }
+        setLeaf(leafIndex, leafNode)
+        for (nodeIdx in BinaryTree.directPath(leafIndex, _leafCount)) {
+            val parent = (getNode(nodeIdx) as? TreeNode.Parent)?.parentNode ?: continue
+            setParent(nodeIdx, parent.copy(unmergedLeaves = parent.unmergedLeaves + leafIndex))
         }
+        return leafIndex
+    }
 
-        // No blank leaf found — extend the tree
-        val newLeafIndex = _leafCount
-        _leafCount++
-        val newNodeCount = BinaryTree.nodeCount(_leafCount)
-        while (nodes.size < newNodeCount) {
-            nodes.add(null)
-        }
-        setLeaf(newLeafIndex, leafNode)
-        // Blank the direct path for the new leaf
-        val directPath = BinaryTree.directPath(newLeafIndex, _leafCount)
-        for (nodeIdx in directPath) {
+    /**
+     * Apply an Update proposal (RFC 9420 §12.1.2): replace the sender's LeafNode AND blank the intermediate nodes on its
+     * direct path. Replacing only the leaf keeps the sender's old path keys where the RFC (and the tree-operations test
+     * vectors) have blanks — a different tree hash whenever those nodes are not overwritten by the committer's UpdatePath.
+     */
+    fun updateLeaf(
+        leafIndex: Int,
+        leafNode: LeafNode,
+    ) {
+        setLeaf(leafIndex, leafNode)
+        for (nodeIdx in BinaryTree.directPath(leafIndex, _leafCount)) {
             if (nodeIdx < nodes.size) {
                 nodes[nodeIdx] = null
             }
         }
-        return newLeafIndex
     }
 
     /**

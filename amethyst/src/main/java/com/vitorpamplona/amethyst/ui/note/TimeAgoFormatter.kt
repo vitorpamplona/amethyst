@@ -42,8 +42,8 @@ import com.vitorpamplona.amethyst.commons.resources.last_seen_on_date
 import com.vitorpamplona.amethyst.commons.resources.m
 import com.vitorpamplona.amethyst.commons.resources.never
 import com.vitorpamplona.amethyst.commons.resources.now
-import com.vitorpamplona.amethyst.ui.pluralStringRes
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import org.jetbrains.compose.resources.StringResource
 import java.text.SimpleDateFormat

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.search
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.search.searchPostsByText
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

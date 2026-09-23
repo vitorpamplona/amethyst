@@ -72,10 +72,10 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_faile
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_ok
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import kotlinx.coroutines.launch
 import java.text.DateFormat

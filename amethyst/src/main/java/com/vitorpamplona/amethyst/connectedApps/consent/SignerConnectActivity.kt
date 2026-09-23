@@ -76,7 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable_desc
 import com.vitorpamplona.amethyst.commons.resources.nip46_connect_requests_title
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 class SignerConnectActivity : ComponentActivity() {

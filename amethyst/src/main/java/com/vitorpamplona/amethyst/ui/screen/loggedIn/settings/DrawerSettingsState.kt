@@ -24,9 +24,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 
 /**
  * State holder for the Side Menu settings screen: owns the set of switched-off drawer rows and the
@@ -53,13 +54,13 @@ class DrawerSettingsState(
 
     fun toggle(item: NavBarItem) = update(DrawerItemVisibility.toggle(hidden, item))
 
-    fun hiddenCount(section: DrawerSection): Int = DrawerItemVisibility.hiddenCount(section, hidden)
+    fun hiddenCount(section: DrawerSection): Int = DrawerSectionVisibility.hiddenCount(section, hidden)
 
-    fun totalHidden(): Int = DrawerItemVisibility.totalHidden(hidden)
+    fun totalHidden(): Int = DrawerSectionVisibility.totalHidden(hidden)
 
-    fun showAll(section: DrawerSection) = update(DrawerItemVisibility.showAll(hidden, section))
+    fun showAll(section: DrawerSection) = update(DrawerSectionVisibility.showAll(hidden, section))
 
-    fun hideAll(section: DrawerSection) = update(DrawerItemVisibility.hideAll(hidden, section))
+    fun hideAll(section: DrawerSection) = update(DrawerSectionVisibility.hideAll(hidden, section))
 
     /** Back to the stock drawer: nothing hidden. */
     fun restoreDefault() = update(emptySet())
