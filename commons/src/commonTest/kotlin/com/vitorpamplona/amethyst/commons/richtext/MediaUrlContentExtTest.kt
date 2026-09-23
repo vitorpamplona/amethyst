@@ -52,6 +52,15 @@ class MediaUrlContentExtTest {
     }
 
     @Test
+    fun encryptedMediaIsNotTurnedIntoBlossomUri() {
+        val url = "https://cdn.example.com/$sha.bin"
+        val image = EncryptedMediaUrlImage(url = url, hash = sha, encryptionAlgo = "aes-gcm", encryptionKey = ByteArray(32), encryptionNonce = ByteArray(12))
+        val video = EncryptedMediaUrlVideo(url = url, hash = sha, encryptionAlgo = "aes-gcm", encryptionKey = ByteArray(32), encryptionNonce = ByteArray(12))
+        assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
+        assertEquals(url, video.toCoilModel(useLocalBlossomBridge = true))
+    }
+
+    @Test
     fun liveStreamReturnsOriginalUrl() {
         val video = MediaUrlVideo(url = "https://stream.example.com/play.m3u8", hash = sha, isLiveStream = true)
         assertEquals("https://stream.example.com/play.m3u8", video.toCoilModel(useLocalBlossomBridge = true))

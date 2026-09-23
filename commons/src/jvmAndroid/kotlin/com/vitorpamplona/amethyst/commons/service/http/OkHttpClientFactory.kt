@@ -76,11 +76,16 @@ class OkHttpClientFactory(
      * anonymous. See [BlossomReadAuthInterceptor].
      */
     private val blossomReadAuth: Interceptor? = null,
+    /**
+     * Called when the local Blossom cache refuses a connection, so the caller can
+     * mark it unavailable instead of waiting for the next periodic probe.
+     */
+    onLocalBlossomCacheUnreachable: () -> Unit = {},
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
     private val blossomCacheRedirect =
-        shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(it) }
+        shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(keyCache, onLocalBlossomCacheUnreachable, it) }
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests

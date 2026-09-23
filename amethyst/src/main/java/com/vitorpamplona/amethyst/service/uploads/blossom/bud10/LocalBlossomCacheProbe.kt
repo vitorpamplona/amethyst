@@ -80,6 +80,16 @@ class LocalBlossomCacheProbe(
         cachedAtMs = 0L
     }
 
+    /**
+     * Records that the cache just refused a connection. Flipping [available] right away turns
+     * the bridge off everywhere it is read, instead of letting every sha256 URL keep failing
+     * against the dead loopback port until the positive TTL runs out and someone re-probes.
+     */
+    fun markUnavailable() {
+        cachedAtMs = currentTimeMs()
+        _available.value = false
+    }
+
     // Confined to Dispatchers.IO because callers reach this through suspend
     // resolvers invoked from Compose `LaunchedEffect`/`produceState`, which run
     // on the main dispatcher: building the OkHttp client and issuing the HEAD

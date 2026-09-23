@@ -153,7 +153,7 @@ class BlossomServerResolver(
             else -> httpClientBuilder.okHttpClientForPreview(url)
         }
 
-    fun canResolve(scheme: String) = scheme == SCHEME
+    fun canResolve(scheme: String) = scheme.equals(SCHEME, ignoreCase = true)
 
     companion object {
         const val SCHEME = "blossom"

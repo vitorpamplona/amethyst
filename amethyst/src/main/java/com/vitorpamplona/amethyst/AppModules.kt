@@ -477,6 +477,7 @@ class AppModules(
                     cachedHeaderProvider = blossomReadAuthTokens::cachedHeader,
                     onAuthRequired = blossomReadAuthTokens::warm,
                 ),
+            onLocalBlossomCacheUnreachable = { localBlossomCacheProbe.markUnavailable() },
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -1035,12 +1036,13 @@ class AppModules(
                 }
             },
             httpClientBuilder = roleBasedHttpClientBuilder,
+            // Same gate as the interceptor: the profile-pictures-only restriction keeps note
+            // media (including native `blossom:` URIs) off the local cache.
             useLocalBlossomCache = {
-                sessionManager
-                    .loggedInAccount()
-                    ?.settings
-                    ?.useLocalBlossomCache
-                    ?.value ?: false
+                val settings = sessionManager.loggedInAccount()?.settings
+                val master = settings?.useLocalBlossomCache?.value ?: false
+                val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
+                master && !profileOnly
             },
             localCacheProbe = localBlossomCacheProbe,
         )
@@ -1367,6 +1369,22 @@ class AppModules(
         applicationIOScope.launch {
             localBlossomCacheProbe.isAvailable()
         }
+        // Re-checks the local cache about once a minute while the feature is on, so the bridge
+        // comes back when the cache app is restarted and turns off when it is closed, even while
+        // no `blossom:` URI is being resolved. A loopback HEAD never wakes the radio.
+        applicationIOScope.launch {
+            while (true) {
+                delay(LOCAL_BLOSSOM_CACHE_RECHECK_MS)
+                if (sessionManager
+                        .loggedInAccount()
+                        ?.settings
+                        ?.useLocalBlossomCache
+                        ?.value == true
+                ) {
+                    localBlossomCacheProbe.isAvailable()
+                }
+            }
+        }
 
         // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite
         // index over StandaloneDatabaseProvider and walks every cached span on disk — up to a
@@ -1505,5 +1523,8 @@ class AppModules(
          * check and burn CPU on a heap that has nothing left to give.
          */
         private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
+
+        /** How often the local Blossom cache is re-probed while the feature is enabled. */
+        private const val LOCAL_BLOSSOM_CACHE_RECHECK_MS = 60_000L
     }
 }

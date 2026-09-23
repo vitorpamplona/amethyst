@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.service.resourceusage
 import android.os.SystemClock
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody
 import okio.Buffer
 import okio.ForwardingSource
 import okio.Source
 import okio.buffer
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -97,24 +99,29 @@ class UsageCountingInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
 
-        // Loopback traffic (LocalBlossomCacheRedirectInterceptor rewrites cache
-        // hits to 127.0.0.1) never touches the radio: counting it would inflate
-        // the network numbers — and could trip the background-data alert — for
-        // exactly the users who cache aggressively to SAVE data.
+        // Loopback traffic never touches the radio: counting it would inflate the
+        // network numbers — and could trip the background-data alert — for exactly
+        // the users who cache aggressively to SAVE data. This interceptor is the
+        // outermost one, so it sees URLs BEFORE LocalBlossomCacheRedirectInterceptor
+        // rewrites them to 127.0.0.1; the host that was actually contacted is only
+        // known from the response's request.
         if (isLoopback(request.url.host)) return chain.proceed(request)
 
         val role = request.tag(UsageRoleTag::class.java)?.role ?: defaultRole
 
-        accountant.add(UsageKeys.netReqs(role, isMobile(), isForeground()), 1)
-        bursts?.onHttpActivity()
-
-        val requestBytes = request.body?.contentLength()?.coerceAtLeast(0L) ?: 0L
-        if (requestBytes > 0) {
-            accountant.add(UsageKeys.net(role, isMobile(), isForeground(), received = false), requestBytes)
-        }
-
         val startedAtMs = nowMs()
-        val response = chain.proceed(request)
+        val response =
+            try {
+                chain.proceed(request)
+            } catch (e: IOException) {
+                countRequest(request, role)
+                throw e
+            }
+
+        if (isLoopback(response.request.url.host)) return response
+
+        countRequest(request, role)
+
         return response
             .newBuilder()
             .body(
@@ -129,6 +136,19 @@ class UsageCountingInterceptor(
                     },
                 ),
             ).build()
+    }
+
+    private fun countRequest(
+        request: Request,
+        role: String,
+    ) {
+        accountant.add(UsageKeys.netReqs(role, isMobile(), isForeground()), 1)
+        bursts?.onHttpActivity()
+
+        val requestBytes = request.body?.contentLength()?.coerceAtLeast(0L) ?: 0L
+        if (requestBytes > 0) {
+            accountant.add(UsageKeys.net(role, isMobile(), isForeground(), received = false), requestBytes)
+        }
     }
 
     companion object {

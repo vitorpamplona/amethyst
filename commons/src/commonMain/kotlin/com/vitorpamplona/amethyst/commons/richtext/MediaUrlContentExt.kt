@@ -44,7 +44,11 @@ fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String =
         useBridge = useLocalBlossomBridge,
         mimeType = mimeType,
         authorPubKey = authorPubKey,
-        skipBridge = this is MediaUrlVideo && isLiveStream,
+        // Encrypted blobs are decrypted by a key registered under their URL. A `blossom:`
+        // URI resolves to a local-cache URL no key is registered under, so the ciphertext
+        // would reach the decoder. They still reach the cache through the HTTP-level
+        // redirect, which carries the key over to the rewritten URL.
+        skipBridge = (this is MediaUrlVideo && isLiveStream) || this is EncryptedMediaUrlImage || this is EncryptedMediaUrlVideo,
     )
 
 /**

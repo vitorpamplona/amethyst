@@ -54,8 +54,10 @@ class DualHttpClientManager(
     // Signs BUD-01 read-auth to retry auth-gated Blossom downloads on 401.
     // See [BlossomReadAuthInterceptor].
     blossomReadAuth: Interceptor? = null,
+    // Told when the local Blossom cache refuses a connection. See [LocalBlossomCacheRedirectInterceptor].
+    onLocalBlossomCacheUnreachable: () -> Unit = {},
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth, onLocalBlossomCacheUnreachable)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

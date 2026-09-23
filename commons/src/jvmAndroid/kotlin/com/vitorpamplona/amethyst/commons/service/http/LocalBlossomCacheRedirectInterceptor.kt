@@ -24,6 +24,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
+import java.net.ConnectException
 
 /**
  * App-wide OkHttp interceptor that transparently rewrites HTTP requests for
@@ -38,24 +39,59 @@ import okhttp3.Response
  * Coil's disk cache keys responses by the original `ImageRequest.data`, so
  * disk caching continues to work transparently even though the network
  * request now goes to localhost.
+ *
+ * Only `GET`s are bridged: a `HEAD` presence check, a `DELETE` or an upload
+ * addresses one specific server and must reach it, not the cache.
+ *
+ * Encrypted blobs are looked up in [keyCache] by URL after this interceptor
+ * runs, so their decryption key is registered under the rewritten URL too.
+ *
+ * When the cache refuses the connection (the app was closed since the last
+ * probe), [onUnreachable] is told so the bridge can switch off, and the
+ * request falls back to its original URL instead of failing.
  */
 class LocalBlossomCacheRedirectInterceptor(
+    private val keyCache: EncryptionKeyCache? = null,
+    private val onUnreachable: () -> Unit = {},
+    // Last, so the `LocalBlossomCacheRedirectInterceptor { enabled }` trailing-lambda form binds here.
     private val shouldBridge: () -> Boolean,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
 
+        if (request.method != "GET") return chain.proceed(request)
+
+        if (isLocalCache(request.url)) {
+            // Already addressed to the cache (a resolved `blossom:` URI): there is no
+            // original URL to fall back to here, but a dead cache must still be reported.
+            try {
+                return chain.proceed(request)
+            } catch (e: ConnectException) {
+                onUnreachable()
+                throw e
+            }
+        }
+
         if (!shouldBridge()) return chain.proceed(request)
 
         val rewritten = rewriteIfApplicable(request.url) ?: return chain.proceed(request)
 
-        return chain.proceed(
-            request
-                .newBuilder()
-                .url(rewritten)
-                .build(),
-        )
+        keyCache?.get(request.url.toString())?.let { keyCache.add(rewritten.toString(), it) }
+
+        return try {
+            chain.proceed(
+                request
+                    .newBuilder()
+                    .url(rewritten)
+                    .build(),
+            )
+        } catch (e: ConnectException) {
+            onUnreachable()
+            chain.proceed(request)
+        }
     }
+
+    private fun isLocalCache(url: HttpUrl): Boolean = url.port == LOCAL_CACHE_PORT && (url.host == LOCAL_CACHE_HOST || url.host.equals("localhost", ignoreCase = true))
 
     private fun rewriteIfApplicable(url: HttpUrl): HttpUrl? {
         val host = url.host
