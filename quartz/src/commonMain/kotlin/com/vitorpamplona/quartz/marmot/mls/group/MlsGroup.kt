@@ -3624,7 +3624,9 @@ class MlsGroup private constructor(
              * the MIP-era set; a current-profile group passes
              * [buildCurrentProfileRequiredCapabilitiesExtension].
              */
-            requiredCapabilities: Extension = buildMarmotRequiredCapabilitiesExtension(),
+            requiredCapabilities: Extension? = buildMarmotRequiredCapabilitiesExtension(),
+            /** The group's MLS `group_id`. Null picks 32 random bytes. */
+            groupId: ByteArray? = null,
         ): MlsGroup {
             val sigKp =
                 signingKey?.let { key ->
@@ -3633,7 +3635,7 @@ class MlsGroup private constructor(
                 } ?: Ed25519.generateKeyPair()
 
             val encKp = X25519.generateKeyPair()
-            val groupId = MlsCryptoProvider.randomBytes(32)
+            val groupId = groupId ?: MlsCryptoProvider.randomBytes(32)
 
             val leafNode =
                 buildLeafNode(
@@ -3654,7 +3656,7 @@ class MlsGroup private constructor(
             // bake into epoch 0 (e.g. the MIP-01 MarmotGroupData extension so
             // new peers who join later can see the group name without first
             // decrypting a pre-membership bootstrap commit — see MIP-03).
-            val baseExtensions = listOf(requiredCapabilities)
+            val baseExtensions = listOfNotNull(requiredCapabilities)
             val groupContext =
                 GroupContext(
                     groupId = groupId,
