@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -312,11 +314,18 @@ private fun ReviewActions(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            OutlinedButton(onClick = onKeepNew, modifier = Modifier.weight(1f).height(52.dp)) {
-                Text(keepLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+            // Keeping the new version is the default: it's what is on relays already. Restoring
+            // always reverts another app's change, so it is the red, secondary choice.
+            OutlinedButton(
+                onClick = onRestore,
+                modifier = Modifier.weight(1f).height(52.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            ) {
+                Text(restoreLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
             }
-            Button(onClick = onRestore, modifier = Modifier.weight(1f).height(52.dp)) {
-                Text(restoreLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+            Button(onClick = onKeepNew, modifier = Modifier.weight(1f).height(52.dp)) {
+                Text(keepLabel, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
             }
         }
     }

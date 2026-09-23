@@ -90,6 +90,8 @@ only surviving copy of the user's data is gone.
    encrypted-only Cashu wallet and Concord list as one explained panel. Only NIP-78 app
    settings still uses the generic removed / added / changed sections.
    Buttons are worded per event ("Keep 120" / "Restore 523", "Re-mute 37", "Rejoin 3").
+   Keeping the new version is the default (the filled button, on the right); restoring
+   always reverts another app's change, so it is an outlined red button on every screen.
    The screen offers:
    - **Restore saved version** — `Account.restoreBackupOver` re-signs the saved kind, tags
      and content (NIP-44 self-encrypted items stay valid) with
