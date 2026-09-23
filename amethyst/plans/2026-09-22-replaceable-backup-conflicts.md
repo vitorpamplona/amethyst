@@ -53,8 +53,9 @@ only surviving copy of the user's data is gone.
    Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
    next to the key-backup nudge): "Your mute list changed in another app" with a
    "12 removed · 3 added" summary. Cards can't be dismissed; they stay until the user
-   decides, and with more than two conflicts they fold into one card with a row per
-   conflict. Tapping one opens `Route.BackupConflictReview(slot)`
+   decides. The most recent conflict gets a lead card with an event-specific headline
+   ("3 relays were unblocked", "Your follow list shrank" with its bar); the others collapse
+   into slim pills. Tapping one opens `Route.BackupConflictReview(slot)`
    (`BackupConflictReviewScreen`): a `LazyColumn` of every entry, so lists with hundreds of
    items scroll lazily. Entries are typed (`ReviewItem`, built per diff class in
    `BackupConflictPresentation.kt`) and rendered with the app's loaders, which subscribe to
