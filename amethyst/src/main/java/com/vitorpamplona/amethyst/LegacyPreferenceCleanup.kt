@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsSto
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSecrets
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -133,9 +132,19 @@ interface MigratedSecrets {
  * `CopyOnceMigration` writes the values and its marker as a single
  * `Preferences`, committed atomically, so the marker cannot be set without them.
  *
- * The secrets and the private key are still written to *both* stores on every
- * save, so for those the stronger question is available and is asked: read both
- * back and require them to agree.
+ * The private key takes the strongest form: read it back and require it to
+ * equal the legacy one. That comparison stays valid forever, because an npub is
+ * derived from its private key, so the key for a given npub can never change.
+ *
+ * The secrets cannot be compared, and the reason is worth stating because the
+ * obvious reading is wrong. They *are* dual-written today — but this whole
+ * check only runs once [legacyWritesRetired] is true, and from that release on
+ * the legacy copy is frozen while the live one keeps moving. An account that
+ * re-pairs a bunker or adds a wallet after upgrading would then differ from the
+ * file forever and never have it deleted. So they are gated the same way as the
+ * plain groups: on the copy having run, which
+ * [AccountSecretsEncryptedStores.loadSecrets] reports by returning non-null
+ * only once its marker is set, and it writes that marker last.
  *
  * # Why an unrecognised key blocks
  *
@@ -223,17 +232,10 @@ class LegacyPreferenceCleanup(
         npub: String,
         legacy: LegacyPreferenceSource,
     ): List<String> {
-        val expected = readLegacyAccountSecrets(legacy)
         val reasons = mutableListOf<String>()
 
         try {
-            val stored = secrets.secrets(npub)
-            when {
-                stored == null -> reasons += "the secrets have not been copied across"
-                // Field names only. These values are bunker secrets and wallet
-                // connection strings; a log line is the last place for them.
-                stored != expected -> reasons += "the stored secrets differ from the legacy file: ${differingFields(expected, stored)}"
-            }
+            if (secrets.secrets(npub) == null) reasons += "the secrets have not been copied across"
         } catch (e: Exception) {
             Log.w(TAG, "Could not read the secrets store for $npub", e)
             reasons += "the secrets store could not be read"
@@ -255,22 +257,6 @@ class LegacyPreferenceCleanup(
 
         return reasons
     }
-
-    private fun differingFields(
-        expected: AccountSecrets,
-        stored: AccountSecrets,
-    ): String =
-        listOfNotNull(
-            "nip46SignerEnabled".takeIf { expected.nip46SignerEnabled != stored.nip46SignerEnabled },
-            "nip46BunkerSecret".takeIf { expected.nip46BunkerSecret != stored.nip46BunkerSecret },
-            "nip46TransportKey".takeIf { expected.nip46TransportKey != stored.nip46TransportKey },
-            "nip46SeenRequestIds".takeIf { expected.nip46SeenRequestIds != stored.nip46SeenRequestIds },
-            "nwcWallets".takeIf { expected.nwcWalletsJson != stored.nwcWalletsJson },
-            "clinkDebitWallets".takeIf { expected.clinkDebitWalletsJson != stored.clinkDebitWalletsJson },
-            "defaultPaymentSourceId".takeIf { expected.defaultPaymentSourceId != stored.defaultPaymentSourceId },
-            "defaultNwcWalletId".takeIf { expected.legacyDefaultNwcWalletId != stored.legacyDefaultNwcWalletId },
-            "zapPaymentServer".takeIf { expected.legacyZapPaymentRequestServer != stored.legacyZapPaymentRequestServer },
-        ).joinToString()
 
     /**
      * Deletes the account's legacy file if — and only if — [verify] comes back

@@ -33,8 +33,22 @@ import java.io.File
  * carrying it over — the dismissed list is a convenience, and chess has few
  * enough users that a migration is not worth the code.
  */
-fun desktopChessDismissedGamesStore(): ChessDismissedGamesStore {
+fun desktopChessDismissedGamesStore(): ChessDismissedGamesStore = sharedStore
+
+/**
+ * One store for the process.
+ *
+ * DataStore keeps a process-wide registry keyed by file path and only releases
+ * an entry when the owning scope ends; the factory's own scope never does. So
+ * building a fresh store per call — and the chess view model builds one in its
+ * constructor, under a `remember(account)` — made the second one throw
+ * "multiple DataStores active for the same file" on its first read. That
+ * surfaced from a `scope.launch` with no handler, taking the screen's whole
+ * scope down with it. The `java.util.prefs` node this replaced was safe to
+ * construct repeatedly, so nothing here used to need a singleton.
+ */
+private val sharedStore: ChessDismissedGamesStore by lazy {
     val file = File(appDataDir, "chess_dismissed_games.preferences_pb")
     file.parentFile?.mkdirs()
-    return ChessDismissedGamesStore(PreferenceDataStoreFactory.createWithPath(produceFile = { file.toOkioPath() }))
+    ChessDismissedGamesStore(PreferenceDataStoreFactory.createWithPath(produceFile = { file.toOkioPath() }))
 }

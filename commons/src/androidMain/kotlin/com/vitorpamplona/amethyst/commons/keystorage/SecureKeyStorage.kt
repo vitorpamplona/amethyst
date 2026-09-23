@@ -68,20 +68,32 @@ actual class SecureKeyStorage private actual constructor() {
             appContext = context.applicationContext
             return SecureKeyStorage()
         }
-    }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        /**
+         * One scope and one store for the whole process, not one per instance.
+         *
+         * [create] hands out a new [SecureKeyStorage] on every call — harmless
+         * when the store was `EncryptedSharedPreferences.create`, which is
+         * idempotent, but DataStore keeps a process-wide registry keyed by file
+         * path and only releases an entry when the owning scope ends. A
+         * per-instance store over a fixed path meant the second instance threw
+         * "multiple DataStores active for the same file" on its first read —
+         * which, for this store, reads as the account having no private key.
+         */
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val store by lazy {
-        EncryptedDataStore(
-            PreferenceDataStoreFactory.createWithPath(
+        private val sharedStore by lazy {
+            EncryptedDataStore(
+                PreferenceDataStoreFactory.createWithPath(
+                    scope = scope,
+                    produceFile = { File(appContext.filesDir, STORE_FILE).toOkioPath() },
+                ),
                 scope = scope,
-                produceFile = { File(appContext.filesDir, STORE_FILE).toOkioPath() },
-            ),
-            SecretEncryption(),
-            scope = scope,
-        )
+            )
+        }
     }
+
+    private val store get() = sharedStore
 
     private fun keyFor(npub: String) = stringPreferencesKey(KEY_PREFIX + npub)
 
@@ -117,10 +129,18 @@ actual class SecureKeyStorage private actual constructor() {
             throw SecureStorageException("Failed to retrieve private key", e)
         }
 
+    /**
+     * Removes the key unconditionally, and reports whether one was there.
+     *
+     * The presence test deliberately does not decrypt. Gating the removal on a
+     * successful decrypting read meant a rotated or wiped AndroidKeyStore —
+     * exactly when the value is unreadable — skipped the delete, leaving the
+     * private key of a deleted account on disk.
+     */
     actual suspend fun deletePrivateKey(npub: String): Boolean =
         try {
-            val existed = store.get(keyFor(npub)) != null
-            if (existed) store.remove(keyFor(npub))
+            val existed = store.contains(keyFor(npub))
+            store.remove(keyFor(npub))
             existed
         } catch (e: Exception) {
             throw SecureStorageException("Failed to delete private key", e)

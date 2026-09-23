@@ -390,10 +390,19 @@ object LocalPreferences {
 
     private suspend fun loadAccountStores(
         npub: String,
-        legacyIdentity: () -> AccountIdentity,
+        legacy: SharedPreferences,
     ) = AccountStoreData(
-        identity = identityStore(npub).load().orIfUnusable(legacyIdentity),
-        followLists = followListStore(npub).load(),
+        identity =
+            identityStore(npub).load().orIfUnusable {
+                AccountIdentity(
+                    pubKeyHex = legacy.getString(PrefKeys.NOSTR_PUBKEY, null),
+                    loginWithExternalSigner = legacy.getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                    externalSignerPackageName = legacy.getString(PrefKeys.SIGNER_PACKAGE_NAME, null),
+                    localRelayServers = legacy.getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf(),
+                    openBackupConflictsJson = legacy.getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null),
+                )
+            },
+        followLists = migrateNotificationFilter(npub, legacy, followListStore(npub).load()),
         latestEvents = latestEventStore(npub).load(),
         uploadSettings = uploadSettingsStore(npub).load(),
         dialogDismissal = dialogDismissalStore(npub).load(),
@@ -522,9 +531,17 @@ object LocalPreferences {
                             )
                         }
 
+                    val json = JsonMapper.toJson(migrated)
                     edit {
-                        putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
+                        putString(PrefKeys.ALL_ACCOUNT_INFO, json)
                     }
+                    // Mirrored as well, exactly as updateSavedAccounts does. The
+                    // roster's own copy has already run by this point, against an
+                    // ALL_ACCOUNT_INFO that did not exist yet, and its marker is
+                    // set — so without this the roster store stays permanently
+                    // empty for these installs and they open as a fresh install
+                    // the moment the legacy write goes.
+                    accountRoster.mirrorAllAccountInfoJson(json)
 
                     migrated
                 }
@@ -535,7 +552,10 @@ object LocalPreferences {
 
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) =
         withContext(Dispatchers.IO) {
-            if (savedAccounts != accounts) {
+            // .value, not the flow: StateFlow does not override equals, so
+            // comparing the holder to a List was unconditionally true and every
+            // call rewrote both stores.
+            if (savedAccounts.value != accounts) {
                 savedAccounts.emit(accounts)
 
                 val json = JsonMapper.toJson(accounts.filter { !it.isTransient })
@@ -614,6 +634,12 @@ object LocalPreferences {
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
             accountKeyStore.delete(accountInfo.npub)
             accountSecretsStore.delete(accountInfo.npub)
+            // The account's plain DataStore, which deleteUserPreferenceFile cannot
+            // reach: that sweeps shared_prefs/, this lives in filesDir/datastore/.
+            // Left behind it would keep the deleted account's pubkey, signer and
+            // cached events on disk — and re-adding the same npub would find a
+            // live identity there and resurrect the account that was just deleted.
+            accountStores.removeAccount(accountInfo.npub)
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
 
@@ -981,26 +1007,33 @@ object LocalPreferences {
         cachedAccounts[npub]?.let { return it }
 
         return withContext(Dispatchers.IO) {
-            mutex.withLock {
-                cachedAccounts[npub]?.let { return@withContext it }
+            var loadedHere = false
 
-                val accountSettings = innerLoadCurrentAccountFromEncryptedStorage(npub)
+            val accountSettings =
+                mutex.withLock {
+                    cachedAccounts[npub]?.let { return@withLock it }
 
-                // Only cache successful loads. Caching null would leave the account
-                // permanently unreachable for the rest of the session if a reader
-                // raced in before the per-npub file finished being written.
-                if (accountSettings != null) {
-                    cachedAccounts.put(npub, accountSettings)
+                    val loaded = innerLoadCurrentAccountFromEncryptedStorage(npub)
 
-                    // Everything this account has is now migrated and just been
-                    // read back, which is the only moment the legacy file can be
-                    // shown to be redundant. It will not be, yet — see
-                    // [LEGACY_WRITES_RETIRED].
-                    legacyCleanup.deleteIfVerified(npub)
+                    // Only cache successful loads. Caching null would leave the account
+                    // permanently unreachable for the rest of the session if a reader
+                    // raced in before the per-npub file finished being written.
+                    if (loaded != null) {
+                        cachedAccounts.put(npub, loaded)
+                        loadedHere = true
+                    }
+
+                    loaded
                 }
 
-                return@withContext accountSettings
-            }
+            // Outside the lock, and only for the call that did the loading.
+            // Verifying decrypts the whole legacy file and reads three stores,
+            // while `mutex` serialises every account load — under the lock, each
+            // account on a multi-account cold start would wait for the previous
+            // one's full cleanup pass. Nothing here feeds the load.
+            if (loadedHere) legacyCleanup.deleteIfVerified(npub)
+
+            accountSettings
         }
     }
 
@@ -1021,16 +1054,7 @@ object LocalPreferences {
                     // identity falls back to that file when its store cannot
                     // produce a pubkey: an account without one vanishes from the
                     // app entirely, private key intact.
-                    val stores =
-                        loadAccountStores(npub) {
-                            AccountIdentity(
-                                pubKeyHex = getString(PrefKeys.NOSTR_PUBKEY, null),
-                                loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
-                                externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null),
-                                localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf(),
-                                openBackupConflictsJson = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null),
-                            )
-                        }
+                    val stores = loadAccountStores(npub, this)
                     val identity = stores.identity
                     val pubKey = identity.pubKeyHex ?: return@with null
                     val privKey =
@@ -1427,17 +1451,27 @@ object LocalPreferences {
      * deliberate raw-Global choice is never reverted. Accounts created after the
      * split are stamped at save time, so they are never touched here.
      */
-    private fun SharedPreferences.migrateNotificationFilter(current: TopFilter): TopFilter {
-        if (getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return current
+    private suspend fun migrateNotificationFilter(
+        npub: String,
+        legacy: SharedPreferences,
+        filters: Map<FollowListSlot, TopFilter>,
+    ): Map<FollowListSlot, TopFilter> {
+        if (legacy.getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return filters
 
+        val current = filters.getValue(FollowListSlot.NOTIFICATION)
         val migrated = if (current is TopFilter.Global) TopFilter.Selected else current
-        edit {
-            if (migrated !== current) {
-                putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(migrated))
-            }
-            putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
-        }
-        return migrated
+
+        // Into the store the loader reads, not the legacy key it no longer does.
+        // Writing it to the legacy file and stamping anyway left the account on
+        // raw Global for good: the stamp survives, the corrected value does not,
+        // and the next launch reads Global back out of the DataStore.
+        if (migrated !== current) followListStore(npub).save(FollowListSlot.NOTIFICATION, migrated)
+
+        // Stamped only once the value is actually stored, so a failed write
+        // means the migration runs again rather than being lost.
+        legacy.edit { putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true) }
+
+        return if (migrated === current) filters else filters + (FollowListSlot.NOTIFICATION to migrated)
     }
 
     /**
@@ -1446,11 +1480,11 @@ object LocalPreferences {
      * returns every slot, so a missing one is a bug in this mapping rather
      * than a user with no saved filter, and should fail loudly.
      */
-    private fun SharedPreferences.toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowListPrefs =
+    private fun toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowListPrefs =
         FollowListPrefs(
             home = filters.getValue(FollowListSlot.HOME),
             stories = filters.getValue(FollowListSlot.STORIES),
-            notification = migrateNotificationFilter(filters.getValue(FollowListSlot.NOTIFICATION)),
+            notification = filters.getValue(FollowListSlot.NOTIFICATION),
             discovery = filters.getValue(FollowListSlot.DISCOVERY),
             polls = filters.getValue(FollowListSlot.POLLS),
             pictures = filters.getValue(FollowListSlot.PICTURES),

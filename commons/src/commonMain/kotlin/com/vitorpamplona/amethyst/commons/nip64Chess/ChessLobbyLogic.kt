@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -141,16 +142,43 @@ class ChessLobbyLogic(
      * or two.
      *
      * The seed unions rather than replaces, so a dismissal the user makes
-     * before the read lands is not overwritten by it.
+     * before the read lands is not overwritten by it — and it asks for a write
+     * when it did union something in, because that earlier dismissal already
+     * persisted a snapshot that did not have the stored ids in it.
      */
     private val dismissedGameIds: MutableSet<String> = mutableSetOf()
+
+    /**
+     * Serialises persistence, so a save cannot land out of order.
+     *
+     * Each dismissal used to launch its own `storage.save(snapshot)`. Two of
+     * them are unordered on the same dispatcher, so the first dismissal's
+     * smaller snapshot could be written *after* the second's and drop it — the
+     * game came back on the next launch. One consumer, writing whatever the set
+     * currently holds, cannot reorder; conflation is safe for the same reason,
+     * since a dropped signal is one whose contents the next write includes.
+     */
+    private val persistRequests = Channel<Unit>(Channel.CONFLATED)
 
     init {
         dismissedStorage?.let { storage ->
             scope.launch {
+                for (unused in persistRequests) {
+                    storage.save(userPubkey, dismissedGameIdsLock.withLock { dismissedGameIds.toSet() })
+                }
+            }
+            scope.launch {
                 val stored = storage.load(userPubkey)
                 if (stored.isNotEmpty()) {
-                    dismissedGameIdsLock.withLock { dismissedGameIds.addAll(stored) }
+                    val union =
+                        dismissedGameIdsLock.withLock {
+                            dismissedGameIds.addAll(stored)
+                            dismissedGameIds.size
+                        }
+                    // Larger than what was on disk means a dismissal beat this
+                    // read, and the snapshot it wrote is missing everything that
+                    // was already stored. Write the union back.
+                    if (union > stored.size) persistRequests.trySend(Unit)
                 }
             }
         }
@@ -984,23 +1012,15 @@ class ChessLobbyLogic(
 
     fun dismissCompletedGame(gameId: String) {
         state.removeCompletedGame(gameId)
-        val snapshot =
-            dismissedGameIdsLock.withLock {
-                dismissedGameIds.add(gameId)
-                dismissedGameIds.toSet()
-            }
-        dismissedStorage?.let { storage -> scope.launch { storage.save(userPubkey, snapshot) } }
+        dismissedGameIdsLock.withLock { dismissedGameIds.add(gameId) }
+        persistRequests.trySend(Unit)
     }
 
     fun dismissAllCompletedGames() {
         val allIds = state.completedGames.value.map { it.gameId }
         state.clearCompletedGames()
-        val snapshot =
-            dismissedGameIdsLock.withLock {
-                dismissedGameIds.addAll(allIds)
-                dismissedGameIds.toSet()
-            }
-        dismissedStorage?.let { storage -> scope.launch { storage.save(userPubkey, snapshot) } }
+        dismissedGameIdsLock.withLock { dismissedGameIds.addAll(allIds) }
+        persistRequests.trySend(Unit)
     }
 
     /**

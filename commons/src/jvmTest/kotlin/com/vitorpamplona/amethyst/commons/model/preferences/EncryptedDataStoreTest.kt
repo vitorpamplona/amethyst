@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -210,5 +211,88 @@ class EncryptedDataStoreTest {
                 runCatching { subject.get(key) }.isFailure,
             )
             scope.cancel()
+        }
+
+    @Test
+    fun editWritesEveryKeyInOneGo() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val subject = store(scope)
+            val other = stringPreferencesKey("bunker")
+
+            subject.edit {
+                put(key, "wallet")
+                put(other, "secret")
+            }
+
+            val snapshot = subject.snapshot()
+            assertEquals("wallet", snapshot[key])
+            assertEquals("secret", snapshot[other])
+        }
+
+    /**
+     * The whole point of writing a group in one edit: a marker written beside
+     * its values cannot be found on disk without them.
+     */
+    @Test
+    fun editIsOneTransaction() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val subject = store(scope)
+            val marker = stringPreferencesKey("migrated")
+
+            runCatching {
+                subject.edit {
+                    put(key, "wallet")
+                    put(marker, "true")
+                    throw IllegalStateException("crash midway")
+                }
+            }
+
+            val snapshot = subject.snapshot()
+            assertNull(snapshot[marker])
+            assertNull(snapshot[key])
+        }
+
+    @Test
+    fun putOrRemoveClearsANullValue() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val subject = store(scope)
+
+            subject.edit { put(key, "wallet") }
+            subject.edit { putOrRemove(key, null) }
+
+            assertNull(subject.snapshot()[key])
+        }
+
+    /**
+     * `contains` must not decrypt.
+     *
+     * A value the current key cannot decrypt — a rotated or wiped keystore — is
+     * still a value that is there, and deleting it has to happen anyway.
+     * `deletePrivateKey` gated its removal on a decrypting read and so skipped
+     * exactly the case that needed it, leaving a deleted account's private key
+     * on disk.
+     */
+    @Test
+    fun containsSeesAValueThatCannotBeDecrypted() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val n = seq++
+            val dataFile = File(folder.root, "secrets_$n.preferences_pb")
+            val raw =
+                PreferenceDataStoreFactory.createWithPath(scope = scope, produceFile = { dataFile.toOkioPath() })
+            // Ciphertext this store's key was never used to produce.
+            raw.edit { prefs -> prefs[key] = "bm90LWFjdHVhbGx5LWNpcGhlcnRleHQ=" }
+
+            val subject =
+                EncryptedDataStore(raw, SecretEncryption(File(folder.root, "secret_$n.key")), scope = scope)
+
+            assertTrue(subject.contains(key))
+            assertNull(runCatching { subject.get(key) }.getOrNull())
+
+            subject.remove(key)
+            assertTrue(!subject.contains(key))
         }
 }

@@ -180,39 +180,28 @@ class LegacyPreferenceCleanupTest {
             assertTrue(!files.deleted)
         }
 
-    /** Both stores are still written, so a disagreement means a write was lost. */
+    /**
+     * A migrated secrets group that has since moved on from the legacy file
+     * must not block deletion.
+     *
+     * This check only ever runs in the release that stopped writing the legacy
+     * file, so from then on that copy is frozen while the live one keeps
+     * changing. Comparing the two would mean any account that re-pairs a bunker
+     * or adds a wallet after upgrading never gets its file deleted. The gate is
+     * the migration marker, which is what a non-null read reports.
+     */
     @Test
-    fun secretsThatDisagreeStopTheDeletion() =
+    fun secretsThatHaveMovedOnSinceTheCopyDoNotBlock() =
         runTest {
             val (files, subject) =
                 cleanup(
-                    mapOf("legacy_flag" to true, "nip46BunkerSecret" to "from-the-file"),
-                    secrets = FakeSecrets(stored = AccountSecrets(nip46BunkerSecret = "stale")),
+                    mapOf("legacy_flag" to true, "nip46BunkerSecret" to "what-the-file-still-says"),
+                    secrets = FakeSecrets(stored = AccountSecrets(nip46BunkerSecret = "re-paired since")),
                 )
 
-            val result = subject.deleteIfVerified(NPUB)
-
-            assertEquals(
-                LegacyCleanupResult.Kept(listOf("the stored secrets differ from the legacy file: nip46BunkerSecret")),
-                result,
-            )
-            assertTrue(!files.deleted)
-        }
-
-    /** The values themselves are bunker secrets and wallet strings. */
-    @Test
-    fun aSecretsMismatchNamesTheFieldAndNotTheValue() =
-        runTest {
-            val (_, subject) =
-                cleanup(
-                    mapOf("nwcWallets" to "nostr+walletconnect://deadbeef?secret=hunter2"),
-                    secrets = FakeSecrets(stored = AccountSecrets()),
-                )
-
-            val reason = subject.verify(NPUB).single()
-
-            assertTrue(reason, !reason.contains("hunter2"))
-            assertTrue(reason, reason.contains("nwcWallets"))
+            assertEquals(emptyList<String>(), subject.verify(NPUB))
+            assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
+            assertTrue(files.deleted)
         }
 
     @Test

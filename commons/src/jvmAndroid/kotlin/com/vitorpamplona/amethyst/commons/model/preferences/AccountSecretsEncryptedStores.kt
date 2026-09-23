@@ -126,53 +126,53 @@ class AccountSecretsEncryptedStores(
      * genuinely holds no secrets must not trigger it forever.
      */
     suspend fun loadSecrets(npub: String): AccountSecrets? {
-        val store = getDataStore(npub)
-        if (store.get(AccountSecretKeys.migrated) == null) return null
+        // One snapshot for the whole group rather than ten flow collections.
+        val stored = getDataStore(npub).snapshot()
+        if (stored[AccountSecretKeys.migrated] == null) return null
 
         return AccountSecrets(
-            nip46SignerEnabled = store.get(AccountSecretKeys.nip46SignerEnabled).toBoolean(),
-            nip46BunkerSecret = store.get(AccountSecretKeys.nip46BunkerSecret) ?: "",
-            nip46TransportKey = store.get(AccountSecretKeys.nip46TransportKey) ?: "",
-            nip46SeenRequestIds = decodeSet(store.get(AccountSecretKeys.nip46SeenRequestIds)),
-            nwcWalletsJson = store.get(AccountSecretKeys.nwcWallets),
-            clinkDebitWalletsJson = store.get(AccountSecretKeys.clinkDebitWallets),
-            defaultPaymentSourceId = store.get(AccountSecretKeys.defaultPaymentSourceId),
-            legacyDefaultNwcWalletId = store.get(AccountSecretKeys.legacyDefaultNwcWalletId),
-            legacyZapPaymentRequestServer = store.get(AccountSecretKeys.legacyZapPaymentRequestServer),
+            nip46SignerEnabled = stored[AccountSecretKeys.nip46SignerEnabled].toBoolean(),
+            nip46BunkerSecret = stored[AccountSecretKeys.nip46BunkerSecret] ?: "",
+            nip46TransportKey = stored[AccountSecretKeys.nip46TransportKey] ?: "",
+            nip46SeenRequestIds = decodeSet(stored[AccountSecretKeys.nip46SeenRequestIds]),
+            nwcWalletsJson = stored[AccountSecretKeys.nwcWallets],
+            clinkDebitWalletsJson = stored[AccountSecretKeys.clinkDebitWallets],
+            defaultPaymentSourceId = stored[AccountSecretKeys.defaultPaymentSourceId],
+            legacyDefaultNwcWalletId = stored[AccountSecretKeys.legacyDefaultNwcWalletId],
+            legacyZapPaymentRequestServer = stored[AccountSecretKeys.legacyZapPaymentRequestServer],
         )
     }
 
     /**
-     * Writes the group, then the marker.
+     * Writes the group and its marker as one edit.
      *
-     * Marker last on purpose: a crash midway leaves the account looking
-     * unmigrated, so the next load copies from the legacy file again rather
-     * than reading a half-written set of secrets as complete.
+     * One edit, not ten. Every account save runs this, and a key at a time cost
+     * ten encrypted-file rewrites — none of which DataStore could skip, because
+     * AES-GCM re-randomises the IV so the ciphertext differs even when the value
+     * does not.
+     *
+     * It also makes the marker meaningful. Written in its own transaction after
+     * the others it merely *tended* to be last; in the same one it cannot exist
+     * without them, so a marker found on disk proves a complete group — which is
+     * what `LegacyPreferenceCleanup` reads it as before deleting the legacy file.
      */
     suspend fun saveSecrets(
         npub: String,
         value: AccountSecrets,
     ) {
-        val store = getDataStore(npub)
+        getDataStore(npub).edit {
+            put(AccountSecretKeys.nip46SignerEnabled, value.nip46SignerEnabled.toString())
+            put(AccountSecretKeys.nip46BunkerSecret, value.nip46BunkerSecret)
+            put(AccountSecretKeys.nip46TransportKey, value.nip46TransportKey)
+            put(AccountSecretKeys.nip46SeenRequestIds, value.nip46SeenRequestIds.joinToString(AccountSecretKeys.SET_SEPARATOR))
+            putOrRemove(AccountSecretKeys.nwcWallets, value.nwcWalletsJson)
+            putOrRemove(AccountSecretKeys.clinkDebitWallets, value.clinkDebitWalletsJson)
+            putOrRemove(AccountSecretKeys.defaultPaymentSourceId, value.defaultPaymentSourceId)
+            putOrRemove(AccountSecretKeys.legacyDefaultNwcWalletId, value.legacyDefaultNwcWalletId)
+            putOrRemove(AccountSecretKeys.legacyZapPaymentRequestServer, value.legacyZapPaymentRequestServer)
 
-        store.save(AccountSecretKeys.nip46SignerEnabled, value.nip46SignerEnabled.toString())
-        store.save(AccountSecretKeys.nip46BunkerSecret, value.nip46BunkerSecret)
-        store.save(AccountSecretKeys.nip46TransportKey, value.nip46TransportKey)
-        store.save(AccountSecretKeys.nip46SeenRequestIds, value.nip46SeenRequestIds.joinToString(AccountSecretKeys.SET_SEPARATOR))
-        store.putOrRemove(AccountSecretKeys.nwcWallets, value.nwcWalletsJson)
-        store.putOrRemove(AccountSecretKeys.clinkDebitWallets, value.clinkDebitWalletsJson)
-        store.putOrRemove(AccountSecretKeys.defaultPaymentSourceId, value.defaultPaymentSourceId)
-        store.putOrRemove(AccountSecretKeys.legacyDefaultNwcWalletId, value.legacyDefaultNwcWalletId)
-        store.putOrRemove(AccountSecretKeys.legacyZapPaymentRequestServer, value.legacyZapPaymentRequestServer)
-
-        store.save(AccountSecretKeys.migrated, "true")
-    }
-
-    private suspend fun EncryptedDataStore.putOrRemove(
-        key: androidx.datastore.preferences.core.Preferences.Key<String>,
-        value: String?,
-    ) {
-        if (value != null) save(key, value) else remove(key)
+            put(AccountSecretKeys.migrated, "true")
+        }
     }
 
     private fun decodeSet(raw: String?): Set<String> =
