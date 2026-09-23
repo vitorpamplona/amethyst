@@ -61,8 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_not_joinable
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_paste
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes

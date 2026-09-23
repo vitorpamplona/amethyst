@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_backup
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_backup_desc
@@ -48,9 +49,8 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_hub_link_desc
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_migrate
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_migrate_desc
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_title
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
