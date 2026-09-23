@@ -58,6 +58,20 @@ class UploadSettingsStore(
         val useLocalBlossomCache = booleanPreferencesKey("useLocalBlossomCache")
         val localBlossomCacheProfilePicturesOnly = booleanPreferencesKey("localBlossomCacheProfilePicturesOnly")
         val defaultFileServerJson = stringPreferencesKey("defaultFileServer")
+
+        /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.uploadSettings",
+                listOf(
+                    LegacyBooleanKey("stripLocationOnUpload", stripLocationOnUpload),
+                    LegacyBooleanKey("optimizeMediaOnUpload", optimizeMediaOnUpload),
+                    LegacyBooleanKey("mirrorUploadsToAllServers", mirrorUploadsToAllServers),
+                    LegacyBooleanKey("useLocalBlossomCache", useLocalBlossomCache),
+                    LegacyBooleanKey("localBlossomCacheProfilePicturesOnly", localBlossomCacheProfilePicturesOnly),
+                    LegacyStringKey("defaultFileServer", defaultFileServerJson),
+                ),
+            )
     }
 
     suspend fun load(): UploadSettings {

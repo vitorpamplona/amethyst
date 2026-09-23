@@ -27,13 +27,16 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Stable
 import androidx.core.content.getSystemService
 import androidx.core.os.LocaleListCompat
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
 import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
@@ -58,7 +61,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
-val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "shared_settings")
+/** The UI settings store. See [UiSharedPreferences.migrations] for the copy it carries. */
+val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "shared_settings",
+    produceMigrations = { UiSharedPreferences.migrations() },
+)
 
 @Stable
 class UiSharedPreferences(
@@ -275,43 +282,77 @@ class UiSharedPreferences(
                 }
             }
 
+        /**
+         * Writes every UI setting into [preferences].
+         *
+         * Shared by [save] and by the one-shot copy out of the old
+         * `shared_settings` blob, so the two cannot come to disagree about
+         * which keys a complete set of UI settings has.
+         */
+        internal fun MutablePreferences.write(sharedSettings: UiSettings) {
+            val preferences = this
+            preferences[UI_THEME] = sharedSettings.theme.name
+            preferences[UI_LANGUAGE] = sharedSettings.preferredLanguage ?: ""
+            preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
+            preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
+            preferences[UI_PLAY_VIDEOS] = sharedSettings.automaticallyPlayVideos.name
+            preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
+            preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
+            preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name
+            preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] = sharedSettings.dontShowPushNotificationSelector
+            preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
+            preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
+            preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
+            preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
+            preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
+            preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
+            preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
+            preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
+            preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
+            preferences[UI_SHOW_PROFILE_BADGES] = sharedSettings.showProfileBadges
+            preferences[UI_SHOW_PROFILE_APP_RECOMMENDATIONS] = sharedSettings.showProfileAppRecommendations
+            preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] = sharedSettings.showProfileZapReceivedFeed
+            preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
+            preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
+            preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT] = sharedSettings.suggestWorkoutsFromHealthConnect.name
+            preferences[UI_ACCENT_COLOR] = sharedSettings.accentColor.name
+            preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
+            preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
+            preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
+            preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
+            preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
+        }
+
+        /**
+         * The one-shot copy out of the single `shared_settings` JSON blob these
+         * settings used to be kept as, in the global encrypted file.
+         *
+         * Guarded, and it has to be. Unlike the per-account migrations, this
+         * store has been the real home of these settings for a while, so most
+         * installs already have a populated one — and copying an old blob over
+         * it would undo every UI change the user has made since. [UI_THEME] is
+         * the test: [save] writes every key unconditionally and is the only
+         * writer, so its absence means this store has never been saved, which
+         * is exactly the install whose settings are still only in the legacy
+         * file.
+         */
+        internal fun migrations(): List<DataMigration<Preferences>> =
+            listOf(
+                CopyOnceMigration("migrated.sharedSettings") { out ->
+                    if (out[UI_THEME] == null) {
+                        withContext(Dispatchers.IO) {
+                            LocalPreferences.loadSharedSettings()?.let { out.write(it) }
+                        }
+                    }
+                },
+            )
+
         suspend fun save(
             sharedSettings: UiSettings,
             context: Context,
         ) {
             try {
-                context.sharedPreferencesDataStore.edit { preferences ->
-                    preferences[UI_THEME] = sharedSettings.theme.name
-                    preferences[UI_LANGUAGE] = sharedSettings.preferredLanguage ?: ""
-                    preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
-                    preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
-                    preferences[UI_PLAY_VIDEOS] = sharedSettings.automaticallyPlayVideos.name
-                    preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
-                    preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
-                    preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name
-                    preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] = sharedSettings.dontShowPushNotificationSelector
-                    preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
-                    preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
-                    preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
-                    preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
-                    preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
-                    preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
-                    preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
-                    preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
-                    preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
-                    preferences[UI_SHOW_PROFILE_BADGES] = sharedSettings.showProfileBadges
-                    preferences[UI_SHOW_PROFILE_APP_RECOMMENDATIONS] = sharedSettings.showProfileAppRecommendations
-                    preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] = sharedSettings.showProfileZapReceivedFeed
-                    preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
-                    preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
-                    preferences[UI_SUGGEST_WORKOUTS_FROM_HEALTH_CONNECT] = sharedSettings.suggestWorkoutsFromHealthConnect.name
-                    preferences[UI_ACCENT_COLOR] = sharedSettings.accentColor.name
-                    preferences[UI_FONT_FAMILY] = sharedSettings.fontFamily.name
-                    preferences[UI_FONT_SIZE] = sharedSettings.fontSize.name
-                    preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
-                    preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
-                    preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
-                }
+                context.sharedPreferencesDataStore.edit { preferences -> preferences.write(sharedSettings) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.

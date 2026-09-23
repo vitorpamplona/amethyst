@@ -59,6 +59,19 @@ class FeedVisibilityStore(
         val relayGroupViewMode = stringPreferencesKey("relay_group_view_mode")
         val concordViewMode = stringPreferencesKey("concord_view_mode")
         val callsEnabled = booleanPreferencesKey("calls_enabled")
+
+        /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.feedVisibility",
+                listOf(
+                    LegacyStringKey("disabled_chat_feeds", disabledChatFeeds),
+                    LegacyStringKey("disabled_home_feed_types", disabledHomeFeedTypes),
+                    LegacyStringKey("relay_group_view_mode", relayGroupViewMode),
+                    LegacyStringKey("concord_view_mode", concordViewMode),
+                    LegacyBooleanKey("calls_enabled", callsEnabled),
+                ),
+            )
     }
 
     suspend fun load(): FeedVisibility {

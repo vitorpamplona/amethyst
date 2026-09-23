@@ -68,6 +68,28 @@ class DialogDismissalStore(
         val mutedPublicChats = stringSetPreferencesKey("mutedPublicChats")
         val hasDonatedInVersion = stringSetPreferencesKey("hasDonatedInVersion")
         val viewedPollResultNoteIdsJson = stringPreferencesKey("viewedPollResultNoteIds")
+
+        /**
+         * What the `secret_keeper_<npub>` file called these, for the one-shot copy.
+         *
+         * Five of the nine were renamed on the way in, so the pairs below are
+         * not derivable from either side alone.
+         */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.dialogDismissal",
+                listOf(
+                    LegacyBooleanKey("hide_delete_request_dialog", hideDeleteRequestDialog),
+                    LegacyBooleanKey("hide_block_alert_dialog", hideBlockAlertDialog),
+                    LegacyBooleanKey("hide_nip24_warning_dialog", hideNip17WarningDialog),
+                    LegacyBooleanKey("hideCommunityRulesViolations", hideCommunityRulesViolations),
+                    LegacyStringSetKey("dismissed_poll_note_ids", dismissedPollNoteIds),
+                    LegacyStringSetKey("dismissed_channel_invites", dismissedChannelInvites),
+                    LegacyStringSetKey("muted_public_chats", mutedPublicChats),
+                    LegacyStringSetKey("has_donated_in_version", hasDonatedInVersion),
+                    LegacyStringKey("viewed_poll_result_note_ids", viewedPollResultNoteIdsJson),
+                ),
+            )
     }
 
     suspend fun load(): DialogDismissal {

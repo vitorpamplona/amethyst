@@ -84,6 +84,20 @@ enum class LatestEventSlot(
 class LatestEventCacheStore(
     private val store: DataStore<Preferences>,
 ) {
+    companion object {
+        /**
+         * The one-shot copy out of `secret_keeper_<npub>`.
+         *
+         * Both names come off the same enum entry, so this table cannot drift
+         * from the slots the store actually reads.
+         */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.latestEvents",
+                LatestEventSlot.entries.map { LegacyStringKey(it.prefKey, it.key) },
+            )
+    }
+
     /** Only the slots actually present; an absent slot means nothing was cached. */
     suspend fun load(): Map<LatestEventSlot, String> {
         val prefs =

@@ -78,3 +78,60 @@ internal object AccountSecretKeys {
      */
     const val SET_SEPARATOR = "\n"
 }
+
+/**
+ * The names [AccountSecrets] had in the `secret_keeper_<npub>` file, and how to
+ * read a set of them back out.
+ *
+ * Unlike the plain-store groups, these are still written to both stores on
+ * every save, so this is not only a migration source: it is what lets a check
+ * read the legacy file and the current one and assert they agree before the
+ * legacy file is deleted.
+ */
+object LegacyAccountSecretNames {
+    const val NIP46_SIGNER_ENABLED = "nip46SignerEnabled"
+    const val NIP46_BUNKER_SECRET = "nip46BunkerSecret"
+    const val NIP46_TRANSPORT_KEY = "nip46TransportKey"
+    const val NIP46_SEEN_IDS = "nip46SeenRequestIds"
+    const val NWC_WALLETS = "nwcWallets"
+    const val CLINK_DEBIT_WALLETS = "clinkDebitWallets"
+    const val DEFAULT_PAYMENT_SOURCE_ID = "defaultPaymentSourceId"
+    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
+    const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
+
+    /** The private key, which lives in its own store rather than in [AccountSecrets]. */
+    const val NOSTR_PRIVKEY = "nostr_privkey"
+
+    val all =
+        setOf(
+            NIP46_SIGNER_ENABLED,
+            NIP46_BUNKER_SECRET,
+            NIP46_TRANSPORT_KEY,
+            NIP46_SEEN_IDS,
+            NWC_WALLETS,
+            CLINK_DEBIT_WALLETS,
+            DEFAULT_PAYMENT_SOURCE_ID,
+            DEFAULT_NWC_WALLET_ID,
+            ZAP_PAYMENT_REQUEST_SERVER,
+            NOSTR_PRIVKEY,
+        )
+}
+
+/**
+ * The secrets as the legacy file holds them.
+ *
+ * Absent keys become the same defaults the loader has always applied, so this
+ * is directly comparable with what the current store returns.
+ */
+fun readLegacyAccountSecrets(source: LegacyPreferenceSource) =
+    AccountSecrets(
+        nip46SignerEnabled = source.getBoolean(LegacyAccountSecretNames.NIP46_SIGNER_ENABLED) ?: false,
+        nip46BunkerSecret = source.getString(LegacyAccountSecretNames.NIP46_BUNKER_SECRET) ?: "",
+        nip46TransportKey = source.getString(LegacyAccountSecretNames.NIP46_TRANSPORT_KEY) ?: "",
+        nip46SeenRequestIds = source.getStringSet(LegacyAccountSecretNames.NIP46_SEEN_IDS) ?: emptySet(),
+        nwcWalletsJson = source.getString(LegacyAccountSecretNames.NWC_WALLETS),
+        clinkDebitWalletsJson = source.getString(LegacyAccountSecretNames.CLINK_DEBIT_WALLETS),
+        defaultPaymentSourceId = source.getString(LegacyAccountSecretNames.DEFAULT_PAYMENT_SOURCE_ID),
+        legacyDefaultNwcWalletId = source.getString(LegacyAccountSecretNames.DEFAULT_NWC_WALLET_ID),
+        legacyZapPaymentRequestServer = source.getString(LegacyAccountSecretNames.ZAP_PAYMENT_REQUEST_SERVER),
+    )

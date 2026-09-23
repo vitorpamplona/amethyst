@@ -59,6 +59,17 @@ class NotificationPrefsStore(
         val alwaysOnService = booleanPreferencesKey("always_on_notification_service")
         val showMessagesInNotifications = booleanPreferencesKey("show_messages_in_notifications")
         val splitNotificationsEnabled = booleanPreferencesKey("split_notifications_enabled")
+
+        /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.notificationPrefs",
+                listOf(
+                    LegacyBooleanKey("always_on_notification_service", alwaysOnService),
+                    LegacyBooleanKey("show_messages_in_notifications", showMessagesInNotifications),
+                    LegacyBooleanKey("split_notifications_enabled", splitNotificationsEnabled),
+                ),
+            )
     }
 
     private suspend fun read(): Preferences =

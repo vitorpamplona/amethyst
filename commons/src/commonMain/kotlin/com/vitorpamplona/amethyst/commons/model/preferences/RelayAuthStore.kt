@@ -59,6 +59,24 @@ class RelayAuthStore(
         val trustReadFollows = booleanPreferencesKey("relay_auth_trust_read_follows")
         val trustMessageFollows = booleanPreferencesKey("relay_auth_trust_message_follows")
         val trustMessageStrangers = booleanPreferencesKey("relay_auth_trust_message_strangers")
+
+        /**
+         * What the `secret_keeper_<npub>` file called these, for the one-shot copy.
+         *
+         * The two "trust my relays" spellings differ: the legacy key grew a
+         * `_and_venues` suffix that the new one dropped.
+         */
+        val legacyTable =
+            LegacyKeyTable(
+                "migrated.relayAuth",
+                listOf(
+                    LegacyStringKey("default_relay_auth_policy", policyName),
+                    LegacyBooleanKey("relay_auth_trust_my_relays_and_venues", trustMyRelays),
+                    LegacyBooleanKey("relay_auth_trust_read_follows", trustReadFollows),
+                    LegacyBooleanKey("relay_auth_trust_message_follows", trustMessageFollows),
+                    LegacyBooleanKey("relay_auth_trust_message_strangers", trustMessageStrangers),
+                ),
+            )
     }
 
     suspend fun load(): RelayAuth {
