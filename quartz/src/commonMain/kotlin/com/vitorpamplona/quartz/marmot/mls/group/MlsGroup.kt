@@ -511,6 +511,8 @@ class MlsGroup private constructor(
         leafExtensions: List<Extension> = emptyList(),
         capabilities: Capabilities = marmotLeafCapabilities(),
         keyPackageExtensions: List<Extension> = emptyList(),
+        /** The leaf's lifetime. Null uses the Marmot window (84 days, backdated an hour for clock skew). */
+        lifetime: Lifetime? = null,
     ): KeyPackageBundle {
         val initKp = X25519.generateKeyPair()
         val encKp = X25519.generateKeyPair()
@@ -525,6 +527,7 @@ class MlsGroup private constructor(
                 signingKey = sigKp.privateKey,
                 capabilities = capabilities,
                 leafExtensions = leafExtensions,
+                lifetime = lifetime,
             )
 
         val unsigned =
@@ -4270,6 +4273,7 @@ class MlsGroup private constructor(
             parentHash: ByteArray? = null,
             capabilities: Capabilities = marmotLeafCapabilities(),
             leafExtensions: List<Extension> = emptyList(),
+            lifetime: Lifetime? = null,
         ): LeafNode {
             val unsigned =
                 LeafNode(
@@ -4281,7 +4285,9 @@ class MlsGroup private constructor(
                     capabilities = capabilities,
                     leafNodeSource = source,
                     lifetime =
-                        if (source == LeafNodeSource.KEY_PACKAGE) {
+                        if (source == LeafNodeSource.KEY_PACKAGE && lifetime != null) {
+                            lifetime
+                        } else if (source == LeafNodeSource.KEY_PACKAGE) {
                             // A real, bounded window. `Lifetime(0, Long.MAX_VALUE)`
                             // used to go here, which any receiver enforcing
                             // `foundation/key-packages.md` rejects outright: the
