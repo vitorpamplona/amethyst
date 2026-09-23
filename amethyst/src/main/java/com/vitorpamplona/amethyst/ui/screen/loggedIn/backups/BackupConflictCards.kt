@@ -30,25 +30,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +75,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
+import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -119,8 +127,46 @@ fun BackupConflictCards(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LeadConflictCard(conflicts.first()) { open(conflicts.first()) }
-        conflicts.drop(1).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
+
+        // The cards float over the feed, so they can't grow with the number of conflicts:
+        // a few pills show, the rest wait behind a toggle and scroll inside a capped area.
+        val rest = conflicts.drop(1)
+        var expanded by rememberSaveable { mutableStateOf(false) }
+        if (rest.size <= MAX_PILLS || expanded) {
+            Column(
+                Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                rest.forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
+            }
+            if (rest.size > MAX_PILLS) MoreConflictsToggle(stringRes(R.string.backup_card_show_less)) { expanded = false }
+        } else {
+            rest.take(MAX_PILLS).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
+            val hidden = rest.size - MAX_PILLS
+            MoreConflictsToggle(pluralStringResource(R.plurals.backup_card_more_lists, hidden, hidden)) { expanded = true }
+        }
     }
+}
+
+private const val MAX_PILLS = 2
+
+@Composable
+private fun MoreConflictsToggle(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Text(
+        label,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+    )
 }
 
 /** A headline that says what happened, in the event's own terms. */
@@ -161,9 +207,56 @@ private fun headlineOf(
             else -> null
         }
     // A headline counting removed items reads wrong when only encrypted items were lost.
-    return specific?.takeUnless { it.isEmpty() }
-        ?: stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType)))
+    if (specific.isNullOrEmpty()) return stringRes(R.string.backup_conflict_title, stringRes(eventTypeName(conflict.eventType)))
+    // Headlines lead with the loss; what the other app added to the same list is said too,
+    // so a list that dropped 3 and gained 40 doesn't read as if it only shrank. The wording
+    // follows the headline's: joining chats, newly blocking relays, adding everything else.
+    val added = addedToHeadlinedList(diff, conflict.eventType)
+    if (added <= 0) return specific
+    val tail =
+        when {
+            diff is ChannelListDiff || diff is CommunityListDiff || diff is EphemeralChatListDiff || diff is SimpleGroupListDiff -> R.plurals.backup_card_and_joined
+            conflict.eventType == BackupEventType.BLOCKED_RELAYS -> R.plurals.backup_card_and_blocked
+            else -> R.plurals.backup_card_and_added
+        }
+    return pluralStringResource(tail, added, specific, added)
 }
+
+/**
+ * How many items were added to the list the headline counts removals from, or 0 when the
+ * headline isn't a count of list items (a key swap, an encrypted rewrite, a profile).
+ */
+private fun addedToHeadlinedList(
+    diff: EventDiff,
+    type: BackupEventType,
+): Int =
+    when (diff) {
+        is ContactListDiff -> diff.follows.added.size
+        is MuteListDiff -> diff.publicMutes.added.size
+        is AdvertisedRelayListDiff -> diff.relays.added.size
+        is RelayListDiff -> if (relayListHasHeadline(type)) diff.relays.added.size else 0
+        is ChannelListDiff -> diff.channels.added.size
+        is CommunityListDiff -> diff.communities.added.size
+        is EphemeralChatListDiff -> diff.rooms.added.size
+        is SimpleGroupListDiff -> diff.groups.added.size
+        is FavoriteAlgoFeedsListDiff -> diff.feeds.added.size
+        is HashtagListDiff -> diff.hashtags.added.size
+        is GeohashListDiff -> diff.geohashes.added.size
+        is NutzapInfoDiff -> if (diff.p2pkPubkey == null) diff.mints.added.size else 0
+        is PaymentTargetsDiff -> diff.targets.added.size
+        is Bolt12OfferListDiff -> diff.offers.added.size
+        else -> 0
+    }
+
+/** The relay lists [relayListHeadline] has a counted headline for. */
+private fun relayListHasHeadline(type: BackupEventType): Boolean =
+    when (type) {
+        BackupEventType.DM_RELAYS, BackupEventType.KEY_PACKAGE_RELAYS, BackupEventType.SEARCH_RELAYS,
+        BackupEventType.INDEXER_RELAYS, BackupEventType.RELAY_FEEDS, BackupEventType.PRIVATE_OUTBOX_RELAYS,
+        BackupEventType.TRUSTED_RELAYS, BackupEventType.BLOCKED_RELAYS,
+        -> true
+        else -> false
+    }
 
 /** The count's plural, or "" when nothing of that kind was removed. */
 @Composable
@@ -243,7 +336,7 @@ private fun LeadConflictCard(
                         Modifier.weight(1f),
                         height = 8.dp,
                     )
-                    Text(new.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = tones.removed)
+                    Text(new.toString(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (new < saved) tones.removed else tones.added)
                 }
             } else {
                 CountChips(counts)
@@ -285,7 +378,8 @@ private fun ConflictPill(
                 Icon(symbol = MaterialSymbols.SyncProblem, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
             }
             Text(headlineOf(conflict, counts), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (counts.removed > 0) StatusTag("−" + counts.removed, tones.removed)
+            if (counts.removed > 0) StatusTag("\u2212" + counts.removed, tones.removed)
+            if (counts.added > 0) StatusTag("+" + counts.added, tones.added)
         }
     }
 }
