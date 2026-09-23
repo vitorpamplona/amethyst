@@ -184,6 +184,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
+import com.vitorpamplona.amethyst.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
@@ -272,6 +273,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
@@ -1081,6 +1083,8 @@ private fun FullBleedNoteCompose(
                     RenderSnoAvatar(baseNote, accountViewModel)
                 } else if (noteEvent is SnoShardEvent) {
                     RenderSnoShard(baseNote, accountViewModel)
+                } else if (noteEvent is CyberspaceBagEvent) {
+                    RenderCyberspaceBag(baseNote, accountViewModel)
                 } else if (noteEvent is Ps1SaveEvent) {
                     RenderPs1Save(baseNote)
                 } else if (noteEvent is GeocacheListingEvent) {

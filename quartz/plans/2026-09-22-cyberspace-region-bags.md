@@ -198,9 +198,12 @@ is not offered as a button at all — it is reported as out of reach.
 3. **Hints.** Parse, validate, price. `amy cyberspace hint`. The three golden
    vectors. **Done** — see §10.
 4. **The bag.** AES-256-GCM, plaintext shapes, item verification. `amy cyberspace
-   open`, round-tripped against the reference CLI's `encrypt`.
-5. **The sweep**, as a budgeted cold sequence. `amy cyberspace sweep`.
+   open`, round-tripped against the reference CLI's `encrypt`. **Done** — see §11.
+5. **The sweep**, as a budgeted cold sequence. `amy cyberspace sweep`. **Done** —
+   see §11.
 6. **The card**, last, once every number it quotes is measured on a device.
+   **Done** — see §12, which measures them on the device at the tap rather than
+   baking in a constant.
 
 Steps 1 to 5 have no product risk and every one of them is diffable against a
 reference implementation. Step 6 is the only judgement call, and it is small.
@@ -308,3 +311,108 @@ The canonical-integer rule is worth keeping for the same reason the aligned base
 is: both exist so that two hiders who hint the same box publish the same bytes,
 and a reader that accepts `"05"` alongside `"5"` lets one box have two
 spellings and breaks comparison by equality.
+
+## 11. Steps 4 and 5 as built
+
+`CyberspaceBagEvent` and `RegionSweep` in quartz, `amy cyberspace open` and
+`amy cyberspace sweep` over them, and two more harness sections. The harness is
+**15 of 15**.
+
+### What the two new sections actually prove
+
+Everything before this diffed a *number* against the reference — a key, a
+lookup id, a hint tag. These diff a **ciphertext**, which is the only test that
+catches a chain that agrees at every step and still cannot open a bag.
+`cyberspace-cli` derives the region key with `location_encryption`, seals the
+plaintext with `encrypt_with_location_key`, and writes the §8.6 tags with
+`make_encrypted_content_event`. `amy` is handed the event and a coordinate and
+has to reach the same 32 bytes: §2.2's interleave, §4.7's three Cantor roots,
+§7.2's two hashes, §7.6's `nonce || ciphertext || tag`. Section 8 then takes the
+coordinate away and makes it find the same bag from its hint box alone.
+
+The box in section 8 comes from the reference's own `coord_to_xyz` /
+`xyz_to_coord` rather than from ours, so a disagreement about alignment shows up
+as a bag that is not in the box we were handed — not as a test grading its own
+arithmetic.
+
+### The two design decisions worth recording
+
+**`open` exits 0 on the wrong key.** §7.6: "A failed decryption therefore means
+only that the reader does not hold this region's key; it MUST NOT be treated as
+an error in the bag." So a wrong key is a verdict (`opened: false`), the way
+`sno parse` reports an invalid payload, and the harness asserts the exit code as
+well as the field. What *does* fail is a bag that cannot be attempted at all: an
+unknown `version` (§8.6 says ignore it) or no `aes-256-gcm` payload to try.
+
+**`sweep` refuses before it spends.** The gap is read from the `hint` and `h`
+tags and checked against `--max-gap` (default 20) before a single tree is built,
+and the refusal quotes the exponent and names the flag that would buy it. A
+harness case pins it: a gap-33 hint is declined rather than swept. This is the
+same shape the card needs, which is why it lives in the CLI first — a budget
+that can be tested in a shell script is a budget that can be trusted in a feed.
+
+### A shell trap worth remembering
+
+`jq`'s `//` treats `false` as empty, so `.opened // "null"` turns a correct
+`false` into `"null"` and fails a passing test. Read booleans with a plain
+`jq -r .field`.
+
+## 12. Step 6 as built
+
+`BagSweep` in `commons/cyberspace/` (headless: the quote, the budget and the
+cold flow) and `RenderCyberspaceBag` in `amethyst/ui/note/types/` (the card),
+wired into `NoteCompose` and `ThreadFeedView`, with kind 33330 routed through
+`EventCache`'s addressable path. Nine tests in `commons`.
+
+### Pricing without a constant
+
+§3 of this plan ended with "Android will be slower — measure it before quoting a
+number in the UI". What shipped measures it **at the moment of the tap, on the
+device that is about to pay**, which is the same answer without a constant that
+goes stale on the next handset. The order is:
+
+1. **Free, while the row composes.** `BagSweep.quote` reads two tags and does
+   three subtractions. A box past `MAX_GAP_BITS` (20) or a bag deeper than
+   `MAX_BAG_HEIGHT` (12, the ceiling ONOSENDAI puts on its own discovery scan)
+   is reported as out of reach and never becomes a button. No Cantor tree is
+   built for a hint the reader has already declined — a test pins that the flow
+   emits nothing at all in that case.
+2. **One candidate, timed.** On the tap, the box's own base region is derived
+   and the elapsed time recorded. That candidate is never wasted work: a gap-0
+   hint names exactly it, so the measurement *is* the search for a destination
+   hint.
+3. **The estimate, then the rest.** `perCandidate × candidates` against a
+   two-minute budget. It over-quotes — the first candidate is three axis roots
+   plus a combine and every later one is a combine, so by about 4x at shallow
+   heights and 2x at deep ones — and over-quoting is the safe direction for a
+   number whose only job is to decide whether to spend somebody's battery.
+
+A slower phone therefore refuses boxes a faster one accepts. That asymmetry is
+correct: the cost is the reader's, so the reader's hardware should decide.
+
+### What the card says, and what it never does
+
+Every sweep is a tap, **including a gap-0 hint**, which §7.7 itself calls "a
+destination the seeker can compute or walk to directly, not a search" and which
+costs about a frame. A reader who learned that some bags open themselves would
+have learned an expectation a hostile bag could hide inside, so the one
+candidate is offered exactly like the million. A test pins it.
+
+Scrolling the row away cancels: the flow is cold over a cold sequence and the
+card disposes its job, so a sweep never outlives the card that asked for it.
+
+Items render through the cards that already exist — a `3330` shard through
+`SnoObjectCard` (palette fetched by `WithSnoPalette`, as a standalone object
+would be), a `kind 1` as its text, anything else named and skipped, because
+§7.6 says a reader that does not understand an item's kind "skips it and renders
+the rest". The attribution is the non-obvious part and §7.6 fixes it: placement
+belongs to the bag's author, authorship only to a signed item's own pubkey. An
+unsigned item therefore carries a line saying its author is a claim, rather than
+borrowing either name.
+
+### One correction carried back into quartz
+
+`SnoShardEvent`'s KDoc said Amethyst "implements none of it" and that a reader
+without the key sees base64 and nothing else. Both were true when it was
+written. The class now points at `RegionSweep` and says what actually decides
+whether a bag opens — whether its own hint prices the search into reach.

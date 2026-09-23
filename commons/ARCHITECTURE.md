@@ -87,6 +87,8 @@ in `commonsUI`, under the same package.
 | `account`      | no  | New-account bootstrap events. |
 | `onchain`      | no  | On-chain zap splitting/broadcasting. |
 | `marmot`       | no  | MLS group-chat event processing. |
+| `cyberspace`   | no  | `CYBERSPACE_V2` §7.7 region-bag search: the free quote off a bag's `hint`/`h` tags, the device-measured budget, and the cold sweep flow over quartz's `RegionSweep`. The protocol itself (coordinates, Cantor trees, keys, the bag) is `quartz/.../cyberspace`. |
+| `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |

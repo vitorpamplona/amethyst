@@ -47,14 +47,16 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  *
  * Not for want of somewhere to stand — §7.7 is explicit that "the seeker's own
  * position never enters this cost, because §7.1 makes looking and walking
- * equivalent", so a client with no avatar could open a hinted bag. What stops
- * it is the work: a key is three `O(2^h)` folds of BigInts that double in width
- * every level, which the spec measures at 816 ms per key at height 16 on a
- * desktop core and which grows about 2.2x per height above that. Amethyst
- * implements none of it and a reader without the key sees base64 and nothing
- * else — §7.6 is explicit that a failed decryption "MUST NOT be treated as an
- * error in the bag". What this class reads is a shard handed over directly:
- * quoted in a note, or fetched by id.
+ * equivalent", so a client with no avatar can open a hinted bag, and
+ * [com.vitorpamplona.quartz.cyberspace.RegionSweep] does. What decides whether
+ * it is worth trying is the work: a key is three `O(2^h)` folds of BigInts that
+ * double in width every level, which the spec measures at 816 ms per key at
+ * height 16 on a desktop core and which grows about 2.2x per height above that,
+ * and a hint's box multiplies that by up to 2^75. So a bag is opened only when
+ * its own hint prices the search into reach, and a reader who does not get
+ * there sees base64 and nothing else — §7.6 is explicit that a failed
+ * decryption "MUST NOT be treated as an error in the bag". A shard can also
+ * arrive with no bag at all: quoted in a note, or fetched by id.
  *
  * **An item MAY be unsigned** (§7.6, and §6 of the deck), in which case its
  * `pubkey` is a claim and a client MUST NOT present it as verified authorship.

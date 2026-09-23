@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
@@ -3837,6 +3838,7 @@ open class EventCache :
                 is GeohashListEvent,
                 is SnoObjectEvent,
                 is SnoAvatarEvent,
+                is CyberspaceBagEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
                 is UserGraspListEvent,

@@ -158,6 +158,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
+import com.vitorpamplona.amethyst.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderExternalReaction
@@ -284,6 +285,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
@@ -1428,6 +1430,10 @@ private fun RenderNoteRow(
 
         is SnoShardEvent -> {
             RenderSnoShard(baseNote, accountViewModel)
+        }
+
+        is CyberspaceBagEvent -> {
+            RenderCyberspaceBag(baseNote, accountViewModel)
         }
 
         is ChessGameEvent -> {
