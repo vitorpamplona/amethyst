@@ -293,6 +293,49 @@ check_verdict "agreement-position-repair" "$FAR" true true "both repair a vertex
 WRAP='{"v":2,"name":"wrap","unit":0,"mode":"solid","vertices":[[0,0,0],[2,0,0],[1,0,2],[17895698,2,1]],"colors":[238,235,239,225],"faces":[[0,1,2]]}'
 check_verdict "divergence-lattice-limit" "$WRAP" false true "past what an Int lattice holds we refuse; the arbiter keeps it in a float"
 
+# ---- 5. cyberspace region keys ---------------------------------------------
+
+banner "5. region keys — CYBERSPACE_V2 §2.2 and §7.2 against cyberspace-cli"
+
+# A region key is a consensus value: §7.2 turns it into an AES key, so a byte
+# of difference is a bag they hid that we cannot open. Four coordinates from
+# §9.8's golden vectors (plus §7.7's ideaspace point) at four heights each.
+if [[ $HAVE_AVATAR_REF -eq 0 ]]; then
+  skip_msg "cyberspace-cli unavailable"
+  record_result "cyberspace-region-keys" skip "no cyberspace-cli checkout"
+else
+  AGREE=0; DISAGREE=0
+  for COORD in \
+    c492492492492492492492edf5bee7267451c787d95ba4d7840c76d1e33c9940 \
+    c4924924924924924924921f79235dae293ada913e78294253a235239a332854 \
+    e000000000000000000001200041040208048040000000000000000000000000 \
+    a4b64924924924924924924924924924924924924924924924924d84b60d9c8f
+  do
+    for H in 0 1 4 8; do
+      THEIRS="$(ref region "$COORD" "$H")"
+      OURS="$(amy cyberspace region "$COORD" --height "$H")"
+      T_KEY="$(jq -r .key <<<"$THEIRS")"; O_KEY="$(jq -r .key <<<"$OURS")"
+      T_ID="$(jq -r .lookup_id <<<"$THEIRS")"; O_ID="$(jq -r .lookup_id <<<"$OURS")"
+      # And the decode underneath it, which is where a wrong bit would start.
+      T_XYZ="$(jq -r '"\(.x) \(.y) \(.z) \(.plane)"' <<<"$THEIRS")"
+      O_XYZ="$(amy cyberspace coord "$COORD" | jq -r '"\(.x) \(.y) \(.z) \(.plane)"')"
+
+      if [[ "$O_KEY" == "$T_KEY" && "$O_ID" == "$T_ID" && "$O_XYZ" == "$T_XYZ" ]]; then
+        AGREE=$((AGREE+1))
+      else
+        DISAGREE=$((DISAGREE+1))
+        fail_msg "${COORD:0:8}… h$H: key amy=${O_KEY:0:16} ref=${T_KEY:0:16}; xyz amy=[$O_XYZ] ref=[$T_XYZ]"
+      fi
+    done
+  done
+
+  if [[ $DISAGREE -eq 0 && $AGREE -gt 0 ]]; then
+    record_result "cyberspace-region-keys" pass "$AGREE keys and decodes agree"
+  else
+    record_result "cyberspace-region-keys" fail "$DISAGREE of $((AGREE+DISAGREE)) diverged"
+  fi
+fi
+
 print_summary
 
 grep -q $'\tfail\t' "$RESULTS_FILE" && exit 1

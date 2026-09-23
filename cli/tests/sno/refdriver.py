@@ -12,6 +12,7 @@ and payment reference), and just re-emits what they answer.
   refdriver.py verdict < payload     {"valid":…, "rule":…}
   refdriver.py work    < payload     {"required":…}
   refdriver.py verify  < event       {"ok":…, "required":…, "committed":…, "zeros":…, "reason":…}
+  refdriver.py region COORD HEIGHT   {"key":…, "lookup_id":…, "x":…, "y":…, "z":…, "plane":…}
 
 Paths come from $CYBERSPACE_DIR and $CYBERSPACE_CLI_DIR.
 """
@@ -94,8 +95,41 @@ def cmd_verify():
     emit({k: result[k] for k in ("ok", "required", "committed", "zeros", "reason")})
 
 
+def cmd_region():
+    """§2.2 decode plus §7.2 derivation, from cyberspace-cli's own modules.
+
+    `location_encryption.py` imports AESGCM at module scope and that binding is
+    not always present; `cantor` and `movement` are the whole of what a region
+    key needs, and going through them keeps this an adapter rather than a
+    reimplementation.
+    """
+    sys.path.insert(0, os.path.join(os.environ["CYBERSPACE_CLI_DIR"], "src"))
+    from cyberspace_core.coords import coord_to_xyz
+    from cyberspace_core.cantor import cantor_pair, int_to_bytes_be_min, sha256
+    from cyberspace_core.movement import compute_subtree_cantor
+
+    coord_hex, height = sys.argv[2], int(sys.argv[3])
+    x, y, z, plane = coord_to_xyz(int(coord_hex, 16))
+    base = lambda v: (v >> height) << height if height > 0 else v
+    region_n = cantor_pair(
+        cantor_pair(
+            compute_subtree_cantor(base(x), height),
+            compute_subtree_cantor(base(y), height),
+        ),
+        compute_subtree_cantor(base(z), height),
+    )
+    key = sha256(int_to_bytes_be_min(region_n))
+    emit({
+        "key": key.hex(),
+        "lookup_id": sha256(key).hex(),
+        "x": str(x), "y": str(y), "z": str(z),
+        "plane": "ideaspace" if plane else "dataspace",
+    })
+
+
 COMMANDS = {
     "cases": cmd_cases,
+    "region": cmd_region,
     "vectors": cmd_vectors,
     "verdict": cmd_verdict,
     "work": cmd_work,

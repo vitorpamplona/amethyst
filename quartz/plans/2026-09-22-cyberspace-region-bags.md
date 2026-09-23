@@ -193,8 +193,8 @@ is not offered as a button at all — it is reported as out of reach.
    coordinate already there, which at least copies. Two shards in one sector would be
    worth saying; there are 21 reachable `3330`s and one author, so there is nothing
    to compare. Revisit when there is.
-2. **Cantor + region key**, with the `expect`/`actual` bignum and the height refusal.
-   `amy cyberspace region`, diffed against `cyberspace-cli`.
+2. **Cantor + region key**, with the big integer and the height refusal.
+   `amy cyberspace region`, diffed against `cyberspace-cli`. **Done** — see §9.
 3. **Hints.** Parse, validate, price. `amy cyberspace hint`. The three golden vectors.
 4. **The bag.** AES-256-GCM, plaintext shapes, item verification. `amy cyberspace
    open`, round-tripped against the reference CLI's `encrypt`.
@@ -203,3 +203,61 @@ is not offered as a button at all — it is reported as out of reach.
 
 Steps 1 to 5 have no product risk and every one of them is diffable against a
 reference implementation. Step 6 is the only judgement call, and it is small.
+
+
+## 9. Step 2 as built
+
+`CantorTree`, `RegionKey`, `UBigInt`, `amy cyberspace coord|region`. The
+conformance harness is now 12 of 12, the new section comparing **16 region keys
+and their coordinate decodes** against `cyberspace-cli` — four coordinates
+(§9.8's london, nyc and origin, plus §7.7's ideaspace point) at heights 0, 1, 4
+and 8. Amethyst derives the keys the rest of the network derives.
+
+### The big integer, and why there are two of them
+
+The plan said "an `expect`/`actual` over `java.math.BigInteger`". The first
+attempt went the other way — one portable implementation everywhere — on the
+argument that a region key is a **consensus value**, since §7.2 turns it into an
+AES key, so two implementations is two chances to disagree and an object that
+opens on a desktop and not on a phone.
+
+Measurement reversed that. Portable Kotlin came in **3 to 10 times slower** than
+`java.math.BigInteger` on the operands a Cantor tree reaches, because
+`BigInteger.multiplyToLen` is a HotSpot intrinsic and the JDK adds Toom-Cook
+above a few hundred limbs. §7's whole feasibility is a number, and that factor
+is the difference between a search a reader waits for and one they abandon.
+
+So: `UBigInt` is an `expect class`, aliased through a thin wrapper to
+`java.math.BigInteger` on `jvmAndroid`, and backed by `PortableUBigInt` on
+`nativeMain` — which covers Apple and Linux together, so there are two actuals
+and not three. A wrapper rather than a `typealias` for one reason:
+`toMinimalBytes`. The reference hashes `int_to_bytes_be_min`, and
+`BigInteger.toByteArray()` is two's complement, so it grows a `0x00` sign byte
+whenever the top bit is set — half of all numbers — and aliasing would have put
+that byte into a SHA-256 and produced a key nobody else derives.
+
+**What makes two implementations safe is that the disagreement is testable, and
+tested.** `PortableUBigIntDifferentialTest` runs every operation against
+`java.math.BigInteger` over random inputs at fifteen widths from 0 to 352,000
+bits, straddling the Karatsuba threshold in both directions, and a ninth test
+asserts the two *actuals* agree with each other on the same inputs — including
+the bytes, which is the one place aliasing would have gone wrong silently.
+`CantorTreeBenchmark` then folds a whole subtree both ways and compares the
+roots, which is where an off-by-one in the fold's stack would live rather than
+in the arithmetic.
+
+### What it costs, on the shipped path
+
+The §3 table was measured on `java.math.BigInteger`, which is what now ships on
+JVM and Android, so it stands. Apple and Linux pay the portable multiplier on
+top; nothing there opens a bag yet.
+
+### Corrections to §3 worth carrying forward
+
+The earlier measurement said a sweep decomposes per axis, `3 · 2^(G/3)` tree
+builds and `2^G` combines. Building it confirmed the decomposition and also that
+**the combine dominates above about height 8** — a combine at height 12 is
+roughly ten times an axis root at the same height, because it multiplies two
+numbers the size of the root rather than folding up to one. A budget model that
+prices a sweep by its tree builds will under-quote badly; price it by `2^G`
+combines and add the trees.
