@@ -33,9 +33,9 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_image
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 
 /**

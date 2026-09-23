@@ -43,10 +43,10 @@ import com.vitorpamplona.amethyst.commons.resources.crashreport_found
 import com.vitorpamplona.amethyst.commons.resources.crashreport_found_send
 import com.vitorpamplona.amethyst.commons.resources.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers

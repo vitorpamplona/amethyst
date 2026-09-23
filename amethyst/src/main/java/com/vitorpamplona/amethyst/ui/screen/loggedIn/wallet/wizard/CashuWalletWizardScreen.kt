@@ -98,9 +98,9 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_single_descript
 import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_single_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_use_wallet
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.text.NumberFormat
 

@@ -63,10 +63,10 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm

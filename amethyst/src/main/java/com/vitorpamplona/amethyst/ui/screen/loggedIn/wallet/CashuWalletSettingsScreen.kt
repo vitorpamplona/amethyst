@@ -95,10 +95,10 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_stop_nutzaps_subtitle
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_title
 import com.vitorpamplona.amethyst.commons.resources.danger_zone
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 

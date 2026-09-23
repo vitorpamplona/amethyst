@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

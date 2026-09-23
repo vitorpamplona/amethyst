@@ -108,7 +108,7 @@ import androidx.compose.material3.Icon as M3Icon
 
 /**
  * The payment rails the profile Send Payment screen can drive. [routeKey] is
- * the stable string used in [com.vitorpamplona.amethyst.ui.navigation.routes.Route.SendPayment]
+ * the stable string used in [com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route.SendPayment]
  * to preselect a rail when navigating from a specific profile chip.
  */
 enum class ProfilePaymentMethod(

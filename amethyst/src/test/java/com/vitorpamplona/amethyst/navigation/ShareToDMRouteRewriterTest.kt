@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMRouteRewriter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

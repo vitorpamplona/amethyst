@@ -52,14 +52,14 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

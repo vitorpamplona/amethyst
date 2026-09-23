@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_pay
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

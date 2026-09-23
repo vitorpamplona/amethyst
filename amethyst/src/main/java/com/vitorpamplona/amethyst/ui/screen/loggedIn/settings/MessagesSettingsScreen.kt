@@ -86,10 +86,10 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_view_grouped_des
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_inline
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_inline_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_view_mode_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel

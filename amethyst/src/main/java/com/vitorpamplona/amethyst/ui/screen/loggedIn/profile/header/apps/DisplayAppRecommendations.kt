@@ -49,10 +49,10 @@ import com.vitorpamplona.amethyst.commons.resources.profile_app_recommendations_
 import com.vitorpamplona.amethyst.commons.resources.profile_apps_empty_hint
 import com.vitorpamplona.amethyst.commons.resources.profile_apps_header
 import com.vitorpamplona.amethyst.commons.resources.profile_apps_header_empty
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

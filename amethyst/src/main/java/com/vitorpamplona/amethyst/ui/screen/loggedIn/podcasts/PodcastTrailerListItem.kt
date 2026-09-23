@@ -41,10 +41,10 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_season
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer

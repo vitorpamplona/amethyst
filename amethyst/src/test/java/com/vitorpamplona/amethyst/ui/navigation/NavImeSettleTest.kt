@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi

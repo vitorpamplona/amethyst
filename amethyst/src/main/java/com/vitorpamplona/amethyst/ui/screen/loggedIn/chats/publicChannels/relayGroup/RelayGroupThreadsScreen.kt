@@ -73,12 +73,12 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_empty_read_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_loading_older
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

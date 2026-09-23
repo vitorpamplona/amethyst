@@ -51,11 +51,11 @@ import com.vitorpamplona.amethyst.commons.model.Resource
 import com.vitorpamplona.amethyst.commons.model.VisionPrescription
 import com.vitorpamplona.amethyst.commons.model.findReferenceInDb
 import com.vitorpamplona.amethyst.commons.model.parseResourceBundleOrNull
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event

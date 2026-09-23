@@ -37,9 +37,9 @@ import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
 import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

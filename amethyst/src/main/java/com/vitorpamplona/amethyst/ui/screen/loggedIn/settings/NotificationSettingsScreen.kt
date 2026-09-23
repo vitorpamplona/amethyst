@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notificatio
 import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_title
 import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_description
 import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -90,7 +91,6 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

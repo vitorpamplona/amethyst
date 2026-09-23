@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_season
 import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_transcript
 import com.vitorpamplona.amethyst.commons.resources.podcast_video
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastLinkChip
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastValueSplits
@@ -62,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 

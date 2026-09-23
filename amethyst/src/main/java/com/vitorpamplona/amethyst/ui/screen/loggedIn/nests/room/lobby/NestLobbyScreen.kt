@@ -69,12 +69,12 @@ import com.vitorpamplona.amethyst.commons.resources.nest_lobby_host_label
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_listeners_count
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_no_listeners
 import com.vitorpamplona.amethyst.commons.resources.nest_lobby_open_action
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -414,7 +414,7 @@ private fun RoomHeader(
                             accountViewModel = accountViewModel,
                             onClick = { hex ->
                                 nav.nav(
-                                    com.vitorpamplona.amethyst.ui.navigation.routes.Route
+                                    com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
                                         .Profile(hex),
                                 )
                             },

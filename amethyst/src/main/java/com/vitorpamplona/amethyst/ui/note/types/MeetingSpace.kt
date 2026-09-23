@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_presence_listening
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_on_stage
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_raised_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_speaking
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

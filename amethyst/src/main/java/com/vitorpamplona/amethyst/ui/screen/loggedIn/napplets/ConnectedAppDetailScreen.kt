@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_own_
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.symbol
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
@@ -116,7 +117,6 @@ import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ActivityCard

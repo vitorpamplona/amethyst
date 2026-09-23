@@ -33,8 +33,8 @@ import com.vitorpamplona.amethyst.commons.resources.kind_good_wiki_authors
 import com.vitorpamplona.amethyst.commons.resources.kind_media_follows
 import com.vitorpamplona.amethyst.commons.resources.kind_media_starter_pack
 import com.vitorpamplona.amethyst.commons.resources.kind_mute_set_for_kind
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent

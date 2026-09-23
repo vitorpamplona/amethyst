@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETT
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
 import com.vitorpamplona.amethyst.ui.note.elements.NowProvider

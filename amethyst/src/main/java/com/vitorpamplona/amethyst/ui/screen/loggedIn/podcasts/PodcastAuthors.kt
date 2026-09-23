@@ -46,11 +46,11 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_author_verified
 import com.vitorpamplona.amethyst.commons.resources.podcast_role_cohost
 import com.vitorpamplona.amethyst.commons.resources.podcast_role_editor
 import com.vitorpamplona.amethyst.commons.resources.podcast_role_host
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

@@ -83,8 +83,8 @@ import com.vitorpamplona.amethyst.commons.resources.software_apps
 import com.vitorpamplona.amethyst.commons.resources.wallet
 import com.vitorpamplona.amethyst.commons.resources.web_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.workouts
-import com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.GeocacheTab
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 

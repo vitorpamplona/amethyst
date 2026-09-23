@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_pinned_empty
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_remove
 import com.vitorpamplona.amethyst.commons.resources.bottom_bar_settings_reorder_hint
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
@@ -97,7 +98,6 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCategory
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberFavoriteIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberGroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel

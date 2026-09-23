@@ -102,8 +102,8 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.resources.zaps_search_keywords
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import org.jetbrains.compose.resources.StringResource
 
 /**

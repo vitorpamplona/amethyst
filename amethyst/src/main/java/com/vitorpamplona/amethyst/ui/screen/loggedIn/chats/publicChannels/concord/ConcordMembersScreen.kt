@@ -81,9 +81,9 @@ import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
 import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.routes
+package com.vitorpamplona.amethyst.commons.ui.navigation.routes
 
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHostController
-import androidx.navigation.toRoute
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.BookmarkType
@@ -30,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.serialization.Serializable
-import kotlin.reflect.KClass
 
 /**
  * A feed whose composer can be pre-loaded from an Android share. [attachments] holds the shared
@@ -1230,40 +1226,6 @@ sealed class Route {
     data class TopUpMint(
         val mintUrl: String,
     ) : Route()
-}
-
-inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
-
-/**
- * The composers that swallow a *redelivered* ACTION_SEND themselves: each registers its own
- * onNewIntent listener and drops the shared text/media into the draft already on screen.
- *
- * Microsoft's SwiftKey delivers GIFs as fresh share intents, so without this the global share
- * router would answer a GIF sent from one of these screens by starting a brand-new short-note
- * composer — throwing away the reply the user was in the middle of writing.
- *
- * Only guards the onNewIntent path. A share that *launches* the activity has no composer
- * listening yet, so it must still navigate.
- */
-fun consumesSharesInPlace(navController: NavHostController): Boolean =
-    isBaseRoute<Route.NewShortNote>(navController) ||
-        isBaseRoute<Route.GenericCommentPost>(navController) ||
-        isBaseRoute<Route.HashtagPost>(navController) ||
-        isBaseRoute<Route.GeoPost>(navController) ||
-        isBaseRoute<Route.UrlPost>(navController)
-
-fun <T : Route> getRouteWithArguments(
-    klazz: KClass<T>,
-    navController: NavHostController,
-): Route? {
-    val entry = navController.currentBackStackEntry ?: return null
-    val dest = entry.destination
-
-    return if (dest.hasRoute(klazz)) {
-        entry.toRoute(klazz)
-    } else {
-        null
-    }
 }
 
 @Serializable

@@ -72,12 +72,12 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_root
 import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitLoadingBox
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitMessageBox
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.RepoInfoBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.git.GitTreeEntry

@@ -44,11 +44,11 @@ import com.vitorpamplona.amethyst.commons.resources.video_credit_featuring
 import com.vitorpamplona.amethyst.commons.resources.video_credit_inspired_by
 import com.vitorpamplona.amethyst.commons.resources.video_credit_references
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent

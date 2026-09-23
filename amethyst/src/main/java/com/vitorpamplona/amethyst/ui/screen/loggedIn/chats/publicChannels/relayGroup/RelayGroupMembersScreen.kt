@@ -85,6 +85,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user
 import com.vitorpamplona.amethyst.commons.resources.relay_group_remove_user_confirm
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
 import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -92,8 +94,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList

@@ -158,9 +158,9 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_triggered_toas
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_on
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

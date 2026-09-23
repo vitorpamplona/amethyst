@@ -75,9 +75,9 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_confir
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_delete_recommendation
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_my_recommendations
 import com.vitorpamplona.amethyst.commons.resources.cashu_settings_no_recommendations
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
