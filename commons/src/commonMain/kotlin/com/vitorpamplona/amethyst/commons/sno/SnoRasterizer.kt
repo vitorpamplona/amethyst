@@ -121,6 +121,12 @@ object SnoRasterizer {
      * @param background an opaque ARGB fill, or 0 for a transparent buffer.
      * @param lighting the light falling on each face, which also carries the
      *   faces wound outward; `null` for §4's default unlit reading.
+     * @param scratch buffers to draw into instead of allocating a pair, for a
+     *   caller that draws the same object many times over; see [SnoRasterScratch]
+     *   for why a turn wants this and why one holder serves one render at a time.
+     *   With a scratch the returned array is the holder's own and is overwritten
+     *   by the next render, so a caller that keeps the pixels must copy them —
+     *   both `PlatformImage.create` implementations do.
      * @return `width * height` ARGB pixels, row-major.
      */
     @Suppress("detekt.LongParameterList")
@@ -132,13 +138,19 @@ object SnoRasterizer {
         pitchDegrees: Float = DEFAULT_PITCH_DEGREES,
         background: Int = TRANSPARENT,
         lighting: SnoLighting? = null,
+        scratch: SnoRasterScratch? = null,
     ): IntArray {
         require(width > 0 && height > 0) { "a raster needs a positive size" }
 
-        val pixels = IntArray(width * height) { background }
+        val area = width * height
+        // A fresh array is cheaper to fill than a reused one — allocation hands
+        // back zeroed pages — so the lambda form stays where nothing is reused.
+        val pixels = scratch?.pixels(area)?.also { it.fill(background) } ?: IntArray(area) { background }
         if (payload.vertexCount == 0) return pixels
 
-        val depth = FloatArray(width * height) { Float.NEGATIVE_INFINITY }
+        val depth =
+            scratch?.depth(area)?.also { it.fill(Float.NEGATIVE_INFINITY) }
+                ?: FloatArray(area) { Float.NEGATIVE_INFINITY }
         val screen = project(payload, width, height, yawDegrees, pitchDegrees)
 
         val drawTriangles = payload.mode == SnoMode.SOLID && payload.faceCount > 0

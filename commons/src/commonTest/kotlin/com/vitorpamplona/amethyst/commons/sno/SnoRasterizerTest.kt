@@ -283,4 +283,53 @@ class SnoRasterizerTest {
         assertEquals(-480, payload.tickAt(0, 0))
         assertEquals(480, payload.tickAt(1, 0))
     }
+
+    /**
+     * Reused buffers must draw the same picture as fresh ones.
+     *
+     * The whole risk of [SnoRasterScratch] is that a frame inherits something
+     * the last one left behind — a pixel the background fill missed, a depth
+     * still holding the previous angle's surface in front of this one. So this
+     * turns the object through a sequence of angles twice, once allocating and
+     * once reusing, and every frame has to match: a leak would show up on the
+     * second angle onward, never on the first.
+     */
+    @Test
+    fun aReusedBufferDrawsWhatAFreshOneDraws() {
+        val payload = triangle(colors = "[238,235,239]")
+        val scratch = SnoRasterScratch()
+        val background = 0xFF101010.toInt()
+
+        for (yaw in floatArrayOf(0f, 37f, 180f, -95f, 0f)) {
+            val fresh = SnoRasterizer.render(payload, dim, dim, yawDegrees = yaw, background = background)
+            val reused =
+                SnoRasterizer.render(payload, dim, dim, yawDegrees = yaw, background = background, scratch = scratch)
+            assertTrue(fresh.contentEquals(reused), "a reused buffer differs from a fresh one at yaw $yaw")
+        }
+    }
+
+    /** A drag ends and the raster goes back to full size; the buffers must follow. */
+    @Test
+    fun aReusedBufferFollowsAChangeOfSize() {
+        val payload = triangle()
+        val scratch = SnoRasterScratch()
+
+        for (size in intArrayOf(dim, dim * 2, 3, dim)) {
+            val reused = SnoRasterizer.render(payload, size, size, scratch = scratch)
+            assertEquals(size * size, reused.size, "the buffer did not resize to $size")
+            assertTrue(reused.contentEquals(SnoRasterizer.render(payload, size, size)))
+        }
+    }
+
+    /** A lit frame must not leave its shading in the buffer for an unlit one. */
+    @Test
+    fun aReusedBufferDoesNotCarryLightingOver() {
+        val payload = parse(solidQuadJson)
+        val scratch = SnoRasterScratch()
+
+        SnoRasterizer.render(payload, dim, dim, lighting = SnoLighting.of(payload), scratch = scratch)
+        val unlitAfterLit = SnoRasterizer.render(payload, dim, dim, scratch = scratch).copyOf()
+
+        assertTrue(unlitAfterLit.contentEquals(SnoRasterizer.render(payload, dim, dim)))
+    }
 }
