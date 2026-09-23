@@ -458,13 +458,14 @@ class AppModules(
             scope = applicationIOScope,
             dns = surgeDns,
             // Transparently rewrites sha256-keyed HTTP requests to the local
-            // Blossom cache when the master toggle is on, the profile-pictures-only
-            // restriction is off, and the probe sees 127.0.0.1:24242 as available.
-            shouldBridgeBlossomCache = {
+            // Blossom cache when the master toggle is on, the probe sees
+            // 127.0.0.1:24242 as available, and either the profile-pictures-only
+            // restriction is off or the request is a profile picture.
+            shouldBridgeBlossomCache = { profilePicture ->
                 val settings = sessionManager.loggedInAccount()?.settings
                 val master = settings?.useLocalBlossomCache?.value ?: false
                 val profileOnly = settings?.localBlossomCacheProfilePicturesOnly?.value ?: false
-                master && !profileOnly && localBlossomCacheProbe.available.value
+                master && (profilePicture || !profileOnly) && localBlossomCacheProbe.available.value
             },
             onionCache = onionLocationCache,
             usageInterceptor = httpUsageInterceptor,

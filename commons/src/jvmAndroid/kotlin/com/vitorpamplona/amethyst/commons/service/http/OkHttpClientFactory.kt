@@ -55,12 +55,13 @@ class OkHttpClientFactory(
     val userAgent: String,
     private val dns: SurgeDns,
     /**
-     * Returns `true` when sha256-keyed HTTP requests should be transparently
-     * rewritten to the local Blossom cache (master toggle on, profile-pictures-only
-     * restriction off, probe up). When `null`, the interceptor is disabled —
-     * useful for tests or pre-configuration call sites.
+     * Returns `true` when a sha256-keyed HTTP request should be transparently
+     * rewritten to the local Blossom cache, given whether it is a profile picture
+     * (master toggle on, probe up, and either not restricted to profile pictures
+     * or this is one). When `null`, the interceptor is disabled — useful for
+     * tests or pre-configuration call sites.
      */
-    val shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    val shouldBridgeBlossomCache: ((profilePicture: Boolean) -> Boolean)? = null,
     private val onionCache: OnionLocationCache,
     /**
      * Resource-usage ledger counter, installed OUTERMOST on the shared base

@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
+import okhttp3.Call
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
+import okhttp3.Request
 import okhttp3.Response
 import java.net.ConnectException
 
@@ -30,6 +32,11 @@ import java.net.ConnectException
  * App-wide OkHttp interceptor that transparently rewrites HTTP requests for
  * sha256-keyed blobs to a local Blossom cache running on `127.0.0.1:24242`,
  * per https://github.com/hzrd149/blossom/blob/master/implementations/local-blossom-cache.md
+ *
+ * This is the only place feed media, videos and profile pictures are routed
+ * to the cache: callers keep the real URL, so the Tor decision, Coil/ExoPlayer
+ * cache keys and decryption-key lookups all see the origin. Tor-proxied
+ * clients don't carry this interceptor, so Tor-routed media skips the cache.
  *
  * Activates when [shouldBridge] returns `true` AND the request URL contains
  * a 64-char hex sha256 segment in its path AND the host isn't already
@@ -54,7 +61,9 @@ class LocalBlossomCacheRedirectInterceptor(
     private val keyCache: EncryptionKeyCache? = null,
     private val onUnreachable: () -> Unit = {},
     // Last, so the `LocalBlossomCacheRedirectInterceptor { enabled }` trailing-lambda form binds here.
-    private val shouldBridge: () -> Boolean,
+    // Told whether the request is a profile picture (tagged [ProfilePictureRequest]), for the
+    // "profile pictures only" setting.
+    private val shouldBridge: (profilePicture: Boolean) -> Boolean,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -72,7 +81,7 @@ class LocalBlossomCacheRedirectInterceptor(
             }
         }
 
-        if (!shouldBridge()) return chain.proceed(request)
+        if (!shouldBridge(request.tag(ProfilePictureRequest::class.java) != null)) return chain.proceed(request)
 
         val rewritten = rewriteIfApplicable(request.url) ?: return chain.proceed(request)
 
@@ -158,4 +167,14 @@ class LocalBlossomCacheRedirectInterceptor(
         const val LOCAL_CACHE_BASE = "http://$LOCAL_CACHE_HOST:$LOCAL_CACHE_PORT"
         private val BLOSSOM_LAST_SEGMENT_REGEX = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
     }
+}
+
+/** OkHttp request tag marking a profile-picture download. See [LocalBlossomCacheRedirectInterceptor]. */
+object ProfilePictureRequest
+
+/** Tags every call it creates with [ProfilePictureRequest]. */
+class ProfilePictureCallFactory(
+    private val delegate: Call.Factory,
+) : Call.Factory {
+    override fun newCall(request: Request): Call = delegate.newCall(request.newBuilder().tag(ProfilePictureRequest::class.java, ProfilePictureRequest).build())
 }

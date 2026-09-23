@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -39,48 +38,17 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
-import com.vitorpamplona.amethyst.commons.richtext.bridgeProfilePictureUrl
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
-import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-
-@OptIn(ExperimentalCoroutinesApi::class)
-@Composable
-private fun rememberLocalBlossomBridgeForProfilePics(): Boolean {
-    val sessionManager =
-        try {
-            Amethyst.instance.sessionManager
-        } catch (e: UninitializedPropertyAccessException) {
-            return false
-        }
-    val probe = Amethyst.instance.localBlossomCacheProbe
-    val flow =
-        remember {
-            combine(
-                sessionManager.accountContent.flatMapLatest { state ->
-                    if (state is AccountState.LoggedIn) state.account.settings.useLocalBlossomCache else flowOf(false)
-                },
-                probe.available,
-            ) { toggle, probeUp -> toggle && probeUp }
-        }
-    val state by flow.collectAsStateWithLifecycle(initialValue = false)
-    return state
-}
 
 @Composable
 fun RobohashAsyncImage(
@@ -120,21 +88,16 @@ fun RobohashFallbackAsyncImage(
     loadRobohash: Boolean,
     autoPlayGif: Boolean = true,
 ) {
-    val useBridge = rememberLocalBlossomBridgeForProfilePics()
-    val bridgedModel =
-        remember(model, robot, useBridge) {
-            bridgeProfilePictureUrl(model, useBridge, robot)
-        }
-    if (bridgedModel != null && loadProfilePicture && isAnimatedMediaUrl(bridgedModel)) {
+    if (model != null && loadProfilePicture && isAnimatedMediaUrl(model)) {
         GifProfilePicture(
             userHex = robot,
-            userPicture = bridgedModel,
+            userPicture = model,
             contentDescription = contentDescription,
             modifier = modifier,
             loadRobohash = loadRobohash,
             autoPlay = autoPlayGif,
         )
-    } else if (bridgedModel != null && loadProfilePicture) {
+    } else if (model != null && loadProfilePicture) {
         val fallbackPainter =
             if (loadRobohash) {
                 rememberVectorPainter(
@@ -154,10 +117,10 @@ fun RobohashFallbackAsyncImage(
             // file://) would fail there. Route only remote http(s) pictures through the thumbnail
             // cache; hand local/content URIs to Coil's native fetchers, which load them directly.
             model =
-                if (bridgedModel.startsWith("http://", ignoreCase = true) || bridgedModel.startsWith("https://", ignoreCase = true)) {
-                    ProfilePictureUrl(bridgedModel)
+                if (model.startsWith("http://", ignoreCase = true) || model.startsWith("https://", ignoreCase = true)) {
+                    ProfilePictureUrl(model)
                 } else {
-                    bridgedModel
+                    model
                 },
             contentDescription = contentDescription,
             modifier = modifier,

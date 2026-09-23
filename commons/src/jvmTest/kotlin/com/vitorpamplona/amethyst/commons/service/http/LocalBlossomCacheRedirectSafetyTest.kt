@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.service.http
 
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -85,6 +86,38 @@ class LocalBlossomCacheRedirectSafetyTest {
         val sent = mutableListOf<Request>()
         LocalBlossomCacheRedirectInterceptor { true }.intercept(chain(Request.Builder().url(origin).build(), sent)).close()
         assertEquals(bridged, sent.single().url.toString())
+    }
+
+    @Test
+    fun profilePicturesOnlyBridgesTaggedRequestsAlone() {
+        // The "profile pictures only" setting: bridge a request only when it is a profile picture.
+        val interceptor = LocalBlossomCacheRedirectInterceptor { profilePicture -> profilePicture }
+
+        val feedImage = mutableListOf<Request>()
+        interceptor.intercept(chain(Request.Builder().url(origin).build(), feedImage)).close()
+        assertEquals(origin, feedImage.single().url.toString())
+
+        val avatar = mutableListOf<Request>()
+        val tagged =
+            Request
+                .Builder()
+                .url(origin)
+                .tag(ProfilePictureRequest::class.java, ProfilePictureRequest)
+                .build()
+        interceptor.intercept(chain(tagged, avatar)).close()
+        assertEquals(bridged, avatar.single().url.toString())
+    }
+
+    @Test
+    fun profilePictureCallFactoryTagsItsRequests() {
+        var seen: Request? = null
+        val factory =
+            ProfilePictureCallFactory { request ->
+                seen = request
+                OkHttpClient().newCall(request)
+            }
+        factory.newCall(Request.Builder().url(origin).build())
+        assertNotNull(seen?.tag(ProfilePictureRequest::class.java))
     }
 
     @Test

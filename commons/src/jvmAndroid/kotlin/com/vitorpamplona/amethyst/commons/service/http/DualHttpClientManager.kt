@@ -42,7 +42,7 @@ class DualHttpClientManager(
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
     dns: SurgeDns,
-    shouldBridgeBlossomCache: (() -> Boolean)? = null,
+    shouldBridgeBlossomCache: ((profilePicture: Boolean) -> Boolean)? = null,
     // Required (not nullable): every general-purpose HTTP client we mint must be
     // wired into the OnionLocationCache so the app's `.onion`-routing behavior
     // is uniform across image, upload, NIP-05, money, preview, and push roles.

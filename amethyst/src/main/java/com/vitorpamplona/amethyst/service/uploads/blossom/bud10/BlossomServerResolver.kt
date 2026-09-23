@@ -124,11 +124,14 @@ class BlossomServerResolver(
     suspend fun findServersInner(uriStr: String): BlossomUriServer? {
         val uri = BlossomUri.parse(uriStr) ?: return null
 
-        if (useLocalBlossomCache() && localCacheProbe?.isAvailable() == true) {
+        val expectedMimeType = mimeTypeMap[uri.extension]
+
+        // Same rule as the HTTP-level bridge, which Tor-routed clients don't carry: media the
+        // user sends through Tor must not be handed to the local cache, which would fetch it
+        // from the origin outside Tor.
+        if (useLocalBlossomCache() && !isTorRouted(uri, expectedMimeType) && localCacheProbe?.isAvailable() == true) {
             return BlossomUriServer(uri, uri.toLocalCacheUrl(LocalBlossomCacheProbe.LOCAL_CACHE_BASE))
         }
-
-        val expectedMimeType = mimeTypeMap[uri.extension]
         val filename = uri.filename()
 
         if (uri.servers.isNotEmpty()) {
@@ -185,6 +188,12 @@ class BlossomServerResolver(
                 client(url, expectedMimeType)
             }
         }
+
+    /** Whether this blob's media type would be fetched through Tor from a regular (clearnet) server. */
+    private fun isTorRouted(
+        uri: BlossomUri,
+        mimeType: String?,
+    ): Boolean = client(uri.toServerUrl() ?: "https://blossom.invalid/${uri.filename()}", mimeType).proxy != null
 
     fun client(
         url: String,
