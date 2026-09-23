@@ -20,30 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
-import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.note.BookmarkToggleButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
@@ -56,10 +42,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
  * Bookmarked state is read from the public bookmark id/address **sets** (not `List<Note>`
  * containment) so it reflects reliably for addressable notes and updates the moment the list
  * changes — the icon flipping filled/outline is the feedback, no toast needed.
- *
- * Rendered as a compact clickable glyph (not a Material [androidx.compose.material3.IconButton],
- * whose 48dp minimum touch target would stand taller than the title it sits beside). [iconSize]
- * defaults to a single title line so it aligns when placed next to a show/episode title.
  */
 @Composable
 fun PodcastBookmarkButton(
@@ -82,30 +64,16 @@ fun PodcastBookmarkButton(
             }
         }
 
-    Box(
-        modifier =
-            modifier
-                .clip(CircleShape)
-                .clickable(
-                    role = Role.Button,
-                    onClick = {
-                        if (isBookmarked) {
-                            accountViewModel.removePublicBookmark(note)
-                        } else {
-                            accountViewModel.addPublicBookmark(note)
-                        }
-                    },
-                ).padding(4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            symbol = if (isBookmarked) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
-            contentDescription =
-                stringRes(
-                    if (isBookmarked) Res.string.remove_from_public_bookmarks else Res.string.add_to_public_bookmarks,
-                ),
-            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(iconSize),
-        )
-    }
+    BookmarkToggleButton(
+        isBookmarked = isBookmarked,
+        onToggle = {
+            if (isBookmarked) {
+                accountViewModel.removePublicBookmark(note)
+            } else {
+                accountViewModel.addPublicBookmark(note)
+            }
+        },
+        modifier = modifier,
+        iconSize = iconSize,
+    )
 }
