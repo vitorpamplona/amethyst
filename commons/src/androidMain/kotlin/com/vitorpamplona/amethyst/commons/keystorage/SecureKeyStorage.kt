@@ -21,42 +21,48 @@
 package com.vitorpamplona.amethyst.commons.keystorage
 
 import android.content.Context
-import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.model.preferences.EncryptedDataStore
+import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.SupervisorJob
+import okio.Path.Companion.toOkioPath
+import java.io.File
 
 /**
- * Android implementation of SecureKeyStorage using EncryptedSharedPreferences
- * backed by Android Keystore (AES-256-GCM, hardware-backed when available).
+ * Android implementation of [SecureKeyStorage]: an encrypted DataStore whose
+ * values are sealed with a key held in the AndroidKeyStore.
  *
- * ## Security Features
+ * ## Why not EncryptedSharedPreferences
  *
- * - **Hardware Security:** Uses Android Keystore (hardware-backed on supported devices with StrongBox)
- * - **Encryption:** AES-256-GCM for both keys and values
- * - **Key Derivation:** AES-256-SIV for preference keys, AES-256-GCM for values
- * - **Application Context:** Uses applicationContext to prevent memory leaks
- * - **Auto-backup Disabled:** EncryptedSharedPreferences automatically excluded from cloud backups
+ * This used to be `androidx.security.crypto`, which Google deprecated with no
+ * drop-in successor. [SecretEncryption] talks to the AndroidKeyStore directly —
+ * AES-256-GCM, StrongBox-backed where the device offers it — so the key still
+ * never enters app memory, and the library goes away.
  *
- * **Note:** While the encryption keys are protected by hardware security modules (when available),
- * the decrypted private keys returned by [getPrivateKey] are still subject to the String memory
- * limitation described in [SecureKeyStorage].
+ * Nothing is migrated from the old `amethyst_secure_keys` file because nothing
+ * ever wrote to it: this class is used by the desktop app, and the Android app
+ * has its own key storage in LocalPreferences. Were that to change, a migration
+ * would have to come first.
+ *
+ * ## Security note
+ *
+ * Only values are encrypted; the key names are not. That reveals which npubs
+ * this installation holds keys for, but not the keys themselves — the same
+ * trade-off the rest of the encrypted stores make.
+ *
+ * The String memory limitation described on [SecureKeyStorage] still applies:
+ * a decrypted private key cannot be zeroed from a JVM String.
  */
 actual class SecureKeyStorage private actual constructor() {
     actual companion object {
-        private const val PREFS_NAME = "amethyst_secure_keys"
+        private const val STORE_FILE = "datastore/secure_keys.preferences_pb"
         private const val KEY_PREFIX = "privkey_"
 
         private lateinit var appContext: Context
 
-        /**
-         * Creates a SecureKeyStorage instance for Android.
-         *
-         * @param context Android Context (will use applicationContext to avoid leaks)
-         * @return SecureKeyStorage instance
-         * @throws IllegalArgumentException if context is null or not a valid Context
-         */
         actual fun create(context: Any?): SecureKeyStorage {
             require(context is Context) { "Android requires a valid Context" }
             appContext = context.applicationContext
@@ -64,85 +70,61 @@ actual class SecureKeyStorage private actual constructor() {
         }
     }
 
-    // androidx.security.crypto is deprecated with no drop-in successor; migrating the
-    // on-disk key store is a separate, security-sensitive effort.
-    @Suppress("DEPRECATION")
-    private val masterKey: MasterKey by lazy {
-        MasterKey
-            .Builder(appContext, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    @Suppress("DEPRECATION")
-    private val encryptedPrefs by lazy {
-        EncryptedSharedPreferences.create(
-            appContext,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+    private val store by lazy {
+        EncryptedDataStore(
+            PreferenceDataStoreFactory.createWithPath(
+                scope = scope,
+                produceFile = { File(appContext.filesDir, STORE_FILE).toOkioPath() },
+            ),
+            SecretEncryption(),
+            scope = scope,
         )
     }
+
+    private fun keyFor(npub: String) = stringPreferencesKey(KEY_PREFIX + npub)
 
     actual suspend fun savePrivateKey(
         npub: String,
         privKeyHex: String,
     ) {
-        withContext(Dispatchers.IO) {
-            try {
-                encryptedPrefs.edit { putString(KEY_PREFIX + npub, privKeyHex) }
-            } catch (e: Exception) {
-                throw SecureStorageException("Failed to save private key", e)
-            }
+        try {
+            store.save(keyFor(npub), privKeyHex)
+        } catch (e: Exception) {
+            throw SecureStorageException("Failed to save private key", e)
         }
     }
 
     actual suspend fun getPrivateKey(npub: String): String? =
-        withContext(Dispatchers.IO) {
-            try {
-                encryptedPrefs.getString(KEY_PREFIX + npub, null)
-            } catch (e: Exception) {
-                throw SecureStorageException("Failed to retrieve private key", e)
-            }
+        try {
+            store.get(keyFor(npub))
+        } catch (e: Exception) {
+            throw SecureStorageException("Failed to retrieve private key", e)
         }
 
     /**
-     * Android backend: EncryptedSharedPreferences.contains + getString has no
-     * ambiguous-error state comparable to macOS Keychain user-cancel/deny, so
-     * "key not present" and "key present" are the only two null outcomes.
-     * Any thrown exception is a genuine failure and propagates.
+     * Unlike [getPrivateKey], this reads through [EncryptedDataStore.getOrThrow]
+     * so a store that cannot be read raises instead of reporting the key as
+     * absent. That distinction is the whole point of this method: callers use
+     * it to decide whether a key needs creating, and treating a transient read
+     * failure as "no key here" would overwrite a live one.
      */
     actual suspend fun getPrivateKeyOrThrow(npub: String): String? =
-        withContext(Dispatchers.IO) {
-            try {
-                val key = KEY_PREFIX + npub
-                if (!encryptedPrefs.contains(key)) {
-                    null
-                } else {
-                    encryptedPrefs.getString(key, null)
-                }
-            } catch (e: Exception) {
-                throw SecureStorageException("Failed to retrieve private key", e)
-            }
+        try {
+            store.getOrThrow(keyFor(npub))
+        } catch (e: Exception) {
+            throw SecureStorageException("Failed to retrieve private key", e)
         }
 
     actual suspend fun deletePrivateKey(npub: String): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                val key = KEY_PREFIX + npub
-                val existed = encryptedPrefs.contains(key)
-                if (existed) {
-                    encryptedPrefs.edit { remove(key) }
-                }
-                existed
-            } catch (e: Exception) {
-                throw SecureStorageException("Failed to delete private key", e)
-            }
+        try {
+            val existed = store.get(keyFor(npub)) != null
+            if (existed) store.remove(keyFor(npub))
+            existed
+        } catch (e: Exception) {
+            throw SecureStorageException("Failed to delete private key", e)
         }
 
-    actual suspend fun hasPrivateKey(npub: String): Boolean =
-        withContext(Dispatchers.IO) {
-            encryptedPrefs.contains(KEY_PREFIX + npub)
-        }
+    actual suspend fun hasPrivateKey(npub: String): Boolean = getPrivateKey(npub) != null
 }

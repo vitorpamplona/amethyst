@@ -167,8 +167,8 @@ kotlin {
                 // Compose UI artifacts before the :commonsUI split.
                 implementation(libs.androidx.core.ktx)
 
-                // Secure key storage via Android Keystore
-                implementation(libs.androidx.security.crypto.ktx)
+                // Secure key storage talks to the AndroidKeyStore directly through
+                // SecretEncryption; androidx.security.crypto is gone from this module.
             }
         }
 

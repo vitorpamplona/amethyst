@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import okio.IOException
@@ -58,6 +59,13 @@ class EncryptedDataStore(
         store.edit { prefs -> prefs[key] = encrypt(value) }
     }
 
+    /**
+     * The value, or null when the key is absent **or unreadable**.
+     *
+     * A read error is reported as absence, which is what most callers want.
+     * Anything that must not mistake a failure for an empty store — a probe
+     * deciding whether to create a replacement key, say — needs [getOrThrow].
+     */
     suspend fun get(key: Preferences.Key<String>): String? =
         store.data
             .catch { e ->
@@ -65,6 +73,16 @@ class EncryptedDataStore(
             }.firstOrNull()
             ?.get(key)
             ?.let { decrypt(it) }
+
+    /**
+     * The value, or null only when the key is genuinely absent.
+     *
+     * Unlike [get], a failure to read propagates rather than being flattened
+     * into null. The difference matters wherever null means "nothing was ever
+     * stored" and the caller acts on that — overwriting a key that is present
+     * but temporarily unreadable is not recoverable.
+     */
+    suspend fun getOrThrow(key: Preferences.Key<String>): String? = store.data.first()[key]?.let { decrypt(it) }
 
     fun <T> getProperty(
         key: Preferences.Key<String>,

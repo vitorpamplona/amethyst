@@ -25,10 +25,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -130,5 +132,48 @@ class EncryptedDataStoreTest {
             subject.remove(key)
 
             assertNull(subject.get(key))
+        }
+
+    /**
+     * [EncryptedDataStore.get] flattens a read failure into null;
+     * [EncryptedDataStore.getOrThrow] does not.
+     *
+     * The difference guards a live key: a probe that decides whether to create
+     * one must not read "absent" from a store it merely failed to open, or it
+     * overwrites what is already there.
+     */
+    @Test
+    fun getSwallowsAReadFailureButGetOrThrowDoesNot() =
+        runTest {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val n = seq++
+            val dataFile = File(folder.root, "corrupt_$n.preferences_pb")
+            val keyFile = File(folder.root, "corrupt_$n.key")
+            val subject =
+                EncryptedDataStore(
+                    PreferenceDataStoreFactory.createWithPath(scope = scope, produceFile = { dataFile.toOkioPath() }),
+                    SecretEncryption(keyFile),
+                    scope = scope,
+                )
+            subject.save(key, "a real value")
+            scope.cancel()
+
+            // Truncate the store so opening it fails rather than reading empty.
+            dataFile.writeBytes(byteArrayOf(0x01, 0x02, 0x03))
+
+            val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val reopened =
+                EncryptedDataStore(
+                    PreferenceDataStoreFactory.createWithPath(scope = readScope, produceFile = { dataFile.toOkioPath() }),
+                    SecretEncryption(keyFile),
+                    scope = readScope,
+                )
+
+            assertNull("get() reports the unreadable store as absent", reopened.get(key))
+            assertTrue(
+                "getOrThrow() must not call it absent",
+                runCatching { reopened.getOrThrow(key) }.isFailure,
+            )
+            readScope.cancel()
         }
 }
