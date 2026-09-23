@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.file_server_description

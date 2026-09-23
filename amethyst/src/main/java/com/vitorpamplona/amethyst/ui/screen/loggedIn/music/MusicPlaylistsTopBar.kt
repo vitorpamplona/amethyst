@@ -60,7 +60,7 @@ fun MusicPlaylistsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultMusicPlaylistsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultMusicPlaylistsFollowList(it.code) },
         )
     }
 }

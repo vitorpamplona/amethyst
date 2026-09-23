@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
@@ -29,7 +31,12 @@ import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mergeMutedPublicChats
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -39,13 +46,6 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
-import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -57,7 +57,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -236,6 +235,14 @@ class AccountSettings(
      * keysets is fine because the derivation includes the keyset id.
      */
     var cashuKeysetCounters: MutableMap<String, Long> = mutableMapOf(),
+    /**
+     * Durable NUT-13 counter store for this account, supplied by the host.
+     *
+     * Defaulted to the failing stand-in rather than an in-memory map: the preview
+     * and test factories below never mint, and a host that does mint must wire a
+     * real store or hear about it on the first reservation.
+     */
+    val cashuCounters: CashuKeysetCounterStore = UnavailableCashuKeysetCounterStore,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -769,19 +776,11 @@ class AccountSettings(
         if (changed) saveAccountSettings()
     }
 
-    fun changeDefaultHomeFollowList(name: FeedDefinition) {
-        changeDefaultHomeFollowList(name.code)
-    }
-
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultStoriesFollowList(name: FeedDefinition) {
-        changeDefaultStoriesFollowList(name.code)
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
@@ -791,19 +790,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNotificationFollowList(name: FeedDefinition) {
-        changeDefaultNotificationFollowList(name.code)
-    }
-
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
@@ -813,19 +804,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPollsFollowList(name: FeedDefinition) {
-        changeDefaultPollsFollowList(name.code)
-    }
-
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCommunitiesFollowList(name: FeedDefinition) {
-        changeDefaultCommunitiesFollowList(name.code)
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
@@ -835,19 +818,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPicturesFollowList(name: FeedDefinition) {
-        changeDefaultPicturesFollowList(name.code)
-    }
-
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultRelayGroupsDiscoveryFollowList(name: FeedDefinition) {
-        changeDefaultRelayGroupsDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
@@ -857,19 +832,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultNappletsFollowList(name: FeedDefinition) {
-        changeDefaultNappletsFollowList(name.code)
-    }
-
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNsitesFollowList(name: FeedDefinition) {
-        changeDefaultNsitesFollowList(name.code)
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
@@ -879,19 +846,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
-        changeDefaultWorkoutsFollowList(name.code)
-    }
-
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGitRepositoriesFollowList(name: FeedDefinition) {
-        changeDefaultGitRepositoriesFollowList(name.code)
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
@@ -901,19 +860,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultHighlightsFollowList(name: FeedDefinition) {
-        changeDefaultHighlightsFollowList(name.code)
-    }
-
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultCalendarsFollowList(name: FeedDefinition) {
-        changeDefaultCalendarsFollowList(name.code)
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
@@ -923,19 +874,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultProductsFollowList(name: FeedDefinition) {
-        changeDefaultProductsFollowList(name.code)
-    }
-
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultGeocachesFollowList(name: FeedDefinition) {
-        changeDefaultGeocachesFollowList(name.code)
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
@@ -945,19 +888,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultShortsFollowList(name: FeedDefinition) {
-        changeDefaultShortsFollowList(name.code)
-    }
-
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPublicChatsFollowList(name: FeedDefinition) {
-        changeDefaultPublicChatsFollowList(name.code)
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
@@ -967,19 +902,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLiveStreamsFollowList(name: FeedDefinition) {
-        changeDefaultLiveStreamsFollowList(name.code)
-    }
-
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultNestsFollowList(name: FeedDefinition) {
-        changeDefaultNestsFollowList(name.code)
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
@@ -989,19 +916,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultLongsFollowList(name: FeedDefinition) {
-        changeDefaultLongsFollowList(name.code)
-    }
-
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultArticlesFollowList(name: FeedDefinition) {
-        changeDefaultArticlesFollowList(name.code)
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
@@ -1011,19 +930,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultMusicTracksFollowList(name: FeedDefinition) {
-        changeDefaultMusicTracksFollowList(name.code)
-    }
-
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultMusicPlaylistsFollowList(name: FeedDefinition) {
-        changeDefaultMusicPlaylistsFollowList(name.code)
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
@@ -1033,19 +944,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultPodcastEpisodesFollowList(name: FeedDefinition) {
-        changeDefaultPodcastEpisodesFollowList(name.code)
-    }
-
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultPodcastsFollowList(name: FeedDefinition) {
-        changeDefaultPodcastsFollowList(name.code)
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
@@ -1055,19 +958,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultSoftwareAppsFollowList(name: FeedDefinition) {
-        changeDefaultSoftwareAppsFollowList(name.code)
-    }
-
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultBadgesFollowList(name: FeedDefinition) {
-        changeDefaultBadgesFollowList(name.code)
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
@@ -1077,10 +972,6 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultBrowseEmojiSetsFollowList(name: FeedDefinition) {
-        changeDefaultBrowseEmojiSetsFollowList(name.code)
-    }
-
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
@@ -1088,19 +979,11 @@ class AccountSettings(
         }
     }
 
-    fun changeDefaultFollowPacksFollowList(name: FeedDefinition) {
-        changeDefaultFollowPacksFollowList(name.code)
-    }
-
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
             saveAccountSettings()
         }
-    }
-
-    fun changeDefaultAppRecommendationsFollowList(name: FeedDefinition) {
-        changeDefaultAppRecommendationsFollowList(name.code)
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
@@ -1270,23 +1153,10 @@ class AccountSettings(
     }
 
     /**
-     * NUT-13 keyset counters live in [CashuPreferences], a dedicated
-     * SharedPreferences file with synchronous (`commit = true`) writes.
-     * AccountSettings goes through a 1-second debounce on its own save
-     * path; the cashu counter cannot tolerate that window because the
-     * mint persists signed (keyset, blind_message) pairs the moment it
-     * sees them, so any local lag → "outputs already signed" on retry.
-     * See [CashuPreferences] for the full rationale.
-     */
-    private val cashuPrefs: CashuPreferences by lazy {
-        CashuPreferences.forAccount(keyPair.pubKey.toNpub())
-    }
-
-    /**
      * Reserve [count] consecutive NUT-13 counters for [keysetId],
      * returning the first one. Caller derives `(secret, r)` from
      * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
-     * Persisted synchronously before returning — see [CashuPreferences].
+     * Persisted synchronously before returning — see [CashuKeysetCounterStore].
      *
      * One-time migration: when this keyset has a non-zero value in the
      * legacy [cashuKeysetCounters] map (from a build that persisted
@@ -1299,18 +1169,18 @@ class AccountSettings(
         count: Int,
     ): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.reserveCounters(keysetId, count)
+        return cashuCounters.reserve(keysetId, count)
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
     fun peekCashuCounter(keysetId: String): Long {
         migrateLegacyCashuCounter(keysetId)
-        return cashuPrefs.peekCounter(keysetId)
+        return cashuCounters.peek(keysetId)
     }
 
     private fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
-        cashuPrefs.seedCounterIfMissing(keysetId, legacy)
+        cashuCounters.seedIfMissing(keysetId, legacy)
     }
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {

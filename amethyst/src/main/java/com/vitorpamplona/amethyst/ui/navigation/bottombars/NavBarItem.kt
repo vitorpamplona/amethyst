@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.badges
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
@@ -84,81 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.workouts
 import com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.StringResource
-
-/**
- * Stable identifiers for every destination the navigation surfaces can show — the bottom bar pins a
- * subset in a user-chosen order, the drawer lists them under fixed headings (see DrawerSections).
- * Order in this enum has no semantic meaning.
- */
-@Serializable
-enum class NavBarItem {
-    HOME,
-    MESSAGES,
-    VIDEO,
-    DISCOVER,
-    NOTIFICATIONS,
-    PROFILE,
-    MY_FITNESS,
-    MY_LISTS,
-    BOOKMARKS,
-    WEB_BOOKMARKS,
-    DRAFTS,
-    SCHEDULED_POSTS,
-    INTEREST_SETS,
-    BLOSSOM_DATA,
-    EMOJI_PACKS,
-    WALLET,
-    NOSTR_SIGNER,
-    COMMUNITIES,
-    ARTICLES,
-    PICTURES,
-    WORKOUTS,
-    GIT_REPOSITORIES,
-    HIGHLIGHTS,
-    SOFTWARE_APPS,
-    NAPPLETS,
-    NSITES,
-    BROWSER,
-    FAVORITE_APPS,
-    CALENDARS,
-    CALENDAR_COLLECTIONS,
-    SHORTS,
-    MUSIC_TRACKS,
-    MUSIC_PLAYLISTS,
-    PODCAST_EPISODES,
-    PODCASTS,
-    PUBLIC_CHATS,
-    RELAY_GROUPS,
-    CONCORD,
-    MARMOT_GROUPS,
-    GEOHASH_CHATS,
-    FOLLOW_PACKS,
-    LIVE_STREAMS,
-    NESTS,
-    LONGS,
-    POLLS,
-    GEOCACHES,
-    GEOCACHE_HUNTS,
-    BADGES,
-    PRODUCTS,
-    EMOJI_SETS,
-    SETTINGS,
-    FAVORITE_ALGO_FEEDS,
-}
-
-private val NavBarItemsByName = NavBarItem.entries.associateBy { it.name }
-
-/**
- * Parses persisted [NavBarItem] names, silently dropping any this build doesn't know — a settings
- * blob synced from a newer client can name a destination that doesn't exist here yet, and that must
- * degrade to "ignore this one row" rather than failing the decode of the whole blob.
- */
-fun navBarItemsFromNames(names: Collection<String>): Set<NavBarItem> = names.mapNotNullTo(mutableSetOf()) { NavBarItemsByName[it] }
-
-/** The inverse of [navBarItemsFromNames]; sorted so the serialized form is deterministic. */
-fun Set<NavBarItem>.toNames(): List<String> = map { it.name }.sorted()
 
 data class NavBarItemDef(
     val id: NavBarItem,

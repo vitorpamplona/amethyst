@@ -56,7 +56,7 @@ fun HighlightsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultHighlightsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultHighlightsFollowList(it.code) },
         )
     }
 }

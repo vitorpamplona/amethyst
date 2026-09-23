@@ -39,12 +39,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_no_recs
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_plus_others
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by
 import com.vitorpamplona.amethyst.commons.resources.cashu_mint_recommended_by_others
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.pluralStringRes

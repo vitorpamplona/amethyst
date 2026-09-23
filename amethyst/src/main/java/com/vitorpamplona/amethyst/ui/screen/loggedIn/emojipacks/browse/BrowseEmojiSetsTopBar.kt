@@ -49,7 +49,7 @@ fun BrowseEmojiSetsTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultBrowseEmojiSetsFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultBrowseEmojiSetsFollowList(it.code) },
         )
     }
 }

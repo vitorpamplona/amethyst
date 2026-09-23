@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
@@ -76,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
-import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning

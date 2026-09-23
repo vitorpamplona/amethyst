@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 
 /**
  * Per-account Cashu state that needs durable, synchronous persistence —
@@ -70,10 +71,10 @@ import com.vitorpamplona.amethyst.Amethyst
  */
 class CashuPreferences(
     private val prefs: SharedPreferences,
-) {
+) : CashuKeysetCounterStore {
     /** Inspect the next free counter for [keysetId] without advancing it. */
     @Synchronized
-    fun peekCounter(keysetId: String): Long = prefs.getLong(counterKey(keysetId), 0L)
+    override fun peek(keysetId: String): Long = prefs.getLong(counterKey(keysetId), 0L)
 
     /**
      * Atomically reserve [count] consecutive NUT-13 counters for
@@ -83,12 +84,12 @@ class CashuPreferences(
      */
     @Synchronized
     @SuppressLint("ApplySharedPref")
-    fun reserveCounters(
+    override fun reserve(
         keysetId: String,
         count: Int,
     ): Long {
         require(count > 0) { "Counter reservation must be positive" }
-        val current = peekCounter(keysetId)
+        val current = peek(keysetId)
         val next = current + count.toLong()
         prefs.edit(commit = true) { putLong(counterKey(keysetId), next) }
         return current
@@ -103,12 +104,12 @@ class CashuPreferences(
      */
     @Synchronized
     @SuppressLint("ApplySharedPref")
-    fun seedCounterIfMissing(
+    override fun seedIfMissing(
         keysetId: String,
         legacyValue: Long,
     ) {
         if (legacyValue <= 0L) return
-        val current = peekCounter(keysetId)
+        val current = peek(keysetId)
         if (current >= legacyValue) return
         prefs.edit(commit = true) { putLong(counterKey(keysetId), legacyValue) }
     }

@@ -49,7 +49,7 @@ fun BadgesTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultBadgesFollowList,
+            onChange = { accountViewModel.account.settings.changeDefaultBadgesFollowList(it.code) },
         )
     }
 }

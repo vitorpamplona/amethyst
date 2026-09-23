@@ -227,7 +227,7 @@ private fun RelayGroupsDiscoveryTopBar(
             placeholderCode = selectedFilter,
             explainer = stringRes(Res.string.select_list_to_filter),
             options = options,
-            onSelect = accountViewModel.account.settings::changeDefaultRelayGroupsDiscoveryFollowList,
+            onSelect = { accountViewModel.account.settings.changeDefaultRelayGroupsDiscoveryFollowList(it.code) },
             accountViewModel = accountViewModel,
         )
     }
