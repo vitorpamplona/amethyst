@@ -476,9 +476,11 @@ class PoWPublishQueue(
         dropCheckpoint: Boolean,
         persisted: Boolean,
     ) {
+        // drop the checkpoint before the entry leaves [jobs]: anyone observing
+        // the job disappear must also see its checkpoint gone.
+        if (persisted && dropCheckpoint) persistence?.remove(jobId)
         pending.update { it.removing(jobId) }
         _jobs.update { list -> list.filter { it.id != jobId }.toImmutableList() }
-        if (persisted && dropCheckpoint) persistence?.remove(jobId)
     }
 
     companion object {
