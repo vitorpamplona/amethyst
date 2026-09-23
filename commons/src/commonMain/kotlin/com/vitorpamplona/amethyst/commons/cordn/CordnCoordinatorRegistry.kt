@@ -88,6 +88,9 @@ class CordnSession(
     /** What this coordinator says about itself. Claims, never identity (§8.5). */
     suspend fun serverInfo(): CoordinatorServerInfo? = scope.serverInfo()
 
+    /** How many of this session's responses arrived reassembled over CEP-22. */
+    val oversizedTransfers: Int get() = scope.coordinator.oversizedTransfers
+
     internal suspend fun close() = scope.close()
 }
 

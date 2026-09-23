@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.contextvm.transfer.ProgressEnvelope
 import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
+import com.vitorpamplona.quartz.contextvm.transport.TimeoutMode
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -50,6 +51,15 @@ data class ToolCallResult(
     val error: com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcError? = null,
     /** Fragments a CEP-41 stream delivered while the call was in flight. */
     val streamed: List<String> = emptyList(),
+    /**
+     * Whether the response arrived reassembled over CEP-22 rather than in the
+     * single event that carried the rest.
+     *
+     * A caller does not need this to read the result - that is the point of the
+     * profile. It is here so a live interop run can assert the profile actually
+     * fired, instead of passing whether or not the server ever chunked.
+     */
+    val viaOversizedTransfer: Boolean = false,
 ) {
     val isError get() = error != null
 }
@@ -83,7 +93,7 @@ class CvmMcpClient(
      * afford the round trip should do it.
      */
     suspend fun initialize(
-        capabilityTags: List<Tag> = emptyList(),
+        capabilityTags: List<Tag> = transport.selfDiscoveryTags(),
         protocolVersion: String = PROTOCOL_VERSION,
     ): JsonRpcMessage {
         val response =
@@ -134,6 +144,7 @@ class CvmMcpClient(
         arguments: JsonObject = buildJsonObject {},
         identity: DualSigner.Identity = DualSigner.Identity.EPHEMERAL,
         timeoutMs: Long = CvmTransport.DEFAULT_TIMEOUT_MS,
+        timeoutMode: TimeoutMode = TimeoutMode.IDLE,
         onStreamFragment: (String) -> Unit = {},
     ): ToolCallResult {
         val id = nextId()
@@ -164,9 +175,10 @@ class CvmMcpClient(
                     ),
                 identity = identity,
                 timeoutMs = timeoutMs,
+                timeoutMode = timeoutMode,
             ) { notification ->
-                val envelope = ProgressEnvelope.parseOrNull(notification) ?: return@request
-                if (envelope.token != token) return@request
+                val envelope = ProgressEnvelope.parseOrNull(notification) ?: return@request null
+                if (envelope.token != token) return@request null
 
                 when (envelope.type) {
                     ProgressEnvelope.TYPE_OVERSIZED -> {
@@ -175,7 +187,10 @@ class CvmMcpClient(
                                 .also { oversized = it }
                         OversizedFrame.parseOrNull(envelope)?.let { frame ->
                             val result = receiver.accept(frame)
-                            if (result is OversizedProgressResult.Completed) reassembled = result.message
+                            if (result is OversizedProgressResult.Completed) {
+                                reassembled = result.message
+                                oversizedTransfersCompleted++
+                            }
                         }
                     }
 
@@ -194,19 +209,34 @@ class CvmMcpClient(
 
                     else -> Unit
                 }
+
+                // A completed CEP-22 transfer IS the response, so handing it
+                // back ends the call. A CEP-41 stream never does: `close` says
+                // no more frames, not that the request is answered.
+                reassembled
             }
 
         // A CEP-22 transfer replaces the response that could not be published
         // directly; a CEP-41 stream does not, since `close` never completes the
         // JSON-RPC request.
+        val chunked = reassembled != null
         return when (val effective = reassembled ?: response) {
-            is JsonRpcSuccess -> ToolCallResult(effective.result, streamed = streamed)
-            is JsonRpcFailure -> ToolCallResult(null, effective.error, streamed)
-            else -> ToolCallResult(null, streamed = streamed)
+            is JsonRpcSuccess -> ToolCallResult(effective.result, streamed = streamed, viaOversizedTransfer = chunked)
+            is JsonRpcFailure -> ToolCallResult(null, effective.error, streamed, chunked)
+            else -> ToolCallResult(null, streamed = streamed, viaOversizedTransfer = chunked)
         }
     }
 
     private fun nextId(): JsonRpcId.Num = JsonRpcId.Num(nextId++)
+
+    /**
+     * How many responses this client has reassembled over CEP-22.
+     *
+     * Diagnostics, not control flow. Nothing decides anything on it; it exists
+     * so a live run can tell a server that chunked from one that never had to.
+     */
+    var oversizedTransfersCompleted: Int = 0
+        private set
 
     companion object {
         /** The MCP revision the ContextVM spec's examples use. */

@@ -221,12 +221,13 @@ class CvmMcpClientTest {
             val big = buildJsonObject { put("text", JsonPrimitive("x".repeat(400))) }
             val serialized = JsonRpcCodec.encode(JsonRpcSuccess(JsonRpcId.Num(0), big))
 
-            val fixture =
-                fixture {
-                    // A placeholder direct response: the real payload arrives
-                    // through the frames, which is the point of the profile.
-                    JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("placeholder", JsonPrimitive(true)) })
-                }
+            // NO direct response, and that is the whole point: a chunked
+            // response REPLACES the direct one. An earlier version of this test
+            // had the fixture also answer normally, which meant the call was
+            // ended by that answer and the reassembly only had to win a
+            // tie-break. Against the reference coordinator, which sends frames
+            // and nothing else, the same code hung until its deadline.
+            val fixture = fixture { error("a chunked response is the only response") }
             fixture.start()
 
             val result =
@@ -234,11 +235,9 @@ class CvmMcpClientTest {
                     val pending = async { client().callTool("big", timeoutMs = 5_000) }
                     yield()
 
-                    // Frames first, then the direct response.
                     OversizedTransferSender(chunkChars = 64).frame(firstCallToken, serialized).forEach { frame ->
                         fixture.reply(frame.envelope.toNotification(), clientSigner.pubKey, "0".repeat(64))
                     }
-                    fixture.pump()
                     pending.await()
                 }
 
@@ -247,7 +246,7 @@ class CvmMcpClientTest {
                 result.result!!
                     .jsonObject["text"]!!
                     .jsonPrimitive.content,
-                "the reassembled payload replaces the placeholder",
+                "the reassembled payload is the response",
             )
         }
 

@@ -244,6 +244,8 @@ class CvmTransportTest {
                         async {
                             transport.request(JsonRpcRequest(JsonRpcId.Num(0), "ping"), timeoutMs = 5_000) {
                                 seen += it.method
+                                // null: a notification does not answer the call.
+                                null
                             }
                         }
                     yield()
@@ -474,6 +476,81 @@ class CvmTransportTest {
         val ours = relays.published.filter { e -> e.tags.any { it.size >= 2 && it[0] == "p" && it[1] == serverSigner.pubKey } }
         assertTrue(ours.isNotEmpty(), "the second request should have been published")
         return ours.map { it.kind }.distinct()
+    }
+
+    @Test
+    fun `CVM-35-12 the session's first message declares this side's surface`() =
+        runTest {
+            // CEP-35 is symmetric, and a peer only offers a profile the other
+            // side declared: the reference ContextVM server chunks a CEP-22
+            // response, and opens a CEP-41 stream, only for a client that said
+            // it can take one. A session that declared nothing capped every
+            // response at a single relay event.
+            //
+            // Read off the inner event, because that is where the server reads
+            // it: the wrap's own tags are just routing, and a surface put there
+            // would be both unread and public.
+            val seen = mutableListOf<List<String>>()
+
+            // Deliberately NOT the handshake: the surface has to ride whatever
+            // the first message is, or a client that opens with a tool call
+            // never declares at all.
+            declaring(seen, CvmGiftWrap(encryptionMode = EncryptionMode.DISABLED), "msg_fetch_many")
+
+            val declared = seen.single()
+            assertTrue(CvmTags.SUPPORT_OVERSIZED_TRANSFER in declared, "no CEP-22 flag in $declared")
+            assertTrue(CvmTags.SUPPORT_OPEN_STREAM in declared, "no CEP-41 flag in $declared")
+            // Encryption is off here, so there is no wrap we could open.
+            assertFalse(CvmTags.SUPPORT_ENCRYPTION in declared, "declared a wrap it will not open")
+        }
+
+    @Test
+    fun `CVM-35-13 an encrypting client declares both wrap kinds`() =
+        runTest {
+            // Receive, not prefer. This client emits 1059, and still says it
+            // takes 21059, because the transport subscribes to both - saying
+            // otherwise would tell the peer to withhold something we can read.
+            val seen = mutableListOf<List<String>>()
+
+            declaring(seen, CvmGiftWrap(giftWrapMode = GiftWrapMode.PERSISTENT, encryptionMode = EncryptionMode.OPTIONAL), "ping")
+
+            val declared = seen.single()
+            assertTrue(CvmTags.SUPPORT_ENCRYPTION in declared, "no CEP-4 flag in $declared")
+            assertTrue(CvmTags.SUPPORT_ENCRYPTION_EPHEMERAL in declared, "no CEP-19 flag in $declared")
+        }
+
+    @Test
+    fun `CVM-35-14 the surface is declared once, not on every message`() =
+        runTest {
+            val seen = mutableListOf<List<String>>()
+
+            declaring(seen, CvmGiftWrap(), "ping", "ping")
+
+            assertEquals(2, seen.size, "both requests should have reached the server")
+            assertTrue(seen.first().isNotEmpty(), "the first message declared nothing")
+            assertEquals(emptyList<String>(), seen.last(), "re-declared on a later message")
+        }
+
+    /**
+     * Runs [methods] in one session, collecting each request's declared
+     * surface - the single-element tags on the event the server unwrapped.
+     */
+    private suspend fun declaring(
+        into: MutableList<List<String>>,
+        crypto: CvmGiftWrap,
+        vararg methods: String,
+    ) {
+        val fixture =
+            server(handler = { request ->
+                into +=
+                    request.event.tags
+                        .filter { it.size == 1 }
+                        .map { it[0] }
+                JsonRpcSuccess(JsonRpcId.Num(0), buildJsonObject { put("ok", JsonPrimitive(true)) })
+            })
+        fixture.start()
+        val transport = transport(crypto)
+        methods.forEach { exchange(fixture, transport, JsonRpcRequest(JsonRpcId.Num(0), it)) }
     }
 
     @Test

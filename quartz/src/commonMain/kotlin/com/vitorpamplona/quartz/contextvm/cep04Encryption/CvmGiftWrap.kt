@@ -85,6 +85,23 @@ class CvmGiftWrap(
     private val encryptionMode: EncryptionMode = EncryptionMode.REQUIRED,
     private val giftWrapMode: GiftWrapMode = GiftWrapMode.EPHEMERAL,
 ) {
+    /**
+     * What this side can *receive*, as CEP-35 tag names.
+     *
+     * Receive, not prefer: the transport subscribes to both wrap kinds, so a
+     * client that emits 1059 still accepts 21059 and says so. Declaring only
+     * what we emit would tell a peer to withhold something we can read.
+     *
+     * Empty under [EncryptionMode.DISABLED] - there, a wrap is not something
+     * this client will open at all.
+     */
+    fun receivableWrapTags(): List<String> =
+        if (encryptionMode == EncryptionMode.DISABLED) {
+            emptyList()
+        } else {
+            listOf(CvmTags.SUPPORT_ENCRYPTION, CvmTags.SUPPORT_ENCRYPTION_EPHEMERAL)
+        }
+
     /** The wrap kind this client emits. */
     fun wrapKind(): Kind =
         when (giftWrapMode) {

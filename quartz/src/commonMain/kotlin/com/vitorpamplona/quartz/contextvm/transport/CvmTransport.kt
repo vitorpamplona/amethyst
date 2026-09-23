@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.quartz.contextvm.cep35Discovery.SessionDiscovery
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.contextvm.core.CvmMessageEvent
+import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcFailure
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcId
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcMessage
@@ -61,6 +62,29 @@ class DualSigner(
             Identity.STABLE -> stable
             Identity.EPHEMERAL -> ephemeral
         }
+}
+
+/** What a call's `timeoutMs` bounds. */
+enum class TimeoutMode {
+    /**
+     * Silence. The clock restarts on every message the peer sends, so a
+     * response still being delivered is never cut off.
+     *
+     * The right default for a request/response call: both transfer profiles
+     * deliver one logical response as a run of notifications, each its own
+     * signed, wrapped, published relay event, so how long a response takes is
+     * a function of its size and not something a caller can predict.
+     */
+    IDLE,
+
+    /**
+     * The whole call, from publish to return.
+     *
+     * For an open-ended subscription, where the timeout is not a failure but
+     * the budget after which the caller re-opens - a busy stream under [IDLE]
+     * would simply never come back.
+     */
+    TOTAL,
 }
 
 /** Thrown when a request cannot be completed at the transport layer. */
@@ -102,6 +126,23 @@ class CvmTransport(
     private val assumePeerSupportsEncryption: Boolean = true,
     private val assumePeerSupportsEphemeralWrap: Boolean = true,
 ) {
+    /**
+     * This side's CEP-35 surface: what a peer may use against us.
+     *
+     * CEP-35 is symmetric, and the half we were not doing is the expensive one
+     * to skip. A spec-correct server only chunks a CEP-22 response, or opens a
+     * CEP-41 stream, for a client that declared it can take one — so declaring
+     * nothing does not make us conservative, it makes those profiles dead on
+     * every session and caps every response at one relay event.
+     *
+     * Both transfer profiles are unconditional: [CvmMcpClient] reassembles
+     * CEP-22 and collects CEP-41 fragments on every call, with no flag to turn
+     * either off.
+     */
+    fun selfDiscoveryTags(): List<Tag> =
+        (crypto.receivableWrapTags() + CvmTags.SUPPORT_OVERSIZED_TRANSFER + CvmTags.SUPPORT_OPEN_STREAM)
+            .map { arrayOf(it) }
+
     /** The peer's learned discovery baseline, once its first message has arrived. */
     val peer get() = discovery.peer
 
@@ -128,15 +169,25 @@ class CvmTransport(
      *
      * @param identity which key signs the request. Anything not required to be
      *   attributable should stay [DualSigner.Identity.EPHEMERAL].
+     * @param onNotification every notification that arrives while the call is
+     *   open. Returning a message **completes the call with it**, which is how
+     *   CEP-22 finishes: a chunked response replaces the direct one rather than
+     *   preceding it, so nothing else would ever arrive to end the wait.
+     *   Returning null keeps waiting - CEP-41 is explicit that a stream's
+     *   `close` does not complete the request.
      * @param discoveryTags this side's CEP-35 baseline, sent on the session's
-     *   first direct message only.
+     *   first direct message only. Defaults to [selfDiscoveryTags] so the
+     *   surface rides whatever that first message turns out to be - a session
+     *   that opens with a tool call rather than a handshake still declares.
+     *   Pass `emptyList()` to declare nothing.
      */
     suspend fun request(
         message: JsonRpcRequest,
         identity: DualSigner.Identity = DualSigner.Identity.EPHEMERAL,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-        discoveryTags: List<Tag> = emptyList(),
-        onNotification: (JsonRpcNotification) -> Unit = {},
+        timeoutMode: TimeoutMode = TimeoutMode.IDLE,
+        discoveryTags: List<Tag> = selfDiscoveryTags(),
+        onNotification: (JsonRpcNotification) -> JsonRpcMessage? = { null },
     ): JsonRpcMessage {
         val signer = signers.signerFor(identity)
         val inbound = Channel<Event>(Channel.UNLIMITED)
@@ -160,8 +211,12 @@ class CvmTransport(
 
             relays.publish(outbound(request))
 
-            return withTimeout(timeoutMs) {
-                awaitResponse(inbound, signer, request.id, message.id, onNotification)
+            return when (timeoutMode) {
+                TimeoutMode.IDLE -> awaitResponse(inbound, signer, request.id, message.id, timeoutMs, onNotification)
+                TimeoutMode.TOTAL ->
+                    withTimeout(timeoutMs) {
+                        awaitResponse(inbound, signer, request.id, message.id, Long.MAX_VALUE, onNotification)
+                    }
             }
         } finally {
             subscription.close()
@@ -178,16 +233,43 @@ class CvmTransport(
         relays.publish(outbound(CvmMessageEvent.create(message, serverPubKey, signer)))
     }
 
+    /**
+     * Waits for the answer, allowing [idleMs] of **silence** between the peer's
+     * messages. [TimeoutMode.TOTAL] passes `Long.MAX_VALUE` and wraps the whole
+     * thing instead.
+     *
+     * A flat deadline cannot express what a CEP-22 or CEP-41 response is. Both
+     * arrive as a run of notifications, each its own signed, wrapped, published
+     * relay event, so a large response takes as long as it takes: a 100 KB
+     * oversized transfer from the reference coordinator ran well past the 20 s
+     * default and was killed mid-run, with the frames arriving and parsing
+     * correctly right up to the cancellation.
+     *
+     * So the clock measures a stalled peer, which is what a caller actually
+     * wants bounded, and only the peer can reset it - events from anyone else
+     * are dropped before this point, or a stranger could hold a call open
+     * indefinitely by publishing noise addressed to us.
+     */
     private suspend fun awaitResponse(
         inbound: Channel<Event>,
         signer: NostrSigner,
         requestEventId: HexKey,
         requestId: JsonRpcId,
-        onNotification: (JsonRpcNotification) -> Unit,
+        idleMs: Long,
+        onNotification: (JsonRpcNotification) -> JsonRpcMessage?,
     ): JsonRpcMessage {
-        for (event in inbound) {
+        while (true) {
+            // withTimeout, not a null-returning variant, so silence still
+            // surfaces as the TimeoutCancellationException callers already
+            // handle - only when the clock starts has changed.
+            // receiveCatching tells a closed subscription from a silent one.
+            val event =
+                withTimeout(idleMs) { inbound.receiveCatching() }
+                    .getOrNull()
+                    ?: throw CvmTransportException("subscription closed before a response arrived")
             val plain = decryptOrNull(event, signer) ?: continue
             val wrapped = CvmMessageEvent.fromOrNull(plain) ?: continue
+            if (wrapped.pubKey != serverPubKey) continue
 
             discovery.observe(wrapped.discoveryTags().toTypedArray())
 
@@ -201,7 +283,7 @@ class CvmTransport(
                 }
 
             when (decoded) {
-                is JsonRpcNotification -> onNotification(decoded)
+                is JsonRpcNotification -> onNotification(decoded)?.let { return it }
 
                 // Correlate on both layers: the `e` tag ties the response to our
                 // request event, and the JSON-RPC id ties it to our call. Either
@@ -216,7 +298,6 @@ class CvmTransport(
                 else -> Unit
             }
         }
-        throw CvmTransportException("subscription closed before a response arrived")
     }
 
     /**

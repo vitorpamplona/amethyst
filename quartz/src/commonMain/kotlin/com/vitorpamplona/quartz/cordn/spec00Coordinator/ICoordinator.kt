@@ -78,4 +78,17 @@ interface ICoordinator {
         timeoutMs: Long,
         onMessage: (GroupMessage) -> Unit,
     )
+
+    /**
+     * How many responses this coordinator chunked over CEP-22 so far.
+     *
+     * Diagnostics, and the one thing here that is not a tool. Nothing in the
+     * binding reads it; a live interop run does, to tell a server that had to
+     * chunk from one that never did - which is otherwise invisible, because a
+     * reassembled response is indistinguishable from a direct one by design.
+     *
+     * Defaulted so a substitute implementation is not forced to fake a number
+     * about a transfer profile it does not have.
+     */
+    val oversizedTransfers: Int get() = 0
 }

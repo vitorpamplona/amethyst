@@ -42,6 +42,7 @@ bad() { echo "   FAIL: $*"; fail=1; }
 # the only thing carrying continuity between them.
 alice() { HOME="$WORK/alice" "$AMY" --account alice --secret-backend ncryptsec "$@" 2>/dev/null; }
 bob() { HOME="$WORK/bob" "$AMY" --account bob --secret-backend ncryptsec "$@" 2>/dev/null; }
+carol() { HOME="$WORK/carol" "$AMY" --account carol --secret-backend ncryptsec "$@" 2>/dev/null; }
 field() { python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d$1) if not isinstance(d$1,str) else d$1)"; }
 
 trap stack_down EXIT
@@ -52,18 +53,24 @@ step "boot geode on $RELAY, and the reference coordinator"
 stack_up
 ok "coordinator $COORD"
 
-step "two accounts"
-mkdir -p "$WORK/alice" "$WORK/bob"
+step "three accounts"
+# Carol is here for the door nobody knocks on in the two-party flow: bob is
+# invited, so he never sends a join request.
+mkdir -p "$WORK/alice" "$WORK/bob" "$WORK/carol"
 alice create --json >/dev/null
 bob create --json >/dev/null
+carol create --json >/dev/null
 ALICE_PK=$(alice whoami --json | field "['hex']")
 BOB_PK=$(bob whoami --json | field "['hex']")
+CAROL_PK=$(carol whoami --json | field "['hex']")
 ok "alice $ALICE_PK"
 ok "bob   $BOB_PK"
+ok "carol $CAROL_PK"
 
-step "both remember the coordinator"
+step "all three remember the coordinator"
 alice cordn coordinator add --coordinator "$COORD" --relay "$RELAY" --label tier-b --json >/dev/null
 bob cordn coordinator add --coordinator "$COORD" --relay "$RELAY" --label tier-b --json >/dev/null
+carol cordn coordinator add --coordinator "$COORD" --relay "$RELAY" --label tier-b --json >/dev/null
 
 step "the MCP handshake"
 # The first thing to break if the transport regresses, and the cheapest to
@@ -118,6 +125,75 @@ echo "$GOT2" | grep -q "$BACK_ID" && ok "alice read the reply" || bad "alice did
 # conversation. Everything alice posted came back at a cursor she re-reads,
 # and recognising it needs bookkeeping that survives the process exit.
 [ "$(echo "$GOT2" | field "['undecryptable']")" = "[]" ] && ok "no self-inflicted gaps" || bad "own traffic came back undecryptable: $(echo "$GOT2" | field "['undecryptable']")"
+
+# ── The three tools the two-party flow never reaches, and CEP-22 ────────────
+# Every other step above exercises a tool as a side effect of the lifecycle.
+# These four do not happen on that path, so they are driven directly.
+
+step "carol asks to join — join_request_store"
+REQ=$(carol cordn request --gid "$GID" --json)
+echo "   $REQ"
+[ "$(echo "$REQ" | field "['gid']")" = "$GID" ] && ok "request stored" || bad "join request not stored"
+# A ref is an invitation to ask, not membership (spec/01.md §5.3).
+[ "$(echo "$REQ" | field "['member']")" = "false" ] && ok "asking is not joining" || bad "request reported membership"
+
+step "alice reads it — join_request_take_many"
+PEND=$(alice cordn requests list --json)
+echo "   $PEND"
+[ "$(echo "$PEND" | field "['requests'][0]['pubkey']")" = "$CAROL_PK" ] && ok "sees carol" || bad "no pending request"
+[ "$(echo "$PEND" | field "['requests'][0]['gid']")" = "$GID" ] && ok "for $GID" || bad "wrong gid on the request"
+# Listing must NOT consume. A request is retired by answering it, not by
+# reading it, and the ack rides the next call — so a reader that lost the
+# process between list and accept has to still find it. Two separate amy
+# runs is exactly that case.
+AGAIN=$(alice cordn requests list --json)
+[ "$(echo "$AGAIN" | field "['requests'][0]['pubkey']")" = "$CAROL_PK" ] && ok "still there for a second reader" || bad "reading a join request consumed it"
+
+step "alice accepts, carol joins"
+ACC=$(alice cordn requests accept --pubkey "$CAROL_PK" --json)
+echo "   $ACC"
+[ "$(echo "$ACC" | field "['answered'][0]['pubkey']")" = "$CAROL_PK" ] && ok "accepted" || bad "accept failed"
+CJOIN=$(carol cordn join --all --json)
+[ "$(echo "$CJOIN" | field "['joined']")" = "[\"$GID\"]" ] && ok "carol joined" || bad "carol did not join"
+# Now it is retired — and the ack for it rode a later call, so this also
+# proves the retirement survived the process that issued it.
+GONE=$(alice cordn requests list --json)
+[ "$(echo "$GONE" | field "['requests']")" = "[]" ] && ok "answering retired it" || bad "an answered request is still pending: $(echo "$GONE" | field "['requests']")"
+
+step "bob withdraws a KeyPackage — kp_remove"
+# Two, so there is something left to prove the removal was targeted rather
+# than a wipe.
+PUB=$(bob cordn keypackage publish --count 2 --json)
+KEEP=$(echo "$PUB" | field "['published'][0]['kp_ref']")
+DROP=$(echo "$PUB" | field "['published'][1]['kp_ref']")
+WD=$(bob cordn keypackage withdraw --kp-ref "$DROP" --json)
+echo "   $WD"
+[ "$(echo "$WD" | field "['removed']")" = "[\"$DROP\"]" ] && ok "coordinator confirms the removal" || bad "kp_remove did not confirm $DROP"
+LIST=$(bob cordn keypackage list --json)
+echo "$LIST" | grep -q "$DROP" && bad "the withdrawn package is still served" || ok "gone from kp_list"
+echo "$LIST" | grep -q "$KEEP" && ok "the other one survived" || bad "kp_remove took more than it was asked for"
+
+step "a response too big for one event — CEP-22"
+# The reference coordinator switches to oversized transfer at a 48000-byte
+# published envelope. One message does not reach it; a backlog of them does,
+# and a fetch is where a backlog is delivered. Nothing below reads the
+# messages differently — a reassembled response is meant to be invisible —
+# so the count is the only thing that can tell us the profile ran.
+BIG=$(python3 -c "print('x' * 6000)")
+for i in $(seq 12); do
+    alice cordn send --text "chunk-$i $BIG" --json >/dev/null
+done
+FETCH=$(bob cordn fetch --json)
+COUNT=$(echo "$FETCH" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['messages']))")
+CHUNKED=$(echo "$FETCH" | field "['oversized_transfers']")
+echo "   $COUNT messages, oversized_transfers=$CHUNKED"
+[ "$COUNT" = "12" ] && ok "all 12 arrived" || bad "expected 12 messages, got $COUNT"
+[ "${CHUNKED:-0}" -ge 1 ] && ok "reassembled over CEP-22" || bad "the response was never chunked — CEP-22 went unexercised"
+# Carol was added at a later epoch, so she must read them too: an oversized
+# response is still one response, not a per-member special case.
+CGOT=$(carol cordn fetch --json)
+CCOUNT=$(echo "$CGOT" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['messages']))")
+[ "$CCOUNT" = "12" ] && ok "carol read the same 12" || bad "carol got $CCOUNT of 12"
 
 step "both sides agree"
 A=$(alice cordn group info --json)

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.cordn.spec00Coordinator
 
 import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
+import com.vitorpamplona.quartz.contextvm.transport.TimeoutMode
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -67,6 +68,8 @@ class CoordinatorClient(
 ) : ICoordinator {
     /** Performs the MCP handshake. Optional, but it is where CEP-35 tags ride. */
     suspend fun initialize() = mcp.initialize()
+
+    override val oversizedTransfers get() = mcp.oversizedTransfersCompleted
 
     /**
      * Handshakes and reports what the coordinator says about itself.
@@ -316,6 +319,9 @@ class CoordinatorClient(
                 arguments = args,
                 identity = CoordinatorMethod.MSG_SUB_MANY.identity,
                 timeoutMs = timeoutMs,
+                // A budget, not a failure: the caller re-opens on it, and a
+                // busy stream bounded by silence would never come back.
+                timeoutMode = TimeoutMode.TOTAL,
                 onStreamFragment = { fragment ->
                     // A malformed frame is the coordinator's problem, not a
                     // reason to tear down a live subscription over other groups.

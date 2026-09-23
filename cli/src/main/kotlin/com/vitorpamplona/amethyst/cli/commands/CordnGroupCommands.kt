@@ -616,6 +616,10 @@ internal object CordnGroupCommands {
                     "epoch_changes" to epochs,
                     "echoes" to echoes,
                     "undecryptable" to undecryptable,
+                    // A fetch is the response most likely to outgrow one relay
+                    // event, so this is where CEP-22 shows up if it shows up at
+                    // all. Zero is the normal answer and not a warning.
+                    "oversized_transfers" to scope.session.oversizedTransfers,
                 ),
             )
             0
