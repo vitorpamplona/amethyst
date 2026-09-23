@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountIdentity
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountIdentityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibilityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.LegacyPreferenceSource
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefs
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuth
@@ -51,12 +54,15 @@ import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettings
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.orIfUnusable
+import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSecrets
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
+import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -98,6 +104,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -120,7 +127,7 @@ data class AccountInfo(
     val isTransient: Boolean = false,
 )
 
-private object PrefKeys {
+internal object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
 
     // Global (non-account) master switch for the always-on notification service.
@@ -268,12 +275,13 @@ object LocalPreferences {
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     /**
-     * The per-account DataStore, and the top-nav filter selections inside it.
+     * The per-account DataStore: every non-secret setting this account has.
      *
-     * Each account's store carries a [CopyOnceMigration] that lifts the filters
-     * out of that account's legacy encrypted SharedPreferences the first time
-     * the store is read. The copy leaves the legacy keys in place, so a build
-     * that reads the old location still works — see [CopyOnceMigration].
+     * Each account's store carries one [CopyOnceMigration] per group in
+     * [LegacyAccountKeys.tables], lifting that group out of the account's legacy
+     * encrypted SharedPreferences the first time the store is read. The copies
+     * leave the legacy keys in place, so a build that reads the old location
+     * still works — see [CopyOnceMigration].
      */
     private val accountStores: AccountPreferenceStores by lazy {
         AccountPreferenceStores(
@@ -282,8 +290,7 @@ object LocalPreferences {
                     .toOkioPath()
             },
             migrations = { npub ->
-                listOf(followListMigration(npub), latestEventMigration(npub)) +
-                    listOf(uploadSettingsMigration(npub), dialogDismissalMigration(npub), relayAuthMigration(npub), feedVisibilityMigration(npub), notificationPrefsMigration(npub))
+                LegacyAccountKeys.tables.map { it.migration { legacySource(npub) } }
             },
         )
     }
@@ -302,68 +309,64 @@ object LocalPreferences {
 
     private fun notificationPrefsStore(npub: String) = NotificationPrefsStore(accountStores.getDataStore(npub))
 
-    private fun uploadSettingsMigration(npub: String) =
-        CopyOnceMigration("migrated.uploadSettings") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                if (legacy.contains(PrefKeys.STRIP_LOCATION_ON_UPLOAD)) out[UploadSettingsStore.stripLocationOnUpload] = legacy.getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, false)
-                if (legacy.contains(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD)) out[UploadSettingsStore.optimizeMediaOnUpload] = legacy.getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
-                if (legacy.contains(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS)) out[UploadSettingsStore.mirrorUploadsToAllServers] = legacy.getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, false)
-                if (legacy.contains(PrefKeys.USE_LOCAL_BLOSSOM_CACHE)) out[UploadSettingsStore.useLocalBlossomCache] = legacy.getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, false)
-                if (legacy.contains(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY)) out[UploadSettingsStore.localBlossomCacheProfilePicturesOnly] = legacy.getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
-                legacy.getString(PrefKeys.DEFAULT_FILE_SERVER, null)?.let { out[UploadSettingsStore.defaultFileServerJson] = it }
-            }
-        }
+    private fun identityStore(npub: String) = AccountIdentityStore(accountStores.getDataStore(npub))
 
-    private fun dialogDismissalMigration(npub: String) =
-        CopyOnceMigration("migrated.dialogDismissal") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                if (legacy.contains(PrefKeys.HIDE_DELETE_REQUEST_DIALOG)) out[DialogDismissalStore.hideDeleteRequestDialog] = legacy.getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
-                if (legacy.contains(PrefKeys.HIDE_BLOCK_ALERT_DIALOG)) out[DialogDismissalStore.hideBlockAlertDialog] = legacy.getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
-                if (legacy.contains(PrefKeys.HIDE_NIP_17_WARNING_DIALOG)) out[DialogDismissalStore.hideNip17WarningDialog] = legacy.getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
-                if (legacy.contains(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS)) out[DialogDismissalStore.hideCommunityRulesViolations] = legacy.getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
-                legacy.getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null)?.let { out[DialogDismissalStore.dismissedPollNoteIds] = it }
-                legacy.getStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, null)?.let { out[DialogDismissalStore.dismissedChannelInvites] = it }
-                legacy.getStringSet(PrefKeys.MUTED_PUBLIC_CHATS, null)?.let { out[DialogDismissalStore.mutedPublicChats] = it }
-                legacy.getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null)?.let { out[DialogDismissalStore.hasDonatedInVersion] = it }
-                legacy.getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)?.let { out[DialogDismissalStore.viewedPollResultNoteIdsJson] = it }
-            }
-        }
+    private fun legacySource(npub: String): LegacyPreferenceSource = LegacySharedPreferences(encryptedPreferences(npub))
 
-    private fun relayAuthMigration(npub: String) =
-        CopyOnceMigration("migrated.relayAuth") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                legacy.getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)?.let { out[RelayAuthStore.policyName] = it }
-                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS)) out[RelayAuthStore.trustMyRelays] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, false)
-                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS)) out[RelayAuthStore.trustReadFollows] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, false)
-                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS)) out[RelayAuthStore.trustMessageFollows] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, false)
-                if (legacy.contains(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS)) out[RelayAuthStore.trustMessageStrangers] = legacy.getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false)
-            }
-        }
+    /**
+     * Whether the app has stopped mirroring into `secret_keeper_<npub>`.
+     *
+     * False, and deliberately so: the private key, the secrets and the identity
+     * group are all still written there, so that a build rolled back to reading
+     * only the legacy file still finds a complete account. Deleting the file
+     * while that is true would achieve nothing — the next save recreates it —
+     * so [legacyCleanup] refuses to.
+     *
+     * Flipping this is a release of its own, and it ends the rollback window.
+     * It waits on the device pass in
+     * `amethyst/plans/2026-09-23-encrypted-storage-retirement.md`.
+     */
+    private const val LEGACY_WRITES_RETIRED = false
 
-    private fun feedVisibilityMigration(npub: String) =
-        CopyOnceMigration("migrated.feedVisibility") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                legacy.getString(PrefKeys.DISABLED_CHAT_FEEDS, null)?.let { out[FeedVisibilityStore.disabledChatFeeds] = it }
-                legacy.getString(PrefKeys.DISABLED_HOME_FEED_TYPES, null)?.let { out[FeedVisibilityStore.disabledHomeFeedTypes] = it }
-                legacy.getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null)?.let { out[FeedVisibilityStore.relayGroupViewMode] = it }
-                legacy.getString(PrefKeys.CONCORD_VIEW_MODE, null)?.let { out[FeedVisibilityStore.concordViewMode] = it }
-                if (legacy.contains(PrefKeys.CALLS_ENABLED)) out[FeedVisibilityStore.callsEnabled] = legacy.getBoolean(PrefKeys.CALLS_ENABLED, false)
-            }
-        }
+    private val legacyCleanup: LegacyPreferenceCleanup by lazy {
+        LegacyPreferenceCleanup(
+            tables = LegacyAccountKeys.tables,
+            accepted = LegacyAccountKeys.accepted,
+            files =
+                object : LegacyAccountFiles {
+                    override fun source(npub: String) = legacySource(npub)
 
-    private fun notificationPrefsMigration(npub: String) =
-        CopyOnceMigration("migrated.notificationPrefs") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                if (legacy.contains(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE)) out[NotificationPrefsStore.alwaysOnService] = legacy.getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
-                if (legacy.contains(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS)) out[NotificationPrefsStore.showMessagesInNotifications] = legacy.getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, false)
-                if (legacy.contains(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED)) out[NotificationPrefsStore.splitNotificationsEnabled] = legacy.getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
-            }
-        }
+                    override fun exists(npub: String) = legacyAccountFile(npub).exists()
+
+                    override suspend fun delete(npub: String): Boolean {
+                        // Clear before unlinking, as deleteAccount does: the live
+                        // SharedPreferences still holds the values in memory and
+                        // would write them straight back out.
+                        encryptedPreferences(npub).edit(commit = true) { clear() }
+                        return legacyAccountFile(npub).delete()
+                    }
+                },
+            currentStore = { npub -> accountStores.getDataStore(npub).data.first() },
+            secrets =
+                object : MigratedSecrets {
+                    override suspend fun secrets(npub: String) = accountSecretsStore.stored(npub)
+
+                    override suspend fun privateKey(npub: String) = accountKeyStore.stored(npub)
+                },
+            legacyWritesRetired = LEGACY_WRITES_RETIRED,
+        )
+    }
+
+    /**
+     * The file behind [encryptedPreferences], following the same branch it
+     * does — a name taken from the other side of that `if` would have the
+     * cleanup checking for, and deleting, a file that is not the one being
+     * read.
+     */
+    private fun legacyAccountFile(npub: String): File {
+        val name = if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) "${DEBUG_PREFERENCES_NAME}_$npub" else EncryptedStorage.prefsFileName(npub)
+        return File(prefsDirPath, "$name.xml")
+    }
 
     /**
      * Everything the account's DataStore holds, read in one hop.
@@ -375,6 +378,7 @@ object LocalPreferences {
      * over. One call, one state.
      */
     private class AccountStoreData(
+        val identity: AccountIdentity,
         val followLists: Map<FollowListSlot, TopFilter>,
         val latestEvents: Map<LatestEventSlot, String>,
         val uploadSettings: UploadSettings,
@@ -384,36 +388,19 @@ object LocalPreferences {
         val notificationPrefs: NotificationPrefs,
     )
 
-    private suspend fun loadAccountStores(npub: String) =
-        AccountStoreData(
-            followLists = followListStore(npub).load(),
-            latestEvents = latestEventStore(npub).load(),
-            uploadSettings = uploadSettingsStore(npub).load(),
-            dialogDismissal = dialogDismissalStore(npub).load(),
-            relayAuth = relayAuthStore(npub).load(),
-            feedVisibility = feedVisibilityStore(npub).load(),
-            notificationPrefs = notificationPrefsStore(npub).load(),
-        )
-
-    private fun followListMigration(npub: String) =
-        CopyOnceMigration("migrated.followLists") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                FollowListSlot.entries.forEach { slot ->
-                    legacy.getString(slot.prefKey, null)?.let { out[slot.key] = it }
-                }
-            }
-        }
-
-    private fun latestEventMigration(npub: String) =
-        CopyOnceMigration("migrated.latestEvents") { out ->
-            withContext(Dispatchers.IO) {
-                val legacy = encryptedPreferences(npub)
-                LatestEventSlot.entries.forEach { slot ->
-                    legacy.getString(slot.prefKey, null)?.let { out[slot.key] = it }
-                }
-            }
-        }
+    private suspend fun loadAccountStores(
+        npub: String,
+        legacyIdentity: () -> AccountIdentity,
+    ) = AccountStoreData(
+        identity = identityStore(npub).load().orIfUnusable(legacyIdentity),
+        followLists = followListStore(npub).load(),
+        latestEvents = latestEventStore(npub).load(),
+        uploadSettings = uploadSettingsStore(npub).load(),
+        dialogDismissal = dialogDismissalStore(npub).load(),
+        relayAuth = relayAuthStore(npub).load(),
+        feedVisibility = feedVisibilityStore(npub).load(),
+        notificationPrefs = notificationPrefsStore(npub).load(),
+    )
 
     // NOT migrated to DataStore, and cannot be: DataStore is suspend-only, while
     // NotificationRelayService.isEnabled(context) is a synchronous Boolean read
@@ -796,6 +783,18 @@ object LocalPreferences {
                     privKeyHex = settings.keyPair.privKey?.toHexKey(),
                 )
             }
+            // Mirrored, not moved: NOSTR_PUBKEY is the one key whose loss empties
+            // the app, so the legacy write above stays until a release has
+            // proved this one — see [EncryptedStorage].
+            identityStore(settings.keyPair.pubKey.toNpub()).save(
+                AccountIdentity(
+                    pubKeyHex = settings.keyPair.pubKey.toHexKey(),
+                    loginWithExternalSigner = settings.externalSignerPackageName != null,
+                    externalSignerPackageName = settings.externalSignerPackageName,
+                    localRelayServers = settings.localRelayServers.value,
+                    openBackupConflictsJson = settings.openBackupConflicts().takeIf { it.isNotEmpty() }?.let { BackupConflictStorage.encode(it) },
+                ),
+            )
             uploadSettingsStore(settings.keyPair.pubKey.toNpub()).save(
                 UploadSettings(
                     stripLocationOnUpload = settings.stripLocationOnUpload,
@@ -915,16 +914,15 @@ object LocalPreferences {
 
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
-    fun saveSharedSettings(
-        sharedSettings: UiSettings,
-        prefs: SharedPreferences = encryptedPreferences(),
-    ) {
-        Log.d("LocalPreferences", "Saving to shared settings")
-        prefs.edit {
-            putString(PrefKeys.SHARED_SETTINGS, JsonMapper.toJson(sharedSettings))
-        }
-    }
-
+    /**
+     * The UI settings as the global `secret_keeper` file holds them.
+     *
+     * A migration source only: [UiSharedPreferences] owns these now and writes
+     * them to its own DataStore, which carries a one-shot copy out of this blob
+     * for installs that predate it. Nothing writes here any more — the matching
+     * `saveSharedSettings` was removed once it had no callers — but the read
+     * stays for good, like every other legacy reader; see [EncryptedStorage].
+     */
     fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
@@ -953,10 +951,9 @@ object LocalPreferences {
     private suspend fun hasBackedUpKeysFlow(npub: String): MutableStateFlow<Boolean> =
         hasBackedUpKeysMutex.withLock {
             hasBackedUpKeysFlows.getOrPut(npub) {
-                val stored =
-                    withContext(Dispatchers.IO) {
-                        encryptedPreferences(npub).getBoolean(PrefKeys.HAS_BACKED_UP_KEYS, true)
-                    }
+                // Absent reads as true in both stores, so a store that cannot be
+                // read leaves the nudge off rather than showing it to everyone.
+                val stored = withContext(Dispatchers.IO) { identityStore(npub).hasBackedUpKeys() }
                 MutableStateFlow(stored)
             }
         }
@@ -969,7 +966,10 @@ object LocalPreferences {
         npub: String,
     ) {
         withContext(Dispatchers.IO) {
+            // Legacy write kept alongside the new one, as for the rest of the
+            // identity group — see [EncryptedStorage].
             encryptedPreferences(npub).edit { putBoolean(PrefKeys.HAS_BACKED_UP_KEYS, value) }
+            identityStore(npub).setHasBackedUpKeys(value)
         }
         hasBackedUpKeysFlow(npub).value = value
     }
@@ -991,6 +991,12 @@ object LocalPreferences {
                 // raced in before the per-npub file finished being written.
                 if (accountSettings != null) {
                     cachedAccounts.put(npub, accountSettings)
+
+                    // Everything this account has is now migrated and just been
+                    // read back, which is the only moment the legacy file can be
+                    // shown to be redundant. It will not be, yet — see
+                    // [LEGACY_WRITES_RETIRED].
+                    legacyCleanup.deleteIfVerified(npub)
                 }
 
                 return@withContext accountSettings
@@ -998,26 +1004,52 @@ object LocalPreferences {
         }
     }
 
-    private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): AccountSettings? {
+    private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String): AccountSettings? {
         Log.d("LocalPreferences") { "Load account from file $npub" }
         val startedAtMs = TimeUtils.nowMillis()
         val result =
             withContext(Dispatchers.IO) {
                 return@withContext with(encryptedPreferences(npub)) {
                     Log.d("LocalPreferences") { "Load account from file $npub - opened file" }
-                    // pubKey first: the key store is keyed by npub, which is derived
-                    // from it, and this is the same npub the save side writes under.
-                    val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
+                    // Every store this account has, read in one hop — including
+                    // the identity the rest of this function is derived from, so
+                    // that read does not cost its own state in the generated
+                    // coroutine state machine (see [AccountStoreData]).
+                    //
+                    // Keyed by the npub handed in, which is the npub the save side
+                    // writes under and the name of the legacy file just opened. The
+                    // identity falls back to that file when its store cannot
+                    // produce a pubkey: an account without one vanishes from the
+                    // app entirely, private key intact.
+                    val stores =
+                        loadAccountStores(npub) {
+                            AccountIdentity(
+                                pubKeyHex = getString(PrefKeys.NOSTR_PUBKEY, null),
+                                loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                                externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null),
+                                localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf(),
+                                openBackupConflictsJson = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null),
+                            )
+                        }
+                    val identity = stores.identity
+                    val pubKey = identity.pubKeyHex ?: return@with null
                     val privKey =
                         accountKeyStore.read(
                             npub = pubKey.hexToByteArray().toNpub(),
                             legacyValue = getString(PrefKeys.NOSTR_PRIVKEY, null),
                         )
-                    val externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
+                    val externalSignerPackageName = identity.externalSignerPackageName ?: if (identity.loginWithExternalSigner) "com.greenart7c3.nostrsigner" else null
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
 
-                    val stores = loadAccountStores(keyPair.pubKey.toNpub())
+                    // The npub handed in names the file just read, and the save
+                    // side writes every store under the npub derived from the
+                    // pubkey inside it, so the two are the same by construction.
+                    // Say so if they ever are not: it would mean this load is
+                    // reading stores that a save never wrote.
+                    if (keyPair.pubKey.toNpub() != npub) {
+                        Log.e("LocalPreferences", "Account file $npub holds pubkey ${keyPair.pubKey.toNpub()}; its stores were read under the file's name", null)
+                    }
 
                     Log.d("LocalPreferences") { "Load account from file $npub - keys ready" }
 
@@ -1043,7 +1075,7 @@ object LocalPreferences {
                     val dismissedChannelInvites = stores.dialogDismissal.dismissedChannelInvites
                     val mutedPublicChats = stores.dialogDismissal.mutedPublicChats
                     val viewedPollResultNoteIdsStr = stores.dialogDismissal.viewedPollResultNoteIdsJson
-                    val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
+                    val localRelayServers = identity.localRelayServers
 
                     val followListPrefs = toFollowListPrefs(stores.followLists)
 
@@ -1052,18 +1084,9 @@ object LocalPreferences {
                     val secrets =
                         accountSecretsStore.read(
                             npub = keyPair.pubKey.toNpub(),
-                            legacy =
-                                AccountSecrets(
-                                    nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false),
-                                    nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: "",
-                                    nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: "",
-                                    nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf(),
-                                    nwcWalletsJson = getString(PrefKeys.NWC_WALLETS, null),
-                                    clinkDebitWalletsJson = getString(PrefKeys.CLINK_DEBIT_WALLETS, null),
-                                    defaultPaymentSourceId = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null),
-                                    legacyDefaultNwcWalletId = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null),
-                                    legacyZapPaymentRequestServer = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null),
-                                ),
+                            // Through the shared reader, so the loader and the check
+                            // that gates deleting this file read the same keys.
+                            legacy = readLegacyAccountSecrets(LegacySharedPreferences(this)),
                         )
                     val nip46SignerEnabled = secrets.nip46SignerEnabled
                     val nip46BunkerSecret = secrets.nip46BunkerSecret
@@ -1077,7 +1100,7 @@ object LocalPreferences {
                     val defaultFileServerStr = stores.uploadSettings.defaultFileServerJson
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
-                    val openBackupConflictsStr = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null)
+                    val openBackupConflictsStr = identity.openBackupConflictsJson
                     val latestUserMetadataStr = stores.latestEvents[LatestEventSlot.USER_METADATA]
                     val latestContactListStr = stores.latestEvents[LatestEventSlot.CONTACT_LIST]
                     val latestDmRelayListStr = stores.latestEvents[LatestEventSlot.DM_RELAY_LIST]

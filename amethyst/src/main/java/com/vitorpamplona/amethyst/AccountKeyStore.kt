@@ -168,6 +168,13 @@ class AccountKeyStore(
         }
     }
 
+    /**
+     * What the current store holds, with no fallback to the legacy value.
+     *
+     * For [LegacyPreferenceCleanup]; [read] deliberately hides this distinction.
+     */
+    suspend fun stored(npub: String): String? = vault.get(npub)
+
     /** Drops the key from the new store; the caller clears the legacy file itself. */
     suspend fun delete(npub: String) {
         try {

@@ -90,6 +90,14 @@ class AccountSecretsStore(
         }
     }
 
+    /**
+     * What the current store holds, with no fallback to the legacy file.
+     *
+     * For [LegacyPreferenceCleanup], which has to tell "migrated" from
+     * "falling back and looking migrated" — the read above deliberately cannot.
+     */
+    suspend fun stored(npub: String): AccountSecrets? = stores.loadSecrets(npub)
+
     suspend fun delete(npub: String) {
         try {
             stores.removeAccount(npub)

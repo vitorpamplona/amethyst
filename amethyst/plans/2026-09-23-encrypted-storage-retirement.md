@@ -1,15 +1,17 @@
 # Retiring EncryptedStorage
 
-Status: **blocked** — the legacy files cannot be deleted yet, and the reader
-can never be.
+Status: **migrated, not yet deleted.** Every key has a home in the new stores.
+The legacy files are still written, so they are still there — and the reader
+can never go.
 
 ## The constraint
 
 Every migration in the preference layer is *lazy*: it reads the legacy store
-when it runs, not when the app is installed. Nine come through
-`EncryptedStorage` — the seven `CopyOnceMigration`s in `LocalPreferences` plus
-the key, secret and roster stores. Only the Cashu counters and calendar
-reminders read a plain (non-encrypted) source and would survive its removal.
+when it runs, not when the app is installed. Ten come through
+`EncryptedStorage` — the eight `LegacyKeyTable` copies on the per-account
+DataStore plus the key, secret and roster stores. Only the Cashu counters and
+calendar reminders read a plain (non-encrypted) source and would survive its
+removal.
 
 So deleting `EncryptedStorage` does not merely affect installs that have not
 upgraded yet. It strands anyone who **skips** the release introducing the new
@@ -25,54 +27,89 @@ from a backup all skip releases.
 an unmaintained-library risk, not an active vulnerability, and a much smaller
 cost than stranding users.
 
-## Outstanding before any legacy file is deleted
+## Where each key went
 
-Deletion is only safe for an account whose every key has a new home. These do
-not yet, and are still read from the legacy files:
+`LegacyKeyCoverageTest` holds this to being exhaustive: every constant in
+`PrefKeys` is either claimed by a migration table, one of the secrets, on the
+accepted-loss list, or a key of the global file. A key added to `PrefKeys` and
+to none of those fails that test at the commit that adds it.
 
-| key | scope | if deleted today |
+| group | destination | legacy write |
 |---|---|---|
-| `NOSTR_PUBKEY` | per-account | **fatal** — `loadAccountConfigFromEncryptedStorage` returns null without it, so the account disappears even though its private key migrated |
-| `LOGIN_WITH_EXTERNAL_SIGNER` | per-account | external-signer accounts stop resolving their signer |
-| `SIGNER_PACKAGE_NAME` | per-account | as above |
-| `HAS_BACKED_UP_KEYS` | per-account | the key-backup nag returns for everyone |
-| `LOCAL_RELAY_SERVERS` | per-account | silently lost |
-| `OPEN_BACKUP_CONFLICTS` | per-account | silently lost |
-| `SHARED_SETTINGS` | global | UI settings reset |
+| follow lists, cached events, upload, dialogs, relay auth, feed visibility, notifications | the account's plain DataStore | already retired |
+| identity — pubkey, signer, local relays, backup conflicts, backup flag | the account's plain DataStore | **kept** |
+| private key | `SecureKeyStorage` | **kept** |
+| NIP-46 material, wallets, payment source | the account's encrypted DataStore | **kept** |
+| current account, saved accounts | the encrypted roster store | **kept** |
+| UI settings (`shared_settings`) | `UiSharedPreferences`' own DataStore | none left |
+
+The three stores that still mirror are the ones whose loss is not an
+annoyance: an account that cannot be listed, signed with, or paid from. They
+keep the rollback window open until the device pass below has happened.
+
+The UI settings copy is **guarded** where the others are not. That store has
+been the real home of these settings for a while, so most installs already
+have a populated one and copying the old blob over it would undo every UI
+change since. The copy only runs into a store that has never been saved
+(`ui.theme` absent, which `save` always writes).
 
 ## Deliberately not migrated
-
-Three keys are accepted losses rather than outstanding work — the cost of
-losing them is one-off and small, and carrying them is not worth the code:
 
 | key | what is lost |
 |---|---|
 | `PENDING_ATTESTATIONS` | queued OTS attestations are not published |
 | `NOTIF_GLOBAL_TO_CURATED_MIGRATED` | the one-shot notification filter migration runs once more |
 | `LAST_READ_PER_ROUTE` | every feed reads as unread once |
+| `USE_PROXY`, `PROXY_PORT` | nothing — only ever removed, never read |
+| `TOR_SETTINGS` | nothing — no reader left anywhere |
 
-`NotificationPrefsStore` was given `hasRunGlobalToCuratedMigration`,
-`markGlobalToCuratedMigrated`, `lastReadPerRoute` and `saveLastReadPerRoute`
-for the last two of these. Nothing ever called them, and now nothing will;
-they have been removed rather than left looking like a feature.
+These are listed in `LegacyAccountKeys.accepted`, which is what lets the
+cleanup treat any *other* unclaimed key as a reason to keep the file.
 
-`USE_PROXY` and `PROXY_PORT` need nothing either: they are only ever `remove`d,
-being cleaned up rather than read.
+## Deleting a legacy file
+
+`LegacyPreferenceCleanup` runs after every successful account load and deletes
+that account's file only when it can prove nothing would be lost:
+
+1. **Every key in the file is accounted for** — claimed by a table, one of the
+   secrets, or on the accepted list. Driven from the file's own keys, not from
+   a checklist, because a checklist fails silently in the one direction that
+   matters.
+2. **Every copy that had something to copy has run.** Marker-based, not a value
+   comparison: those groups stopped being legacy-written when they moved, so
+   the file is a frozen snapshot and the two are *expected* to diverge as soon
+   as the user changes a setting. `CopyOnceMigration` commits the values and
+   its marker as one `Preferences`, so the marker cannot be set without them.
+3. **The secrets and the private key read back identical** from the current
+   stores. Those *are* still dual-written, so the stronger question is
+   available and is asked.
+4. A store that cannot be read is a reason, never a pass.
+
+It refuses today, and says so, because of the fifth condition:
+`LEGACY_WRITES_RETIRED` is false. While the app still mirrors into the file,
+deleting it achieves nothing — the next save recreates it — and would look
+like it had worked.
 
 ## Order of work
 
-1. Migrate the seven keys above, on the same dual-store terms as the rest.
-2. Add a per-account completeness check — every key present in the new stores —
-   and only then delete that account's legacy file, after reading back what was
-   written.
-3. Retire the legacy writes once (2) holds for every account on a device.
-4. Keep the reader, and the dependency, indefinitely.
+1. ~~Migrate the remaining keys.~~ Done.
+2. ~~Gate deletion on a per-account read-back.~~ Done.
+3. Do the device pass below.
+4. Flip `LEGACY_WRITES_RETIRED` and drop the legacy writes for the identity,
+   key, secret and roster stores. This ends the rollback window, so it is a
+   release of its own.
+5. Keep the reader, and `androidx.security.crypto`, indefinitely.
 
 ## Verification this needs and has not had
 
 None of the AndroidKeyStore paths have executed: this environment has no device
 or emulator, and `commons` has no Robolectric. What is tested is the decision
-logic against fakes. On a real device, before any deletion ships: upgrade an
-install holding accounts and confirm they all list; open one and sign;
-force-stop and relaunch; add and remove an account; pair a NIP-46 signer; pay
-from a wallet.
+logic against fakes — which is why step 3 is not optional, and why deletion is
+the one irreversible step in the whole series.
+
+On a real device, before step 4 ships: upgrade an install holding accounts and
+confirm they all list; open one and sign; force-stop and relaunch; add and
+remove an account; pair a NIP-46 signer; pay from a wallet; check the
+key-backup nudge stays dismissed; confirm UI settings survive the upgrade.
+Then let the cleanup run with the flag flipped, and confirm the files are gone
+and everything above still holds on the next cold start.
