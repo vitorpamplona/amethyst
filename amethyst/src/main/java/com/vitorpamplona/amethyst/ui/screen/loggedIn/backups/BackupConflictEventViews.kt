@@ -837,33 +837,8 @@ private fun LazyListScope.nip65Items(
     val outbox = lane(saved, new, writes)
     val inbox = lane(saved, new, reads)
 
-    item(key = "relay-reach", contentType = "reach") {
-        Row(Pad.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReachTile(stringRes(R.string.backup_review_reach_posts), outbox, Modifier.weight(1f))
-            ReachTile(stringRes(R.string.backup_review_reach_replies), inbox, Modifier.weight(1f))
-        }
-    }
     laneItems("outbox", stringRes = R.string.backup_review_outbox, subRes = R.string.backup_review_outbox_explainer, rows = outbox, nav = nav)
     laneItems("inbox", stringRes = R.string.backup_review_inbox, subRes = R.string.backup_review_inbox_explainer, rows = inbox, nav = nav)
-}
-
-@Composable
-private fun ReachTile(
-    caption: String,
-    lane: List<LaneRow>,
-    modifier: Modifier,
-) {
-    val tones = conflictTones()
-    val had = lane.count { it.state != LaneState.ADDED }
-    val kept = lane.count { it.state == LaneState.KEPT }
-    val color = if (kept < had) tones.removed else tones.added
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(color.copy(alpha = 0.12f)).padding(14.dp)) {
-        Text(caption, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.placeholderText)
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(kept.toString(), fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(stringRes(R.string.backup_review_of_relays, had.toString()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.padding(bottom = 6.dp))
-        }
-    }
 }
 
 private fun LazyListScope.laneItems(

@@ -79,12 +79,13 @@ only surviving copy of the user's data is gone.
    kept/dropped/new split bar, Dropped/New/Edited tabs and a searchable grid of faces; the
    mute list a shield with the unmuted count, per-kind tiles, a face pile, struck-through
    words and the private-items card; the profile both versions side by side as mini
-   cards, then inline field diffs with images as thumbnails; NIP-65 reach numbers ("people
-   find your posts on 2 of 3 relays") over outbox and inbox lanes; nutzap info a key swap
+   cards, then inline field diffs with images as thumbnails; NIP-65 outbox and inbox
+   lanes; nutzap info a key swap
    drawn as color fingerprints with a warning, then mints; groups a tile per group, faded
    when you left it. The other lists (`BackupConflictListViews.kt`) get their own too:
-   each relay list framed by what it is for (DM, key-package, search, indexer, relay-feed,
-   private-outbox and trusted relays as "N of M" reach over per-relay rows; blocked relays
+   each relay list as per-relay rows tagged by what the list is for (DM, key-package,
+   search, indexer, relay-feed, private-outbox and trusted relays; no "N of M" summary card,
+   since the change is the tagged rows, not a reach number); blocked relays
    as an "N unblocked" warning with allowed / newly blocked / still blocked), public
    chats, communities, favorite feeds and ephemeral rooms as tiles loaded from relays and
    faded when you left them, hashtags and places as a pill cloud (places as "City · #geohash" through `LoadCityName`, each pill opening its feed), trust providers as a

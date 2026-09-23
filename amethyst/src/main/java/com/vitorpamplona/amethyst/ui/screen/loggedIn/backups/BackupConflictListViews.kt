@@ -211,26 +211,23 @@ private fun LazyListScope.privateItemsCard(change: ContentChange) {
 // Relay lists, framed by what each one is for.
 // ---------------------------------------------------------------------------------------
 
-/** How a relay list is presented: the reach it gives, or the protection it takes away. */
+/** How a relay list's rows are presented: its icon and what a kept or dropped relay is called. */
 private class RelayFraming(
     val icon: MaterialSymbol,
-    val headline: Int,
-    val explainer: Int,
     val keptTag: Int,
     val droppedTag: Int = R.string.backup_review_dropped_tag,
-    val lossIsWarning: Boolean = false,
 )
 
 private fun framingOf(type: BackupEventType): RelayFraming =
     when (type) {
-        BackupEventType.DM_RELAYS -> RelayFraming(MaterialSymbols.Mail, R.string.backup_review_reach_dms, R.string.backup_review_reach_dms_explainer, R.string.backup_review_receiving_tag)
-        BackupEventType.KEY_PACKAGE_RELAYS -> RelayFraming(MaterialSymbols.Key, R.string.backup_review_reach_key_packages, R.string.backup_review_reach_key_packages_explainer, R.string.backup_review_listed_tag)
-        BackupEventType.SEARCH_RELAYS -> RelayFraming(MaterialSymbols.Search, R.string.backup_review_reach_search, R.string.backup_review_reach_search_explainer, R.string.backup_review_searching_tag)
-        BackupEventType.INDEXER_RELAYS -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_reach_indexers, R.string.backup_review_reach_indexers_explainer, R.string.backup_review_listed_tag)
-        BackupEventType.RELAY_FEEDS -> RelayFraming(MaterialSymbols.CellTower, R.string.backup_review_reach_relay_feeds, R.string.backup_review_reach_relay_feeds_explainer, R.string.backup_review_listed_tag)
-        BackupEventType.PRIVATE_OUTBOX_RELAYS -> RelayFraming(MaterialSymbols.Lock, R.string.backup_review_reach_private_outbox, R.string.backup_review_reach_private_outbox_explainer, R.string.backup_review_storing_tag)
-        BackupEventType.TRUSTED_RELAYS -> RelayFraming(MaterialSymbols.Shield, R.string.backup_review_reach_trusted, R.string.backup_review_reach_trusted_explainer, R.string.backup_review_trusted_tag, R.string.backup_review_untrusted_tag, lossIsWarning = true)
-        else -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_reach_generic, R.string.backup_review_reach_generic_explainer, R.string.backup_review_listed_tag)
+        BackupEventType.DM_RELAYS -> RelayFraming(MaterialSymbols.Mail, R.string.backup_review_receiving_tag)
+        BackupEventType.KEY_PACKAGE_RELAYS -> RelayFraming(MaterialSymbols.Key, R.string.backup_review_listed_tag)
+        BackupEventType.SEARCH_RELAYS -> RelayFraming(MaterialSymbols.Search, R.string.backup_review_searching_tag)
+        BackupEventType.INDEXER_RELAYS -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_listed_tag)
+        BackupEventType.RELAY_FEEDS -> RelayFraming(MaterialSymbols.CellTower, R.string.backup_review_listed_tag)
+        BackupEventType.PRIVATE_OUTBOX_RELAYS -> RelayFraming(MaterialSymbols.Lock, R.string.backup_review_storing_tag)
+        BackupEventType.TRUSTED_RELAYS -> RelayFraming(MaterialSymbols.Shield, R.string.backup_review_trusted_tag, R.string.backup_review_untrusted_tag)
+        else -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_listed_tag)
     }
 
 private fun savedRelaysOf(event: Event): List<NormalizedRelayUrl> =
@@ -255,28 +252,8 @@ private fun LazyListScope.relayListItems(
     if (conflict.eventType == BackupEventType.BLOCKED_RELAYS) {
         blockedRelayItems(rows, nav)
     } else {
+        // No summary card: the rows themselves, tagged kept / dropped / new, are the change.
         val framing = framingOf(conflict.eventType)
-        val had = rows.count { it.second != ItemFate.ADDED }
-        val kept = rows.count { it.second == ItemFate.KEPT }
-        item(key = "relay-hero", contentType = "hero") {
-            val tones = conflictTones()
-            val color = if (framing.lossIsWarning) tones.changed else tones.removed
-            TintedPanel(color.copy(alpha = 0.12f), Pad.padding(top = 8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(color.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                        Icon(symbol = framing.icon, contentDescription = null, tint = color)
-                    }
-                    Column {
-                        Text(stringRes(framing.headline), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.placeholderText)
-                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(kept.toString(), fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = if (kept < had) color else tones.added)
-                            Text(stringRes(R.string.backup_review_of_relays, had.toString()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.padding(bottom = 6.dp))
-                        }
-                        Text(stringRes(framing.explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
-                    }
-                }
-            }
-        }
         items(rows, key = { "relay-" + it.first.url }, contentType = { "relay-row" }) { (url, fate) ->
             RelayFateRow(url, fate, framing, nav)
         }
