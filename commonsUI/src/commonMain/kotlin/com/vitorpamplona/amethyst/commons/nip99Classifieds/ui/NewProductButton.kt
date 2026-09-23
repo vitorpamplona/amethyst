@@ -18,31 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions
+package com.vitorpamplona.amethyst.commons.nip99Classifieds.ui
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 
 @Composable
-fun LeaveChatButton(
-    channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.unfollow(channel) },
-        contentPadding = ButtonPadding,
+fun NewProductButton(nav: INav) {
+    FloatingActionButton(
+        onClick = {
+            nav.nav(Route.NewProduct())
+        },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
     ) {
-        Text(text = stringRes(Res.string.leave))
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(id = Res.string.new_product),
+            modifier = Size26Modifier,
+            tint = MaterialTheme.colorScheme.onPrimary,
+        )
     }
 }

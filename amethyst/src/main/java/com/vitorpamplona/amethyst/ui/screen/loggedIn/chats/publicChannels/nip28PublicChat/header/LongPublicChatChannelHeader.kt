@@ -41,7 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.ui.LeaveChannelButton
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.nip28PublicChat.ui.EditChannelButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.channel_image
 import com.vitorpamplona.amethyst.commons.resources.created_at
@@ -64,8 +67,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.EditButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LeaveChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LinkChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.MuteChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.OpenChatButton
@@ -212,7 +213,7 @@ fun EditButtonIfIamCreator(
         }
 
     if (isMe) {
-        EditButton(channel, accountViewModel, nav)
+        EditChannelButton { nav.nav(Route.ChannelMetadataEdit(channel.idHex)) }
     }
 }
 
@@ -225,6 +226,6 @@ fun LeaveButtonIfFollowing(
     val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (isFollowing) {
-        LeaveChatButton(channel, accountViewModel, nav)
+        LeaveChannelButton { accountViewModel.unfollow(channel) }
     }
 }

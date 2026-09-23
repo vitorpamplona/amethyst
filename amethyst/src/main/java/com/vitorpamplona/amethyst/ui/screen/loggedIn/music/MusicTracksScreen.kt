@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.music.ui.NewMusicTrackButton
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
@@ -87,7 +88,7 @@ fun MusicTracksScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewMusicTrackButton(accountViewModel, nav)
+                NewMusicTrackButton(nav)
             }
         },
         accountViewModel = accountViewModel,

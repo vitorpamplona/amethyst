@@ -18,31 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.commons.profile.ui
 
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.join
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun JoinChatButton(
-    channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.follow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringRes(Res.string.join))
-    }
+fun RelaysTabHeader() {
+    Text(text = stringRes(Res.string.relays))
 }

@@ -18,31 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.join
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
+import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
 
+/**
+ * The `#tag` link a note header shows when the note carries a hashtag the viewer follows,
+ * explaining why it is in their feed. Single line, ellipsized.
+ */
 @Composable
-fun JoinChatButton(
-    channel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+fun FollowedHashtagLabel(
+    tag: String,
+    onClick: () -> Unit,
 ) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.follow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringRes(Res.string.join))
+    Column(verticalArrangement = Arrangement.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ClickableTextColor(
+                "#$tag",
+                linkColor = MaterialTheme.colorScheme.lessImportantLink,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                onClick = onClick,
+            )
+        }
     }
 }
