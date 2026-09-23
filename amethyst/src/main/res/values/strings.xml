@@ -2844,7 +2844,10 @@
     <string name="backup_conflict_count_removed">%1$s removed</string>
     <string name="backup_conflict_count_added">%1$s added</string>
     <string name="backup_conflict_count_changed">%1$s changed</string>
-    <string name="backup_card_follows_shrank">Your follow list shrank</string>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">%1$d follow was dropped</item>
+        <item quantity="other">%1$d follows were dropped</item>
+    </plurals>
     <string name="backup_review_changed_by_other_app">Changed by another app · %1$s</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_restore_count">Restore %1$s</string>

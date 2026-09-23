@@ -132,7 +132,9 @@ private fun headlineOf(
     val diff = conflict.diff
     val specific: String? =
         when (diff) {
-            is ContactListDiff -> stringRes(R.string.backup_card_follows_shrank)
+            // Counted, not "shrank": a version that drops 3 follows and adds 100 still raises
+            // a conflict, and calling that a shrink contradicts the card's own bar.
+            is ContactListDiff -> plural(R.plurals.backup_card_follows_dropped, diff.follows.removed.size)
             is MuteListDiff -> plural(R.plurals.backup_card_mutes_visible, diff.publicMutes.removed.size)
             is MetadataDiff -> plural(R.plurals.backup_card_profile_lost_fields, counts.removed)
             is AdvertisedRelayListDiff -> plural(R.plurals.backup_card_nip65_lost, diff.relays.removed.size)

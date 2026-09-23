@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.UiSettings
+import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -158,6 +159,7 @@ private object PrefKeys {
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID
     const val CLINK_DEBIT_WALLETS = "clinkDebitWallets"
     const val DEFAULT_PAYMENT_SOURCE_ID = "defaultPaymentSourceId"
+    const val OPEN_BACKUP_CONFLICTS = "openBackupConflicts"
     const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
@@ -581,6 +583,16 @@ object LocalPreferences {
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
 
+                    // The undecided conflicts themselves, not just the backups they hold back.
+                    // Without these the card vanishes on the next launch and the user never
+                    // answers the question the backup is still waiting on.
+                    val openConflicts = settings.openBackupConflicts()
+                    if (openConflicts.isEmpty()) {
+                        remove(PrefKeys.OPEN_BACKUP_CONFLICTS)
+                    } else {
+                        putString(PrefKeys.OPEN_BACKUP_CONFLICTS, BackupConflictStorage.encode(openConflicts))
+                    }
+
                     putOrRemove(PrefKeys.LATEST_USER_METADATA, settings.backupUserMetadata)
                     putOrRemove(PrefKeys.LATEST_DM_RELAY_LIST, settings.backupDMRelayList)
                     putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
@@ -807,6 +819,7 @@ object LocalPreferences {
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
+                    val openBackupConflictsStr = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null)
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
                     val latestContactListStr = getString(PrefKeys.LATEST_CONTACT_LIST, null)
                     val latestDmRelayListStr = getString(PrefKeys.LATEST_DM_RELAY_LIST, null)
@@ -1062,7 +1075,7 @@ object LocalPreferences {
                         backupCashuWallet = latestCashuWalletResolved,
                         backupNutzapInfo = latestNutzapInfoResolved,
                         callsEnabled = MutableStateFlow(callsEnabled),
-                    )
+                    ).also { it.restoreBackupConflicts(BackupConflictStorage.decode(openBackupConflictsStr)) }
                 }
             }
         // Milestone with its cost attached. Decrypting and parsing one account's settings is one of

@@ -1214,7 +1214,12 @@ class AccountSettings(
 
             if (pending != null) {
                 // The same version re-emitted by the cache: the open conflict already describes it.
-                if (pending.incoming.id == incoming.id) return@synchronized false
+                // Its retry is refreshed too: a conflict restored from storage carries none
+                // until the version it is about comes round again.
+                if (pending.incoming.id == incoming.id) {
+                    backupConflictRetries[slot] = retry
+                    return@synchronized false
+                }
                 // An older version (e.g. the retry of a just-accepted conflict that a newer
                 // external change overtook) must never replace or clear the newer question.
                 if (incoming.createdAt < pending.incoming.createdAt) return@synchronized false
@@ -1235,6 +1240,7 @@ class AccountSettings(
                     val conflict = ReplaceableBackupConflict(reference, incoming, cause, diff)
                     backupConflictRetries[slot] = retry
                     backupConflicts.update { it + (slot to conflict) }
+                    saveAccountSettings()
                     return@synchronized false
                 }
             }
@@ -1248,8 +1254,75 @@ class AccountSettings(
     private fun dropBackupConflict(slot: String) {
         if (backupConflicts.value.containsKey(slot)) {
             backupConflicts.update { it - slot }
+            saveAccountSettings()
         }
         backupConflictRetries.remove(slot)
+    }
+
+    /**
+     * Re-seeds the open conflicts read back from storage.
+     *
+     * A conflict outlives the process that raised it: it is the user's undecided question, and
+     * the whole point of holding the backup back is that nobody answered it yet. Their [diff]
+     * is recomputed rather than stored, so a version that no longer removes anything — the
+     * other app put it back — quietly stops being a conflict.
+     */
+    fun restoreBackupConflicts(saved: List<Triple<Event, Event, Event>>) {
+        if (saved.isEmpty()) return
+        val restored =
+            saved.mapNotNull { (savedEvent, incoming, cause) ->
+                val diff = ReplaceableBackupDiff.detectLoss(savedEvent, incoming) ?: return@mapNotNull null
+                val conflict = ReplaceableBackupConflict(savedEvent, incoming, cause, diff)
+                conflict.slot to conflict
+            }
+        if (restored.isNotEmpty()) backupConflicts.update { it + restored }
+    }
+
+    /** The open conflicts, as the three events storage needs to rebuild each one. */
+    fun openBackupConflicts(): List<Triple<Event, Event, Event>> = backupConflicts.value.values.map { Triple(it.saved, it.incoming, it.cause) }
+
+    /**
+     * Re-runs the update that a restored conflict no longer carries.
+     *
+     * [backupConflictRetries] holds closures, so it cannot be written to disk; a conflict read
+     * back after a restart has none until its version happens to arrive again. Keeping the new
+     * version must work regardless, and every update is the same shape — hand the event to the
+     * function that owns its slot — so the slot can be recovered from the event's own type.
+     */
+    private fun reapplyBackup(incoming: Event) {
+        when (incoming) {
+            is MetadataEvent -> updateUserMetadata(incoming)
+            is ContactListEvent -> updateContactListTo(incoming)
+            is ChatMessageRelayListEvent -> updateDMRelayList(incoming)
+            is KeyPackageRelayListEvent -> updateKeyPackageRelayList(incoming)
+            is AdvertisedRelayListEvent -> updateNIP65RelayList(incoming)
+            is CashuWalletEvent -> updateCashuWallet(incoming)
+            is NutzapInfoEvent -> updateNutzapInfo(incoming)
+            is PaymentTargetsEvent -> updateNIPA3PaymentTargets(incoming)
+            is Bolt12OfferListEvent -> updateBolt12Offers(incoming)
+            is SearchRelayListEvent -> updateSearchRelayList(incoming)
+            is IndexerRelayListEvent -> updateIndexRelayList(incoming)
+            is RelayFeedsListEvent -> updateRelayFeedList(incoming)
+            is BlockedRelayListEvent -> updateBlockedRelayList(incoming)
+            is TrustedRelayListEvent -> updateTrustedRelayList(incoming)
+            is PrivateOutboxRelayListEvent -> updatePrivateHomeRelayList(incoming)
+            is ChannelListEvent -> updateChannelListTo(incoming)
+            is GeohashListEvent -> updateGeohashListTo(incoming)
+            is HashtagListEvent -> updateHashtagListTo(incoming)
+            is FavoriteAlgoFeedsListEvent -> updateFavoriteAlgoFeedsListTo(incoming)
+            is CommunityListEvent -> updateCommunityListTo(incoming)
+            is EphemeralChatListEvent -> updateEphemeralChatListTo(incoming)
+            is SimpleGroupListEvent -> updateRelayGroupListTo(incoming)
+            is ConcordCommunityListEvent -> updateConcordListTo(incoming)
+            is TrustProviderListEvent -> updateTrustProviderListTo(incoming)
+            is MuteListEvent -> updateMuteList(incoming)
+            // NIP-78 is deliberately absent: its update also takes the decrypted
+            // AccountSyncedSettingsInternal, which only the caller can produce. Keeping that
+            // version still works — [keepIncomingVersion] records the id in
+            // [acceptedExternalVersions] first, so the next delivery walks into the backup
+            // unchallenged — it just lands when the event next arrives rather than right now.
+            else -> Unit
+        }
     }
 
     /**
@@ -1268,7 +1341,10 @@ class AccountSettings(
             if (claimed) current - conflict.slot else current
         }
         if (!claimed) return null
-        return backupConflictRetries.remove(conflict.slot) ?: {}
+        saveAccountSettings()
+        // A conflict restored from storage has no closure to re-run: rebuild it from the event.
+        // Falling back to {} instead would clear the card and quietly keep the old backup.
+        return backupConflictRetries.remove(conflict.slot) ?: { reapplyBackup(conflict.incoming) }
     }
 
     /** Keeps the new version: the backup moves forward to [ReplaceableBackupConflict.incoming]. */
@@ -1322,7 +1398,10 @@ class AccountSettings(
             reopened = !current.containsKey(conflict.slot)
             if (reopened) current + (conflict.slot to conflict) else current
         }
-        if (reopened) backupConflictRetries[conflict.slot] = token
+        if (reopened) {
+            backupConflictRetries[conflict.slot] = token
+            saveAccountSettings()
+        }
     }
 
     fun updateLocalRelayServers(servers: Set<String>) {
