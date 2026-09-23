@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.cordn.KeyedCordnBlobCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import java.io.File
 
 /**
  * cordn wiring for the CLI, split out of [Context] the way [CashuContext] is
@@ -115,6 +116,15 @@ class CordnContext(
             it.manager.restore()
             it.keyPackages.restore()
         }
+
+    /** Where the cordn tree lives, for the migration verbs. */
+    val migrationRoot: File get() = ctx.dataDir.root
+
+    /** The at-rest cipher, so a migration can read and write the same blobs. */
+    val blobCipher: CordnBlobCipher get() = cipher
+
+    /** Replaces the remembered coordinator list, after adopting a migration. */
+    suspend fun replaceCoordinators(configs: List<CoordinatorConfig>) = coordinatorStore.save(configs)
 
     /**
      * Picks the coordinator a command should act on.

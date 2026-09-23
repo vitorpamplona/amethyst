@@ -104,7 +104,7 @@ object CordnCommands {
         route(
             "cordn",
             tail,
-            "cordn <coordinator|keypackage|group|invite|request|requests|welcomes|join|decline|send|fetch|ref|exposure>",
+            "cordn <coordinator|keypackage|migrate|group|invite|request|requests|welcomes|join|decline|send|fetch|ref|exposure>",
             help = USAGE,
             routes =
                 mapOf(
@@ -112,6 +112,7 @@ object CordnCommands {
                     "exposure" to { rest -> exposure(rest) },
                     "coordinator" to { rest -> CordnCoordinatorCommands.coordinator(dataDir, rest) },
                     "keypackage" to { rest -> CordnCoordinatorCommands.keyPackage(dataDir, rest) },
+                    "migrate" to { rest -> CordnMigrateCommands.migrate(dataDir, rest) },
                     "group" to { rest -> CordnGroupCommands.group(dataDir, rest) },
                     "invite" to { rest -> CordnGroupCommands.invite(dataDir, rest) },
                     "request" to { rest -> CordnGroupCommands.request(dataDir, rest) },

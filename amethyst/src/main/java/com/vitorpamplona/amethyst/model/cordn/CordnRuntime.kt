@@ -30,14 +30,12 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
 import com.vitorpamplona.amethyst.commons.cordn.CordnHandoffState
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationGroup
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationSnapshot
+import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
 import com.vitorpamplona.amethyst.commons.cordn.CordnRoomState
-import com.vitorpamplona.amethyst.commons.cordn.CordnRoomStateCodec
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
-import com.vitorpamplona.amethyst.commons.cordn.EchoStateCodec
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
@@ -46,17 +44,14 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +62,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Base64
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -566,41 +560,10 @@ class CordnRuntime(
      * still migrated, because a handoff that silently omitted the groups the
      * app could not reach would be wrong precisely when it matters.
      */
-    suspend fun migrationSnapshot(): CordnMigrationSnapshot {
-        val configs = coordinatorStore.load()
-        val groups = mutableListOf<CordnMigrationGroup>()
-        val keyPackages = mutableListOf<CordnCarriedKeyPackage>()
-
+    suspend fun migrationSnapshot(): CordnMigrationSnapshot =
         withContext(Dispatchers.IO) {
-            configs.forEach { config ->
-                val dir = CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, config.pubKey)
-                val groupStore = FileCordnGroupStore(dir, cipher)
-                val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
-
-                groupStore.listGroups().forEach { gid ->
-                    val state = groupStore.loadGroup(gid) ?: return@forEach
-                    groups +=
-                        CordnMigrationGroup(
-                            coordinatorPubKey = config.pubKey,
-                            coordinatorRelays = config.relays.map { it.url },
-                            gid = gid,
-                            clientStateBase64 = state.toBase64(),
-                            cursor = groupStore.loadCursor(gid)?.fetchCursor ?: 0L,
-                            roomStateBase64 = groupStore.loadRoomState(gid)?.let { CordnRoomStateCodec.encode(it).toBase64() },
-                            echoStateBase64 = groupStore.loadEchoState(gid)?.let { EchoStateCodec.encode(it).toBase64() },
-                            joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
-                        )
-                }
-
-                keyPackageStore.list().forEach { ref ->
-                    val bundle = keyPackageStore.load(ref) ?: return@forEach
-                    keyPackages += CordnCarriedKeyPackage(config.pubKey, ref, bundle.toBase64())
-                }
-            }
+            CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load())
         }
-
-        return CordnMigrationSnapshot(accountSigner.pubKey, groups, keyPackages = keyPackages)
-    }
 
     /**
      * Publishes a handoff and stands this device down.
@@ -641,30 +604,9 @@ class CordnRuntime(
         stop()
 
         val configs =
-            snapshot.groups
-                .groupBy { it.coordinatorPubKey }
-                .mapNotNull { (pubKey, groups) ->
-                    val relays = groups.flatMap { it.coordinatorRelays }.distinct().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                    if (relays.isEmpty()) null else CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
-                }
-
-        withContext(Dispatchers.IO) {
-            File(filesDir, "cordn/${accountSigner.pubKey}").deleteRecursively()
-
-            snapshot.groups.forEach { group ->
-                val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, group.coordinatorPubKey), cipher)
-                store.saveGroup(group.gid, group.clientStateBase64.fromBase64())
-                store.saveCursor(group.gid, GroupCursor(fetchCursor = group.cursor, lastCursor = group.cursor))
-                group.roomStateBase64?.let { store.saveRoomState(group.gid, CordnRoomStateCodec.decode(it.fromBase64())) }
-                group.echoStateBase64?.let { store.saveEchoState(group.gid, EchoStateCodec.decode(it.fromBase64())) }
-                if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
+            withContext(Dispatchers.IO) {
+                CordnMigrationStores.write(filesDir, accountSigner.pubKey, cipher, snapshot)
             }
-
-            snapshot.keyPackages.forEach { keyPackage ->
-                FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, keyPackage.coordinatorPubKey), cipher)
-                    .save(keyPackage.keyPackageRef, keyPackage.bundle.fromBase64())
-            }
-        }
 
         // A device that just adopted state is emphatically not handed off, even
         // if it had handed off before: it now holds the newest copy.
@@ -672,10 +614,6 @@ class CordnRuntime(
         coordinatorStore.save(configs)
         start(configs)
     }
-
-    private fun ByteArray.toBase64() = Base64.getEncoder().encodeToString(this)
-
-    private fun String.fromBase64() = Base64.getDecoder().decode(this)
 
     /** What [coordinatorPubKey] says about itself, or null if it is not open. */
     suspend fun serverInfo(coordinatorPubKey: HexKey): CoordinatorServerInfo? = registry.sessionOrNull(coordinatorPubKey)?.serverInfo()
