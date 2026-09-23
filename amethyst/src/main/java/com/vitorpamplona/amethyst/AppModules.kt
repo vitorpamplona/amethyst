@@ -1045,6 +1045,7 @@ class AppModules(
                 master && !profileOnly
             },
             localCacheProbe = localBlossomCacheProbe,
+            scope = applicationIOScope,
         )
     }
 
@@ -1343,8 +1344,7 @@ class AppModules(
                         state.account.settings.localBlossomCacheProfilePicturesOnly
                             .drop(1),
                     ).collect {
-                        blossomResolver.uriToUrlCache.evictAll()
-                        blossomResolver.blossomHitCache.cache.evictAll()
+                        blossomResolver.clearCaches()
                         localBlossomCacheProbe.invalidate()
                         // Re-probe immediately so enabling the feature activates it
                         // this session. Otherwise `available` only advances when a
@@ -1360,8 +1360,7 @@ class AppModules(
         }
         applicationIOScope.launch {
             localBlossomCacheProbe.available.drop(1).collect {
-                blossomResolver.uriToUrlCache.evictAll()
-                blossomResolver.blossomHitCache.cache.evictAll()
+                blossomResolver.clearCaches()
             }
         }
         // Warm the local-cache probe so the very first image load doesn't pay
