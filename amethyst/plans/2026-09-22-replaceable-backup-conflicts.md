@@ -51,14 +51,13 @@ only surviving copy of the user's data is gone.
    never replace or clear it (e.g. the retry of an accept that a newer change overtook).
 4. **Freeze and ask.** On a loss, the backup keeps the saved version and a
    `ReplaceableBackupConflict` is published on `BackupConflictGuard.conflicts`.
-   Home shows a card per open conflict at the top of the feed (`BackupConflictCards`,
-   next to the key-backup nudge): "You changed your mute list in another app" with a
+   Home shows a card per open conflict as the first item of each tab's feed
+   (`BackupConflictCards`), so they scroll away with the posts instead of covering them;
+   an empty, loading or failed feed shows them above its placeholder: "You changed your mute list in another app" with a
    "12 removed · 3 added" summary. Cards can't be dismissed; they stay until the user
    decides. The most recent conflict gets a lead card with an event-specific headline
    ("You unblocked 3 relays", "You unfollowed 12 people" with its bar); the others collapse
-   into slim pills. At most two pills show; more open conflicts sit behind an "N more lists
-   changed" toggle that expands into a capped, scrollable area, since the cards float over
-   the feed instead of scrolling with it. List headlines lead with what was lost and add
+   into slim pills. List headlines lead with what was removed and add
    what was added to the same list, worded per list ("You unfollowed 12 people and
    followed 40", "You left 2 groups and joined 1", "You unblocked 3 relays and blocked 1").
    All copy assumes the change was on purpose: the user did it in another client, and

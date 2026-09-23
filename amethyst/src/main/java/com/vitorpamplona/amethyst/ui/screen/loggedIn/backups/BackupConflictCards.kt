@@ -27,39 +27,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -68,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
@@ -95,78 +80,35 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDif
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 
 /**
- * Cards at the top of Home, one per open [ReplaceableBackupConflict]: another app replaced
- * one of the account's backed-up lists (or the profile) with a version that lost data. They
- * can't be dismissed. They stay until the user decides on the review screen they open
- * ([BackupConflictReviewScreen]), where the differences can be inspected.
+ * Cards at the top of Home's feed, one per open [ReplaceableBackupConflict]: the user
+ * changed one of the account's backed-up lists (or the profile) in another app, and
+ * Amethyst asks to confirm before its backup moves on. They can't be dismissed. They stay
+ * until the user decides on the review screen they open ([BackupConflictReviewScreen]).
  *
  * The most recent conflict gets a lead card with a headline and a picture of the change
- * (the follow list's shrink bar, or lost/gained counts); the rest collapse into slim pills
- * so they don't cover the feed.
+ * (the follow list's bar, or removed/added counts); the rest are slim pills. They are the
+ * first item of the feed, so they scroll away with it instead of covering posts.
  */
 @Composable
 fun BackupConflictCards(
-    accountViewModel: AccountViewModel,
+    conflictMap: Map<String, ReplaceableBackupConflict>,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val conflictMap by accountViewModel.account.settings.backupConflicts
-        .collectAsStateWithLifecycle()
     if (conflictMap.isEmpty()) return
 
-    val conflicts = conflictMap.values.sortedByDescending { it.cause.createdAt }
+    val conflicts = remember(conflictMap) { conflictMap.values.sortedByDescending { it.cause.createdAt } }
     val open = { conflict: ReplaceableBackupConflict -> nav.nav(Route.BackupConflictReview(conflict.slot)) }
 
-    // Home's padding only covers the top bar; in landscape a side 3-button navigation bar
-    // or a display cutout would otherwise sit on top of the cards.
     Column(
         modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LeadConflictCard(conflicts.first()) { open(conflicts.first()) }
-
-        // The cards float over the feed, so they can't grow with the number of conflicts:
-        // a few pills show, the rest wait behind a toggle and scroll inside a capped area.
-        val rest = conflicts.drop(1)
-        var expanded by rememberSaveable { mutableStateOf(false) }
-        if (rest.size <= MAX_PILLS || expanded) {
-            Column(
-                Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                rest.forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
-            }
-            if (rest.size > MAX_PILLS) MoreConflictsToggle(stringRes(R.string.backup_card_show_less)) { expanded = false }
-        } else {
-            rest.take(MAX_PILLS).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
-            val hidden = rest.size - MAX_PILLS
-            MoreConflictsToggle(pluralStringResource(R.plurals.backup_card_more_lists, hidden, hidden)) { expanded = true }
-        }
+        conflicts.drop(1).forEach { conflict -> ConflictPill(conflict) { open(conflict) } }
     }
-}
-
-private const val MAX_PILLS = 2
-
-@Composable
-private fun MoreConflictsToggle(
-    label: String,
-    onClick: () -> Unit,
-) {
-    Text(
-        label,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .clickable(onClick = onClick)
-                .padding(vertical = 8.dp),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        textAlign = TextAlign.Center,
-    )
 }
 
 /** A headline that says what happened, in the event's own terms. */

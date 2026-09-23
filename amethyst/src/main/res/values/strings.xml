@@ -2848,7 +2848,6 @@
         <item quantity="one">You unfollowed %1$d person</item>
         <item quantity="other">You unfollowed %1$d people</item>
     </plurals>
-    <string name="backup_card_show_less">Show less</string>
     <string name="backup_review_changed_by_other_app">Changed in another app · %1$s</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_restore_count">Restore %1$s</string>
@@ -3060,10 +3059,6 @@
     <plurals name="backup_card_and_blocked">
         <item quantity="one">%1$s and blocked %2$d</item>
         <item quantity="other">%1$s and blocked %2$d</item>
-    </plurals>
-    <plurals name="backup_card_more_lists">
-        <item quantity="one">%1$d more list changed</item>
-        <item quantity="other">%1$d more lists changed</item>
     </plurals>
     <string name="backup_card_app_settings">Your Amethyst synced app settings changed in another app that is not Amethyst. This can create problems.</string>
     <string name="backup_card_nutzap_key_replaced">You replaced your nutzap key</string>
