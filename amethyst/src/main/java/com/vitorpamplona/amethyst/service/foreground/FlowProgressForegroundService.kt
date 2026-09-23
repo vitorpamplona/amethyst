@@ -42,6 +42,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -93,6 +94,15 @@ abstract class FlowProgressForegroundService<T> : Service() {
 
     /** When non-null, re-render the card on this cadence (for clock-driven text like "time left"). */
     protected open val refreshMs: Long? = null
+
+    /**
+     * How long to keep the service (and whatever it holds up) alive after [isActive] turns
+     * false, before stopping. Lets work that was just handed off asynchronously — e.g. a
+     * broadcast still leaving through the relay pool — finish before the process loses its
+     * foreground protection and gets frozen. A new active emission during the grace keeps
+     * the service running.
+     */
+    protected open val stopGraceMs: Long = 0L
 
     protected abstract fun state(): StateFlow<T>
 
@@ -222,9 +232,11 @@ abstract class FlowProgressForegroundService<T> : Service() {
         onStarted()
         watchJob =
             scope.launch {
-                state().collect { value ->
+                state().collectLatest { value ->
                     onEmission(value)
                     if (!isActive(value)) {
+                        // collectLatest: a new active emission cancels this pending stop.
+                        if (stopGraceMs > 0) delay(stopGraceMs)
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
                     } else {
