@@ -37,13 +37,14 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -73,7 +74,7 @@ fun MyAsyncImage(
         val ratio = MediaAspectRatioCache.get(imageUrl)
         val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
 
-        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
+        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center) {
             if (it) {
                 SubcomposeAsyncImage(
                     model = imageUrl,
@@ -154,11 +155,3 @@ fun MyAsyncImage(
         }
     }
 }
-
-fun isAnimatedMediaUrl(url: String): Boolean =
-    url.endsWith(".gif", ignoreCase = true) ||
-        url.contains(".gif?", ignoreCase = true) ||
-        url.contains(".gif#", ignoreCase = true) ||
-        url.endsWith(".avif", ignoreCase = true) ||
-        url.contains(".avif?", ignoreCase = true) ||
-        url.contains(".avif#", ignoreCase = true)

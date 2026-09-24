@@ -18,19 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.util
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import android.content.ClipData
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.Clipboard
+import android.graphics.drawable.Animatable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import coil3.Image
+import coil3.asDrawable
 
-suspend fun Clipboard.setText(text: String) {
-    setClipEntry(ClipEntry(ClipData.newPlainText("", text)))
+@Composable
+internal actual fun AnimatedImageAutoPlay(
+    image: Image?,
+    autoPlay: Boolean,
+) {
+    val resources = LocalContext.current.resources
+    // asDrawable wraps a bitmap in a new BitmapDrawable on every call; remembering it keeps the
+    // effect below from restarting on each recomposition.
+    val drawable = remember(image, resources) { image?.asDrawable(resources) }
+
+    LaunchedEffect(drawable, autoPlay) {
+        if (drawable is Animatable) {
+            if (autoPlay) drawable.start() else drawable.stop()
+        }
+    }
 }
-
-suspend fun Clipboard.getText(): String? =
-    getClipEntry()
-        ?.clipData
-        ?.getItemAt(0)
-        ?.text
-        ?.toString()

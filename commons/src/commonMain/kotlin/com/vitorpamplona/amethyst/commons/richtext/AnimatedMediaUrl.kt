@@ -18,31 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.commons.richtext
 
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+/** True for GIF urls (path ends in `.gif`, optionally followed by a query or fragment). */
+fun isAnimatedGifUrl(url: String): Boolean =
+    url.endsWith(".gif", ignoreCase = true) ||
+        url.contains(".gif?", ignoreCase = true) ||
+        url.contains(".gif#", ignoreCase = true)
 
-@Composable
-fun <T> CrossfadeIfEnabled(
-    targetState: T,
-    modifier: Modifier = Modifier,
-    contentAlignment: Alignment = Alignment.TopStart,
-    animationSpec: FiniteAnimationSpec<Float> = tween(),
-    label: String = "Crossfade",
-    accountViewModel: AccountViewModel,
-    content: @Composable (T) -> Unit,
-) = CrossfadeIfEnabled(
-    targetState = targetState,
-    enabled = !accountViewModel.settings.isPerformanceMode(),
-    modifier = modifier,
-    contentAlignment = contentAlignment,
-    animationSpec = animationSpec,
-    label = label,
-    content = content,
-)
+/** True for AVIF urls (path ends in `.avif`, optionally followed by a query or fragment). */
+fun isAvifUrl(url: String): Boolean =
+    url.endsWith(".avif", ignoreCase = true) ||
+        url.contains(".avif?", ignoreCase = true) ||
+        url.contains(".avif#", ignoreCase = true)
+
+/** True for GIF/AVIF urls, which may animate and so bypass still-image pipelines like the avatar thumbnail cache. */
+fun isAnimatedMediaUrl(url: String): Boolean = isAnimatedGifUrl(url) || isAvifUrl(url)

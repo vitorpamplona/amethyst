@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.people_list_explainer
 import com.vitorpamplona.amethyst.commons.resources.people_list_title
 import com.vitorpamplona.amethyst.commons.resources.picture_url
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory

@@ -18,21 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.bottombars
+package com.vitorpamplona.amethyst.commons.ui.navigation.bottombars
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 
 /**
- * Reserves the visual space the [AppBottomBar] occupies on root tab entries so a
+ * Reserves the visual space the `AppBottomBar` occupies on root tab entries so a
  * FloatingActionButton stays at the same vertical position whether or not the bar is
- * rendered. [AppBottomBar] hides itself on canPop entries (drawer pushes, in-app
- * navigations) — without this padding the FAB drops by [AppBottomBarHeight] there.
+ * rendered. `AppBottomBar` hides itself on canPop entries (drawer pushes, in-app
+ * navigations) — without this padding the FAB drops by `AppBottomBarHeight` there.
  *
  * The system-navigation-bar inset is already handled by the surrounding Scaffold, so
  * only the bar's content height needs to be reserved.

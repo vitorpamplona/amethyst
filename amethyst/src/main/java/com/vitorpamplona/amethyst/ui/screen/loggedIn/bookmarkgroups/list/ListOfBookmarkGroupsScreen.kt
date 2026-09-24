@@ -45,11 +45,11 @@ import com.vitorpamplona.amethyst.commons.nip51Lists.ui.ListOfBookmarkGroupsFeed
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
 import com.vitorpamplona.amethyst.commons.resources.follow_set_create_btn_label
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

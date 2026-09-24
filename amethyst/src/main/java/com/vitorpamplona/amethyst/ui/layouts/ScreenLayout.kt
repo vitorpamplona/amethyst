@@ -29,52 +29,14 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-
-/** How the app shell presents its top-level navigation for the current window size. */
-enum class NavigationStyle {
-    /** Compact windows (phones): bottom navigation bar + modal drawer. */
-    BOTTOM_BAR,
-
-    /**
-     * Every non-Compact window that does not dock — portrait tablets and unfolded foldables at
-     * any width, plus short landscape windows: a left navigation rail replaces the bottom bar
-     * and the drawer stays modal behind the rail's avatar button.
-     */
-    NAV_RAIL,
-
-    /** Wide, landscape, tall windows (landscape tablets, desktop): the drawer docks permanently on the left. */
-    PERMANENT_DRAWER,
-}
-
-/**
- * The shell layout decisions for the current window, published once per window size change
- * through [LocalScreenLayout] so every screen, bar and panel agrees on the same tier.
- */
-@Immutable
-data class ScreenLayoutSpec(
-    val navigationStyle: NavigationStyle,
-    val hasRoomForNotificationPanel: Boolean,
-) {
-    /**
-     * True on the rail and permanent-drawer tiers. Large screens hide the bottom bar and pin
-     * the top/bottom chrome (no disappearing bars on scroll).
-     */
-    val isLargeScreen: Boolean get() = navigationStyle != NavigationStyle.BOTTOM_BAR
-
-    companion object {
-        val Phone = ScreenLayoutSpec(NavigationStyle.BOTTOM_BAR, hasRoomForNotificationPanel = false)
-    }
-}
-
-val LocalScreenLayout = compositionLocalOf { ScreenLayoutSpec.Phone }
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 
 /**
  * Minimum window width for the docked notification panel: a leading navigation pane, a

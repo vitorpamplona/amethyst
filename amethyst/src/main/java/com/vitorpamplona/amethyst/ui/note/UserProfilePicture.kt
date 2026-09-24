@@ -21,47 +21,38 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.profile_image_of_user
 import com.vitorpamplona.amethyst.commons.resources.unknown_author
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ScoreTag
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
-import com.vitorpamplona.amethyst.commons.ui.theme.Font6SP
-import com.vitorpamplona.amethyst.commons.ui.theme.Font8SP
-import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
@@ -526,84 +517,6 @@ fun ScoreTag55Preview() {
 }
 
 @Composable
-fun ScoreTag(
-    score: Int,
-    size: Dp,
-    modifier: Modifier,
-) {
-    if (size > 34.dp) {
-        ScoreTagRegular(score, modifier)
-    } else if (size > 23.dp) {
-        ScoreTagSmall(score, modifier)
-    } else {
-        ScoreTagSmallest(score, modifier)
-    }
-}
-
-@Composable
-fun ScoreTagRegular(
-    score: Int,
-    modifier: Modifier,
-) {
-    Text(
-        text = score.toString(),
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-        fontSize = Font10SP,
-        maxLines = 1,
-        overflow = TextOverflow.Clip,
-        lineHeight = Font10SP,
-        modifier =
-            modifier
-                .clip(SmallBorder)
-                .background(Color.Black)
-                .padding(horizontal = 4.dp, vertical = 0.dp),
-    )
-}
-
-@Composable
-fun ScoreTagSmall(
-    score: Int,
-    modifier: Modifier,
-) {
-    Text(
-        text = score.toString(),
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-        fontSize = Font8SP,
-        maxLines = 1,
-        overflow = TextOverflow.Clip,
-        lineHeight = Font8SP,
-        modifier =
-            modifier
-                .clip(SmallBorder)
-                .background(Color.Black)
-                .padding(horizontal = 3.dp, vertical = 0.dp),
-    )
-}
-
-@Composable
-fun ScoreTagSmallest(
-    score: Int,
-    modifier: Modifier,
-) {
-    Text(
-        text = score.toString(),
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-        fontSize = Font6SP,
-        maxLines = 1,
-        overflow = TextOverflow.Clip,
-        lineHeight = Font6SP,
-        modifier =
-            modifier
-                .clip(SmallBorder)
-                .background(Color.Black)
-                .padding(horizontal = 2.dp, vertical = 0.dp),
-    )
-}
-
-@Composable
 fun WatchProfilePicture(
     baseUser: User,
     accountViewModel: AccountViewModel,
@@ -623,22 +536,17 @@ fun InnerUserPicture(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val myImageModifier =
-        remember {
-            modifier.size(size).clip(shape = CircleShape)
-        }
-
-    RobohashFallbackAsyncImage(
-        robot = userHex,
-        model = userPicture,
+    UserAvatar(
+        userHex = userHex,
+        pictureUrl = userPicture,
+        size = size,
+        modifier = modifier,
         contentDescription =
             if (userName != null) {
                 stringRes(id = Res.string.profile_image_of_user, userName)
             } else {
                 stringRes(id = Res.string.profile_image)
             },
-        modifier = myImageModifier,
-        contentScale = ContentScale.Crop,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

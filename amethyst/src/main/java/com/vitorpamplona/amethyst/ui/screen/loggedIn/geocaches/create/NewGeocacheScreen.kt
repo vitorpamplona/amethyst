@@ -100,12 +100,12 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_photo_remove
 import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

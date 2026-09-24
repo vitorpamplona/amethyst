@@ -51,13 +51,13 @@ import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)

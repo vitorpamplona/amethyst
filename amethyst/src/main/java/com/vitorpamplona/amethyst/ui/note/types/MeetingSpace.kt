@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space_unknown
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_presence_listening
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_on_stage
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_raised_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_speaking
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
@@ -71,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -140,7 +141,7 @@ fun RenderMeetingSpaceEventInner(
 
         Spacer(modifier = StdHorzSpacer)
 
-        CrossfadeIfEnabled(targetState = status, label = "MeetingSpaceStatus", accountViewModel = accountViewModel) {
+        CrossfadeIfEnabled(targetState = status, label = "MeetingSpaceStatus") {
             when (it) {
                 MeetingSpaceStatusTag.STATUS.LIVE -> {
                     MeetingSpaceOpenFlag()
@@ -295,7 +296,7 @@ fun RenderMeetingRoomEventInner(
 
         Spacer(modifier = StdHorzSpacer)
 
-        CrossfadeIfEnabled(targetState = status, label = "MeetingRoomStatus", accountViewModel = accountViewModel) {
+        CrossfadeIfEnabled(targetState = status, label = "MeetingRoomStatus") {
             when (it) {
                 StatusTag.STATUS.LIVE -> {
                     media?.let {

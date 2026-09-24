@@ -61,11 +61,11 @@ import org.junit.Test
  * [aCancelledImeAnimationMustNotWedgeTheAnimatedInset] FAILS on every version from 1.4.0 on, so it
  * is [Ignore]d to keep CI green. It is not a test of Amethyst code — it is the upstream repro we
  * attached to the bug. **Re-run it by hand after every Compose upgrade**: when it passes, the
- * upstream fix has landed and [com.vitorpamplona.amethyst.ui.insets.SafeImeInsets] can be retired.
+ * upstream fix has landed and [com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] can be retired.
  *
  * [theAnimationTargetSurvivesTheWedge] documents the asymmetry that makes a workaround possible
  * and is expected to PASS — `updateImeAnimationTarget` is called outside the guard. It stays
- * enabled, because it guards the premise [com.vitorpamplona.amethyst.ui.insets.SafeImeInsets]
+ * enabled, because it guards the premise [com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets]
  * depends on: if a future Compose release stopped keeping `imeAnimationTarget` current, our
  * fallback would silently start reading a dead value too.
  */

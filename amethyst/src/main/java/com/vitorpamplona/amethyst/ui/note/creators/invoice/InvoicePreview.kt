@@ -47,12 +47,12 @@ import com.vitorpamplona.amethyst.commons.resources.invoice_expired
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
 import com.vitorpamplona.amethyst.ui.components.PaymentCardDescription
@@ -85,7 +85,7 @@ fun MayBeInvoicePreview(
     accountViewModel: AccountViewModel,
 ) {
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
-        CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
+        CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
             if (it != null) {
                 InvoicePreview(it.invoice, it.amount, it.description, it.expiresAt, accountViewModel)
             } else {

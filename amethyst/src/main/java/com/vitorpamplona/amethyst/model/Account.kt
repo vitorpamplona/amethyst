@@ -2076,7 +2076,7 @@ class Account(
                     // blessed status. 40002 survives only as a read-compat tail from the
                     // 10002 -> 40001 -> 40002 migration, so we were the last active writer of a kind
                     // their clients no longer thread on. Reading 40002 stays supported (see
-                    // [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply]).
+                    // [com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply]).
                     //
                     // Attached media rides as URLs appended to the content.
                     val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id

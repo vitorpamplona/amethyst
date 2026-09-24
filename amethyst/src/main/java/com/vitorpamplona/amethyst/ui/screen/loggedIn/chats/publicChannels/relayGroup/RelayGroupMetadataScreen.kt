@@ -103,12 +103,12 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_no_nip29
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap

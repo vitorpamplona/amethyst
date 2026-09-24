@@ -54,7 +54,6 @@ fun WoTBadgedAvatar(
     contentDescription: String? = null,
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
-    useThumbnailCache: Boolean = false,
 ) {
     val service = LocalWoTService.current
     val ready = LocalWoTReady.current
@@ -75,7 +74,6 @@ fun WoTBadgedAvatar(
         contentDescription = contentDescription,
         loadProfilePicture = loadProfilePicture,
         loadRobohash = loadRobohash,
-        useThumbnailCache = useThumbnailCache,
         badge =
             if (score > 0) {
                 {

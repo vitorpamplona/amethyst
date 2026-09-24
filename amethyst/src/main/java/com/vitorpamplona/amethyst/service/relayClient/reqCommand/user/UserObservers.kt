@@ -47,10 +47,13 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAboutMe as sharedObserveUserAboutMe
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserBanner as sharedObserveUserBanner
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo as sharedObserveUserInfo
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture as sharedObserveUserPicture
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -86,113 +89,30 @@ fun observeUserNickname(
     return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedNickname(user) })
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserAboutMe(
     user: User,
     accountViewModel: AccountViewModel,
-): State<String> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+): State<String> = sharedObserveUserAboutMe(user, accountViewModel.dataSources().userFinder, accountViewModel.account)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user.metadata().flow.map {
-                it?.info?.about ?: ""
-            }
-        }
-
-    return flow.collectAsStateWithLifecycle(
-        user
-            .metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.about ?: "",
-    )
-}
-
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserInfo(
     user: User,
     accountViewModel: AccountViewModel,
-): State<UserInfo?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+): State<UserInfo?> = sharedObserveUserInfo(user, accountViewModel.dataSources().userFinder, accountViewModel.account)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    return user.metadata().flow.collectAsStateWithLifecycle()
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserBanner(
     user: User,
     accountViewModel: AccountViewModel,
-): State<String?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+): State<String?> = sharedObserveUserBanner(user, accountViewModel.dataSources().userFinder, accountViewModel.account)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .metadata()
-                .flow
-                .map {
-                    it?.info?.banner
-                }.distinctUntilChanged()
-        }
-
-    return flow.collectAsStateWithLifecycle(
-        user
-            .metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.banner,
-    )
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserPicture(
     user: User,
     accountViewModel: AccountViewModel,
     subscribe: Boolean = true,
-): State<String?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    // Callers that already hold a single shared subscription for the same user
-    // (e.g. an author avatar that also observes the contact-card score) can pass
-    // subscribe = false to avoid setting up a redundant relay subscription.
-    if (subscribe) {
-        UserFinderFilterAssemblerSubscription(user, accountViewModel)
-    }
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .metadata()
-                .flow
-                .map {
-                    it?.info?.picture
-                }.distinctUntilChanged()
-        }
-
-    return flow.collectAsStateWithLifecycle(
-        user
-            .metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.picture,
-    )
-}
+): State<String?> = sharedObserveUserPicture(user, accountViewModel.dataSources().userFinder, accountViewModel.account, subscribe)
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable

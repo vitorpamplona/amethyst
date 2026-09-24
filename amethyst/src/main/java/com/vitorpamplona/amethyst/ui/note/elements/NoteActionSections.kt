@@ -70,10 +70,10 @@ import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
 import com.vitorpamplona.amethyst.commons.resources.unpin_from_profile
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

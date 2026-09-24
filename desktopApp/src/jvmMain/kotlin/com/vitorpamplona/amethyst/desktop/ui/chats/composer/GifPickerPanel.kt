@@ -49,10 +49,10 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
-import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
 import kotlinx.coroutines.delay
 
 /**

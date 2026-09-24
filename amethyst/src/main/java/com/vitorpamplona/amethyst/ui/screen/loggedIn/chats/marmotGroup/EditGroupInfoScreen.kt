@@ -56,12 +56,12 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

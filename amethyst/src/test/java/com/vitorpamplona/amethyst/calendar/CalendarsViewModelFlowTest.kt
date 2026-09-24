@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.calendar
 
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -33,16 +34,17 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -79,24 +81,6 @@ class CalendarsViewModelFlowTest {
 
     @After
     fun tearDown() {
-        // Unconfined makes cancellation finish synchronously ON THE CANCELLING THREAD, which is
-        // what the class comment above describes — but it does not cover the upstreams. Every
-        // derived flow is `flowOn(Dispatchers.Default)`, so those run on the pool, and a cancelled
-        // one completes on a Default worker and resumes its Main-side parent from there. If
-        // `resetMain()` already ran, that resume throws `IllegalStateException: Dispatchers.Main
-        // was accessed when the platform dispatcher was absent` on a background thread.
-        //
-        // Nothing here fails when it happens. The next test in the JVM to call `runTest` does,
-        // with `UncaughtExceptionsBeforeTest` — for a long time that was
-        // `Nip46ConsentInfoBuilderTest`, which is innocent and passes in isolation.
-        //
-        // So: drain the pool while Main is still valid. Same mitigation as the sibling suite
-        // `CalendarsViewModelTest`, and the same caveat — there is no public handle on
-        // viewModelScope's Job to join and a pool has no "everything queued has run" barrier, so
-        // this closes the window rather than removing it. The real fix is for the ViewModel to
-        // take its dispatcher as a parameter.
-        runBlocking { withContext(Dispatchers.Default) { yield() } }
-
         Dispatchers.resetMain()
     }
 
@@ -157,14 +141,20 @@ class CalendarsViewModelFlowTest {
     ) = runBlocking {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val store = ViewModelStore()
+        var modelScope: Job? = null
         try {
             val feed = FeedContentState(CalendarAppointmentsFeedFilter(seeEverythingAccount()), scope, LocalCache)
             val model = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
+            modelScope = model.viewModelScope.coroutineContext.job
             model.init(pubKey, feed)
             block(model)
         } finally {
             store.clear()
             scope.cancel()
+            // Clearing only requests cancellation. The flowOn producers on Dispatchers.Default can
+            // still be finishing and hand their completion back to the Main collectors; wait for
+            // them here, while setMain is still in force, not after tearDown's resetMain.
+            withTimeout(AWAIT_MS) { modelScope?.join() }
         }
     }
 

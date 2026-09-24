@@ -63,11 +63,11 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_d
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_manual
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_yours
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -360,7 +360,6 @@ private fun DiscoverCoordinators(
     CrossfadeIfEnabled(
         targetState = result,
         label = "cordn-discovery",
-        accountViewModel = accountViewModel,
     ) { found ->
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (found == null) return@Column
