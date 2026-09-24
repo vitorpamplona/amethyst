@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -120,5 +121,62 @@ class AppPreferenceStoresTest {
             assertNull("a file with no migration must stay untouched", subject.sharedSettings().data.first()[marker])
 
             assertTrue("cashu_npubA" in asked && "cashu_npubB" in asked && "shared_settings" in asked)
+        }
+
+    /**
+     * Releasing a store lets the same file be opened again.
+     *
+     * DataStore's registry is keyed by path and `cancel()` only asks, so this is
+     * only safe because [AppPreferenceStores.release] joins the scope's job.
+     * Without the join this test is exactly the "multiple DataStores active for
+     * the same file" crash.
+     */
+    @Test
+    fun aReleasedStoreCanBeReopenedAndStillHasItsData() =
+        runTest {
+            val key = stringPreferencesKey("k")
+            val subject = stores()
+
+            subject.getDataStore("reopen").edit { it[key] = "written once" }
+
+            assertTrue("something was open", subject.release("reopen"))
+            assertFalse("and now nothing is", subject.release("reopen"))
+
+            // a genuinely new instance over the same file
+            val reopened = subject.getDataStore("reopen")
+            assertEquals("written once", reopened.data.first()[key])
+        }
+
+    /**
+     * The guard the Cashu and UI copies both rest on, now checked the way it
+     * actually happens at runtime: the migration runs when the file is first
+     * opened, and must not run again when a later instance opens the same file.
+     */
+    @Test
+    fun aMigrationRunsOnceEvenAcrossAReopen() =
+        runTest {
+            val marker = stringPreferencesKey("copied")
+            var runs = 0
+
+            val subject =
+                AppPreferenceStores(
+                    rootFilesDir = { folder.root.toOkioPath() },
+                    migrations = {
+                        listOf(
+                            CopyOnceMigration("migrated.once") { out ->
+                                runs++
+                                out[marker] = "run $runs"
+                            },
+                        )
+                    },
+                )
+
+            assertEquals("run 1", subject.getDataStore("once").data.first()[marker])
+            assertEquals(1, runs)
+
+            subject.release("once")
+
+            assertEquals("still the first copy", "run 1", subject.getDataStore("once").data.first()[marker])
+            assertEquals("the migration must not run a second time", 1, runs)
         }
 }

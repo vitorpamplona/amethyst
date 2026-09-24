@@ -30,6 +30,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import okio.Path
 
 /**
@@ -116,6 +118,33 @@ class AppPreferenceStores(
 
     /** The file UI, Tor, OTS, Namecoin and friends share. */
     fun sharedSettings(): DataStore<Preferences> = getDataStore(SHARED_SETTINGS)
+
+    /**
+     * Releases the store for [name], so the file can be opened again.
+     *
+     * DataStore keeps a process-wide registry keyed by path and refuses a second
+     * live instance, and `cancel()` only *asks* a scope to stop — the registry
+     * entry survives until the owning job actually completes, which is why this
+     * joins. Getting that wrong produced "there are multiple DataStores active
+     * for the same file" twice in this codebase already.
+     *
+     * Production has no reason to call this: these stores live as long as the
+     * process. It exists so a test can write a file, let go of it, and reopen it
+     * to check what is actually on disk — the one thing that was impossible
+     * before, and the reason the migration-guard test had to be driven against
+     * the DataMigration directly instead.
+     *
+     * Returns false if nothing was open under that name.
+     */
+    suspend fun release(name: String): Boolean {
+        val entry = storeCache.get(name) ?: return false
+
+        entry.scope.cancel()
+        entry.scope.coroutineContext.job
+            .join()
+        storeCache.remove(name)
+        return true
+    }
 
     /**
      * The names of stores already on disk whose name starts with [prefix].

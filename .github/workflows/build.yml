@@ -380,9 +380,25 @@ jobs:
       # variants are compile-equivalent for unit-test purposes; running all six
       # adds ~5× the kotlinc work without catching new defects on PRs. Push to
       # main still gets the full test matrix via the production-build path.
+      # Memory caps, CI-only. gradle.properties asks for -Xmx6g (Gradle) plus
+      # -Xmx8g and 2g metaspace (Kotlin daemon), which is ~16GB of ceiling on a
+      # 16GB ubuntu-latest runner before the launcher JVM, Lint's fork and the
+      # KSP workers are counted. Every other job stays well under it; this one
+      # runs two lint variants, two flavours of unit tests and
+      # assembleBenchmark, and it is the only job that has died — five times,
+      # each mid-compile or mid-lint, reported as "the runner has received a
+      # shutdown signal", which is what the Linux OOM killer taking the runner
+      # agent looks like from the outside.
+      #
+      # Overridden here rather than in gradle.properties so local builds on
+      # bigger machines keep the headroom. 4g apiece was verified to complete
+      # lintFdroidBenchmark and both unit-test tasks; it trades some build time
+      # for a job that finishes.
       - name: Test + Build Android (gradle)
         run: |
           ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             :amethyst:lintFdroidBenchmark \
             :amethyst:lintPlayBenchmark \
             :quartz:jvmTest \
