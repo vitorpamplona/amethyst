@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.extractEventId
 import com.vitorpamplona.amethyst.commons.scheduledposts.extractFirstMediaUrl
 import com.vitorpamplona.amethyst.commons.scheduledposts.ui.MediaThumbnail
 import com.vitorpamplona.amethyst.commons.ui.components.SwipeToDeleteWithConfirmation
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
@@ -131,7 +132,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot

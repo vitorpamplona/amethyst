@@ -18,19 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.util
+package com.vitorpamplona.amethyst.commons.ui.components.util
 
-import android.content.ClipData
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 
-suspend fun Clipboard.setText(text: String) {
-    setClipEntry(ClipEntry(ClipData.newPlainText("", text)))
-}
+/** Puts [text] on the system clipboard as plain text. */
+expect suspend fun Clipboard.setText(text: String)
 
-suspend fun Clipboard.getText(): String? =
-    getClipEntry()
-        ?.clipData
-        ?.getItemAt(0)
-        ?.text
-        ?.toString()
+/** The clipboard's current plain text, or null when it holds none. */
+expect suspend fun Clipboard.getText(): String?

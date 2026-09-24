@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold as SharedDisappearingScaffold
 

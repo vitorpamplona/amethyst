@@ -56,8 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_invite_error_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_link_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_share
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException

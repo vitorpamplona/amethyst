@@ -18,26 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop
+package com.vitorpamplona.amethyst.commons.ui.components.util
 
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
-import java.awt.datatransfer.DataFlavor
-import java.awt.datatransfer.StringSelection
-import java.awt.datatransfer.Transferable
+import platform.UIKit.UIPasteboard
 
-@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
-suspend fun Clipboard.setText(text: String) {
-    setClipEntry(ClipEntry(StringSelection(text)))
+// Reads and writes the general pasteboard directly: plain text needs nothing from ClipEntry here.
+actual suspend fun Clipboard.setText(text: String) {
+    UIPasteboard.generalPasteboard.string = text
 }
 
-@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
-suspend fun Clipboard.getText(): String? {
-    val entry = getClipEntry() ?: return null
-    val transferable = entry.nativeClipEntry as? Transferable ?: return null
-    return try {
-        transferable.getTransferData(DataFlavor.stringFlavor) as? String
-    } catch (_: Exception) {
-        null
-    }
-}
+actual suspend fun Clipboard.getText(): String? = UIPasteboard.generalPasteboard.string

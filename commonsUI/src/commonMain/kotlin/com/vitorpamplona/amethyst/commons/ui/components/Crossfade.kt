@@ -35,20 +35,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastForEach
 
 /**
- * [Crossfade][MyCrossfade] between [targetState]s when [enabled], a plain swap otherwise (the app
- * turns it off in performance mode). The animated path defers building its transition until the
- * target first changes; see [DeferredCrossfade].
+ * Whether decorative animations run. The app turns them off in performance mode by providing
+ * `false` near its root; [CrossfadeIfEnabled] follows it unless told otherwise.
+ */
+val LocalAnimationsEnabled = staticCompositionLocalOf { true }
+
+/**
+ * [Crossfade][MyCrossfade] between [targetState]s when [enabled], a plain swap otherwise. By default
+ * [enabled] follows [LocalAnimationsEnabled]. The animated path defers building its transition until
+ * the target first changes; see [DeferredCrossfade].
  */
 @Composable
 fun <T> CrossfadeIfEnabled(
     targetState: T,
-    enabled: Boolean,
+    enabled: Boolean = LocalAnimationsEnabled.current,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
     animationSpec: FiniteAnimationSpec<Float> = tween(),

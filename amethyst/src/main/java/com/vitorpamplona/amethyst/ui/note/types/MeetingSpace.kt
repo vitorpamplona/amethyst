@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space_unknown
