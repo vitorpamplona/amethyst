@@ -18,39 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
+package com.vitorpamplona.amethyst.commons.relayauth
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.flow.first
-import java.io.File
-import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Single-file DataStore-backed [RelayAuthPermissionStore]. All per-relay ALLOW/DENY overrides
- * live in one `datastore/relay_auth.preferences_pb` file; a SHA-256 prefix of the URL is the
- * key so the URL itself is safe in the file (stored separately for reverse-lookup in [allDecisions]).
+ * Per-account NIP-42 ALLOW/DENY overrides, in one `relay_auth` store inside that
+ * account's own directory so a DENY for one account never leaks into another.
+ *
+ * A SHA-256 prefix of the relay URL is the key, so the URL itself is not a key
+ * in the file; it is stored separately under its own prefix for the reverse
+ * lookup [allDecisions] needs.
+ *
+ * Takes the store rather than the directory. DataStore throws if two instances
+ * are ever live on one file, and an account can be built more than once in a
+ * process (re-login, cache races), so the caller has to hand in a store it
+ * keeps — see AccountCacheState, which caches one holder per account.
  */
 class DataStoreRelayAuthPermissionStore(
-    private val filesDir: File,
+    private val store: DataStore<Preferences>,
 ) : RelayAuthPermissionStore {
-    constructor(context: Context) : this(context.applicationContext.filesDir)
-
-    // DataStore v1 throws if two instances are ever active on the same file. loadAccount can build
-    // this store more than once for the same account (re-login, cache races), so the underlying
-    // DataStore is shared per absolute file path across the process instead of created per instance.
-    private val store: DataStore<Preferences> get() = dataStoreFor(File(filesDir, "datastore/relay_auth.preferences_pb"))
-
     override suspend fun loadDecision(relayUrl: String): RelayAuthDecision? {
         val raw = store.data.first()[decisionKey(relayUrl)] ?: return null
         return runCatching { RelayAuthDecision.valueOf(raw) }.getOrNull()
@@ -198,14 +193,7 @@ class DataStoreRelayAuthPermissionStore(
     private fun lastUsedKey(relayUrl: String) = stringPreferencesKey("$LAST_USED_PREFIX${hash(relayUrl)}")
 
     companion object {
-        // One DataStore per file path, process-wide. computeIfAbsent runs the factory at most once
-        // per path, so concurrent constructions for the same account share a single active DataStore.
-        private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
-
-        private fun dataStoreFor(file: File): DataStore<Preferences> =
-            stores.computeIfAbsent(file.absolutePath) {
-                PreferenceDataStoreFactory.create(produceFile = { file })
-            }
+        const val FILE_NAME = "relay_auth"
 
         private const val DECISION_PREFIX = "allow:"
         private const val URL_PREFIX = "url:"
@@ -220,9 +208,15 @@ class DataStoreRelayAuthPermissionStore(
         /** Minimum seconds between last-used refreshes when no new counterparty appears. */
         private const val LAST_USED_REFRESH_SECS = 300L
 
-        private fun hash(relayUrl: String): String {
-            val digest = MessageDigest.getInstance("SHA-256").digest(relayUrl.toByteArray())
-            return digest.take(8).joinToString("") { "%02x".format(it) }
-        }
+        /**
+         * The first 8 bytes of the URL's SHA-256, lower-case hex.
+         *
+         * A stored key, so it has to keep producing exactly what
+         * `MessageDigest.getInstance("SHA-256")` plus `"%02x".format(byte)` did
+         * on Android: a different digest silently drops every decision the user
+         * has made rather than failing. Pinned in
+         * DataStoreRelayAuthPermissionStoreTest.
+         */
+        internal fun hash(relayUrl: String): String = sha256(relayUrl.encodeToByteArray()).copyOfRange(0, 8).toHexKey()
     }
 }

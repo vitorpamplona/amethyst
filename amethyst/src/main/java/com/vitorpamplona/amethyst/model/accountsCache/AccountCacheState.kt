@@ -30,7 +30,9 @@ import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -39,7 +41,6 @@ import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidPublishObligationStore
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -49,6 +50,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +59,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class AccountCacheState(
@@ -88,6 +91,23 @@ class AccountCacheState(
 
     /** Guards [loadAccount]'s check-then-create so concurrent callers can't build twin Accounts. */
     private val loadLock = Any()
+
+    /**
+     * One [AppPreferenceStores] per account directory, kept for the life of the
+     * process.
+     *
+     * [buildAccount] runs again for the same account on re-login and on cache
+     * races, and DataStore throws if a second instance is ever live on a file
+     * that already has one. Caching the holder — rather than the store — keeps
+     * that guarantee for every per-account store that gets added here later,
+     * not just the relay-auth one.
+     */
+    private val accountStoreHolders = LargeCache<String, AppPreferenceStores>()
+
+    private fun storesFor(accountDir: File): AppPreferenceStores =
+        accountStoreHolders.getOrCreate(accountDir.absolutePath) {
+            AppPreferenceStores(rootFilesDir = { accountDir.toOkioPath() })
+        }
 
     fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
@@ -310,7 +330,10 @@ class AccountCacheState(
 
         // Per-account NIP-42 ALLOW/DENY overrides live in this account's own dir, so a DENY for one
         // account never leaks into another (the store used to be a single app-wide file).
-        val relayAuthPermissionStore = DataStoreRelayAuthPermissionStore(accountDir)
+        val relayAuthPermissionStore =
+            DataStoreRelayAuthPermissionStore(
+                storesFor(accountDir).getDataStore(DataStoreRelayAuthPermissionStore.FILE_NAME),
+            )
 
         return Account(
             settings = accountSettings,

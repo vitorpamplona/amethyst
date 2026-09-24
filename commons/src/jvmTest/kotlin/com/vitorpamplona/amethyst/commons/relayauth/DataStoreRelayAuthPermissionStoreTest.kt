@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
+package com.vitorpamplona.amethyst.commons.relayauth
 
-import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -33,14 +33,31 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * Round-trip tests for the DataStore-backed relay-auth permission store. Backed by a real
- * PreferenceDataStore on a per-test temp directory (the store takes a plain filesDir), so it runs
- * on the JVM without Robolectric. A fresh directory per test dodges DataStore's per-file
- * single-instance guard.
+ * PreferenceDataStore on a per-test temp directory, so it runs on the JVM without Robolectric.
+ * A fresh directory per test dodges DataStore's per-file single-instance guard.
  */
 class DataStoreRelayAuthPermissionStoreTest {
     @get:Rule val tmp = TemporaryFolder()
 
-    private fun newStore() = DataStoreRelayAuthPermissionStore(tmp.newFolder())
+    private fun newStore() =
+        DataStoreRelayAuthPermissionStore(
+            AppPreferenceStores(rootFilesDir = { tmp.newFolder().toOkioPath() })
+                .getDataStore(DataStoreRelayAuthPermissionStore.FILE_NAME),
+        )
+
+    /**
+     * The relay-URL hash is a stored key, so it must keep producing exactly what
+     * `MessageDigest.getInstance("SHA-256")` truncated to 8 bytes and formatted
+     * with `"%02x"` produced on Android. A different digest would not throw — it
+     * would silently drop every ALLOW/DENY the user has ever set. Expected values
+     * are SHA-256 prefixes computed outside this codebase.
+     */
+    @Test
+    fun theRelayHashMatchesTheAndroidImplementation() {
+        assertEquals("88b21471340e72df", DataStoreRelayAuthPermissionStore.hash("wss://auth.relay.test"))
+        assertEquals("2535089fcc9a2cf1", DataStoreRelayAuthPermissionStore.hash("wss://other.relay.test"))
+        assertEquals("e3b0c44298fc1c14", DataStoreRelayAuthPermissionStore.hash(""))
+    }
 
     private val relay = "wss://auth.relay.test"
     private val other = "wss://other.relay.test"
