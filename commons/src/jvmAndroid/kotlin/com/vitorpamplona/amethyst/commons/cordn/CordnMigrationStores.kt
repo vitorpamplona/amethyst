@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -70,6 +71,7 @@ object CordnMigrationStores {
                         roomStateBase64 = groupStore.loadRoomState(gid)?.let { CordnRoomStateCodec.encode(it).toBase64() },
                         echoStateBase64 = groupStore.loadEchoState(gid)?.let { EchoStateCodec.encode(it).toBase64() },
                         joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
+                        messages = carriedMessages(groupStore, gid),
                     )
             }
 
@@ -80,6 +82,39 @@ object CordnMigrationStores {
         }
 
         return CordnMigrationSnapshot(accountPubKey, groups, keyPackages = keyPackages)
+    }
+
+    /**
+     * Roughly how much conversation one group contributes to a handoff.
+     *
+     * A migration document is sealed and uploaded to blob hosts whose limits we
+     * do not know, and a handoff that fails because one group is chatty is a
+     * worse outcome than one that carries a deep but bounded history. Budgeted
+     * in bytes rather than messages because a single long message can cost as
+     * much as a hundred short ones.
+     */
+    private const val MESSAGE_BUDGET_BYTES = 512 * 1024
+
+    /**
+     * The newest messages that fit the budget, back in oldest-first order.
+     *
+     * Newest-first while accumulating: if something has to be left behind it
+     * should be the oldest part of the conversation, which is the part least
+     * likely to be missed and the part a reader scrolls to last.
+     */
+    private suspend fun carriedMessages(
+        store: FileCordnGroupStore,
+        gid: String,
+    ): List<String> {
+        var budget = MESSAGE_BUDGET_BYTES
+        return store
+            .loadMessages(gid)
+            .asReversed()
+            .map { CordnDeliveredMessageCodec.encode(it) }
+            .takeWhile { entry ->
+                budget -= entry.length
+                budget > 0
+            }.asReversed()
     }
 
     /**
@@ -106,6 +141,13 @@ object CordnMigrationStores {
         snapshot.groups.forEach { group ->
             val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(root, accountPubKey, group.coordinatorPubKey), cipher)
             store.saveGroup(group.gid, group.clientStateBase64.fromBase64())
+            // Before the cursor, for the same reason the live path writes them in
+            // that order: a seeding that wrote the cursor and then failed would
+            // leave a device holding a cursor past a conversation it never
+            // wrote, with no way to ask for it again.
+            group.messages.forEach { entry ->
+                CordnDeliveredMessageCodec.decodeOrNull(entry)?.let { store.appendMessage(group.gid, it) }
+            }
             // Both halves of the cursor: the writer's snapshot was consistent at
             // fetchCursor (§4.1), and starting behind it would re-fetch
             // messages the state has already advanced past.

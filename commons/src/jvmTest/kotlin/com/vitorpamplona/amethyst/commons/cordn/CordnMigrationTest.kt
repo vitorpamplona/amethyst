@@ -28,6 +28,9 @@ import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnLastResortKeyPackage
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnTipEntry
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnTipInventory
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
@@ -61,6 +64,17 @@ import org.junit.Test
  */
 class CordnMigrationTest {
     private val account = NostrSignerInternal(KeyPair())
+
+    /** Real codec output, so this travels the same bytes the store writes. */
+    private val entryOne =
+        CordnDeliveredMessageCodec.encode(
+            CordnDeliveredMessage(CordnEnvelope.build("aa".repeat(32), 1_757_000_000L, 9, content = "first"), cursor = 1),
+        )
+
+    private val entryTwo =
+        CordnDeliveredMessageCodec.encode(
+            CordnDeliveredMessage(CordnEnvelope.build("aa".repeat(32), 1_757_000_060L, 9, content = "second"), cursor = 2),
+        )
     private val relay = RelayUrlNormalizer.normalize("wss://tip.example")
 
     private val snapshot =
@@ -108,6 +122,39 @@ class CordnMigrationTest {
             assertEquals("cm9vbQ==", received.groups[0].roomStateBase64)
             assertEquals("ZWNobw==", received.groups[0].echoStateBase64)
             assertEquals(listOf("wss://coord.example"), received.groups[0].coordinatorRelays)
+        }
+
+    @Test
+    fun `the conversation travels, because nothing else can carry it`() =
+        runTest {
+            // The one piece of a handoff that has no second source. A group's
+            // MLS state can be re-derived from the coordinator's stream and a
+            // KeyPackage can be republished, but a cordn message is readable
+            // exactly once — at ingest — and the cursor in this very document
+            // has already moved past it. A device seeded without the messages
+            // arrives holding every group and no conversation, for good.
+            val world = World(this)
+            val withHistory =
+                snapshot.copy(
+                    groups = listOf(group("gid-1", cursor = 7, messages = listOf(entryOne, entryTwo))),
+                )
+
+            val received = world.new(account).fetch(world.old().publish(withHistory, setOf(relay)))
+
+            assertEquals(listOf(entryOne, entryTwo), received.groups[0].messages)
+        }
+
+    @Test
+    fun `a group with no history carries no messages field`() =
+        runTest {
+            // The field is additive, so an empty list must not become an empty
+            // array in the document and come back as something other than what
+            // went in — the round-trip equality above depends on it.
+            val world = World(this)
+
+            val received = world.new(account).fetch(world.old().publish(snapshot, setOf(relay)))
+
+            assertEquals(emptyList<String>(), received.groups[0].messages)
         }
 
     @Test
@@ -265,6 +312,7 @@ class CordnMigrationTest {
         gid: String,
         cursor: Long,
         joinedViaRequest: Boolean = false,
+        messages: List<String> = emptyList(),
     ) = CordnMigrationGroup(
         coordinatorPubKey = "cc".repeat(32),
         coordinatorRelays = listOf("wss://coord.example"),
@@ -274,6 +322,7 @@ class CordnMigrationTest {
         roomStateBase64 = "cm9vbQ==",
         echoStateBase64 = "ZWNobw==",
         joinedViaRequest = joinedViaRequest,
+        messages = messages,
     )
 
     /** The two phones, one relay and one storage server, in memory. */

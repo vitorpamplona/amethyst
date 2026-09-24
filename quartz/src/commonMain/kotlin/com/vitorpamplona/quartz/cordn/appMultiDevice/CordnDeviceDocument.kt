@@ -85,6 +85,7 @@ object CordnDeviceDocument {
     private const val ROOM_STATE = "amethystRoomState"
     private const val ECHO_STATE = "amethystEchoState"
     private const val JOINED_VIA_REQUEST = "amethystJoinedViaRequest"
+    private const val MESSAGES = "amethystMessages"
     private const val COORDINATOR_RELAYS = "amethystCoordinatorRelays"
     private const val KEY_PACKAGES = "amethystKeyPackages"
     private const val COORDINATOR_PUBKEY = "coordinator"
@@ -146,6 +147,9 @@ object CordnDeviceDocument {
             put(CLIENT_STATE_FORMAT_FIELD, document.clientStateFormat)
             put(CURSOR, document.cursor)
             document.roomState?.let { put(ROOM_STATE, it) }
+            document.messages
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { entries -> put(MESSAGES, buildJsonArray { entries.forEach { add(JsonPrimitive(it)) } }) }
             document.echoState?.let { put(ECHO_STATE, it) }
             if (document.joinedViaRequest) put(JOINED_VIA_REQUEST, true)
             if (document.coordinatorRelays.isNotEmpty()) {
@@ -169,6 +173,7 @@ object CordnDeviceDocument {
             // client. Either way it is not ours; say so rather than guess.
             clientStateFormat = root.stringOrNull(CLIENT_STATE_FORMAT_FIELD),
             roomState = root.stringOrNull(ROOM_STATE),
+            messages = (root[MESSAGES] as? JsonArray)?.map { (it as JsonPrimitive).content },
             echoState = root.stringOrNull(ECHO_STATE),
             joinedViaRequest = root.boolOrNull(JOINED_VIA_REQUEST) ?: false,
             coordinatorRelays =
@@ -326,6 +331,17 @@ data class CordnGroupDocument(
      * half-typed message gone.
      */
     val roomState: String? = null,
+    /**
+     * The conversation, as `CordnDeliveredMessageCodec` entries, oldest first.
+     *
+     * Additive like [roomState], and the most load-bearing of the additions. A
+     * cordn message is readable exactly once — at ingest — because both of its
+     * seal keys are epoch-derived and the [cursor] this document carries has
+     * already advanced past everything behind it. A device seeded without this
+     * cannot fetch the history back from anywhere: it would arrive holding
+     * every group and no conversation, permanently.
+     */
+    val messages: List<String>? = null,
     /**
      * `base64(EchoStateCodec)` — pending commits and own-message cursors.
      *

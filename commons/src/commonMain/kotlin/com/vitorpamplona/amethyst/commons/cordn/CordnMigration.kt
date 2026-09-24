@@ -113,6 +113,7 @@ class CordnMigration(
                         roomState = group.roomStateBase64,
                         echoState = group.echoStateBase64,
                         joinedViaRequest = group.joinedViaRequest,
+                        messages = group.messages.takeIf { it.isNotEmpty() },
                         coordinatorRelays = group.coordinatorRelays,
                     )
                 val blob = CordnDocumentSeal.seal(document, dek)
@@ -252,6 +253,7 @@ class CordnMigration(
                     roomStateBase64 = document.roomState,
                     echoStateBase64 = document.echoState,
                     joinedViaRequest = document.joinedViaRequest,
+                    messages = document.messages.orEmpty(),
                 )
             }
 
@@ -335,4 +337,6 @@ data class CordnMigrationGroup(
     val roomStateBase64: String? = null,
     val echoStateBase64: String? = null,
     val joinedViaRequest: Boolean = false,
+    /** The conversation, as `CordnDeliveredMessageCodec` entries, oldest first. */
+    val messages: List<String> = emptyList(),
 )

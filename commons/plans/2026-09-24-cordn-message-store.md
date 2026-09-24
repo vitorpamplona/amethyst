@@ -133,9 +133,16 @@ joined-via-request. No messages.
 
 - **Device migration** (`CordnMigrationStores`) is "this device becomes that
   device". Arriving with no history would be the surprising outcome. **Include.**
+  *Done* — as `amethystMessages` on the group document, alongside the other
+  additive `amethyst*` fields, written before the cursor on import for the same
+  reason the live path writes it that way. Bounded per group by
+  `MESSAGE_BUDGET_BYTES`, newest first: these blobs go to hosts whose limits we
+  do not know, and a handoff that fails because one group is chatty is worse
+  than one that carries a deep but bounded history.
 - **Backup** is a recovery artifact whose size the user sees. History could
   multiply it by a large factor. **Exclude for now**, and say so in the backup
-  screen's copy rather than letting someone discover it at restore time.
+  screen's copy rather than letting someone discover it at restore time. *Still
+  open.*
 
 Both are reversible later; the format is versioned.
 
