@@ -180,6 +180,16 @@ private fun CordnGroupChat(
             )
         }
     var pendingVoice by remember { mutableStateOf<RecordingResult?>(null) }
+
+    DisposableEffect(room.gid) {
+        onDispose {
+            // The recorder writes plaintext audio to cacheDir and sendVoiceNote deletes
+            // it after sending. A note recorded and then abandoned — the screen closed,
+            // the room switched — never reached that, so it stayed on disk: an
+            // unencrypted copy of a message that was never even sent.
+            pendingVoice?.file?.delete()
+        }
+    }
     var attachError by remember { mutableStateOf<String?>(null) }
 
     // Why sending says anything at all when it fails: `manager()` is null-safe
@@ -768,51 +778,77 @@ private suspend fun sendAttachment(
         session.manager.group(room.gid)
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
 
-    val orchestrator = state.multiOrchestrator ?: return
+    // The gallery inside the dialog can delete what was picked, which leaves an empty
+    // orchestrator rather than a null one. canPost() now refuses that, but indexing it
+    // blindly here crashed, so it is checked where the index happens too.
+    val orchestrator = state.multiOrchestrator
+    if (orchestrator == null || orchestrator.size() == 0) return
+
     val item = orchestrator.get(0)
     val uri = item.media.uri
     val declaredMime = item.media.mimeType ?: context.contentResolver.getType(uri) ?: CordnBlobUpload.OPAQUE
 
-    // The media-quality slider.
-    val compressed =
-        item.orchestrator.compressIfNeeded(
-            uri = uri,
-            mimeType = declaredMime,
-            compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
-            context = context,
-        )
-    val mime = compressed.contentType ?: declaredMime
+    // Marks the dialog busy: its Send button reads canPost(), which is false while a
+    // tracker says an upload is running. Without this the button stayed live for the
+    // whole upload and a second tap encrypted, uploaded and posted the file twice.
+    state.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
-    // The strip-metadata switch. A file type the stripper does not handle comes back
-    // untouched and says so, which is not a failure — there was nothing to strip.
-    val finalUri =
-        if (state.stripMetadata) {
-            withContext(Dispatchers.IO) { MetadataStripper.strip(compressed.uri, mime, context) }.uri
-        } else {
-            compressed.uri
+    try {
+        // The media-quality slider.
+        val compressed =
+            item.orchestrator.compressIfNeeded(
+                uri = uri,
+                mimeType = declaredMime,
+                compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
+                context = context,
+            )
+        val mime = compressed.contentType ?: declaredMime
+
+        // The strip-metadata switch. A file type the stripper does not handle comes back
+        // untouched and says so, which is not a failure — there was nothing to strip.
+        val finalUri =
+            if (state.stripMetadata) {
+                withContext(Dispatchers.IO) { MetadataStripper.strip(compressed.uri, mime, context) }.uri
+            } else {
+                compressed.uri
+            }
+
+        try {
+            // Name comes from OpenableColumns: `uri.lastPathSegment` is a document id
+            // on a content:// URI, not a filename.
+            val name = resolveDisplayName(context, uri)
+            val bytes =
+                withContext(Dispatchers.IO) { context.contentResolver.openInputStream(finalUri)?.use { it.readBytes() } }
+                    ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
+
+            // Null means the chosen host has no base URL, which is a setting the person can
+            // change — the one failure here that is entirely actionable.
+            val tag =
+                CordnMediaService(accountViewModel.account)
+                    .upload(bytes, mime, name, context, state.selectedServer.baseUrl)
+                    ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
+
+            // Into the room as well, for the same reason every other send is: an
+            // attachment of your own echoes back as an Echo and would otherwise be
+            // invisible to the person who sent it.
+            //
+            // The dialog's description is the message's own content, so an attachment with
+            // something written about it is one message rather than two.
+            room.add(session.manager.send(room.gid, content = state.caption.trim(), tags = arrayOf(tag)))
+        } finally {
+            // Compressing and stripping each write a new file, and both hold the
+            // attachment in the clear. Leaving them in the cache would keep plaintext
+            // copies of a message that is end-to-end encrypted everywhere else — the
+            // same reason the voice path deletes its recording. Both calls no-op on the
+            // user's own file.
+            item.orchestrator.deleteTempUri(finalUri, uri)
+            item.orchestrator.deleteTempUri(compressed.uri, uri)
         }
-
-    // Name and type come from OpenableColumns: `uri.lastPathSegment` is a document id
-    // on a content:// URI, not a filename.
-    val name = resolveDisplayName(context, uri)
-    val bytes =
-        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(finalUri)?.use { it.readBytes() } }
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
-
-    // Null means the chosen host has no base URL, which is a setting the person can
-    // change — the one failure here that is entirely actionable.
-    val tag =
-        CordnMediaService(accountViewModel.account)
-            .upload(bytes, mime, name, context, state.selectedServer.baseUrl)
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
-
-    // Into the room as well, for the same reason every other send is: an
-    // attachment of your own echoes back as an Echo and would otherwise be
-    // invisible to the person who sent it.
-    //
-    // The dialog's description is the message's own content, so an attachment with
-    // something written about it is one message rather than two.
-    room.add(session.manager.send(room.gid, content = state.caption.trim(), tags = arrayOf(tag)))
+    } finally {
+        // Always, not just on success: a failure leaves the dialog up to retry from,
+        // and a tracker stuck "uploading" would keep its Send button dead forever.
+        state.mediaUploadTracker.finishUpload()
+    }
 }
 
 /**

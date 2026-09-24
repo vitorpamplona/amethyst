@@ -99,23 +99,6 @@ internal fun CordnComposer(
     // inequality, so neither direction can bounce off the other.
     val draftState = remember(room.gid) { TextFieldState(room.draft.value) }
 
-    LaunchedEffect(draftState, room) {
-        snapshotFlow { draftState.text.toString() }.collect {
-            if (room.draft.value != it) room.draft.value = it
-        }
-    }
-
-    LaunchedEffect(draftState, room) {
-        room.draft.collect { external ->
-            // The screen writes the draft from outside on three paths: clearing it on
-            // send, restoring it when a send fails, and loading a message's text into
-            // it to edit. Cursor to the end, as editFromDraft does elsewhere.
-            if (external != draftState.text.toString()) {
-                if (external.isEmpty()) draftState.clearText() else draftState.setTextAndPlaceCursorAtEnd(external)
-            }
-        }
-    }
-
     val suggestions =
         remember(room.gid, accountViewModel) {
             UserSuggestionState(
@@ -129,6 +112,26 @@ internal fun CordnComposer(
 
     DisposableEffect(suggestions) {
         onDispose { suggestions.reset() }
+    }
+
+    LaunchedEffect(draftState, room) {
+        snapshotFlow { draftState.text.toString() }.collect {
+            if (room.draft.value != it) room.draft.value = it
+        }
+    }
+
+    LaunchedEffect(draftState, room) {
+        room.draft.collect { external ->
+            // The screen writes the draft from outside on three paths: clearing it on
+            // send, restoring it when a send fails, and loading a message's text into
+            // it to edit. Cursor to the end, as editFromDraft does elsewhere.
+            if (external != draftState.text.toString()) {
+                if (external.isEmpty()) draftState.clearText() else draftState.setTextAndPlaceCursorAtEnd(external)
+                // onTextChanged only fires for typing, so a list left open by a
+                // half-typed "@na" survived the field being cleared on send.
+                suggestions.reset()
+            }
+        }
     }
 
     // A recorded voice note is something to send even with nothing typed; the text
