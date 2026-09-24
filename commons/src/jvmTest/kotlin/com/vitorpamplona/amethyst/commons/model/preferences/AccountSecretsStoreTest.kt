@@ -206,4 +206,94 @@ class AccountSecretsStoreTest {
 
             assertEquals(filled, subject.loadSecrets(npub))
         }
+    // ── the location-chat identity ────────────────────────────────────
+
+    @Test
+    fun anUnmigratedGeohashIdentityReadsAsNull() =
+        runTest {
+            assertNull(stores().loadGeohashIdentity(npub))
+        }
+
+    @Test
+    fun theGeohashIdentityRoundTrips() =
+        runTest {
+            val subject = stores()
+            val value = GeohashIdentitySecrets(deviceSeed = "a".repeat(64), nickname = "vitor")
+
+            subject.saveGeohashIdentity(npub, value)
+
+            assertEquals(value, subject.loadGeohashIdentity(npub))
+        }
+
+    /**
+     * An account that opened a location chat under a bunker signer has a seed but
+     * never set a handle. Absent must come back absent rather than as "".
+     */
+    @Test
+    fun aSeedWithNoNicknameRoundTrips() =
+        runTest {
+            val subject = stores()
+            val value = GeohashIdentitySecrets(deviceSeed = "b".repeat(64), nickname = null)
+
+            subject.saveGeohashIdentity(npub, value)
+
+            assertEquals(value, subject.loadGeohashIdentity(npub))
+        }
+
+    /** An account that holds neither key still counts as migrated, or the copy runs forever. */
+    @Test
+    fun anEmptyGeohashIdentityStillCountsAsMigrated() =
+        runTest {
+            val subject = stores()
+
+            subject.saveGeohashIdentity(npub, GeohashIdentitySecrets())
+
+            assertEquals(GeohashIdentitySecrets(), subject.loadGeohashIdentity(npub))
+        }
+
+    /**
+     * The two groups migrate out of *different* legacy files — the secrets from
+     * `secret_keeper_<npub>`, the identity from `secret_keeper_<pubkey hex>` —
+     * so neither marker may stand in for the other. Saving one must leave the
+     * other reading as not-yet-copied.
+     */
+    @Test
+    fun theTwoGroupsMigrateIndependently() =
+        runTest {
+            val subject = stores()
+
+            subject.saveSecrets(npub, filled)
+
+            assertNull("saving the secrets must not mark the identity migrated", subject.loadGeohashIdentity(npub))
+        }
+
+    @Test
+    fun savingTheIdentityDoesNotMarkTheSecretsMigrated() =
+        runTest {
+            val subject = stores()
+
+            subject.saveGeohashIdentity(npub, GeohashIdentitySecrets(deviceSeed = "c".repeat(64)))
+
+            assertNull(subject.loadSecrets(npub))
+        }
+
+    /**
+     * The seed must survive an unrelated account save. This is the whole reason
+     * the identity is its own group: every save mirrors a full AccountSecrets
+     * built from AccountSettings, which does not hold the seed, and the group
+     * save removes keys whose value is null. Folded into that group, the seed
+     * would be deleted here — and every geohash identity the user has would
+     * silently change.
+     */
+    @Test
+    fun anAccountSaveLeavesTheGeohashIdentityAlone() =
+        runTest {
+            val subject = stores()
+            val identity = GeohashIdentitySecrets(deviceSeed = "d".repeat(64), nickname = "vitor")
+            subject.saveGeohashIdentity(npub, identity)
+
+            subject.saveSecrets(npub, filled)
+
+            assertEquals(identity, subject.loadGeohashIdentity(npub))
+        }
 }

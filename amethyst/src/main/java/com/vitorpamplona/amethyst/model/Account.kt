@@ -759,7 +759,7 @@ class Account(
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
 
     // Anonymous, per-geohash throwaway identities for Bitchat-interoperable location chats.
-    val geohashIdentity = GeohashChatIdentityState(signer)
+    val geohashIdentity = GeohashChatIdentityState(signer, scope)
 
     val muteListDecryptionCache = MuteListDecryptionCache(signer)
     val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)

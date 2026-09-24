@@ -102,6 +102,22 @@ object LegacyAccountSecretNames {
     /** The private key, which lives in its own store rather than in [AccountSecrets]. */
     const val NOSTR_PRIVKEY = "nostr_privkey"
 
+    /**
+     * The location-chat identity, which is [GeohashIdentitySecrets] rather than
+     * part of [AccountSecrets] — see that class for why it is its own group.
+     *
+     * These two sit in `secret_keeper_<pubkey hex>`, not `secret_keeper_<npub>`:
+     * the writer passed `signer.pubKey`, which is hex, where every other caller
+     * passes an npub. They are therefore in a *different file* from everything
+     * else named here, which is why they are deliberately **not** in [all]:
+     * [all] is what `LegacyPreferenceCleanup` treats as claimed in the npub
+     * file, and these never appear in it. That file's deletion cannot lose
+     * them, and cannot clean them up either — retiring the hex file is its own
+     * job, once these writes stop.
+     */
+    const val GEOHASH_DEVICE_SEED = "geohash_chat_device_seed"
+    const val GEOHASH_NICKNAME = "geohash_chat_nickname"
+
     val all =
         setOf(
             NIP46_SIGNER_ENABLED,
@@ -134,4 +150,53 @@ fun readLegacyAccountSecrets(source: LegacyPreferenceSource) =
         defaultPaymentSourceId = source.getString(LegacyAccountSecretNames.DEFAULT_PAYMENT_SOURCE_ID),
         legacyDefaultNwcWalletId = source.getString(LegacyAccountSecretNames.DEFAULT_NWC_WALLET_ID),
         legacyZapPaymentRequestServer = source.getString(LegacyAccountSecretNames.ZAP_PAYMENT_REQUEST_SERVER),
+    )
+
+/**
+ * The account's location-chat identity: the seed its per-geohash throwaway keys
+ * come from, and the handle it posts under.
+ *
+ * # Why this is not two more fields on [AccountSecrets]
+ *
+ * Every account save mirrors a whole [AccountSecrets], built field by field from
+ * `AccountSettings` — which does not hold these, because they are owned by
+ * `GeohashChatIdentityState` rather than by the settings object. Folding them in
+ * would make each save write null over them, and the group save uses
+ * `putOrRemove`, so null *deletes*. The seed would vanish on the next unrelated
+ * save and every geohash identity the user has would silently change. A separate
+ * group with its own save path cannot be wiped by a save that does not know
+ * about it.
+ *
+ * # Why encrypted
+ *
+ * The whole point of the seed is that the identities derived from it are
+ * unlinkable to the npub. Anyone who can read it can link every cell the user
+ * has ever posted in, to each other and to the device, which is exactly what the
+ * feature exists to prevent. It was in an encrypted file before; it stays in one.
+ */
+data class GeohashIdentitySecrets(
+    val deviceSeed: String? = null,
+    val nickname: String? = null,
+)
+
+/** Keys for [GeohashIdentitySecrets] inside an [EncryptedDataStore]. */
+internal object GeohashIdentityKeys {
+    val deviceSeed = stringPreferencesKey(LegacyAccountSecretNames.GEOHASH_DEVICE_SEED)
+    val nickname = stringPreferencesKey(LegacyAccountSecretNames.GEOHASH_NICKNAME)
+
+    /** Records that the one-off copy out of the legacy file has run for this account. */
+    val migrated = stringPreferencesKey("migrated.geohashIdentity")
+}
+
+/**
+ * The location-chat identity as the legacy file holds it.
+ *
+ * Both absent is a real answer — an account that never opened a location chat —
+ * and is why the caller compares against [GeohashIdentitySecrets] rather than
+ * treating null as "not migrated".
+ */
+fun readLegacyGeohashIdentity(source: LegacyPreferenceSource) =
+    GeohashIdentitySecrets(
+        deviceSeed = source.getString(LegacyAccountSecretNames.GEOHASH_DEVICE_SEED),
+        nickname = source.getString(LegacyAccountSecretNames.GEOHASH_NICKNAME),
     )

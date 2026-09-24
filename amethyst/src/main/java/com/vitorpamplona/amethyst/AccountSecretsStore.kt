@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecretsEncryptedStores
+import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.quartz.utils.Log
 import okio.Path.Companion.toOkioPath
 
@@ -97,6 +98,46 @@ class AccountSecretsStore(
      * "falling back and looking migrated" — the read above deliberately cannot.
      */
     suspend fun stored(npub: String): AccountSecrets? = stores.loadSecrets(npub)
+
+    // ── the location-chat identity ────────────────────────────────────
+
+    /**
+     * The account's location-chat identity, migrating out of the legacy file on
+     * first use, on the same terms as [read].
+     *
+     * @param legacy what `secret_keeper_<pubkey hex>` holds. Note the *hex*: this
+     *   group's legacy file is keyed by the signer's pubkey rather than the npub
+     *   every other group uses, so the caller opens a different file for it.
+     */
+    suspend fun readGeohashIdentity(
+        npub: String,
+        legacy: GeohashIdentitySecrets,
+    ): GeohashIdentitySecrets {
+        val stored =
+            try {
+                stores.loadGeohashIdentity(npub)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not read the location-chat identity for $npub; using the legacy file", e)
+                return legacy
+            }
+
+        if (stored != null) return stored
+
+        mirrorGeohashIdentity(npub, legacy)
+        return legacy
+    }
+
+    /** Mirrors a save into the new store. The legacy write stays where it is. */
+    suspend fun mirrorGeohashIdentity(
+        npub: String,
+        value: GeohashIdentitySecrets,
+    ) {
+        try {
+            stores.saveGeohashIdentity(npub, value)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not write the location-chat identity for $npub to the current store", e)
+        }
+    }
 
     suspend fun delete(npub: String) {
         try {

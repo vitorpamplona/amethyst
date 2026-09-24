@@ -182,6 +182,39 @@ class AccountSecretsEncryptedStores(
         }
     }
 
+    // ── the location-chat identity ────────────────────────────────────
+
+    /**
+     * Reads [GeohashIdentitySecrets], or null when this account has not been
+     * copied out of the legacy encrypted file yet.
+     *
+     * Its own marker, not [AccountSecretKeys.migrated]: the two groups migrate
+     * from *different files* (this one from `secret_keeper_<pubkey hex>`, the
+     * secrets from `secret_keeper_<npub>`), so one marker cannot speak for both.
+     */
+    suspend fun loadGeohashIdentity(npub: String): GeohashIdentitySecrets? {
+        val stored = getDataStore(npub).snapshot()
+        if (stored[GeohashIdentityKeys.migrated] == null) return null
+
+        return GeohashIdentitySecrets(
+            deviceSeed = stored[GeohashIdentityKeys.deviceSeed],
+            nickname = stored[GeohashIdentityKeys.nickname],
+        )
+    }
+
+    /** Writes the group and its marker as one edit, for the reasons [saveSecrets] gives. */
+    suspend fun saveGeohashIdentity(
+        npub: String,
+        value: GeohashIdentitySecrets,
+    ) {
+        getDataStore(npub).edit {
+            putOrRemove(GeohashIdentityKeys.deviceSeed, value.deviceSeed)
+            putOrRemove(GeohashIdentityKeys.nickname, value.nickname)
+
+            put(GeohashIdentityKeys.migrated, "true")
+        }
+    }
+
     private fun decodeSet(raw: String?): Set<String> =
         raw
             ?.split(AccountSecretKeys.SET_SEPARATOR)
