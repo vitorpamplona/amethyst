@@ -347,7 +347,7 @@ jobs:
     # workflow, which puts this one past the cap and gets it killed mid-step
     # with no test report. Raising the cap costs nothing on runs that finish
     # early — `timeout-minutes` bounds a job, it does not reserve the time.
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -396,10 +396,31 @@ jobs:
       #
       # Overridden here rather than in gradle.properties so local builds on
       # bigger machines keep the headroom.
+      #
+      # `--max-workers` is the second half, and it is about concurrency rather
+      # than ceilings. The heap numbers above are per-JVM limits; what actually
+      # tips a 16GB runner over is how many heavy JVMs are live at once. Gradle
+      # defaults max-workers to the core count (4 on ubuntu-latest) and
+      # org.gradle.parallel is on, so a cold run can have several kotlinc
+      # workers, a lint fork and a forked test JVM resident alongside the two
+      # daemons.
+      #
+      # Cold is the case that matters. The 4g cap was first validated on a run
+      # that only changed this file, so it restored main's Gradle cache and
+      # built almost nothing; the next PR run that touched `commons`
+      # invalidated that cache, rebuilt from cold, and died the same way at
+      # ~20 minutes. Fewer workers is what makes the cold path fit — dropping
+      # heap further would start starving R8 again, which is the trade the
+      # previous attempt already lost.
+      #
+      # 3 rather than 2: this job is mostly a chain of single-task module
+      # compiles, so the parallelism it loses is small, and halving it risks
+      # the timeout on a cold run. The cap goes to 120 for the same reason.
       - name: Test + Build Android (gradle)
         run: |
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            --max-workers=3 \
             :amethyst:lintFdroidBenchmark \
             :amethyst:lintPlayBenchmark \
             :quartz:jvmTest \
