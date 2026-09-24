@@ -40,12 +40,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_image
+import com.vitorpamplona.amethyst.commons.resources.profile_image_of_user
 import com.vitorpamplona.amethyst.commons.resources.unknown_author
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ScoreTag
-import com.vitorpamplona.amethyst.commons.ui.note.UserPictureImage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
@@ -533,12 +535,17 @@ fun InnerUserPicture(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    UserPictureImage(
+    UserAvatar(
         userHex = userHex,
-        userPicture = userPicture,
-        userName = userName,
+        pictureUrl = userPicture,
         size = size,
         modifier = modifier,
+        contentDescription =
+            if (userName != null) {
+                stringRes(id = Res.string.profile_image_of_user, userName)
+            } else {
+                stringRes(id = Res.string.profile_image)
+            },
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

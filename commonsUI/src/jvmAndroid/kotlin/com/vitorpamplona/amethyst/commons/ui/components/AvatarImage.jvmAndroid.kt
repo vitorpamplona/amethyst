@@ -18,53 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.note
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.profile_image
-import com.vitorpamplona.amethyst.commons.resources.profile_image_of_user
-import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 
-/**
- * A user's round avatar: their picture when [loadProfilePicture] allows it, otherwise (or while
- * loading / on error) their robohash, or a plain face icon when [loadRobohash] is off.
- * Animated pictures play only when [autoPlayGif].
- */
 @Composable
-fun UserPictureImage(
+internal actual fun AvatarImage(
     userHex: String,
-    userPicture: String?,
-    userName: String?,
-    size: Dp,
+    pictureUrl: String?,
+    contentDescription: String?,
     modifier: Modifier,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
 ) {
-    val myImageModifier =
-        remember {
-            modifier.size(size).clip(shape = CircleShape)
-        }
-
     RobohashFallbackAsyncImage(
         robot = userHex,
-        model = userPicture,
-        contentDescription =
-            if (userName != null) {
-                stringRes(id = Res.string.profile_image_of_user, userName)
-            } else {
-                stringRes(id = Res.string.profile_image)
-            },
-        modifier = myImageModifier,
+        model = pictureUrl,
+        contentDescription = contentDescription,
+        modifier = modifier,
         contentScale = ContentScale.Crop,
         loadProfilePicture = loadProfilePicture,
         loadRobohash = loadRobohash,

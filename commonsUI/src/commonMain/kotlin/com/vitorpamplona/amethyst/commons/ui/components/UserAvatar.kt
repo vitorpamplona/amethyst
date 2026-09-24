@@ -20,28 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.DefaultAlpha
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
-import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
-import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 /**
  * Wrapper class for profile picture URLs that signals Coil to use the thumbnail
@@ -54,7 +42,16 @@ data class ProfilePictureUrl(
 )
 
 /**
- * Shared avatar component that displays a user's profile picture with Robohash fallback.
+ * True when the host's Coil pipeline registers a `Fetcher.Factory<ProfilePictureUrl>` (the
+ * avatar thumbnail cache) and the local Blossom cache bridge that strips the profile-picture
+ * request marker. Avatars then load http(s) pictures through that cache. Hosts without them
+ * (desktop, iOS) keep the default `false`, so avatars load the plain URL.
+ */
+val LocalProfilePictureCache = staticCompositionLocalOf { false }
+
+/**
+ * The shared user avatar: the profile picture clipped to a circle, with a Robohash (or a generic
+ * face icon) while it loads, when it fails, or when pictures are turned off.
  *
  * @param userHex The user's public key hex (used for Robohash generation)
  * @param pictureUrl Optional URL to the user's profile picture
@@ -63,7 +60,8 @@ data class ProfilePictureUrl(
  * @param contentDescription Accessibility description
  * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
- * @param useThumbnailCache Whether to use the thumbnail disk cache for faster repeated loads
+ * @param autoPlayGif Whether animated (GIF/AVIF) pictures play. Only Android can animate them;
+ *   desktop shows their first frame either way.
  * @param badge Optional overlay drawn on top of the avatar (bottom-right by
  *   convention). Used by Desktop for the WoT trust-score chip; Android call
  *   sites leave it null. When null the avatar renders as before (no extra
@@ -78,7 +76,7 @@ fun UserAvatar(
     contentDescription: String? = null,
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
-    useThumbnailCache: Boolean = false,
+    autoPlayGif: Boolean = true,
     badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
     if (badge != null) {
@@ -91,7 +89,7 @@ fun UserAvatar(
                 contentDescription = contentDescription,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
-                useThumbnailCache = useThumbnailCache,
+                autoPlayGif = autoPlayGif,
                 badge = null,
             )
             badge()
@@ -106,53 +104,25 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
-    val imageModel: Any? =
-        if (pictureUrl != null && useThumbnailCache) {
-            ProfilePictureUrl(pictureUrl)
-        } else {
-            pictureUrl
-        }
-
-    if (imageModel != null && loadProfilePicture) {
-        // Show profile picture with robohash/icon as fallback
-        val fallbackPainter =
-            if (loadRobohash) {
-                rememberVectorPainter(
-                    image = CachedRobohash.get(userHex, MaterialTheme.colorScheme.isLight),
-                )
-            } else {
-                rememberMaterialSymbolPainter(MaterialSymbols.Face)
-            }
-
-        AsyncImage(
-            model = imageModel,
-            contentDescription = contentDescription,
-            modifier = avatarModifier,
-            placeholder = fallbackPainter,
-            fallback = fallbackPainter,
-            error = fallbackPainter,
-            alignment = Alignment.Center,
-            contentScale = ContentScale.Crop,
-            alpha = DefaultAlpha,
-            colorFilter = null,
-            filterQuality = DrawScope.DefaultFilterQuality,
-        )
-    } else if (loadRobohash) {
-        // Show robohash only
-        Image(
-            imageVector = CachedRobohash.get(userHex, MaterialTheme.colorScheme.isLight),
-            contentDescription = contentDescription,
-            modifier = avatarModifier,
-            contentScale = ContentScale.Crop,
-        )
-    } else {
-        // Show generic icon
-        Image(
-            painter = rememberMaterialSymbolPainter(MaterialSymbols.Face),
-            contentDescription = contentDescription,
-            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-            modifier = avatarModifier,
-            contentScale = ContentScale.Crop,
-        )
-    }
+    AvatarImage(
+        userHex = userHex,
+        pictureUrl = pictureUrl,
+        contentDescription = contentDescription,
+        modifier = avatarModifier,
+        loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
+        autoPlayGif = autoPlayGif,
+    )
 }
+
+/** Draws the avatar picture into an already sized and clipped [modifier]. */
+@Composable
+internal expect fun AvatarImage(
+    userHex: String,
+    pictureUrl: String?,
+    contentDescription: String?,
+    modifier: Modifier,
+    loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
+    autoPlayGif: Boolean,
+)

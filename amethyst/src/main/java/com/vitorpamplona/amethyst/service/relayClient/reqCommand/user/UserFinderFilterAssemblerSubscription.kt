@@ -26,9 +26,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription as SharedUserFinderSubscription
@@ -38,18 +36,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssem
 fun UserFinderFilterAssemblerSubscription(
     user: User,
     accountViewModel: AccountViewModel,
-) = UserFinderFilterAssemblerSubscription(
+) = SharedUserFinderSubscription(
     user,
     accountViewModel.account,
     accountViewModel.dataSources().userFinder,
 )
-
-@Composable
-fun UserFinderFilterAssemblerSubscription(
-    user: User,
-    forAccount: Account,
-    dataSource: UserFinderFilterAssembler,
-) = SharedUserFinderSubscription(user, forAccount, dataSource)
 
 /**
  * Watches all the users that are cited in the parent post.

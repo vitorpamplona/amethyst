@@ -44,6 +44,7 @@ import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
+import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueDark
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueLight
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenDark
@@ -189,6 +190,8 @@ fun AmethystTheme(
             ProvideAppIcons {
                 CompositionLocalProvider(
                     LocalDensity provides scaledDensity,
+                    // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
+                    LocalProfilePictureCache provides true,
                     LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),
                     content = content,
                 )

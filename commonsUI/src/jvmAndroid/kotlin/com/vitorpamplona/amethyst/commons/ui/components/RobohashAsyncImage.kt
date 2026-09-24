@@ -54,7 +54,8 @@ import coil3.Image as CoilImage
 
 /**
  * Plays or pauses an animated avatar (GIF/AVIF) once Coil has decoded it. Android drives the
- * decoded `Animatable` drawable; desktop has no such drawable, so it is a no-op there.
+ * decoded `Animatable` drawable; desktop decodes only the first frame, so there [autoPlay] has
+ * no effect.
  */
 @Composable
 internal expect fun AnimatedImageAutoPlay(
@@ -100,6 +101,7 @@ fun RobohashFallbackAsyncImage(
     loadRobohash: Boolean,
     autoPlayGif: Boolean = true,
 ) {
+    val useThumbnailCache = LocalProfilePictureCache.current
     if (model != null && loadProfilePicture && isAnimatedMediaUrl(model)) {
         GifProfilePicture(
             userHex = robot,
@@ -123,12 +125,13 @@ fun RobohashFallbackAsyncImage(
             }
 
         SubcomposeAsyncImage(
-            // The thumbnail-cache fetcher behind ProfilePictureUrl delegates to Coil's http-only
+            // ProfilePictureUrl only loads where the host registered its thumbnail-cache fetcher
+            // (see LocalProfilePictureCache). That fetcher delegates to Coil's http-only
             // NetworkFetcher, so a LOCAL model (e.g. a decrypted Concord community icon cached at
             // file://) would fail there. Route only remote http(s) pictures through the thumbnail
             // cache; hand local/content URIs to Coil's native fetchers, which load them directly.
             model =
-                if (model.startsWith("http://", ignoreCase = true) || model.startsWith("https://", ignoreCase = true)) {
+                if (useThumbnailCache && (model.startsWith("http://", ignoreCase = true) || model.startsWith("https://", ignoreCase = true))) {
                     ProfilePictureUrl(model)
                 } else {
                     model
@@ -204,19 +207,26 @@ fun GifProfilePicture(
         }
 
     val context = LocalPlatformContext.current
+    val markForLocalBlossom = LocalProfilePictureCache.current
     // Animated avatars skip ProfilePictureFetcher (its thumbnail cache would flatten them), so
-    // they carry the profile-picture marker themselves for the local Blossom cache bridge.
-    val model =
-        remember(userPicture) {
-            ImageRequest
-                .Builder(context)
-                .data(userPicture)
-                .httpHeaders(
-                    NetworkHeaders
-                        .Builder()
-                        .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
-                        .build(),
-                ).build()
+    // they carry the profile-picture marker themselves for the local Blossom cache bridge. Only
+    // hosts that install that bridge (LocalProfilePictureCache) strip the marker before the
+    // request leaves; anywhere else it would reach the image server, so it is not added.
+    val model: Any =
+        remember(userPicture, markForLocalBlossom) {
+            if (markForLocalBlossom) {
+                ImageRequest
+                    .Builder(context)
+                    .data(userPicture)
+                    .httpHeaders(
+                        NetworkHeaders
+                            .Builder()
+                            .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
+                            .build(),
+                    ).build()
+            } else {
+                userPicture
+            }
         }
 
     Box(modifier = modifier) {

@@ -28,5 +28,6 @@ internal actual fun AnimatedImageAutoPlay(
     image: Image?,
     autoPlay: Boolean,
 ) {
-    // Desktop decodes animated avatars without a controllable drawable; nothing to toggle.
+    // Coil on desktop decodes only the first frame of a GIF/AVIF, so there is no animation to
+    // start or stop and autoPlay has no effect here.
 }

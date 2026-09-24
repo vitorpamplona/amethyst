@@ -20,11 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-/** True for GIF/AVIF urls, which may animate and so bypass still-image pipelines like the avatar thumbnail cache. */
-fun isAnimatedMediaUrl(url: String): Boolean =
+/** True for GIF urls (path ends in `.gif`, optionally followed by a query or fragment). */
+fun isAnimatedGifUrl(url: String): Boolean =
     url.endsWith(".gif", ignoreCase = true) ||
         url.contains(".gif?", ignoreCase = true) ||
-        url.contains(".gif#", ignoreCase = true) ||
-        url.endsWith(".avif", ignoreCase = true) ||
+        url.contains(".gif#", ignoreCase = true)
+
+/** True for AVIF urls (path ends in `.avif`, optionally followed by a query or fragment). */
+fun isAvifUrl(url: String): Boolean =
+    url.endsWith(".avif", ignoreCase = true) ||
         url.contains(".avif?", ignoreCase = true) ||
         url.contains(".avif#", ignoreCase = true)
+
+/** True for GIF/AVIF urls, which may animate and so bypass still-image pipelines like the avatar thumbnail cache. */
+fun isAnimatedMediaUrl(url: String): Boolean = isAnimatedGifUrl(url) || isAvifUrl(url)

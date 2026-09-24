@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import android.graphics.drawable.Animatable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import coil3.Image
 import coil3.asDrawable
@@ -33,7 +34,9 @@ internal actual fun AnimatedImageAutoPlay(
     autoPlay: Boolean,
 ) {
     val resources = LocalContext.current.resources
-    val drawable = image?.asDrawable(resources)
+    // asDrawable wraps a bitmap in a new BitmapDrawable on every call; remembering it keeps the
+    // effect below from restarting on each recomposition.
+    val drawable = remember(image, resources) { image?.asDrawable(resources) }
 
     LaunchedEffect(drawable, autoPlay) {
         if (drawable is Animatable) {
