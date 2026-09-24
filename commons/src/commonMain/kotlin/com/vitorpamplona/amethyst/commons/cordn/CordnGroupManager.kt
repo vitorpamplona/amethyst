@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnApplicationMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.ReceivedMessage
@@ -536,7 +537,7 @@ class CordnGroupManager(
         deleteTo: CordnMessageReferences.Target? = null,
         pinTo: CordnMessageReferences.Target? = null,
         pinOp: CordnMessageReferences.PinOp = CordnMessageReferences.PinOp.ADD,
-    ): CordnEnvelope {
+    ): CordnDeliveredMessage {
         editTo?.let { require(it.pubKey == accountPubKey) { "only a message's author can edit it" } }
         deleteTo?.let { require(it.pubKey == accountPubKey) { "only a message's author can delete it" } }
 
@@ -553,13 +554,22 @@ class CordnGroupManager(
         return send(gid, outbound.content, outbound.kind, outbound.tags)
     }
 
-    /** Sends [content] to [gid] as a cordn application message. */
+    /**
+     * Sends [content] to [gid] as a cordn application message.
+     *
+     * Returns the message as the room will hold it, cursor included. The
+     * cursor is the coordinator's, taken from the post's own response, so a
+     * caller that shows the message immediately places it in the same order
+     * the echo would have — [CordnGroupChatroom.ORDER] sorts on it, and a
+     * guessed one would put your own message in the wrong place until the
+     * echo corrected it.
+     */
     suspend fun send(
         gid: String,
         content: String,
         kind: Int = CHAT_KIND,
         tags: Array<Array<String>> = emptyArray(),
-    ): CordnEnvelope {
+    ): CordnDeliveredMessage {
         val group = requireGroup(gid)
         val envelope =
             CordnEnvelope.build(
@@ -570,9 +580,9 @@ class CordnGroupManager(
                 content = content,
             )
         val sealed = CordnApplicationMessage.seal(group, accountPubKey, envelope)
-        call { sync.postMessage(gid, sealed) }
+        val posted = call { sync.postMessage(gid, sealed) }
         persist(gid)
-        return envelope
+        return CordnDeliveredMessage(envelope, posted.cursor)
     }
 
     /** Drains history for every group this manager holds. */

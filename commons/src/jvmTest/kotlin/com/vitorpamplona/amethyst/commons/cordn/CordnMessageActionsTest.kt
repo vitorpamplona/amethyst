@@ -75,7 +75,7 @@ class CordnMessageActionsTest {
             val manager = manager(FakeCoordinator(callerPubKey = alice))
             manager.createGroup(gid, CordnGroupMetadata(name = "Actions"))
 
-            val sent = manager.post(gid, "in reply", replyTo = target(bob))
+            val sent = manager.post(gid, "in reply", replyTo = target(bob)).envelope
 
             assertEquals(CordnMessageKinds.THREAD_REPLY, sent.kind)
             assertEquals("in reply", sent.content)
@@ -88,7 +88,7 @@ class CordnMessageActionsTest {
             val manager = manager(FakeCoordinator(callerPubKey = alice))
             manager.createGroup(gid, CordnGroupMetadata(name = "Actions"))
 
-            val sent = manager.post(gid, "👍", reactionTo = target(bob))
+            val sent = manager.post(gid, "👍", reactionTo = target(bob)).envelope
 
             assertEquals(CordnMessageKinds.REACTION, sent.kind)
             assertEquals("👍", sent.content)
@@ -126,8 +126,8 @@ class CordnMessageActionsTest {
             val manager = manager(FakeCoordinator(callerPubKey = alice))
             manager.createGroup(gid, CordnGroupMetadata(name = "Actions"))
 
-            assertEquals(CordnMessageKinds.EDIT, manager.post(gid, "fixed", editTo = target(alice)).kind)
-            assertEquals(CordnMessageKinds.DELETION, manager.post(gid, deleteTo = target(alice)).kind)
+            assertEquals(CordnMessageKinds.EDIT, manager.post(gid, "fixed", editTo = target(alice)).envelope.kind)
+            assertEquals(CordnMessageKinds.DELETION, manager.post(gid, deleteTo = target(alice)).envelope.kind)
         }
 
     @Test
@@ -139,7 +139,7 @@ class CordnMessageActionsTest {
             val manager = manager(FakeCoordinator(callerPubKey = alice))
             manager.createGroup(gid, CordnGroupMetadata(name = "Actions"))
 
-            val sent = manager.post(gid, pinTo = target(bob))
+            val sent = manager.post(gid, pinTo = target(bob)).envelope
 
             assertEquals(CordnMessageKinds.PIN, sent.kind)
         }

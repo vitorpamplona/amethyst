@@ -190,14 +190,22 @@ private fun CordnGroupChat(
     // One place for every outbound action, so none of them can go quiet again.
     // Returns false when it failed, which is what lets the composer put the
     // draft back rather than eat it.
-    suspend fun trySend(block: suspend (CordnGroupManager) -> Unit): Boolean {
+    suspend fun trySend(block: suspend (CordnGroupManager) -> CordnDeliveredMessage?): Boolean {
         val manager = manager()
         if (manager == null) {
             sendError = noSession
             return false
         }
         return try {
-            block(manager)
+            // Shown the moment the coordinator takes it, rather than when the
+            // echo comes back — which, for your own traffic, it never does as
+            // a message: the sync loop recognises it by cursor and reports it
+            // as Delivery.Echo, whose branch adds nothing to the room. So a
+            // sent message used to leave no trace in the room that sent it.
+            //
+            // add() is keyed on the envelope id and idempotent, so a later
+            // re-sync that does hand the message back cannot double it.
+            block(manager)?.let { room.add(it) }
             sendError = null
             true
         } catch (e: Exception) {
@@ -242,13 +250,27 @@ private fun CordnGroupChat(
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
             // away exactly like everything else.
-            PinnedRibbon(annotations, room, scope, ::manager)
+            PinnedRibbon(annotations, scope) { message ->
+                trySend {
+                    it.post(
+                        gid = room.gid,
+                        pinTo = message.target(),
+                        pinOp = CordnMessageReferences.PinOp.REMOVE,
+                    )
+                }
+            }
 
             LazyColumn(
                 state = listState,
+                // Anchored at the bottom like every other chat: a room opens on
+                // its newest message, and an arrival while you sit at the
+                // bottom keeps you there instead of pushing the conversation up
+                // out of view. `messages` is oldest-first, so the rows are
+                // reversed to match.
+                reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                items(messages, key = { it.envelope.id }) { message ->
+                items(messages.asReversed(), key = { it.envelope.id }) { message ->
                     CordnMessageRow(
                         message = message,
                         room = room,
@@ -382,17 +404,23 @@ private fun CordnGroupChat(
             },
             onDelete = {
                 acting = null
-                scope.launch { manager()?.post(room.gid, deleteTo = message.target()) }
+                // Through trySend like the rest: a deletion is an annotation,
+                // and an annotation of your own comes back as an Echo too, so
+                // deleting your own message used to look like nothing had
+                // happened until someone else's traffic refreshed the fold.
+                scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
             },
             onTogglePin = {
                 val pinned = annotations.isPinned(message.envelope.id)
                 acting = null
                 scope.launch {
-                    manager()?.post(
-                        gid = room.gid,
-                        pinTo = message.target(),
-                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                    )
+                    trySend {
+                        it.post(
+                            gid = room.gid,
+                            pinTo = message.target(),
+                            pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                        )
+                    }
                 }
             },
         )
@@ -413,9 +441,11 @@ private fun CordnDeliveredMessage.target() =
 @Composable
 private fun PinnedRibbon(
     annotations: CordnAnnotationIndex,
-    room: CordnGroupChatroom,
     scope: CoroutineScope,
-    manager: () -> CordnGroupManager?,
+    // Hoisted rather than handed a manager: unpinning has to go through the
+    // caller's trySend so it reports a failure and lands in the room, and a
+    // ribbon that posted for itself could do neither.
+    onUnpin: suspend (CordnDeliveredMessage) -> Unit,
 ) {
     val pinned = annotations.pinnedIds().mapNotNull { annotations.byId[it] }
     if (pinned.isEmpty()) return
@@ -441,11 +471,7 @@ private fun PinnedRibbon(
                 )
                 TextButton(onClick = {
                     scope.launch {
-                        manager()?.post(
-                            gid = room.gid,
-                            pinTo = message.target(),
-                            pinOp = CordnMessageReferences.PinOp.REMOVE,
-                        )
+                        onUnpin(message)
                     }
                 }) {
                     Text(stringRes(R.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
@@ -761,7 +787,10 @@ private suspend fun sendAttachment(
     val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
 
     val tag = CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context) ?: return
-    session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+    // Into the room as well, for the same reason every other send is: an
+    // attachment of your own echoes back as an Echo and would otherwise be
+    // invisible to the person who sent it.
+    room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
 }
 
 /**
@@ -928,7 +957,10 @@ private suspend fun sendVoiceNote(
         val tag =
             CordnMediaService(accountViewModel.account)
                 .upload(bytes, recording.mimeType, recording.file.name, context) ?: return
-        session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+        // Into the room as well, for the same reason every other send is: an
+        // attachment of your own echoes back as an Echo and would otherwise be
+        // invisible to the person who sent it.
+        room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }
     }
