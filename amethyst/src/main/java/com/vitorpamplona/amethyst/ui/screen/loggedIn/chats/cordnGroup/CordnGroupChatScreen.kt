@@ -26,6 +26,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -85,12 +86,17 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -99,6 +105,7 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -163,7 +170,16 @@ private fun CordnGroupChat(
     var replyingTo by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var editing by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var attaching by remember { mutableStateOf(false) }
-    var pendingAttachment by remember { mutableStateOf<Uri?>(null) }
+    // The same upload state every other chat's dialog is built on — caption, media
+    // quality, metadata stripping and the server to put it on.
+    val uploadState =
+        remember(room.gid) {
+            ChatFileUploadState(
+                accountViewModel.account.settings.defaultFileServer,
+                accountViewModel.account.settings.stripLocationOnUpload,
+            )
+        }
+    var pendingVoice by remember { mutableStateOf<RecordingResult?>(null) }
     var attachError by remember { mutableStateOf<String?>(null) }
 
     // Why sending says anything at all when it fails: `manager()` is null-safe
@@ -405,21 +421,23 @@ private fun CordnGroupChat(
                 )
             }
 
-            pendingAttachment?.let { pending ->
-                CordnAttachmentDialog(
-                    uri = pending,
-                    sending = attaching,
-                    onDismiss = { pendingAttachment = null },
-                    onSend = { resolved, caption ->
+            // The app's upload dialog, as Marmot, Concord, the DMs, minichat and Nests
+            // all use it. cordn keeps its own uploader behind it — encrypted blobs to
+            // Blossom, not a nostr media post — which is exactly how Marmot uses it too.
+            if (uploadState.multiOrchestrator != null) {
+                ChatFileUploadDialog(
+                    state = uploadState,
+                    title = { Text(name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8))) },
+                    upload = {
                         scope.launch {
                             attaching = true
                             attachError = null
                             try {
-                                sendAttachment(context, accountViewModel, room, resolved, caption)
-                                // Only on success: a failed send leaves the dialog up
+                                sendAttachment(context, accountViewModel, room, uploadState)
+                                // Only on success: a failed upload leaves the dialog up
                                 // with what you picked still in it, so retrying is one
                                 // tap rather than the picker again.
-                                pendingAttachment = null
+                                uploadState.reset()
                             } catch (e: Exception) {
                                 // A failed attachment left no trace anywhere; the
                                 // banner tells the person, this tells whoever has
@@ -431,6 +449,13 @@ private fun CordnGroupChat(
                             }
                         }
                     },
+                    onCancel = uploadState::reset,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    // cordn tells its blob host a fixed set of constants on purpose and
+                    // its imeta tag has no field for a warning, so the switch would be
+                    // a control with nowhere to put the answer.
+                    showContentWarning = false,
                 )
             }
 
@@ -471,19 +496,21 @@ private fun CordnGroupChat(
                 // uploaded and announced to the room in one irreversible action, so it
                 // gets the same confirm-first treatment as anything else that cannot be
                 // taken back.
-                onAttach = { uri -> pendingAttachment = uri },
+                onAttach = { uri ->
+                    uploadState.load(persistentListOf(SelectedMedia(uri, context.contentResolver.getType(uri))))
+                },
+                // Recording no longer sends. It goes to the preview above the field,
+                // where it can be played back, re-recorded or dropped first.
+                pendingVoice = pendingVoice,
                 onVoiceNote = { recording ->
-                    scope.launch {
-                        attaching = true
-                        attachError = null
-                        try {
-                            sendVoiceNote(context, accountViewModel, room, recording)
-                        } catch (e: Exception) {
-                            attachError = e.message ?: uploadFailed
-                        } finally {
-                            attaching = false
-                        }
-                    }
+                    // Re-recording replaces what was there; the old file is a temp
+                    // file this screen owns, so it goes now rather than being leaked.
+                    pendingVoice?.file?.delete()
+                    pendingVoice = recording
+                },
+                onRemoveVoice = {
+                    pendingVoice?.file?.delete()
+                    pendingVoice = null
                 },
                 attaching = attaching,
                 // The field hands its own text over rather than the screen reading
@@ -491,6 +518,26 @@ private fun CordnGroupChat(
                 // settles a frame later, and a send must use what is on screen now.
                 onSend = { typed ->
                     val text = typed.trim()
+
+                    val voice = pendingVoice
+                    if (voice != null) {
+                        pendingVoice = null
+                        room.draft.value = ""
+                        scope.launch {
+                            attaching = true
+                            attachError = null
+                            try {
+                                sendVoiceNote(context, accountViewModel, room, voice, text)
+                            } catch (e: Exception) {
+                                Log.w("CordnGroupChat", "voice note failed in ${room.gid}: ${e.message}", e)
+                                attachError = e.message ?: uploadFailed
+                            } finally {
+                                attaching = false
+                            }
+                        }
+                        return@CordnComposer
+                    }
+
                     if (text.isEmpty()) return@CordnComposer
 
                     val reply = replyingTo
@@ -696,24 +743,24 @@ private class CordnAttachmentException(
 ) : Exception(message)
 
 /**
- * Encrypts the picked file and sends it as an attachment on an empty message.
+ * Encrypts what the upload dialog is holding and sends it as an attachment.
  *
- * Reading the bytes into memory rather than streaming: the codec authenticates
- * the whole file with one AEAD tag and hashes the plaintext, both of which
- * need every byte anyway, and a group chat attachment is not a video archive.
+ * cordn does not go through [com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator]
+ * like the nostr surfaces do: its `imeta` tag carries the hash of the *plaintext* and a
+ * per-file key, which the orchestrator neither produces nor surfaces. So the dialog's
+ * two byte-level choices are applied here by hand, against the same helpers the
+ * orchestrator uses, and the encryption and upload stay in [CordnMediaService].
  */
 private suspend fun sendAttachment(
     context: Context,
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
-    picked: PickedAttachment,
-    caption: String,
+    state: ChatFileUploadState,
 ) {
     // Every step here used to `?: return`, which reads as "nothing to do" and
     // behaves as "the attach button does nothing at all": the picker closed,
-    // the spinner ended, and no message and no error appeared. Measured on the
-    // tablet — attaching a PNG produced no message, no error and no log line.
-    // Each one is now a reason a person can act on.
+    // the spinner ended, and no message and no error appeared. Each one is now
+    // a reason a person can act on.
     val session =
         accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
@@ -721,28 +768,70 @@ private suspend fun sendAttachment(
         session.manager.group(room.gid)
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
 
-    // Name and type come from the dialog, which resolved them through OpenableColumns
-    // — `uri.lastPathSegment` is a document id on a content:// URI, not a filename.
-    val mime = picked.mimeType.ifBlank { CordnBlobUpload.OPAQUE }
-    val name = picked.displayName
+    val orchestrator = state.multiOrchestrator ?: return
+    val item = orchestrator.get(0)
+    val uri = item.media.uri
+    val declaredMime = item.media.mimeType ?: context.contentResolver.getType(uri) ?: CordnBlobUpload.OPAQUE
+
+    // The media-quality slider.
+    val compressed =
+        item.orchestrator.compressIfNeeded(
+            uri = uri,
+            mimeType = declaredMime,
+            compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
+            context = context,
+        )
+    val mime = compressed.contentType ?: declaredMime
+
+    // The strip-metadata switch. A file type the stripper does not handle comes back
+    // untouched and says so, which is not a failure — there was nothing to strip.
+    val finalUri =
+        if (state.stripMetadata) {
+            withContext(Dispatchers.IO) { MetadataStripper.strip(compressed.uri, mime, context) }.uri
+        } else {
+            compressed.uri
+        }
+
+    // Name and type come from OpenableColumns: `uri.lastPathSegment` is a document id
+    // on a content:// URI, not a filename.
+    val name = resolveDisplayName(context, uri)
     val bytes =
-        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(picked.uri)?.use { it.readBytes() } }
+        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(finalUri)?.use { it.readBytes() } }
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
 
-    // Null means the account has no Blossom server, which is a setting the
-    // person can change — the one failure here that is entirely actionable,
-    // and the one that was hardest to notice.
+    // Null means the chosen host has no base URL, which is a setting the person can
+    // change — the one failure here that is entirely actionable.
     val tag =
-        CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context)
+        CordnMediaService(accountViewModel.account)
+            .upload(bytes, mime, name, context, state.selectedServer.baseUrl)
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
+
     // Into the room as well, for the same reason every other send is: an
     // attachment of your own echoes back as an Echo and would otherwise be
     // invisible to the person who sent it.
     //
-    // The caption is the message's own content, so an attachment with something
-    // written about it is one message rather than two.
-    room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
+    // The dialog's description is the message's own content, so an attachment with
+    // something written about it is one message rather than two.
+    room.add(session.manager.send(room.gid, content = state.caption.trim(), tags = arrayOf(tag)))
 }
+
+/**
+ * The file's real name.
+ *
+ * `uri.lastPathSegment` is a document id on a `content://` URI, not a name — it is what
+ * every cordn attachment has been named until now.
+ */
+private fun resolveDisplayName(
+    context: Context,
+    uri: Uri,
+): String =
+    runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
+        }
+    }.getOrNull()
+        ?: uri.lastPathSegment?.substringAfterLast('/')
+        ?: "file"
 
 /**
  * One attachment, fetched and decrypted on demand.
@@ -899,6 +988,7 @@ private suspend fun sendVoiceNote(
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
     recording: RecordingResult,
+    caption: String,
 ) {
     val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey) ?: return
     val group = session.manager.group(room.gid) ?: return
@@ -911,7 +1001,7 @@ private suspend fun sendVoiceNote(
         // Into the room as well, for the same reason every other send is: an
         // attachment of your own echoes back as an Echo and would otherwise be
         // invisible to the person who sent it.
-        room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
+        room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }
     }

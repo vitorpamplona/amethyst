@@ -368,9 +368,6 @@
     <string name="cordn_chat_yesterday">Yesterday</string>
     <string name="cordn_chat_unread_divider">New messages</string>
     <string name="cordn_reactions_title">Reactions</string>
-    <string name="cordn_attachment_title">Send file</string>
-    <string name="cordn_attachment_caption_hint">Add a caption</string>
-    <string name="cordn_attachment_uploading">Uploading\u2026</string>
     <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
     <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
     <string name="cordn_coordinators_discover_action">Look for coordinators</string>

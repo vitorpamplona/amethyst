@@ -82,11 +82,12 @@ class CordnMediaService(
         mimeType: String,
         filename: String,
         context: Context,
+        /** The host to put it on. Defaults to the account's, which is what the
+         *  upload dialog's server spinner starts on. */
+        serverBaseUrl: String = account.settings.defaultFileServer.baseUrl,
     ): Array<String>? =
         withContext(Dispatchers.IO) {
-            val server =
-                account.settings.defaultFileServer.baseUrl
-                    .ifBlank { return@withContext null }
+            val server = serverBaseUrl.ifBlank { return@withContext null }
 
             // A fresh key per file, carried in the descriptor. Deriving it from
             // the group would tie the attachment to the epoch it was sent in

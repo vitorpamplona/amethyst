@@ -38,7 +38,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -57,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -515,19 +515,7 @@ private const val QUOTE_TINT_ALPHA = 0.06f
  */
 @Composable
 internal fun UnreadDivider() {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
-        Text(
-            text = stringRes(R.string.cordn_chat_unread_divider),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
-    }
+    ChatDivisor(stringRes(R.string.cordn_chat_unread_divider), MaterialTheme.colorScheme.primary)
 }
 
 /**
@@ -740,19 +728,7 @@ internal fun DaySeparator(
                 )
         }
 
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HorizontalDivider(Modifier.weight(1f))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        HorizontalDivider(Modifier.weight(1f))
-    }
+    ChatDivisor(label)
 }
 
 /** Upper bound on how long a stale "Today" can survive a clock correction. */

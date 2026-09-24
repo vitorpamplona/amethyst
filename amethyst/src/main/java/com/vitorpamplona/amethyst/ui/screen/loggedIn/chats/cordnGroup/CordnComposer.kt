@@ -56,11 +56,13 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 
 /**
  * The cordn room's composer, on the same field every other Amethyst chat uses.
@@ -84,9 +86,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 internal fun CordnComposer(
     room: CordnGroupChatroom,
     attaching: Boolean,
+    pendingVoice: RecordingResult?,
     accountViewModel: AccountViewModel,
     onAttach: (Uri) -> Unit,
     onVoiceNote: (RecordingResult) -> Unit,
+    onRemoveVoice: () -> Unit,
     onSend: (String) -> Unit,
 ) {
     // `room.draft` is the persisted String — commons holds the draft and may not depend
@@ -127,7 +131,9 @@ internal fun CordnComposer(
         onDispose { suggestions.reset() }
     }
 
-    val canPost by remember { derivedStateOf { draftState.text.isNotBlank() } }
+    // A recorded voice note is something to send even with nothing typed; the text
+    // beside it rides along as its caption.
+    val canPost by remember(pendingVoice) { derivedStateOf { draftState.text.isNotBlank() || pendingVoice != null } }
 
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -135,6 +141,32 @@ internal fun CordnComposer(
         }
 
     Column(modifier = EditFieldModifier) {
+        // The same preview the post screens use: listen back, re-record, or drop it.
+        // Recording used to send the moment you released the button, which is a hard
+        // thing to get right first time and impossible to take back afterwards.
+        pendingVoice?.let { recording ->
+            val meta =
+                remember(recording) {
+                    AudioMeta(
+                        // Empty: nothing is uploaded yet, so the preview plays the
+                        // local file instead.
+                        url = "",
+                        mimeType = recording.mimeType,
+                        duration = recording.duration,
+                        waveform = recording.amplitudes,
+                    )
+                }
+
+            VoiceMessagePreview(
+                voiceMetadata = meta,
+                localFile = recording.file,
+                onRemove = onRemoveVoice,
+                onReRecord = onVoiceNote,
+                isUploading = attaching,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         ShowUserSuggestionList(
             suggestions,
             onSelect = { user ->
