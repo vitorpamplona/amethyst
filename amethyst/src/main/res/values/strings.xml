@@ -365,6 +365,14 @@
     <string name="cordn_invitations_accept">Join</string>
     <string name="cordn_invitations_decline">Decline</string>
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_coordinators_discover">Coordinators announcing themselves</string>
+    <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
+    <string name="cordn_coordinators_discover_action">Look for coordinators</string>
+    <string name="cordn_coordinators_discover_add">Add</string>
+    <string name="cordn_coordinators_discover_failed">Could not read announcements</string>
+    <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
+    <string name="cordn_coordinators_discover_unheard">Nothing found, and %1$d of your relays did not answer.</string>
+    <string name="cordn_coordinators_discover_seen">Last announced %1$s ago</string>
     <string name="cordn_info_admin_badge">Admin</string>
     <string name="cordn_invitations_members_more">+%1$d more</string>
     <string name="cordn_invitations_via">Through %1$s</string>
