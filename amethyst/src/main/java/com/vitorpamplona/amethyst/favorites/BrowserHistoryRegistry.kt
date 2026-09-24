@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.favorites
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
@@ -37,7 +39,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
-private val Context.browserHistoryDataStore by preferencesDataStore(name = "browser_history")
+/**
+ * The browser-history file, on the app-wide holder rather than a `Context` delegate.
+ * Same path the delegate resolved to, so nothing migrates.
+ *
+ * Main process only: [Amethyst.instance] is deliberately unset in the
+ * `:napplet` sandbox.
+ */
+private val browserHistoryDataStore: DataStore<Preferences>
+    get() = Amethyst.instance.appStores.getDataStore("browser_history")
 
 /**
  * One device-local visited site, keyed by full [url]. [visitCount]/[lastVisitedAt] drive frecency ranking
@@ -83,7 +93,7 @@ object BrowserHistoryRegistry {
         val ctx = context.applicationContext
         appContext = ctx
         scope.launch {
-            val json = ctx.browserHistoryDataStore.data.first()[KEY]
+            val json = browserHistoryDataStore.data.first()[KEY]
             val loaded = if (json != null) decode(json) else emptyList()
             // Merge disk under anything already recorded this session (session wins, newest-first).
             update { current -> dedupeNewestFirst(current + loaded) }
@@ -136,9 +146,9 @@ object BrowserHistoryRegistry {
     }
 
     private fun persist(json: String) {
-        val ctx = appContext ?: return
+        appContext ?: return
         scope.launch {
-            ctx.browserHistoryDataStore.edit { it[KEY] = json }
+            browserHistoryDataStore.edit { it[KEY] = json }
         }
     }
 

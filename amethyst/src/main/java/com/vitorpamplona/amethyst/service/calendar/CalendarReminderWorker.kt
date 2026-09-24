@@ -65,7 +65,7 @@ class CalendarReminderWorker(
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
         runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("calendarReminder"), 1) }
-        val settings = applicationContext.calendarReminderSettings().load()
+        val settings = calendarReminderSettings().load()
         if (!settings.enabled) {
             Log.d(TAG) { "Reminders disabled; ending periodic chain." }
             // The settings toggle re-schedules on enable; no reason to keep
@@ -75,7 +75,7 @@ class CalendarReminderWorker(
         }
         val now = TimeUtils.now()
         val windowEnd = now + settings.leadMinutes * 60L
-        val store = applicationContext.calendarReminderLog()
+        val store = calendarReminderLog()
 
         // Walk every kind-31925 RSVP authored by an account on this device. We don't have a
         // multi-account "all logged-in pubkeys" view here, so we accept any RSVP that's

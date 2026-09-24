@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.favorites
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
@@ -38,7 +40,15 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
-private val Context.favoriteAppsDataStore by preferencesDataStore(name = "favorite_apps")
+/**
+ * The favorite-apps file, on the app-wide holder rather than a `Context` delegate.
+ * Same path the delegate resolved to, so nothing migrates.
+ *
+ * Main process only: [Amethyst.instance] is deliberately unset in the
+ * `:napplet` sandbox.
+ */
+private val favoriteAppsDataStore: DataStore<Preferences>
+    get() = Amethyst.instance.appStores.getDataStore("favorite_apps")
 
 /**
  * The user's device-local list of [FavoriteApp]s — the single source of truth shared by the bottom
@@ -81,7 +91,7 @@ object FavoriteAppsRegistry {
         val ctx = context.applicationContext
         appContext = ctx
         scope.launch {
-            val prefs = ctx.favoriteAppsDataStore.data.first()
+            val prefs = favoriteAppsDataStore.data.first()
             val loaded = prefs[KEY]?.let { decode(it) } ?: emptyList()
             // Don't clobber adds made in this session before hydration finished, and don't resurrect
             // anything the user removed in that same window.
@@ -139,16 +149,16 @@ object FavoriteAppsRegistry {
     }
 
     private fun persist(json: String) {
-        val ctx = appContext ?: return
+        appContext ?: return
         scope.launch {
-            ctx.favoriteAppsDataStore.edit { it[KEY] = json }
+            favoriteAppsDataStore.edit { it[KEY] = json }
         }
     }
 
     private fun persistManifests(json: String) {
-        val ctx = appContext ?: return
+        appContext ?: return
         scope.launch {
-            ctx.favoriteAppsDataStore.edit { it[MANIFESTS_KEY] = json }
+            favoriteAppsDataStore.edit { it[MANIFESTS_KEY] = json }
         }
     }
 

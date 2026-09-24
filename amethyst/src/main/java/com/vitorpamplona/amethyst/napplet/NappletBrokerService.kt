@@ -90,7 +90,7 @@ class NappletBrokerService : Service() {
     private val signerLedger by lazy { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
     // Per-applet sandboxed key-value store (namespaced by account + coordinate inside the impl).
-    private val storage by lazy { DataStoreNappletStorage(applicationContext, Amethyst.instance.nappletAccountScope) }
+    private val storage by lazy { DataStoreNappletStorage(Amethyst.instance.appStores.getDataStore("napplet_storage"), Amethyst.instance.nappletAccountScope) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 

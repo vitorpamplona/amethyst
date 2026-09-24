@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.service.calendar
 
 import android.content.Context
+import androidx.datastore.core.DataMigration
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettings
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
@@ -34,43 +36,47 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
  *
  * The store classes live in commons; only the file location and the one-off
  * lift out of the legacy SharedPreferences are Android's business.
+ *
+ * Both files sit on `AppPreferenceStores` rather than a `Context` delegate.
+ * The names below are the delegate's names, and the holder reproduces the path
+ * it resolved to, so nothing migrates. The migrations move with them: DataStore
+ * runs a file's migrations once, when that file is first opened, so they have
+ * to be attached to the file by the holder rather than by whoever opens it.
  */
 private const val LEGACY_SETTINGS_FILE = "amethyst_calendar_reminder_prefs"
 private const val LEGACY_LOG_FILE = "amethyst_calendar_reminders"
 
-private val Context.calendarReminderSettingsData by preferencesDataStore(
-    name = "calendar_reminder_settings",
-    produceMigrations = { context ->
-        listOf(
-            CopyOnceMigration("migrated.calendarReminderSettings") { out ->
-                val legacy = context.getSharedPreferences(LEGACY_SETTINGS_FILE, Context.MODE_PRIVATE)
-                if (legacy.contains("enabled")) {
-                    out[booleanPreferencesKey("enabled")] = legacy.getBoolean("enabled", CalendarReminderSettings.DEFAULT_ENABLED)
-                }
-                if (legacy.contains("lead_minutes")) {
-                    out[intPreferencesKey("lead_minutes")] = legacy.getInt("lead_minutes", CalendarReminderSettings.DEFAULT_LEAD_MINUTES)
-                }
-            },
-        )
-    },
-)
+/** Store (and file) names, as [Amethyst.appStores] keys them. */
+const val CALENDAR_REMINDER_SETTINGS_STORE = "calendar_reminder_settings"
+const val CALENDAR_REMINDER_LOG_STORE = "calendar_reminder_log"
 
-private val Context.calendarReminderLogData by preferencesDataStore(
-    name = "calendar_reminder_log",
-    produceMigrations = { context ->
-        listOf(
-            CopyOnceMigration("migrated.calendarReminderLog") { out ->
-                val legacy = context.getSharedPreferences(LEGACY_LOG_FILE, Context.MODE_PRIVATE)
-                // Values are the event-start times the reminders fired for; anything
-                // else in the file is not ours and is left behind.
-                legacy.all.forEach { (key, value) ->
-                    if (value is Long) out[CalendarReminderLogStore.keyFor(key.removePrefix("notified:"))] = value
-                }
-            },
-        )
-    },
-)
+/** The one-off copy of the reminder settings out of the legacy prefs file. */
+fun calendarReminderSettingsMigrations(context: Context): List<DataMigration<Preferences>> =
+    listOf(
+        CopyOnceMigration("migrated.calendarReminderSettings") { out ->
+            val legacy = context.getSharedPreferences(LEGACY_SETTINGS_FILE, Context.MODE_PRIVATE)
+            if (legacy.contains("enabled")) {
+                out[booleanPreferencesKey("enabled")] = legacy.getBoolean("enabled", CalendarReminderSettings.DEFAULT_ENABLED)
+            }
+            if (legacy.contains("lead_minutes")) {
+                out[intPreferencesKey("lead_minutes")] = legacy.getInt("lead_minutes", CalendarReminderSettings.DEFAULT_LEAD_MINUTES)
+            }
+        },
+    )
 
-fun Context.calendarReminderSettings() = CalendarReminderSettingsStore(calendarReminderSettingsData)
+/** The one-off copy of the fired-reminder log out of the legacy prefs file. */
+fun calendarReminderLogMigrations(context: Context): List<DataMigration<Preferences>> =
+    listOf(
+        CopyOnceMigration("migrated.calendarReminderLog") { out ->
+            val legacy = context.getSharedPreferences(LEGACY_LOG_FILE, Context.MODE_PRIVATE)
+            // Values are the event-start times the reminders fired for; anything
+            // else in the file is not ours and is left behind.
+            legacy.all.forEach { (key, value) ->
+                if (value is Long) out[CalendarReminderLogStore.keyFor(key.removePrefix("notified:"))] = value
+            }
+        },
+    )
 
-fun Context.calendarReminderLog() = CalendarReminderLogStore(calendarReminderLogData)
+fun calendarReminderSettings() = CalendarReminderSettingsStore(Amethyst.instance.appStores.getDataStore(CALENDAR_REMINDER_SETTINGS_STORE))
+
+fun calendarReminderLog() = CalendarReminderLogStore(Amethyst.instance.appStores.getDataStore(CALENDAR_REMINDER_LOG_STORE))

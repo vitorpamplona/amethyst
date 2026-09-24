@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import androidx.core.net.toUri
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,7 +35,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
-private val Context.webUrlNetworkDataStore by preferencesDataStore(name = "weburl_network")
+/**
+ * The per-site routing file, on the app-wide holder rather than a `Context`
+ * delegate. Same path the delegate resolved to, so nothing migrates.
+ *
+ * Main process only: [Amethyst.instance] is deliberately unset in the
+ * `:napplet` sandbox, and this registry is only touched from the browser
+ * chrome that runs in the main process.
+ */
+private val webUrlNetworkDataStore: DataStore<Preferences>
+    get() = Amethyst.instance.appStores.getDataStore("weburl_network")
 
 /**
  * Per-web-client network-routing preference: whether a favorited URL / browsed site routes through
@@ -67,7 +78,7 @@ object WebAppNetworkRegistry {
         appContext = ctx
         hydration =
             scope.launch {
-                ctx.webUrlNetworkDataStore.data.first().asMap().forEach { (key, value) ->
+                webUrlNetworkDataStore.data.first().asMap().forEach { (key, value) ->
                     // putIfAbsent: never clobber a choice made in this session before hydration finished.
                     modes.putIfAbsent(key.name, value != OPEN_WEB)
                 }
@@ -98,9 +109,9 @@ object WebAppNetworkRegistry {
     ) {
         val host = hostKeyOf(url)
         modes[host] = useTor
-        val ctx = appContext ?: return
+        appContext ?: return
         scope.launch {
-            ctx.webUrlNetworkDataStore.edit { it[stringPreferencesKey(host)] = if (useTor) TOR else OPEN_WEB }
+            webUrlNetworkDataStore.edit { it[stringPreferencesKey(host)] = if (useTor) TOR else OPEN_WEB }
         }
     }
 }

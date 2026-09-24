@@ -61,7 +61,7 @@ class ChessViewModelNew(
     private val publisher = AndroidChessPublisher(account)
     private val fetcher = AndroidRelayFetcher(account)
     private val metadataProvider = AndroidMetadataProvider()
-    private val dismissedStorage = ChessDismissedGamesStore(application.chessDismissedGamesData)
+    private val dismissedStorage = ChessDismissedGamesStore(chessDismissedGamesData)
 
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =

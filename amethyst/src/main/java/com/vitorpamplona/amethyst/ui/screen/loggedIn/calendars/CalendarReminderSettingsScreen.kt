@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
 fun CalendarReminderSettingsScreen(nav: INav) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val store = remember(context) { context.calendarReminderSettings() }
+    val store = remember { calendarReminderSettings() }
 
     // DataStore reads are suspend, so the first frame renders the defaults and
     // the stored values arrive right after. Collecting the flow rather than

@@ -79,8 +79,12 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
+import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_LOG_STORE
+import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderLogMigrations
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigrations
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
@@ -257,6 +261,8 @@ class AppModules(
                     // One file per account, so the migration is per name rather than a constant.
                     name.startsWith(CashuPreferences.FILE_PREFIX) ->
                         listOf(CashuPreferences.legacyMigration(appContext, name.removePrefix(CashuPreferences.FILE_PREFIX)))
+                    name == CALENDAR_REMINDER_SETTINGS_STORE -> calendarReminderSettingsMigrations(appContext)
+                    name == CALENDAR_REMINDER_LOG_STORE -> calendarReminderLogMigrations(appContext)
                     else -> emptyList()
                 }
             },
@@ -855,8 +861,10 @@ class AppModules(
      */
     val nappletAccountScope: () -> String = { sessionManager.loggedInAccount()?.pubKey ?: "" }
 
-    // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
-    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext, nappletAccountScope) }
+    // Singleton stores for napplet permissions. The holder is what enforces
+    // DataStore's one-instance-per-file rule now; this stays a lazy val so the
+    // ledger below and the broker share one object.
+    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appStores.getDataStore("napplet_permissions"), nappletAccountScope) }
 
     /**
      * The one napplet permission ledger for the main process. Its persistent half is just the store
@@ -1347,7 +1355,7 @@ class AppModules(
                     Filter(kinds = listOf(CalendarDateSlotEvent.KIND, CalendarTimeSlotEvent.KIND)),
                 ).conflate()
                 .collect {
-                    if (appContext.calendarReminderSettings().load().enabled &&
+                    if (calendarReminderSettings().load().enabled &&
                         CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)
