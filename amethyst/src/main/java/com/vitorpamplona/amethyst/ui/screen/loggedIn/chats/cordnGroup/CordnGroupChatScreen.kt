@@ -61,6 +61,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -107,12 +108,15 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -255,6 +259,9 @@ private fun CordnGroupChat(
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
             // away exactly like everything else.
+            // One clock for every divider in the room, so they cannot disagree.
+            val today = rememberToday()
+
             PinnedRibbon(annotations, scope) { message ->
                 trySend {
                     it.post(
@@ -311,7 +318,7 @@ private fun CordnGroupChat(
                     // Drawn under the first message of each day, which in a
                     // reversed list means comparing against the older row.
                     if (!message.sameDayAs(older)) {
-                        DaySeparator(message.envelope.createdAt)
+                        DaySeparator(message.envelope.createdAt, today)
                     }
                 }
             }
@@ -590,6 +597,9 @@ private fun CordnChatTopBar(
 /** How long a burst from one sender stays one burst. */
 private const val GROUPING_WINDOW_SECONDS = 5 * 60
 
+/** Upper bound on how long a stale "Today" can survive a clock correction. */
+private const val TODAY_POLL_MS = 60_000L
+
 /**
  * Whether this message continues [older]'s burst — same sender, close in time.
  *
@@ -613,15 +623,44 @@ private fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Bool
 private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
 
 /**
+ * Today, as a value that stops being today when it stops being today.
+ *
+ * [DaySeparator] used to hold `remember { LocalDate.now() }` of its own. That
+ * is a snapshot of the wall clock with nothing to invalidate it, and each
+ * separator keeps a separate one, so they can disagree: a separator composed
+ * before midnight goes on saying "Today" while the one for the new day says it
+ * too. Seen on the tablet -- one room, two "Today" dividers.
+ *
+ * Polling rather than a single sleep to the next midnight, because a device
+ * clock does not only advance: it is corrected, and the tablet this was found
+ * on jumped nine hours in one step. Re-assigning an equal [LocalDate] is not a
+ * change, so a quiet minute costs no recomposition.
+ */
+@Composable
+private fun rememberToday(): LocalDate {
+    val zone = remember { ZoneId.systemDefault() }
+    return produceState(LocalDate.now(zone), zone) {
+        while (true) {
+            val now = ZonedDateTime.now(zone)
+            val untilMidnight = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay(zone)).toMillis()
+            delay(untilMidnight.coerceIn(1_000L, TODAY_POLL_MS))
+            value = LocalDate.now(zone)
+        }
+    }.value
+}
+
+/**
  * The day a run of messages belongs to.
  *
  * Without one, a conversation is an undivided column and "yesterday evening"
  * and "this morning" sit flush against each other.
  */
 @Composable
-private fun DaySeparator(createdAt: Long) {
+private fun DaySeparator(
+    createdAt: Long,
+    today: LocalDate,
+) {
     val day = remember(createdAt) { localDayOf(createdAt) }
-    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
     val label =
         when (day) {
