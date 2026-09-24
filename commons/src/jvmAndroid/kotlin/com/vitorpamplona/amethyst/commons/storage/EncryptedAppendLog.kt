@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.marmot
+package com.vitorpamplona.amethyst.commons.storage
 
 import java.io.File
 import java.io.FileOutputStream
@@ -34,10 +34,17 @@ import java.io.RandomAccessFile
  * plain   := uint32 count, (uint32 len, byte[len])*
  * ```
  *
+ * Protocol-neutral on purpose: it takes [encrypt]/[decrypt] lambdas and stores
+ * opaque strings, so both group-chat implementations keep their own ciphers and
+ * their own formats on top of one file layout. It used to live in the `marmot`
+ * package, which made it unreachable from cordn — the independence guard
+ * forbids either feature importing the other by name — for no reason other
+ * than where it happened to be written first.
+ *
  * Segments are the whole point. The format this replaces was a single blob
  * covering the entire history, so recording one line meant pushing every line
  * ever written back through the cipher and out to disk again — work that grew
- * with the log and, for Marmot's message log, was paid on the send path. A
+ * with the log and was paid on the send path. A
  * conversation a few thousand messages long was moving hundreds of KB through
  * a hardware-backed cipher to append a couple of hundred bytes.
  *

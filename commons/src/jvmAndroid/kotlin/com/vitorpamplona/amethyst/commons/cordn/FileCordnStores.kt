@@ -20,11 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.EchoState
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.ByteBuffer
@@ -168,6 +173,46 @@ class FileCordnGroupStore(
 
     private fun echoStateFile(gid: String) = File(groupDir(gid), "echoes")
 
+    /**
+     * Inside [groupDir] so [deleteGroup]'s recursive delete already covers it:
+     * a group that left its history behind would keep the plaintext of an
+     * end-to-end encrypted conversation after the key that read it was gone.
+     */
+    private fun messagesFile(gid: String) = File(groupDir(gid), "messages")
+
+    private fun summaryFile(gid: String) = File(groupDir(gid), "newest")
+
+    /**
+     * Appending a segment rather than rewriting the conversation, so the cost
+     * of receiving a message does not grow with how much has been said.
+     */
+    private val messageLog =
+        EncryptedAppendLog(
+            encrypt = cipher::encrypt,
+            // The log treats null as "this segment is unreadable" and carries on
+            // with the rest, which is what one corrupt segment should cost.
+            decrypt = { runCatching { cipher.decrypt(it) }.getOrNull() },
+        )
+
+    private val messageLock = Mutex()
+
+    /**
+     * Envelope ids already in a group's log.
+     *
+     * Dedup cannot be the log's own whole-entry comparison: the same message
+     * re-delivered after a crash carries the same envelope but not necessarily
+     * the same cursor, so the entries differ as strings while naming one
+     * message. Built once per group from the log the first time it is touched.
+     */
+    private val seenIds = mutableMapOf<String, MutableSet<HexKey>>()
+
+    private fun idsFor(gid: String): MutableSet<HexKey> =
+        seenIds.getOrPut(gid) {
+            messageLog
+                .readAll(messagesFile(gid))
+                .mapNotNullTo(mutableSetOf()) { CordnDeliveredMessageCodec.decodeOrNull(it)?.envelope?.id }
+        }
+
     override suspend fun saveGroup(
         gid: String,
         state: ByteArray,
@@ -183,6 +228,13 @@ class FileCordnGroupStore(
 
     override suspend fun deleteGroup(gid: String) {
         withContext(Dispatchers.IO) {
+            messageLock.withLock {
+                // The log caches a file's entries by path, so dropping the
+                // directory alone would leave a re-join of the same gid reading
+                // the previous membership's messages out of memory.
+                messageLog.forget(messagesFile(gid))
+                seenIds.remove(gid)
+            }
             // The cursor goes with it. Leaving one behind would mean a later
             // re-join of the same gid resumes from a cursor belonging to a
             // group it is no longer in, skipping everything before it.
@@ -250,6 +302,49 @@ class FileCordnGroupStore(
                 CordnRoomStateCodec.decode(cipher.decrypt(file.readBytes()))
             } catch (e: Exception) {
                 CordnRoomState()
+            }
+        }
+
+    override suspend fun appendMessage(
+        gid: String,
+        message: CordnDeliveredMessage,
+    ) = withContext(Dispatchers.IO) {
+        messageLock.withLock {
+            val ids = idsFor(gid)
+            // Idempotent on the envelope id. The crash window between this and
+            // saveCursor is deliberate — see the store interface — and it is
+            // this check that makes re-delivery free rather than duplicating.
+            if (!ids.add(message.envelope.id)) return@withContext
+
+            groupDir(gid).mkdirs()
+            messageLog.append(messagesFile(gid), CordnDeliveredMessageCodec.encode(message))
+            // Written on the same beat, so the inbox preview cannot disagree
+            // with the room. Whole-blob rather than appended: it is one entry
+            // that is always overwritten.
+            atomicWrite(summaryFile(gid), cipher.encrypt(CordnMessageSummaryCodec.encode(message, ids.size)))
+        }
+    }
+
+    override suspend fun loadMessages(gid: String): List<CordnDeliveredMessage> =
+        withContext(Dispatchers.IO) {
+            messageLock.withLock {
+                // One unreadable entry costs that message, not the conversation
+                // behind it in the file.
+                messageLog.readAll(messagesFile(gid)).mapNotNull { CordnDeliveredMessageCodec.decodeOrNull(it) }
+            }
+        }
+
+    override suspend fun loadMessageSummary(gid: String): CordnMessageSummary? =
+        withContext(Dispatchers.IO) {
+            val file = summaryFile(gid)
+            if (!file.exists()) return@withContext null
+            try {
+                CordnMessageSummaryCodec.decode(cipher.decrypt(file.readBytes()))
+            } catch (e: Exception) {
+                // A summary is a derived convenience; losing one costs a preview
+                // line until the next message, not the history it summarises.
+                Log.w("FileCordnGroupStore", "unreadable message summary for $gid: ${e.message}", e)
+                null
             }
         }
 

@@ -181,7 +181,13 @@ class CordnRuntime(
                 // opened: an inbox that shows every room as unread until it is
                 // visited is worse than one with no unread state at all.
                 val saved = session.manager.roomState(it)
-                groups.get(config.pubKey, it)?.restoreState(saved.draft, saved.lastReadCursor)
+                val room = groups.get(config.pubKey, it)
+                room?.restoreState(saved.draft, saved.lastReadCursor)
+                // The last message, for the inbox line. One small key per group
+                // rather than the whole log: the conversation itself loads when
+                // a room is opened. Without it every cordn room read "No
+                // messages yet" after a relaunch, however much had been said.
+                session.manager.storedMessageSummary(it)?.let { summary -> room?.restorePreview(summary.newest) }
             }
         remember()
         maintainKeyPackages(session)
@@ -725,6 +731,11 @@ class CordnRuntime(
         val room = groups.get(coordinatorPubKey, gid) ?: return
         val saved = session.manager.roomState(gid)
         room.restoreState(saved.draft, saved.lastReadCursor)
+        // The conversation itself. Through addAll, so the annotation fold, the
+        // ordering and `newest` are all rebuilt by exactly the code that
+        // handles live delivery — a room restored down a second path would be
+        // a second set of rules to keep in step.
+        room.addAll(session.manager.storedMessages(gid))
     }
 
     /** Persists [gid]'s draft and read position. */

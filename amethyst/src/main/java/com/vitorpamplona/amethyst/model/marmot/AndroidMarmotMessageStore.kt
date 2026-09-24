@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.marmot
 
-import com.vitorpamplona.amethyst.commons.marmot.EncryptedAppendLog
+import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
 import com.vitorpamplona.amethyst.model.preferences.KeyStoreEncryption
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event

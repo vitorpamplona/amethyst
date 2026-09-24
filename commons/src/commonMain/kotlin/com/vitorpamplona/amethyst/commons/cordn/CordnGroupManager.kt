@@ -583,6 +583,10 @@ class CordnGroupManager(
             )
         val sealed = CordnApplicationMessage.seal(group, accountPubKey, envelope)
         val posted = call { sync.postMessage(gid, sealed) }
+        // Our own message never arrives as a Delivery.Message — it comes back
+        // as an Echo, which by design carries nothing — so the only place it
+        // can be recorded is here, where we still hold the plaintext.
+        queueForStore(gid, CordnDeliveredMessage(envelope, posted.cursor))
         persist(gid)
         return CordnDeliveredMessage(envelope, posted.cursor)
     }
@@ -659,8 +663,11 @@ class CordnGroupManager(
                 else -> {
                     val decrypted = group.decrypt(opened)
                     when (decrypted.contentType) {
-                        ContentType.APPLICATION ->
-                            Delivery.Message(gid, ingestion.cursor, CordnApplicationMessage.open(decrypted))
+                        ContentType.APPLICATION -> {
+                            val received = CordnApplicationMessage.open(decrypted)
+                            queueForStore(gid, CordnDeliveredMessage(received.envelope, ingestion.cursor))
+                            Delivery.Message(gid, ingestion.cursor, received)
+                        }
                         // decrypt() applies a Commit, so the epoch has moved already.
                         else -> Delivery.EpochAdvanced(gid, ingestion.cursor, group.epoch)
                     }
@@ -747,6 +754,20 @@ class CordnGroupManager(
     private suspend fun persist(gid: String) {
         val group = groups[gid] ?: return
         store.saveGroup(gid, group.saveState().encodeTls())
+
+        // Messages BEFORE the cursor, and deliberately so. Crash between the
+        // two and the message is on disk while the cursor still points before
+        // it: the next catch-up re-delivers it and appendMessage's dedup drops
+        // it, costing nothing. The other order loses the message permanently —
+        // both cordn seal keys are epoch-derived, so the copy the coordinator
+        // still holds can no longer be opened, and the cursor would not offer
+        // it again anyway.
+        //
+        // Living here rather than at the call sites is the point: the ordering
+        // is the correctness property, so it sits next to the cursor write
+        // where it cannot be forgotten.
+        pendingMessages.remove(gid)?.forEach { store.appendMessage(gid, it) }
+
         sync.cursors()[gid]?.let { store.saveCursor(gid, it) }
         // On the same beat as the cursor, because the two are only meaningful
         // together: a cursor that outlives the process while the record of
@@ -754,6 +775,31 @@ class CordnGroupManager(
         // traffic with no way to recognise it. See EchoState.
         sync.echoes()[gid]?.let { store.saveEchoState(gid, it) }
     }
+
+    /**
+     * Messages delivered but not yet written, per group.
+     *
+     * [ingest] is not a suspend function — it runs inside the sync's own
+     * delivery callback — so it cannot write. It queues here instead, and
+     * [persist] drains the queue immediately before the cursor. Held in memory
+     * only for as long as the cursor is: neither is on disk until a run ends,
+     * so a crash mid-run loses both together and the next catch-up refetches
+     * from the last cursor that *was* written.
+     */
+    private val pendingMessages = mutableMapOf<String, MutableList<CordnDeliveredMessage>>()
+
+    private fun queueForStore(
+        gid: String,
+        message: CordnDeliveredMessage,
+    ) {
+        pendingMessages.getOrPut(gid) { mutableListOf() }.add(message)
+    }
+
+    /** Every message this group has stored, oldest first. */
+    suspend fun storedMessages(gid: String): List<CordnDeliveredMessage> = store.loadMessages(gid)
+
+    /** The newest stored message and the count, without reading the log. */
+    suspend fun storedMessageSummary(gid: String): CordnMessageSummary? = store.loadMessageSummary(gid)
 
     private suspend fun persistAll() {
         groups.keys.forEach { persist(it) }

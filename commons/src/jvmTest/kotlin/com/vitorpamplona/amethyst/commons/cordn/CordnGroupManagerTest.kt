@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.GroupMessage
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
@@ -297,6 +301,148 @@ class CordnGroupManagerTest {
                 "our own message must come back as an echo, not as a gap",
             )
         }
+
+    @Test
+    fun `a message is stored before the cursor that would skip it`() =
+        runTest {
+            // The ordering IS the correctness property. Write the cursor first
+            // and a crash in between loses the message permanently: both cordn
+            // seal keys are epoch-derived, so the copy the coordinator still
+            // holds can no longer be opened, and a cursor past it means it is
+            // never offered again. Write the message first and the same crash
+            // costs nothing — the message is on disk, the cursor still points
+            // before it, and the re-delivery dedups.
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val store = OrderRecordingStore()
+            val m = manager(alice, coordinator, store)
+            m.createGroup(gid, CordnGroupMetadata(name = "Order"))
+            m.send(gid, "one")
+
+            val append = store.calls.indexOf("appendMessage")
+            val cursor = store.calls.indexOf("saveCursor")
+            assertTrue(append >= 0, "the message was never stored at all: ${store.calls}")
+            assertTrue(cursor >= 0, "the cursor was never stored at all: ${store.calls}")
+            assertTrue(
+                append < cursor,
+                "the cursor was written before the message, so a crash between them loses it: ${store.calls}",
+            )
+        }
+
+    @Test
+    fun `the same message delivered twice is stored once`() =
+        runTest {
+            // The crash window above lands here: a re-fetch after a restart
+            // re-delivers a message that is already on disk, and it arrives
+            // carrying a cursor of its own. Dedup on the whole stored entry
+            // would not catch that — same envelope, different cursor, different
+            // bytes — so it has to key on the envelope id.
+            val store = InMemoryCordnGroupStore()
+            val envelope =
+                CordnEnvelope.build(
+                    pubKey = alice,
+                    createdAt = 1_757_000_000L,
+                    kind = 9,
+                    content = "once",
+                )
+
+            store.appendMessage(gid, CordnDeliveredMessage(envelope, cursor = 7))
+            store.appendMessage(gid, CordnDeliveredMessage(envelope, cursor = 9))
+
+            assertEquals(1, store.loadMessages(gid).size, "the same envelope was stored twice")
+        }
+
+    @Test
+    fun `a stored conversation reloads as the one that was ingested`() =
+        runTest {
+            // Equality of the raw list is not enough: what the room shows is
+            // the annotation fold — edits applied, deletions withdrawn,
+            // reactions counted. A reload that produced the same messages but a
+            // different fold would look right in a list assertion and wrong on
+            // screen.
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val store = InMemoryCordnGroupStore()
+            val m = manager(alice, coordinator, store)
+            m.createGroup(gid, CordnGroupMetadata(name = "Fold"))
+
+            val first = m.send(gid, "original")
+            m.post(
+                gid = gid,
+                content = "edited",
+                editTo =
+                    CordnMessageReferences.Target(
+                        id = first.envelope.id,
+                        pubKey = first.envelope.pubKey,
+                        kind = first.envelope.kind,
+                        tags = first.envelope.tags,
+                    ),
+            )
+            m.post(gid, "\uD83D\uDC4D", reactionTo = CordnMessageReferences.Target(first.envelope.id, first.envelope.pubKey, first.envelope.kind, first.envelope.tags))
+
+            val live = CordnAnnotationIndex.of(listOf(first) + m.storedMessages(gid).drop(1))
+            val reloaded = CordnAnnotationIndex.of(m.storedMessages(gid))
+
+            assertEquals("edited", reloaded.contentOf(first.envelope.id), "the edit did not survive the reload")
+            assertTrue(reloaded.isEdited(first.envelope.id))
+            assertEquals(
+                live.reactions[first.envelope.id]?.keys,
+                reloaded.reactions[first.envelope.id]?.keys,
+                "the reaction fold differs after a reload",
+            )
+        }
+
+    @Test
+    fun `the summary names the newest message without loading the log`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val m = manager(alice, coordinator)
+            m.createGroup(gid, CordnGroupMetadata(name = "Summary"))
+            m.send(gid, "first")
+            val last = m.send(gid, "last")
+
+            val summary = m.storedMessageSummary(gid)
+            assertEquals(last.envelope.id, summary?.newest?.envelope?.id)
+            assertEquals(2, summary?.count)
+        }
+
+    @Test
+    fun `leaving a group takes its messages with it`() =
+        runTest {
+            // A group whose history outlived it would keep the plaintext of an
+            // end-to-end encrypted conversation on disk after the MLS state
+            // that could read it was thrown away.
+            val store = InMemoryCordnGroupStore()
+            val envelope = CordnEnvelope.build(alice, 1_757_000_000L, 9, content = "secret")
+            store.saveGroup(gid, ByteArray(1))
+            store.appendMessage(gid, CordnDeliveredMessage(envelope, cursor = 1))
+
+            store.deleteGroup(gid)
+
+            assertEquals(emptyList<CordnDeliveredMessage>(), store.loadMessages(gid))
+            assertEquals(null, store.loadMessageSummary(gid))
+        }
+
+    /** Records the order writes arrive in, so an ordering invariant can be asserted. */
+    private class OrderRecordingStore(
+        private val inner: CordnGroupStore = InMemoryCordnGroupStore(),
+    ) : CordnGroupStore by inner {
+        val calls = mutableListOf<String>()
+
+        override suspend fun appendMessage(
+            gid: String,
+            message: CordnDeliveredMessage,
+        ) {
+            calls += "appendMessage"
+            inner.appendMessage(gid, message)
+        }
+
+        override suspend fun saveCursor(
+            gid: String,
+            cursor: GroupCursor,
+        ) {
+            calls += "saveCursor"
+            inner.saveCursor(gid, cursor)
+        }
+    }
 
     @Test
     fun `a posted commit is still recognised as ours after a restart`() =

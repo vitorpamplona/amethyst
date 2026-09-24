@@ -172,6 +172,21 @@ class CordnGroupChatroom(
         recountUnread()
     }
 
+    /**
+     * Seeds the inbox's preview line without loading the conversation.
+     *
+     * The inbox needs a last message for every room before any room is opened,
+     * and reading every group's whole history at login to get one would be
+     * paying for the rooms nobody visits. The store keeps a one-entry summary
+     * for exactly this.
+     *
+     * Ignored once the room holds anything, so a summary read cannot overwrite
+     * a newer message that live delivery already put here.
+     */
+    fun restorePreview(newest: CordnDeliveredMessage) {
+        if (byId.isEmpty()) _newest.value = newest
+    }
+
     /** Restores what the store remembered for this room. */
     fun restoreState(
         draft: String,

@@ -137,6 +137,30 @@ data class CordnEnvelope(
 
             require(SIG !in json) { "cordn envelope must not carry a `sig` (spec/02.md §2)" }
 
+            val envelope = fromJsonObject(json)
+
+            // Both checks are MUSTs, and each covers a different lie: the id
+            // check catches a rewritten body, the pubkey check catches a member
+            // posting under someone else's name. fromJsonObject does the first,
+            // because a body that does not hash to its id is malformed wherever
+            // it came from; only the second needs the MLS sender.
+            require(envelope.pubKey == senderIdentity) {
+                "cordn envelope claims pubkey ${envelope.pubKey} but the MLS sender is $senderIdentity"
+            }
+            return envelope
+        }
+
+        /**
+         * Reads an envelope out of its JSON form, checking that the body hashes
+         * to the id it carries.
+         *
+         * Separate from [decode] because a re-read from our own storage has no
+         * MLS sender to compare against — the sender was checked when the
+         * message was first ingested, and the plaintext has been ours since.
+         * What is still worth checking on the way back in is integrity, which
+         * the id covers.
+         */
+        fun fromJsonObject(json: JsonObject): CordnEnvelope {
             val envelope =
                 CordnEnvelope(
                     id = json.str(ID),
@@ -151,14 +175,8 @@ data class CordnEnvelope(
                     content = json.str(CONTENT),
                 )
 
-            // Both checks are MUSTs, and each covers a different lie: the id
-            // check catches a rewritten body, the pubkey check catches a member
-            // posting under someone else's name.
             require(envelope.id == envelope.computedId()) {
                 "cordn envelope id ${envelope.id} does not match its contents (${envelope.computedId()})"
-            }
-            require(envelope.pubKey == senderIdentity) {
-                "cordn envelope claims pubkey ${envelope.pubKey} but the MLS sender is $senderIdentity"
             }
             return envelope
         }
