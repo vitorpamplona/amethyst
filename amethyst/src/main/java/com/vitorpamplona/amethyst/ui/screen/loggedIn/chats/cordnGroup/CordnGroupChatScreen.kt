@@ -503,7 +503,10 @@ private fun CordnGroupChat(
                         CordnQuotedMessage(
                             parent = replyPreview,
                             annotations = annotations,
+                            me = me,
                             accountViewModel = accountViewModel,
+                            nav = nav,
+                            onClick = { jumpTo(replyPreview.envelope.id) },
                         )
                     }
                     IconButton(onClick = { replyingTo = null }) {

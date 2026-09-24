@@ -20,22 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -43,14 +38,18 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,11 +63,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.today
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -95,6 +99,7 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -171,9 +176,12 @@ internal fun CordnMessageRow(
             onHighlightFinished = onHighlightFinished,
             // A plain tap is a no-op, exactly as in every other Amethyst chat.
             onClick = { false },
+            // The account's own first choice, as `reactToOrDelete` uses in every other
+            // chat — a hardcoded thumb ignored the palette the user configured, and
+            // disagreed with cordn's own action sheet, which already reads it.
             onDoubleTap =
                 if (isLive) {
-                    { onReact(DEFAULT_REACTION) }
+                    { onReact(accountViewModel.reactionChoices().firstOrNull() ?: DEFAULT_REACTION) }
                 } else {
                     null
                 },
@@ -210,7 +218,9 @@ internal fun CordnMessageRow(
                 if (groupPosition.isLastOfGroup || isEdited || isPinned) {
                     {
                         CordnMessageFooter(
-                            createdAt = message.envelope.createdAt,
+                            message = message,
+                            isMine = isMine,
+                            coordinatorPubKey = room.coordinatorPubKey,
                             isEdited = isEdited,
                             isPinned = isPinned,
                             showTime = groupPosition.isLastOfGroup,
@@ -220,13 +230,15 @@ internal fun CordnMessageRow(
                     null
                 },
             drawAuthorLine = { CordnAuthorLine(message.envelope.pubKey, accountViewModel, nav) },
-        ) { _ ->
+        ) { bgColor ->
             CordnBubbleContents(
                 message = message,
                 room = room,
                 annotations = annotations,
+                me = me,
                 text = text,
                 jumboCount = jumboCount,
+                bubbleColor = bgColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onScrollToMessage = onScrollToMessage,
@@ -246,8 +258,10 @@ private fun CordnBubbleContents(
     message: CordnDeliveredMessage,
     room: CordnGroupChatroom,
     annotations: CordnAnnotationIndex,
+    me: HexKey,
     text: String?,
     jumboCount: Int,
+    bubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onScrollToMessage: (HexKey) -> Unit,
@@ -258,7 +272,10 @@ private fun CordnBubbleContents(
         CordnQuotedMessage(
             parent = parent,
             annotations = annotations,
+            me = me,
             accountViewModel = accountViewModel,
+            nav = nav,
+            parentBackgroundColor = bubbleColor,
             onClick = { onScrollToMessage(parent.envelope.id) },
         )
     }
@@ -441,25 +458,29 @@ private fun CordnReactionDetailSheet(
 }
 
 /**
- * The message a reply is answering, drawn above it.
+ * The message a reply is answering, drawn above it as a nested bubble.
  *
- * A one-line "Replying to: <first 60 characters>" told you a reply existed without ever
- * saying who it answered, which in a group is most of what you need. This names the
- * author in their own colour and is tappable, so a reply is a way back to what it
- * answers rather than a dead label.
+ * The same [ChatBubbleLayout] in `innerQuote` mode that every other chat uses for a
+ * quote, so what a reply answers reads identically in a cordn room and a DM: the
+ * quoted author's own bubble shape and tint, their name in their colour, and a tap
+ * that takes you to the message. Cordn drew a bespoke accent-bar card here, which was
+ * the one place in the app where a quote did not look like a quote.
+ *
+ * [parentBackgroundColor] is the enclosing bubble's fill. The layout composites the
+ * nested bubble over it, which is what keeps a quote legible inside both a sent and a
+ * received bubble instead of being tinted against the screen background.
  */
 @Composable
 internal fun CordnQuotedMessage(
     parent: CordnDeliveredMessage,
     annotations: CordnAnnotationIndex,
+    me: HexKey,
     accountViewModel: AccountViewModel,
+    nav: INav,
+    parentBackgroundColor: MutableState<Color>? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.isLight
-    val authorColor =
-        remember(parent.envelope.pubKey, isLightTheme) {
-            authorNameColorFor(parent.envelope.pubKey, isLightTheme)
-        }
+    val isMine = parent.envelope.pubKey == me
 
     val body =
         if (annotations.isDeleted(parent.envelope.id)) {
@@ -468,44 +489,67 @@ internal fun CordnQuotedMessage(
             annotations.contentOf(parent.envelope.id).orEmpty()
         }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(QuoteShape)
-                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = QUOTE_TINT_ALPHA))
-                .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // The accent bar reads as "this is quoted" at a glance, and takes the author's
-        // own colour so a run of replies to different people stays distinguishable.
-        Box(Modifier.width(3.dp).fillMaxHeight().background(authorColor))
-
-        Column(Modifier.padding(top = 6.dp, bottom = 6.dp, end = 8.dp)) {
-            Text(
-                text = observeUserNameByHex(parent.envelope.pubKey, accountViewModel),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = authorColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    ChatBubbleLayout(
+        isLoggedInUser = isMine,
+        isDraft = false,
+        innerQuote = true,
+        // Same rule as the bubbles: your own quoted message needs no name on it.
+        drawAuthorInfo = !isMine,
+        parentBackgroundColor = parentBackgroundColor,
+        // Returning true marks the tap as handled, which is how the shared layout
+        // distinguishes a quote (goes somewhere) from a bubble (a tap does nothing).
+        onClick = {
+            onClick?.invoke()
+            onClick != null
+        },
+        onAuthorClick = { nav.nav(Route.Profile(parent.envelope.pubKey)) },
+        // The shared layout does not gate long-press on innerQuote, so a quote that
+        // offered no menu would swallow the gesture. Only what makes sense on a
+        // preview: where it came from, and its text.
+        actionMenu = { onDismiss ->
+            CordnQuoteActionSheet(
+                body = body,
+                onDismiss = onDismiss,
+                onGoToMessage = onClick,
             )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        },
+        drawAuthorLine = { CordnAuthorLine(parent.envelope.pubKey, accountViewModel, nav) },
+    ) { _ ->
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
-private val QuoteShape = RoundedCornerShape(6.dp)
-
-/** How strongly a quoted message is lifted off the bubble it sits in. */
-private const val QUOTE_TINT_ALPHA = 0.06f
+/** Long-press on a quote: go to what it quotes, or take its text. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CordnQuoteActionSheet(
+    body: String,
+    onDismiss: () -> Unit,
+    onGoToMessage: (() -> Unit)?,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            TileRow {
+                if (onGoToMessage != null) {
+                    ActionTile(MaterialSymbols.ArrowUpward, stringRes(R.string.cordn_action_go_to_message)) {
+                        onGoToMessage()
+                        onDismiss()
+                    }
+                }
+                CopyTextTile(body, onDismiss)
+            }
+        }
+    }
+}
 
 /**
  * The line where the messages you have already read end.
@@ -525,11 +569,15 @@ internal fun UnreadDivider() {
  */
 @Composable
 private fun CordnMessageFooter(
-    createdAt: Long,
+    message: CordnDeliveredMessage,
+    isMine: Boolean,
+    coordinatorPubKey: HexKey,
     isEdited: Boolean,
     isPinned: Boolean,
     showTime: Boolean,
 ) {
+    var showDetails by remember(message.envelope.id) { mutableStateOf(false) }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (isPinned) {
             Icon(
@@ -552,13 +600,124 @@ private fun CordnMessageFooter(
         }
 
         if (showTime) {
-            ToggleableTimeAgoText(
-                timestamp = createdAt,
-                style = TimeAgoStyle.Short,
-                color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = Font12SP,
-            )
+            ClickableBox(onClick = { showDetails = true }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ToggleableTimeAgoText(
+                        timestamp = message.envelope.createdAt,
+                        style = TimeAgoStyle.Short,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        fontSize = Font12SP,
+                        // The tap belongs to the details sheet, as it does in the shared
+                        // footer. Left toggleable, the same tap flipped relative/absolute
+                        // here and opened delivery detail everywhere else; the absolute
+                        // time is in the sheet instead.
+                        toggleable = false,
+                    )
+
+                    // Anything of yours that is in this list was accepted by the
+                    // coordinator: `post` returns the cursor it was filed under, and
+                    // nothing enters the room until it does. So this says what the
+                    // shared ticks say, for the one hop cordn has.
+                    if (isMine) {
+                        Spacer(StdHorzSpacer)
+                        Icon(
+                            symbol = MaterialSymbols.Done,
+                            contentDescription = stringRes(R.string.cordn_delivery_accepted),
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.allGoodColor,
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    if (showDetails) {
+        CordnMessageDetailsSheet(
+            message = message,
+            isMine = isMine,
+            coordinatorPubKey = coordinatorPubKey,
+            onDismiss = { showDetails = false },
+        )
+    }
+}
+
+/**
+ * Where a message came from and when, behind a tap on its timestamp.
+ *
+ * The shared footer puts relay acceptance here. Cordn has one hop instead of a relay
+ * set — the coordinator that filed it — and the cursor it was filed under, which is the
+ * only ordering the room has and the thing to quote when a message looks out of place.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CordnMessageDetailsSheet(
+    message: CordnDeliveredMessage,
+    isMine: Boolean,
+    coordinatorPubKey: HexKey,
+    onDismiss: () -> Unit,
+) {
+    val sentAt =
+        remember(message.envelope.createdAt) {
+            ZonedDateTime
+                .ofInstant(Instant.ofEpochSecond(message.envelope.createdAt), ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.cordn_message_details_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            DetailLine(stringRes(R.string.cordn_message_details_sent_at), sentAt)
+            DetailLine(stringRes(R.string.cordn_message_details_cursor), message.cursor.toString())
+            DetailLine(stringRes(R.string.cordn_message_details_coordinator), coordinatorPubKey.take(16))
+            if (isMine) {
+                Text(
+                    text = stringRes(R.string.cordn_delivery_accepted),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.allGoodColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailLine(
+    label: String,
+    value: String,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Copies [text] and says so, the way every other copy affordance in the app does. */
+@Composable
+private fun CopyTextTile(
+    text: String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copied = stringRes(Res.string.copied_to_clipboard)
+
+    ActionTile(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text)) {
+        scope.launch {
+            clipboard.setText(text)
+            Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+        }
+        onDismiss()
     }
 }
 

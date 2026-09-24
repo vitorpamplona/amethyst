@@ -309,6 +309,12 @@
     <string name="cordn_group_info">Group info</string>
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_message_edited">edited</string>
+    <string name="cordn_action_go_to_message">Go to message</string>
+    <string name="cordn_delivery_accepted">Accepted by the coordinator</string>
+    <string name="cordn_message_details_title">Message details</string>
+    <string name="cordn_message_details_sent_at">Sent</string>
+    <string name="cordn_message_details_cursor">Cursor</string>
+    <string name="cordn_message_details_coordinator">Coordinator</string>
     <string name="cordn_composer_hint">Message</string>
     <string name="cordn_action_reply">Reply</string>
     <string name="cordn_action_edit">Edit</string>
