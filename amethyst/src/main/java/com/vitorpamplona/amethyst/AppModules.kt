@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
+import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
@@ -273,8 +273,8 @@ class AppModules(
 
     private val torPrefsDeferred =
         applicationIOScope.async {
-            val prefs = TorSharedPreferences.torPreferences(sharedSettingsStore) ?: TorSettings()
-            TorSharedPreferences(prefs, sharedSettingsStore, applicationIOScope)
+            val prefs = TorSettingsStore.torPreferences(sharedSettingsStore) ?: TorSettings()
+            TorSettingsStore(prefs, sharedSettingsStore, applicationIOScope)
         }
 
     // Blocking load of UI Preferences to avoid theme/language blinking
@@ -285,7 +285,7 @@ class AppModules(
 
     // Blocking load of Tor Settings to avoid connection leaks
     val torPrefs by lazy {
-        Log.d("AppModules", "TorSharedPreferences Init")
+        Log.d("AppModules", "TorSettingsStore Init")
         runBlocking { torPrefsDeferred.await() }
     }
 

@@ -18,15 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The slice of `TorSharedPreferences` that [TorManager] depends on. Extracted so the
- * manager can be unit-tested without an Android `Context` (and without DataStore).
- * Production wires `TorSharedPreferences`; tests wire an in-memory fake.
+ * The slice of `TorSettingsStore` that each front end's Tor manager depends on.
+ *
+ * Extracted so a manager can be unit-tested without a real store behind it:
+ * production wires `TorSettingsStore`, tests wire an in-memory fake. It lives
+ * here rather than beside Android's `TorManager` because the store that
+ * satisfies it is shared, and a desktop or CLI manager needs the same slice.
  */
 interface TorPreferencesPort {
     val torType: StateFlow<TorType>

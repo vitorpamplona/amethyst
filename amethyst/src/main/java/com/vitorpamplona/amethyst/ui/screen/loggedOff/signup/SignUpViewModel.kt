@@ -29,9 +29,9 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.name_is_required
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @Stable
 class SignUpViewModel : ViewModel() {

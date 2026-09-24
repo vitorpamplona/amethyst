@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.ui.settings
 
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.tor_custom
@@ -38,12 +38,15 @@ import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import org.jetbrains.compose.resources.StringResource
 
-// Re-export shared types so existing Android imports continue to work
-// The canonical types now live in commons/commonMain
-@Suppress("unused")
-private const val RE_EXPORTS = 0
-
-// Catalog keys for TorType (shared types live in commons/commonMain)
+/**
+ * The display labels for the Tor settings enums.
+ *
+ * Same split as the UI settings labels beside this file: the data ([TorType], [TorPresetType],
+ * [com.vitorpamplona.amethyst.commons.tor.TorSettings]) is in `commons`, where
+ * the CLI and any headless front end can read it, and the [StringResource]s are
+ * here because they come from the generated `Res` class that only `commonsUI`
+ * has.
+ */
 val TorType.resourceId: StringResource
     get() =
         when (this) {
@@ -52,7 +55,6 @@ val TorType.resourceId: StringResource
             TorType.EXTERNAL -> Res.string.tor_external
         }
 
-// Catalog keys for TorPresetType
 val TorPresetType.resourceId: StringResource
     get() =
         when (this) {

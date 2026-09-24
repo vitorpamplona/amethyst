@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import com.vitorpamplona.amethyst.commons.tor.TorPreferencesPort
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher

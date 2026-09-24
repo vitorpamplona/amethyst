@@ -84,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.tor.parseTorPresetType
 import com.vitorpamplona.amethyst.commons.tor.parseTorType
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.settings.explainerId
+import com.vitorpamplona.amethyst.commons.ui.settings.resourceId
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn

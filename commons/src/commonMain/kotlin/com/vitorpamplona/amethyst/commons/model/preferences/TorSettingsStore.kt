@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.compose.runtime.Stable
 import androidx.datastore.core.DataStore
@@ -28,14 +28,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.tor.TorPreferencesPort
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.ui.tor.TorPreferencesPort
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
@@ -47,7 +48,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
-class TorSharedPreferences(
+class TorSettingsStore(
     prefs: TorSettings,
     val store: DataStore<Preferences>,
     val scope: CoroutineScope,
@@ -72,9 +73,9 @@ class TorSharedPreferences(
                 value.toSettings(),
             )
 
-    override suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(store)
+    override suspend fun loadLastBypassApprovalMs(): Long = loadLastBypassApprovalMs(store)
 
-    override suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, store)
+    override suspend fun saveLastBypassApprovalMs(value: Long) = saveLastBypassApprovalMs(value, store)
 
     companion object {
         // loads faster when individualized
@@ -115,7 +116,7 @@ class TorSharedPreferences(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.
-                Log.e("SharedPreferences") { "Error reading DataStore preferences: ${e.message}" }
+                Log.e("TorSettingsStore") { "Error reading DataStore preferences: ${e.message}" }
                 null
             }
 
@@ -142,7 +143,7 @@ class TorSharedPreferences(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Log any errors that occur while reading the DataStore.
-                Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
+                Log.e("TorSettingsStore") { "Error saving DataStore preferences: ${e.message}" }
             }
         }
 
@@ -151,7 +152,7 @@ class TorSharedPreferences(
                 store.data.first()[LAST_BYPASS_APPROVAL_MS_KEY] ?: 0L
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("SharedPreferences") { "Error reading lastBypassApprovalMs: ${e.message}" }
+                Log.e("TorSettingsStore") { "Error reading lastBypassApprovalMs: ${e.message}" }
                 0L
             }
 
@@ -165,7 +166,7 @@ class TorSharedPreferences(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("SharedPreferences") { "Error saving lastBypassApprovalMs: ${e.message}" }
+                Log.e("TorSettingsStore") { "Error saving lastBypassApprovalMs: ${e.message}" }
             }
         }
     }
