@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountRosterStore
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.utils.Log
-import okio.Path.Companion.toOkioPath
-import java.io.File
 
 /**
  * The slice of the roster store this needs.
@@ -169,17 +166,18 @@ class AccountRoster(
 }
 
 val accountRoster: AccountRoster by lazy {
-    val context = Amethyst.instance.appContext
     AccountRoster(
         EncryptedRosterStorage(
             AccountRosterStore(
-                PreferenceDataStoreFactory.createWithPath(
-                    scope = Amethyst.instance.applicationIOScope,
-                    produceFile = { File(context.filesDir, "datastore/roster.preferences_pb").toOkioPath() },
-                ),
+                // Through the holder rather than a DataStore built here: it is the
+                // one registry that knows which files already have a live store,
+                // and `roster` sits in the same directory as every other one.
+                Amethyst.instance.appStores.getDataStore(ROSTER_FILE_NAME),
                 SecretEncryption(),
                 Amethyst.instance.applicationIOScope,
             ),
         ),
     )
 }
+
+private const val ROSTER_FILE_NAME = "roster"

@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -251,8 +252,11 @@ class AppModules(
         AppPreferenceStores(
             rootFilesDir = { appContext.filesDir.toOkioPath() },
             migrations = { name ->
-                when (name) {
-                    AppPreferenceStores.SHARED_SETTINGS -> UiSettingsStore.migrations { LocalPreferences.loadSharedSettings() }
+                when {
+                    name == AppPreferenceStores.SHARED_SETTINGS -> UiSettingsStore.migrations { LocalPreferences.loadSharedSettings() }
+                    // One file per account, so the migration is per name rather than a constant.
+                    name.startsWith(CashuPreferences.FILE_PREFIX) ->
+                        listOf(CashuPreferences.legacyMigration(appContext, name.removePrefix(CashuPreferences.FILE_PREFIX)))
                     else -> emptyList()
                 }
             },

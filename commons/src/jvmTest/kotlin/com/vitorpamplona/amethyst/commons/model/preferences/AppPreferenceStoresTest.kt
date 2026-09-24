@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -84,5 +85,40 @@ class AppPreferenceStoresTest {
 
             val expected = java.io.File(folder.root, "datastore/shared_settings.preferences_pb")
             assertTrue(expected.absolutePath, expected.exists())
+        }
+
+    /**
+     * Migrations are chosen per file name, and the name reaches the chooser.
+     *
+     * Both users of this depend on it: shared_settings takes the UI copy, and
+     * the Cashu counters take a different migration per account because they
+     * are one file per npub. A holder that ignored the name, or applied one
+     * file's migration to another, would copy an account's counters into
+     * someone else's — and a counter that moves backwards costs real ecash.
+     */
+    @Test
+    fun migrationsAreChosenPerFileNameAndTheNameIsPassedThrough() =
+        runTest {
+            val asked = mutableListOf<String>()
+            val marker = stringPreferencesKey("from")
+
+            val subject =
+                AppPreferenceStores(
+                    rootFilesDir = { folder.root.toOkioPath() },
+                    migrations = { name ->
+                        asked += name
+                        if (name.startsWith("cashu_")) {
+                            listOf(CopyOnceMigration("migrated.$name") { out -> out[marker] = name })
+                        } else {
+                            emptyList()
+                        }
+                    },
+                )
+
+            assertEquals("cashu_npubA", subject.getDataStore("cashu_npubA").data.first()[marker])
+            assertEquals("cashu_npubB", subject.getDataStore("cashu_npubB").data.first()[marker])
+            assertNull("a file with no migration must stay untouched", subject.sharedSettings().data.first()[marker])
+
+            assertTrue("cashu_npubA" in asked && "cashu_npubB" in asked && "shared_settings" in asked)
         }
 }

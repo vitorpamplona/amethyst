@@ -21,15 +21,12 @@
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
 import android.content.Context
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.longPreferencesKey
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.DataStoreCashuCounterStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import okio.Path.Companion.toOkioPath
-import java.io.File
 
 /**
  * Android's per-account NUT-13 counter store: the shared
@@ -51,6 +48,11 @@ import java.io.File
 object CashuPreferences {
     private const val LEGACY_FILE_PREFIX = "cashu_prefs_"
 
+    /** The store file name for [npub], as AppPreferenceStores takes it. */
+    const val FILE_PREFIX = "cashu_"
+
+    fun fileName(npub: String) = FILE_PREFIX + npub
+
     private val stores = LargeCache<String, CashuKeysetCounterStore>()
 
     /**
@@ -60,16 +62,18 @@ object CashuPreferences {
      */
     fun forAccount(npub: String): CashuKeysetCounterStore =
         stores.getOrCreate(npub) {
-            val context = Amethyst.instance.appContext
-            DataStoreCashuCounterStore(
-                PreferenceDataStoreFactory.createWithPath(
-                    migrations = listOf(legacyMigration(context, npub)),
-                    produceFile = { File(context.filesDir, "datastore/cashu_$npub.preferences_pb").toOkioPath() },
-                ),
-            )
+            DataStoreCashuCounterStore(Amethyst.instance.appStores.getDataStore(fileName(npub)))
         }
 
-    private fun legacyMigration(
+    /**
+     * The copy out of `cashu_prefs_<npub>`, wired to the file by AppModules
+     * rather than attached here.
+     *
+     * DataStore runs a file's migrations when that file is first opened, and
+     * the holder is what opens it, so the migration has to be registered with
+     * the holder or it would never run.
+     */
+    fun legacyMigration(
         context: Context,
         npub: String,
     ) = CopyOnceMigration("migrated.cashuCounters") { out ->
