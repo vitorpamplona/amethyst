@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
@@ -206,7 +207,12 @@ class TopNavFollowListStoreTest {
                         ),
                     )
                 } finally {
+                    // cancel() only asks. DataStore's registry keeps the entry until
+                    // the owning job actually completes, so without this join the
+                    // next open of the same file races it — which is what failed on
+                    // a loaded CI runner while passing locally every time.
                     scope.cancel()
+                    scope.coroutineContext.job.join()
                 }
             }
 

@@ -59,7 +59,11 @@ class DrawerSectionCollapsePreferencesTest {
         advanceUntilIdle()
         prefs.taps()
         advanceUntilIdle()
+        // On the test dispatcher advanceUntilIdle is the join: cancel() only
+        // asks, and the next session() opens the same file, which DataStore
+        // refuses while the previous instance is still winding down.
         scope.cancel()
+        advanceUntilIdle()
         return prefs.flow.value
     }
 

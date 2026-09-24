@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
@@ -158,6 +159,7 @@ class EncryptedDataStoreTest {
                 )
             subject.save(key, "a real value")
             scope.cancel()
+            scope.coroutineContext.job.join()
 
             // Truncate the store so opening it fails rather than reading empty.
             dataFile.writeBytes(byteArrayOf(0x01, 0x02, 0x03))
