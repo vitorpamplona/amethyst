@@ -24,6 +24,7 @@ import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,8 @@ class AppPreferenceStores(
          * a whole-file read.
          */
         const val SHARED_SETTINGS = "shared_settings"
+
+        private const val SUFFIX = ".preferences_pb"
     }
 
     /**
@@ -95,7 +98,7 @@ class AppPreferenceStores(
 
     private val storeCache = LargeCache<String, Entry>()
 
-    fun file(name: String): Path = rootFilesDir() / "datastore" / "$name.preferences_pb"
+    fun file(name: String): Path = rootFilesDir() / "datastore" / "$name$SUFFIX"
 
     fun getDataStore(name: String): DataStore<Preferences> =
         storeCache
@@ -113,4 +116,27 @@ class AppPreferenceStores(
 
     /** The file UI, Tor, OTS, Namecoin and friends share. */
     fun sharedSettings(): DataStore<Preferences> = getDataStore(SHARED_SETTINGS)
+
+    /**
+     * The names of stores already on disk whose name starts with [prefix].
+     *
+     * For the store families that are one file per key rather than one file —
+     * the signer permissions keep an `nsp_<hash>` file per app — where the only
+     * way to enumerate what exists is to look. Reads the directory, so callers
+     * keep it off the main thread.
+     *
+     * Returns names in the form [getDataStore] takes, with the directory and
+     * the `.preferences_pb` suffix stripped, and an empty list when nothing has
+     * been written yet.
+     */
+    fun names(prefix: String): List<String> {
+        val dir = rootFilesDir() / "datastore"
+        if (!platformFileSystem.exists(dir)) return emptyList()
+
+        return platformFileSystem
+            .list(dir)
+            .map { it.name }
+            .filter { it.startsWith(prefix) && it.endsWith(SUFFIX) }
+            .map { it.removeSuffix(SUFFIX) }
+    }
 }

@@ -18,11 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.connectedApps
+package com.vitorpamplona.amethyst.commons.connectedApps
 
-import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -30,12 +28,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.security.MessageDigest
 
 /**
  * Per-coordinate DataStore-backed [NostrSignerPermissionStore]. One small `.preferences_pb`
@@ -46,18 +44,9 @@ import java.security.MessageDigest
  * reverse-map file → coordinate without scanning the filesystem.
  */
 class DataStoreNostrSignerPermissionStore(
-    private val filesDir: File,
+    private val stores: AppPreferenceStores,
 ) : NostrSignerPermissionStore {
-    constructor(context: Context) : this(context.applicationContext.filesDir)
-
-    private val cache = LargeCache<String, DataStore<Preferences>>()
-
-    private fun storeFor(coordinate: String): DataStore<Preferences> {
-        val file = File(filesDir, "datastore/nsp_${hash(coordinate)}.preferences_pb")
-        return cache.getOrCreate(file.absolutePath) {
-            PreferenceDataStoreFactory.create(produceFile = { file })
-        }
-    }
+    private fun storeFor(coordinate: String): DataStore<Preferences> = stores.getDataStore(nameFor(coordinate))
 
     override suspend fun loadPolicy(coordinate: String): AppSignerPolicy? {
         val raw = storeFor(coordinate).data.first()[KEY_POLICY] ?: return null
@@ -108,15 +97,9 @@ class DataStoreNostrSignerPermissionStore(
         // Enumerates the datastore directory + reads each file — blocking disk IO, so keep it off the
         // caller's thread (callers invoke this from Compose LaunchedEffects on the main dispatcher).
         withContext(Dispatchers.IO) {
-            val dir = File(filesDir, "datastore")
-            if (!dir.exists()) return@withContext emptyMap()
             val result = mutableMapOf<String, AppSignerPolicy>()
-            for (file in dir.listFiles { f -> f.name.startsWith("nsp_") } ?: emptyArray()) {
-                val ds =
-                    cache.getOrCreate(file.absolutePath) {
-                        PreferenceDataStoreFactory.create(produceFile = { file })
-                    }
-                val coordinate = ds.data.first()[KEY_COORDINATE] ?: continue
+            for (name in stores.names(NAME_PREFIX)) {
+                val coordinate = stores.getDataStore(name).data.first()[KEY_COORDINATE] ?: continue
                 val policy = loadPolicy(coordinate) ?: continue
                 result[coordinate] = policy
             }
@@ -188,9 +171,18 @@ class DataStoreNostrSignerPermissionStore(
         private const val OP_PREFIX = "op:"
         private const val OP_EXPIRY_SUFFIX = ":exp"
 
-        private fun hash(coordinate: String): String {
-            val digest = MessageDigest.getInstance("SHA-256").digest(coordinate.toByteArray())
-            return digest.take(8).joinToString("") { "%02x".format(it) }
-        }
+        internal const val NAME_PREFIX = "nsp_"
+
+        /**
+         * The per-app store's file name.
+         *
+         * The hash is part of the file name, so it must keep producing exactly
+         * what `MessageDigest.getInstance("SHA-256")` plus `"%02x".format(byte)`
+         * did on Android — a different digest orphans the file rather than
+         * failing, and with it every permission the user has granted that app.
+         * Pinned in DataStoreNostrSignerPermissionStoreTest against hashes
+         * computed outside this codebase.
+         */
+        internal fun nameFor(coordinate: String): String = NAME_PREFIX + sha256(coordinate.encodeToByteArray()).copyOfRange(0, 8).toHexKey()
     }
 }

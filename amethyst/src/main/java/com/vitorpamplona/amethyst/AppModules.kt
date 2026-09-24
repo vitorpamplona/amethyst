@@ -27,6 +27,7 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResol
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
@@ -870,7 +870,7 @@ class AppModules(
     // carry their owning account (`nip46:<signer>:<client>`) and whose sessions run for a specific
     // account rather than the active one. The napplet path namespaces its own coordinate the same way
     // (see NappletBroker.signerCoordinateFor) instead.
-    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
+    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appStores) }
 
     // Display + relay info for connected NIP-46 remote-signer clients.
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
