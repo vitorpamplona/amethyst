@@ -91,6 +91,8 @@ import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.explainerId
+import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
 import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
 import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
@@ -101,8 +103,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.tor.explainerId
-import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SegmentedChoiceTile
