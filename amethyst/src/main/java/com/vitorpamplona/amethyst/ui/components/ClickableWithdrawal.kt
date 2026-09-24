@@ -34,8 +34,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_error
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -54,7 +54,7 @@ fun MayBeWithdrawal(
         launch(Dispatchers.IO) { lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord) }
     }
 
-    CrossfadeIfEnabled(targetState = lnWithdrawal, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = lnWithdrawal) {
         if (it != null) {
             ClickableWithdrawal(withdrawalString = it)
         } else {

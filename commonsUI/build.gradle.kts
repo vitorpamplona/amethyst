@@ -180,6 +180,8 @@ kotlin {
             dependencies {
                 // Android-specific Compose tooling
                 implementation(libs.androidx.ui.tooling.preview)
+                // WindowInsetsControllerCompat, for DisappearingScaffold's immersive status bar.
+                implementation(libs.androidx.core.ktx)
             }
         }
 
@@ -204,6 +206,9 @@ kotlin {
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
+                // SafeImeInsetsTest mocks the android.view.View its per-window cache is keyed on.
+                implementation(libs.mockk)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 

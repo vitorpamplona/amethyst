@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalView
-import com.vitorpamplona.amethyst.ui.components.getActivityWindow
+import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 
 /**
  * Pins the screen to full brightness, and awake, while a QR code is on it.

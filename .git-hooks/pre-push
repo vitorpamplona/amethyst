@@ -28,6 +28,8 @@ TASKS=(
     :quartz:jvmTest
     :commons:jvmTest
     :commonsUI:jvmTest
+    # Android-only commonsUI code (e.g. SafeImeInsets) is tested here, not in jvmTest.
+    :commonsUI:testAndroidHostTest
     :nestsClient:jvmTest
     :quic:jvmTest
     :marmotQuic:jvmTest

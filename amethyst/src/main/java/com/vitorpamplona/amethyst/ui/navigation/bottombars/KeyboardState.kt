@@ -25,8 +25,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
-import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
-import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
+import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
 
 enum class KeyboardState {
     Opened,
@@ -36,7 +35,7 @@ enum class KeyboardState {
 /**
  * Whether the soft keyboard is currently on screen, derived from the IME inset.
  *
- * This intentionally reads the same [SafeImeInsets] that drives `Modifier.imePaddingSafe()`
+ * This intentionally reads the same [SafeImeInsets][com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] that drives `Modifier.imePaddingSafe()`
  * everywhere else in the app, so the two can never disagree about whether the keyboard is up.
  *
  * The original implementation measured `View.getWindowVisibleDisplayFrame` from a
@@ -48,7 +47,7 @@ enum class KeyboardState {
  *
  * Reading `WindowInsets.ime` fixed that, but has a latch of its own: Compose stops updating the
  * inset entirely once its insets listener is left mid-animation, which pins this back at [Opened]
- * in exactly the same way. [SafeImeInsets] is what closes that last hole, which is why this reads
+ * in exactly the same way. [SafeImeInsets][com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] is what closes that last hole, which is why this reads
  * the corrected inset rather than the raw one.
  */
 @Composable

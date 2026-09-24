@@ -67,12 +67,12 @@ import com.vitorpamplona.amethyst.commons.resources.content_warning_explanation
 import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
 import com.vitorpamplona.amethyst.commons.resources.show_anyway
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
@@ -154,7 +154,7 @@ fun ContentWarningGate(
         }
     }
 
-    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = showContentWarningNote) {
         if (it) {
             if (backdrop != null) {
                 Box(modifier = modifier.clipToBounds()) {
@@ -180,7 +180,7 @@ fun ObserveSensitivityWarning(
 
     var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
 
-    CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = showContentWarningNote) {
         if (it) {
             ContentWarningNote(reason) { showContentWarningNote = false }
         } else {

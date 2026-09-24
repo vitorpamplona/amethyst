@@ -379,6 +379,7 @@ jobs:
             :quartz:jvmTest \
             :commons:jvmTest \
             :commonsUI:jvmTest \
+            :commonsUI:testAndroidHostTest \
             :nestsClient:jvmTest \
             :amethyst:testFdroidDebugUnitTest \
             :amethyst:testPlayDebugUnitTest \

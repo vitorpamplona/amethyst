@@ -75,10 +75,10 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_chip
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_body
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_confirm
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat

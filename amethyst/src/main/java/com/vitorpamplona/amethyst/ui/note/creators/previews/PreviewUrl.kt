@@ -42,12 +42,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
@@ -217,7 +217,6 @@ private fun MyLoadUrlPreviewDirect(
     CrossfadeIfEnabled(
         targetState = urlPreviewState,
         label = "UrlPreview",
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is UrlPreviewState.Loaded -> {
@@ -286,7 +285,6 @@ private fun MyLoadUrlPreviewDirectFillWidth(
     CrossfadeIfEnabled(
         targetState = urlPreviewState,
         label = "UrlPreview",
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is UrlPreviewState.Loaded -> {

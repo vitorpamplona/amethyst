@@ -71,11 +71,11 @@ import com.vitorpamplona.amethyst.commons.resources.new_highlight_note_placehold
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_passage_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_source_label
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_title
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
