@@ -180,6 +180,8 @@ kotlin {
             dependencies {
                 // Android-specific Compose tooling
                 implementation(libs.androidx.ui.tooling.preview)
+                // WindowInsetsControllerCompat, for DisappearingScaffold's immersive status bar.
+                implementation(libs.androidx.core.ktx)
             }
         }
 
