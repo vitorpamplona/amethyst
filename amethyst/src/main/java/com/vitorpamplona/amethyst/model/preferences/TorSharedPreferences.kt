@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -48,7 +49,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Stable
 class TorSharedPreferences(
     prefs: TorSettings,
-    val context: Context,
+    val store: DataStore<Preferences>,
     val scope: CoroutineScope,
 ) : TorPreferencesPort {
     // Tor Preferences. Makes sure to wait for it to avoid connecting with random IPs
@@ -63,7 +64,7 @@ class TorSharedPreferences(
             .debounce(1000)
             .distinctUntilChanged()
             .onEach {
-                save(it, context)
+                save(it, store)
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -71,9 +72,9 @@ class TorSharedPreferences(
                 value.toSettings(),
             )
 
-    override suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(context)
+    override suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(store)
 
-    override suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, context)
+    override suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, store)
 
     companion object {
         // loads faster when individualized
@@ -92,10 +93,10 @@ class TorSharedPreferences(
         val NIP05_VERIFICATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.nip05VerificationsViaTor")
         val MEDIA_UPLOADS_VIA_TOR_KEY = booleanPreferencesKey("tor.mediaUploadsViaTor")
 
-        suspend fun torPreferences(context: Context): TorSettings? =
+        suspend fun torPreferences(store: DataStore<Preferences>): TorSettings? =
             try {
                 // Get the preference flow and take the first value.
-                val preferences = context.sharedPreferencesDataStore.data.first()
+                val preferences = store.data.first()
                 TorSettings(
                     torType = preferences[TOR_TYPE_KEY]?.let { TorType.valueOf(it) } ?: TorType.INTERNAL,
                     externalSocksPort = preferences[EXTERNAL_SOCKS_PORT_KEY] ?: 9050,
@@ -120,10 +121,10 @@ class TorSharedPreferences(
 
         suspend fun save(
             torSettings: TorSettings,
-            context: Context,
+            store: DataStore<Preferences>,
         ) {
             try {
-                context.sharedPreferencesDataStore.edit { preferences ->
+                store.edit { preferences ->
                     preferences[TOR_TYPE_KEY] = torSettings.torType.name
                     preferences[EXTERNAL_SOCKS_PORT_KEY] = torSettings.externalSocksPort
                     preferences[ONION_RELAYS_VIA_TOR_KEY] = torSettings.onionRelaysViaTor
@@ -145,9 +146,9 @@ class TorSharedPreferences(
             }
         }
 
-        suspend fun loadLastBypassApprovalMs(context: Context): Long =
+        suspend fun loadLastBypassApprovalMs(store: DataStore<Preferences>): Long =
             try {
-                context.sharedPreferencesDataStore.data.first()[LAST_BYPASS_APPROVAL_MS_KEY] ?: 0L
+                store.data.first()[LAST_BYPASS_APPROVAL_MS_KEY] ?: 0L
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("SharedPreferences") { "Error reading lastBypassApprovalMs: ${e.message}" }
@@ -156,10 +157,10 @@ class TorSharedPreferences(
 
         suspend fun saveLastBypassApprovalMs(
             value: Long,
-            context: Context,
+            store: DataStore<Preferences>,
         ) {
             try {
-                context.sharedPreferencesDataStore.edit { prefs ->
+                store.edit { prefs ->
                     prefs[LAST_BYPASS_APPROVAL_MS_KEY] = value
                 }
             } catch (e: Exception) {

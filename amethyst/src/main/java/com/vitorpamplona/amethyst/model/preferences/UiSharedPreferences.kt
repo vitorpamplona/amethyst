@@ -29,8 +29,6 @@ import androidx.core.content.getSystemService
 import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -49,21 +47,6 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * The file UI, Tor, Namecoin, OTS and the Buzz stores all share, each under its
- * own key prefix.
- *
- * The migration is attached here, at the file, rather than inside
- * [UiSettingsStore]: whichever of those stores is constructed first is the one
- * that opens the file, and DataStore runs a file's migrations once, on that
- * first open. Hanging it off the UI store alone would make the copy depend on
- * load order.
- */
-val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "shared_settings",
-    produceMigrations = { UiSettingsStore.migrations { LocalPreferences.loadSharedSettings() } },
-)
-
-/**
  * The Android half of the UI settings: the flows the app observes, and the two
  * platform side effects that a theme or language change has to perform.
  *
@@ -74,10 +57,11 @@ val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDat
 @Stable
 class UiSharedPreferences(
     prefs: UiSettings,
+    dataStore: DataStore<Preferences>,
     val context: Context,
     val scope: CoroutineScope,
 ) {
-    private val store = UiSettingsStore(context.sharedPreferencesDataStore) { LocalPreferences.loadSharedSettings() }
+    private val store = UiSettingsStore(dataStore)
 
     // UI Preferences. Makes sure to wait for it to avoid blinking themes and language preferences
     val value = UiSettingsFlow.build(prefs)
@@ -197,6 +181,6 @@ class UiSharedPreferences(
             )
 
     companion object {
-        suspend fun uiPreferences(context: Context): UiSettings? = UiSettingsStore(context.sharedPreferencesDataStore) { LocalPreferences.loadSharedSettings() }.load()
+        suspend fun uiPreferences(dataStore: DataStore<Preferences>): UiSettings? = UiSettingsStore(dataStore).load()
     }
 }

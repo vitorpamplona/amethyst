@@ -33,12 +33,14 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
+import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
@@ -71,7 +73,6 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.sharedPreferencesDataStore
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
@@ -198,6 +199,7 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class AppModules(
@@ -229,19 +231,50 @@ class AppModules(
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
+    /**
+     * The app-wide DataStore files — the ones that belong to the install rather
+     * than to an account. [AccountPreferenceStores] is the same idea keyed by
+     * npub.
+     *
+     * This replaces the `Context.preferencesDataStore` delegate these stores
+     * used to share. Same paths — `AppPreferenceStores.file` reproduces
+     * `filesDir/datastore/<name>.preferences_pb` exactly — so nothing migrates
+     * and a rollback finds its data where it left it. What it buys is that the
+     * stores themselves live in `commonMain`, where a desktop or CLI front end
+     * can say where its data lives instead of needing a `Context`.
+     *
+     * The shared_settings migration is attached here, to the file, because
+     * eight stores share it and DataStore runs a file's migrations once, on
+     * whichever store opens it first.
+     */
+    val appStores by lazy {
+        AppPreferenceStores(
+            rootFilesDir = { appContext.filesDir.toOkioPath() },
+            migrations = { name ->
+                when (name) {
+                    AppPreferenceStores.SHARED_SETTINGS -> UiSettingsStore.migrations { LocalPreferences.loadSharedSettings() }
+                    else -> emptyList()
+                }
+            },
+        )
+    }
+
+    /** The file UI, Tor, Namecoin, OTS and the Buzz stores all share. */
+    val sharedSettingsStore get() = appStores.sharedSettings()
+
     // Pre-load both preference DataStores in parallel on IO threads.
     // Both constructors use runBlocking internally, so starting them concurrently
     // reduces total blocking time from (torPrefs + uiPrefs) to ~max(torPrefs, uiPrefs).
     private val uiPrefsDeferred =
         applicationIOScope.async {
-            val prefs = UiSharedPreferences.uiPreferences(appContext) ?: UiSettings()
-            UiSharedPreferences(prefs, appContext, applicationIOScope)
+            val prefs = UiSharedPreferences.uiPreferences(sharedSettingsStore) ?: UiSettings()
+            UiSharedPreferences(prefs, sharedSettingsStore, appContext, applicationIOScope)
         }
 
     private val torPrefsDeferred =
         applicationIOScope.async {
-            val prefs = TorSharedPreferences.torPreferences(appContext) ?: TorSettings()
-            TorSharedPreferences(prefs, appContext, applicationIOScope)
+            val prefs = TorSharedPreferences.torPreferences(sharedSettingsStore) ?: TorSettings()
+            TorSharedPreferences(prefs, sharedSettingsStore, applicationIOScope)
         }
 
     // Blocking load of UI Preferences to avoid theme/language blinking
@@ -259,7 +292,7 @@ class AppModules(
     // Namecoin ElectrumX server preferences (global, like Tor settings)
     val namecoinPrefs by lazy {
         Log.d("AppModules", "NamecoinSettingsStore Init")
-        NamecoinSettingsStore(appContext.sharedPreferencesDataStore, applicationIOScope)
+        NamecoinSettingsStore(sharedSettingsStore, applicationIOScope)
     }
 
     // OTS blockchain explorer preferences (global, like Tor settings)
@@ -270,7 +303,7 @@ class AppModules(
     // in commonMain, which has no runBlocking to hide it behind.
     val otsPrefs by lazy {
         Log.d("AppModules", "OtsSettingsStore Init")
-        val store = appContext.sharedPreferencesDataStore
+        val store = sharedSettingsStore
         OtsSettingsStore(store, runBlocking { OtsSettingsStore.load(store) })
     }
 
@@ -315,12 +348,12 @@ class AppModules(
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
     val relayGroupDeletionPrefs =
-        RelayGroupDeletionStore(appContext.sharedPreferencesDataStore, applicationIOScope)
+        RelayGroupDeletionStore(sharedSettingsStore, applicationIOScope)
 
     // Restore + persist which drawer section headings the user has folded away, so the side menu
     // opens the way they left it (device-global: a collapsed heading is a per-device view choice,
     // not an account setting worth syncing, unlike the hidden rows beside it in the drawer).
-    val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(appContext.sharedPreferencesDataStore, applicationIOScope)
+    val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
@@ -976,11 +1009,11 @@ class AppModules(
             // start — Buzz membership is server-side) and the starred channels. Per account: the
             // joined set makes a relay first-party for NIP-42, and a star is personal.
             startBuzzPersistence = { account ->
-                BuzzWorkspaceStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzChannelStars)
+                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
                 // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
                 // first Buzz-relay AUTH rather than after it.
-                BuzzAttestationStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzAttestation)
+                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
             },
         )
 

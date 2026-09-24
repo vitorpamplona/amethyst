@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.preferences
 
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -54,9 +55,17 @@ import okio.Path
  * holder opens the file it was already using, so nothing has to be migrated
  * and a rollback finds its data where it left it. Changing [file]'s shape
  * would silently orphan every existing install's settings.
+ *
+ * @param migrations the migrations to attach to a file, by name. Taken here
+ *   rather than at [getDataStore] because DataStore runs a file's migrations
+ *   once, when that file is first opened — and several stores share
+ *   [SHARED_SETTINGS], so which one opens it is a race. Wiring the migrations
+ *   to the file rather than to a caller is what makes the copy happen no
+ *   matter who wins.
  */
 class AppPreferenceStores(
     val rootFilesDir: () -> Path,
+    private val migrations: (String) -> List<DataMigration<Preferences>> = { emptyList() },
 ) {
     companion object {
         /**
@@ -96,6 +105,7 @@ class AppPreferenceStores(
                     scope,
                     PreferenceDataStoreFactory.createWithPath(
                         scope = scope,
+                        migrations = migrations(name),
                         produceFile = { file(name) },
                     ),
                 )
