@@ -18,16 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import androidx.compose.runtime.Stable
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
-import com.vitorpamplona.amethyst.ui.navigation.drawer.drawerSectionIdsFromNames
-import com.vitorpamplona.amethyst.ui.navigation.drawer.toNames
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
+import com.vitorpamplona.amethyst.commons.model.navigation.drawerSectionIdsFromNames
+import com.vitorpamplona.amethyst.commons.model.navigation.toNames
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -25,8 +25,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
-import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_create
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
@@ -69,38 +69,6 @@ data class DrawerSection(
  * copied — a `DrawerSections.map { it.copy(...) }` would silently defeat an `===` check, with no
  * compile error and nothing to fail a test.
  */
-enum class DrawerSectionId {
-    YOU,
-    NAVIGATE,
-    FEEDS,
-
-    /** Composer entry points. Carries no catalog destinations, so nothing in it is configurable. */
-    CREATE,
-
-    /** Also renders the relay-status row, which isn't a catalog destination (it shows a live counter). */
-    SYSTEM,
-}
-
-private val DrawerSectionIdsByName = DrawerSectionId.entries.associateBy { it.name }
-
-/**
- * Parses the persisted names of the headings the user has collapsed, silently dropping any this
- * build doesn't know. Mirrors [com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames]:
- * names rather than ordinals, so reordering this enum renames nothing by accident, and a value left
- * by a build with one more section costs that heading rather than the whole read.
- *
- * The stored set holds the **collapsed** headings rather than the expanded ones, for the same reason
- * [DrawerItemVisibility] stores the hidden rows: a heading nobody has ever collapsed simply isn't in
- * the set, so a section added in a later release opens expanded for everyone with no migration.
- */
-fun drawerSectionIdsFromNames(names: Collection<String>): Set<DrawerSectionId> = names.mapNotNullTo(mutableSetOf()) { DrawerSectionIdsByName[it] }
-
-/**
- * The inverse of [drawerSectionIdsFromNames]. Unlike the NavBarItem codec this returns an unsorted
- * Set rather than a sorted List: the destination is a DataStore string set, whose equality is
- * already order-independent, so there is no serialized form to keep deterministic.
- */
-fun Set<DrawerSectionId>.toNames(): Set<String> = mapTo(mutableSetOf()) { it.name }
 
 private val DrawerNavigateItems: List<NavBarItem> =
     listOf(

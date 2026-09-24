@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSection
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
