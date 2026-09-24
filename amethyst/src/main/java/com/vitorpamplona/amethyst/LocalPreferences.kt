@@ -26,6 +26,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSec
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences

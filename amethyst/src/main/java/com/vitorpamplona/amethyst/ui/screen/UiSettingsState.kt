@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.BooleanType
-import com.vitorpamplona.amethyst.model.ConnectivityType
-import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.model.ProfileGalleryType
-import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.ConnectivityType
+import com.vitorpamplona.amethyst.commons.model.FeatureSetType
+import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

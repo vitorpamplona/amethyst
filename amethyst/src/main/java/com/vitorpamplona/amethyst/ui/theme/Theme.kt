@@ -44,6 +44,10 @@ import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
+import com.vitorpamplona.amethyst.commons.model.AccentColorType
+import com.vitorpamplona.amethyst.commons.model.FontFamilyType
+import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueDark
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueLight
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenDark
@@ -64,10 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColorScheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.withFontFamily
-import com.vitorpamplona.amethyst.model.AccentColorType
-import com.vitorpamplona.amethyst.model.FontFamilyType
-import com.vitorpamplona.amethyst.model.FontSizeType
-import com.vitorpamplona.amethyst.model.ThemeType
 
 // The accent color (primary/secondary/tertiary) is user-selectable in Settings -> Accent Color.
 // Purple keeps the original Amethyst look (purple primary + teal secondary). Every other accent
