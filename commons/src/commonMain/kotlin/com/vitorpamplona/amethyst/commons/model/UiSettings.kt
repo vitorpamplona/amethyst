@@ -21,37 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.accent_color_blue
-import com.vitorpamplona.amethyst.commons.resources.accent_color_green
-import com.vitorpamplona.amethyst.commons.resources.accent_color_orange
-import com.vitorpamplona.amethyst.commons.resources.accent_color_pink
-import com.vitorpamplona.amethyst.commons.resources.accent_color_purple
-import com.vitorpamplona.amethyst.commons.resources.accent_color_red
-import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
-import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
-import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only
-import com.vitorpamplona.amethyst.commons.resources.content_warning_hide_all_sensitive_content_option
-import com.vitorpamplona.amethyst.commons.resources.content_warning_see_warnings_option
-import com.vitorpamplona.amethyst.commons.resources.content_warning_show_all_sensitive_content_option
-import com.vitorpamplona.amethyst.commons.resources.dark
-import com.vitorpamplona.amethyst.commons.resources.font_family_monospace
-import com.vitorpamplona.amethyst.commons.resources.font_family_sans_serif
-import com.vitorpamplona.amethyst.commons.resources.font_family_serif
-import com.vitorpamplona.amethyst.commons.resources.font_family_system
-import com.vitorpamplona.amethyst.commons.resources.font_size_huge
-import com.vitorpamplona.amethyst.commons.resources.font_size_large
-import com.vitorpamplona.amethyst.commons.resources.font_size_normal
-import com.vitorpamplona.amethyst.commons.resources.font_size_small
-import com.vitorpamplona.amethyst.commons.resources.gallery_type_classic
-import com.vitorpamplona.amethyst.commons.resources.gallery_type_modern
-import com.vitorpamplona.amethyst.commons.resources.light
-import com.vitorpamplona.amethyst.commons.resources.system
-import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_complete
-import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performance
-import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified
 import kotlinx.serialization.Serializable
-import org.jetbrains.compose.resources.StringResource
 
 @Stable
 @Serializable
@@ -98,11 +68,10 @@ data class UiSettings(
 
 enum class ThemeType(
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    SYSTEM(0, Res.string.system),
-    LIGHT(1, Res.string.light),
-    DARK(2, Res.string.dark),
+    SYSTEM(0),
+    LIGHT(1),
+    DARK(2),
 }
 
 fun parseThemeType(code: Int?): ThemeType =
@@ -115,14 +84,13 @@ fun parseThemeType(code: Int?): ThemeType =
 
 enum class AccentColorType(
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    PURPLE(0, Res.string.accent_color_purple),
-    BLUE(1, Res.string.accent_color_blue),
-    GREEN(2, Res.string.accent_color_green),
-    ORANGE(3, Res.string.accent_color_orange),
-    RED(4, Res.string.accent_color_red),
-    PINK(5, Res.string.accent_color_pink),
+    PURPLE(0),
+    BLUE(1),
+    GREEN(2),
+    ORANGE(3),
+    RED(4),
+    PINK(5),
 }
 
 fun parseAccentColorType(screenCode: Int): AccentColorType =
@@ -138,12 +106,11 @@ fun parseAccentColorType(screenCode: Int): AccentColorType =
 
 enum class FontFamilyType(
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    SYSTEM(0, Res.string.font_family_system),
-    SANS_SERIF(1, Res.string.font_family_sans_serif),
-    SERIF(2, Res.string.font_family_serif),
-    MONOSPACE(3, Res.string.font_family_monospace),
+    SYSTEM(0),
+    SANS_SERIF(1),
+    SERIF(2),
+    MONOSPACE(3),
 }
 
 fun parseFontFamilyType(screenCode: Int): FontFamilyType =
@@ -158,12 +125,11 @@ fun parseFontFamilyType(screenCode: Int): FontFamilyType =
 enum class FontSizeType(
     val scale: Float,
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    SMALL(0.85f, 0, Res.string.font_size_small),
-    NORMAL(1.0f, 1, Res.string.font_size_normal),
-    LARGE(1.15f, 2, Res.string.font_size_large),
-    HUGE(1.3f, 3, Res.string.font_size_huge),
+    SMALL(0.85f, 0),
+    NORMAL(1.0f, 1),
+    LARGE(1.15f, 2),
+    HUGE(1.3f, 3),
 }
 
 fun parseFontSizeType(screenCode: Int): FontSizeType =
@@ -178,28 +144,25 @@ fun parseFontSizeType(screenCode: Int): FontSizeType =
 enum class ConnectivityType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    ALWAYS(null, 0, Res.string.connectivity_type_always),
-    WIFI_ONLY(true, 1, Res.string.connectivity_type_unmetered_wifi_only),
-    NEVER(false, 2, Res.string.connectivity_type_never),
+    ALWAYS(null, 0),
+    WIFI_ONLY(true, 1),
+    NEVER(false, 2),
 }
 
 enum class FeatureSetType(
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    COMPLETE(0, Res.string.ui_feature_set_type_complete),
-    SIMPLIFIED(1, Res.string.ui_feature_set_type_simplified),
-    PERFORMANCE(2, Res.string.ui_feature_set_type_performance),
+    COMPLETE(0),
+    SIMPLIFIED(1),
+    PERFORMANCE(2),
 }
 
 enum class ProfileGalleryType(
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    CLASSIC(0, Res.string.gallery_type_classic),
-    MODERN(1, Res.string.gallery_type_modern),
+    CLASSIC(0),
+    MODERN(1),
 }
 
 fun parseConnectivityType(code: Boolean?): ConnectivityType =
@@ -236,10 +199,9 @@ fun parseGalleryType(screenCode: Int): ProfileGalleryType =
 enum class BooleanType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val reourceId: StringResource,
 ) {
-    ALWAYS(null, 0, Res.string.connectivity_type_always),
-    NEVER(false, 1, Res.string.connectivity_type_never),
+    ALWAYS(null, 0),
+    NEVER(false, 1),
 }
 
 fun parseBooleanType(code: Boolean?): BooleanType =
@@ -259,11 +221,10 @@ fun parseBooleanType(screenCode: Int): BooleanType =
 enum class WarningType(
     val prefCode: Boolean?,
     val screenCode: Int,
-    val resourceId: StringResource,
 ) {
-    WARN(null, 0, Res.string.content_warning_see_warnings_option),
-    SHOW(true, 1, Res.string.content_warning_show_all_sensitive_content_option),
-    HIDE(false, 2, Res.string.content_warning_hide_all_sensitive_content_option),
+    WARN(null, 0),
+    SHOW(true, 1),
+    HIDE(false, 2),
 }
 
 fun parseWarningType(screenCode: Int): WarningType =

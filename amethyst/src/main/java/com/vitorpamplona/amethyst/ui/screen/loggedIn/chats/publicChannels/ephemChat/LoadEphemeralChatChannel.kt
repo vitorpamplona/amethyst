@@ -24,13 +24,11 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
 @Composable
 fun LoadEphemeralChatChannel(
     id: RoomId,
-    accountViewModel: AccountViewModel,
     content: @Composable (EphemeralChatChannel) -> Unit,
 ) {
     val channel =

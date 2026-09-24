@@ -92,7 +92,6 @@ fun LoadDecryptedContentOrNull(
 @Composable
 fun LoadAddressableNote(
     address: Address,
-    accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     val note by produceState(
@@ -150,7 +149,6 @@ fun LoadOts(
 @Composable
 fun LoadPublicChatChannel(
     id: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (PublicChatChannel) -> Unit,
 ) {
     val channel by produceStateIfNotNull(LocalCache.getPublicChatChannelIfExists(id), id) {
@@ -163,7 +161,6 @@ fun LoadPublicChatChannel(
 @Composable
 fun LoadEphemeralChatChannel(
     id: RoomId,
-    accountViewModel: AccountViewModel,
     content: @Composable (EphemeralChatChannel) -> Unit,
 ) {
     val channel =
@@ -177,7 +174,6 @@ fun LoadEphemeralChatChannel(
 @Composable
 fun LoadLiveActivityChannel(
     id: Address,
-    accountViewModel: AccountViewModel,
     content: @Composable (LiveActivitiesChannel) -> Unit,
 ) {
     val channel =

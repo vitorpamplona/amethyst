@@ -61,7 +61,7 @@ fun RenderLiveActivityChatMessage(
         }
 
     showChannelInfo?.let {
-        LoadLiveActivityChannel(it, accountViewModel) {
+        LoadLiveActivityChannel(it) {
             LiveActivitiesChannelHeader(
                 baseChannel = it,
                 showVideo = false,

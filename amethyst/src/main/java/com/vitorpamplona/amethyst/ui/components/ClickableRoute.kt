@@ -147,7 +147,7 @@ fun DisplayEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(hex, accountViewModel) {
+    LoadNote(hex) {
         if (it != null) {
             DisplayNoteLink(it, hex, additionalChars, accountViewModel, nav)
         } else {

@@ -106,7 +106,6 @@ fun ObserveRelayListForDMs(
 ) {
     LoadAddressableNote(
         ChatMessageRelayListEvent.createAddress(pubkey),
-        accountViewModel,
     ) { relayList ->
         if (relayList != null) {
             val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList, accountViewModel)

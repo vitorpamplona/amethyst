@@ -127,7 +127,7 @@ fun RelayGroupMembersScreen(
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
     val channelId = remember(id, relay) { GroupId(id, relay) }
 
-    LoadRelayGroupChannel(channelId, accountViewModel) { channel ->
+    LoadRelayGroupChannel(channelId) { channel ->
         RelayGroupMembers(channel, accountViewModel, nav)
     }
 }

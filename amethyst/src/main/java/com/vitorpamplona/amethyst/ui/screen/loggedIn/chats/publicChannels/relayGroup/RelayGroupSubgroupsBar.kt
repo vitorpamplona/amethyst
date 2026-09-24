@@ -135,7 +135,7 @@ private fun SubgroupChip(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadRelayGroupChannel(groupId, accountViewModel) { child ->
+    LoadRelayGroupChannel(groupId) { child ->
         val childState by child
             .flow()
             .metadata.stateFlow

@@ -53,7 +53,7 @@ fun ThreadScreen(
     WatchLifecycleAndUpdateModel(feedViewModel)
     ThreadFilterAssemblerSubscription(noteId, accountViewModel)
 
-    LoadNote(noteId, accountViewModel) {
+    LoadNote(noteId) {
         if (it != null) {
             // this will force loading every post from this thread.
             EventFinderFilterAssemblerSubscription(it, accountViewModel)

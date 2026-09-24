@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_top_level
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_structure
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
@@ -182,8 +183,8 @@ private fun ParentSelectorCard(
                         model = liveParent.profilePicture(),
                         contentDescription = liveParent.toBestDisplayName(),
                         modifier = Modifier.size(46.dp).clip(CircleShape),
-                        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                        loadRobohash = LocalDisplaySettings.current.loadRobohash,
                         autoPlayGif = false,
                     )
                 } else {
@@ -263,7 +264,7 @@ private fun ParentGroupPickerSheet(
     // rejects), so exclude them from the candidate set.
     val forbidden =
         remember(selfGroupId, relay) {
-            descendantIdsOf(accountViewModel, selfGroupId, relay) + selfGroupId
+            descendantIdsOf(selfGroupId, relay) + selfGroupId
         }
 
     // Re-read the relay's genuine, relay-signed groups whenever a kind-39000 lands. The initial
@@ -275,10 +276,10 @@ private fun ParentGroupPickerSheet(
         relayInfo,
         forbidden,
     ) {
-        value = pickCandidates(accountViewModel, relay, relayInfo, forbidden)
+        value = pickCandidates(relay, relayInfo, forbidden)
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
-            .collect { value = pickCandidates(accountViewModel, relay, relayInfo, forbidden) }
+            .collect { value = pickCandidates(relay, relayInfo, forbidden) }
     }
 
     val filtered =
@@ -393,8 +394,8 @@ private fun GroupPickRow(
             model = channel.profilePicture(),
             contentDescription = channel.toBestDisplayName(),
             modifier = Modifier.size(46.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = false,
         )
         Column(Modifier.weight(1f)) {
@@ -468,7 +469,6 @@ private fun SelectionMark(selected: Boolean) {
 
 /** Genuine, relay-signed groups on [relay], minus the forbidden (self + descendant) ids, name-sorted. */
 private fun pickCandidates(
-    accountViewModel: AccountViewModel,
     relay: NormalizedRelayUrl,
     relayInfo: Nip11RelayInformation,
     forbidden: Set<String>,
@@ -486,7 +486,6 @@ private fun pickCandidates(
  * advertised `child` links. Visited-guarded so a malformed cycle can't loop forever.
  */
 private fun descendantIdsOf(
-    accountViewModel: AccountViewModel,
     rootId: String,
     relay: NormalizedRelayUrl,
 ): Set<String> {

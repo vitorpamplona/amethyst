@@ -428,7 +428,7 @@ fun PayReaction(
     val authorPubkey = baseNote.author?.pubkeyHex ?: return
     val address = remember(authorPubkey) { PaymentTargetsEvent.createAddress(authorPubkey) }
 
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         var expanded by remember { mutableStateOf(false) }
 
         ClickableBox(

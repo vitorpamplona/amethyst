@@ -131,7 +131,6 @@ fun ChatroomView(
     for (userHex in room.users) {
         LoadAddressableNote(
             ChatMessageRelayListEvent.createAddress(userHex),
-            accountViewModel,
         ) { note ->
             if (note != null) {
                 EventFinderFilterAssemblerSubscription(note, accountViewModel)

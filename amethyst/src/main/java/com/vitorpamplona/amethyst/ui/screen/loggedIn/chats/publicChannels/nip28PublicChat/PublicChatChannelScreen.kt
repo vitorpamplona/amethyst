@@ -52,7 +52,7 @@ fun PublicChatChannelScreen(
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            LoadPublicChatChannel(channelId, accountViewModel) {
+            LoadPublicChatChannel(channelId) {
                 PublicChatTopBar(it, accountViewModel, nav)
             }
         },

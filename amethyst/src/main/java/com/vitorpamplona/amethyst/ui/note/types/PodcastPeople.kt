@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_hosts_and_guests
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -104,7 +105,7 @@ private fun PersonItem(
     val pubKey = remember(person) { person.nostrPubKey() }
 
     if (pubKey != null) {
-        LoadUser(pubKey, accountViewModel) { user ->
+        LoadUser(pubKey) { user ->
             if (user != null) {
                 NostrPersonCard(user, person.role, accountViewModel, nav)
             } else {
@@ -157,8 +158,8 @@ private fun FreeTextPersonCard(
                 model = person.img,
                 contentDescription = person.name,
                 modifier = Modifier.size(56.dp).clip(CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
             )
         },
         name = {

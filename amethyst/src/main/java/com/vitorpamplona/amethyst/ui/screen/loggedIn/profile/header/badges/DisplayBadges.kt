@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.profile_badges_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -344,7 +345,7 @@ private fun LoadDefinitionForAward(
     awardNote.value?.let { note ->
         val awardEvent by observeNoteEvent<BadgeAwardEvent>(note, accountViewModel)
         awardEvent?.awardDefinition()?.firstOrNull()?.let { defAddr ->
-            LoadAddressableNote(defAddr, accountViewModel) { defNote ->
+            LoadAddressableNote(defAddr) { defNote ->
                 defNote?.let { content(it) }
             }
         }
@@ -411,7 +412,7 @@ private fun RenderBadgeImage(
             robot = "badgenotfound",
             contentDescription = description,
             modifier = modifier,
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
         )
     } else {
         RobohashFallbackAsyncImage(
@@ -419,8 +420,8 @@ private fun RenderBadgeImage(
             model = image,
             contentDescription = description,
             modifier = modifier,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif =
                 accountViewModel.settings.autoPlayVideosFlow
                     .collectAsStateWithLifecycle()

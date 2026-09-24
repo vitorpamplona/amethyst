@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accent_color
 import com.vitorpamplona.amethyst.commons.resources.accent_color_description

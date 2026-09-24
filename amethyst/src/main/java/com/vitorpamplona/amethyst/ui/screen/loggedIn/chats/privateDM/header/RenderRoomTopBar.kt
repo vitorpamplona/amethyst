@@ -81,7 +81,7 @@ fun RenderRoomTopBar(
     if (room.users.size == 1) {
         TopBarExtensibleWithBackButton(
             title = {
-                LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
+                LoadUser(baseUserHex = room.users.first()) { baseUser ->
                     if (baseUser != null) {
                         ClickableUserPicture(
                             baseUser = baseUser,
@@ -124,7 +124,7 @@ fun RenderRoomTopBar(
                 }
             },
             extendableRow = {
-                LoadUser(baseUserHex = room.users.first(), accountViewModel) {
+                LoadUser(baseUserHex = room.users.first()) {
                     if (it != null) {
                         UserCompose(
                             baseUser = it,
@@ -216,7 +216,7 @@ fun GroupMembersHeader(
         state = rememberLazyListState(),
     ) {
         itemsIndexed(list, key = { _, item -> item }) { _, item ->
-            LoadUser(baseUserHex = item, accountViewModel) {
+            LoadUser(baseUserHex = item) {
                 if (it != null) {
                     UserCompose(
                         baseUser = it,

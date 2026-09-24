@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
@@ -338,8 +339,8 @@ fun ShortCommunityHeader(
                 contentDescription = stringRes(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()
@@ -393,8 +394,8 @@ fun ShortCommunityHeaderNoActions(
                 contentDescription = stringRes(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()

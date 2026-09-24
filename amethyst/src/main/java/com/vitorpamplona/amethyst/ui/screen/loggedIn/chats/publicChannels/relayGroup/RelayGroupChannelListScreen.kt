@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
@@ -973,8 +974,8 @@ private fun RelayGroupChannelRow(
             model = channel.profilePicture(),
             contentDescription = channel.toBestDisplayName(),
             modifier = Modifier.size(40.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = autoPlayGif,
         )
 

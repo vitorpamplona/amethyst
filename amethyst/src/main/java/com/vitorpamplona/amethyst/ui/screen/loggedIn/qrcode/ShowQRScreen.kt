@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -124,7 +125,7 @@ fun ShowQRScreen(
     nav: INav,
     startScanning: Boolean = false,
 ) {
-    LoadUser(pubkey, accountViewModel) { user ->
+    LoadUser(pubkey) { user ->
         if (user != null) {
             ShowQRScreen(
                 user = user,
@@ -242,8 +243,8 @@ fun RenderName(
                 model = userInfo?.info?.profilePicture(),
                 contentDescription = stringRes(Res.string.profile_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()

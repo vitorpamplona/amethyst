@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -269,7 +270,7 @@ private fun PersonCell(
             Badge.ADDED -> "+" to tones.added
             Badge.CHANGED -> "~" to tones.changed
         }
-    LoadUser(pubKey, accountViewModel) { user ->
+    LoadUser(pubKey) { user ->
         Column(
             modifier.clip(RoundedCornerShape(12.dp)).clickable { nav.nav(Route.Profile(pubKey)) }.padding(vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -437,7 +438,7 @@ private fun LazyListScope.muteListItems(
     if (threads.isNotEmpty()) {
         item(key = "mute-threads-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_entry_thread), Pad.padding(top = 18.dp)) }
         items(threads, key = { "mute-thread-$it" }, contentType = { "note" }) { id ->
-            LoadNote(id, accountViewModel) { note ->
+            LoadNote(id) { note ->
                 if (note != null) {
                     NoteCompose(note, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), makeItShort = true, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
                 } else {
@@ -489,8 +490,8 @@ private fun FacePile(
                         model = observedPicture(pubKey, accountViewModel),
                         contentDescription = null,
                         modifier = Modifier.size(42.dp).clip(CircleShape),
-                        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                        loadRobohash = LocalDisplaySettings.current.loadRobohash,
                     )
                 }
             }
@@ -688,8 +689,8 @@ private fun MiniProfileCard(
                     model = meta.picture,
                     contentDescription = null,
                     modifier = Modifier.size(46.dp).clip(CircleShape),
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 )
             }
             Column(Modifier.offset(y = (-20).dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1122,7 +1123,7 @@ private fun GroupTileCard(
         GroupTileContent(tile, tile.group.name ?: tile.group.groupId, null, accountViewModel, modifier, null)
         return
     }
-    LoadRelayGroupChannel(GroupId(tile.group.groupId, relay), accountViewModel) { channel ->
+    LoadRelayGroupChannel(GroupId(tile.group.groupId, relay)) { channel ->
         // Subscribes to the group's relay-signed metadata (even when not joined) and recomposes
         // when its name or picture arrives.
         val state by observeChannel(channel, accountViewModel)
@@ -1158,8 +1159,8 @@ private fun GroupTileContent(
                 model = picture,
                 contentDescription = null,
                 modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
             )
             Column {
                 Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

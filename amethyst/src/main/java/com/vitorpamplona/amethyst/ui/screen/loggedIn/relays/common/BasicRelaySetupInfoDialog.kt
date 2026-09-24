@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayDragState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -43,8 +44,8 @@ fun BasicRelaySetupInfoDialog(
 ) {
     BasicRelaySetupInfoClickableRow(
         item = item,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         onDelete = onDelete,
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
         nip11CachedRetriever = nip11CachedRetriever,

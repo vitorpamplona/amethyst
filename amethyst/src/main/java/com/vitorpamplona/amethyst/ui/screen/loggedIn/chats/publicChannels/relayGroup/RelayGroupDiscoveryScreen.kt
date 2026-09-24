@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
@@ -369,8 +370,8 @@ private fun RelayRailHeader(
             RenderRelayIcon(
                 displayUrl = host,
                 iconUrl = info.value.icon,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 pingInMs = 0,
                 iconModifier = Modifier.size(Size25dp).clip(CircleShape),
             )
@@ -520,8 +521,8 @@ private fun RelayGroupRailRowContent(
                     .size(40.dp)
                     .clip(CircleShape)
                     .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = autoPlayGif,
         )
 

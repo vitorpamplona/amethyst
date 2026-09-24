@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -425,8 +426,8 @@ private fun SpaceTile(
                 model = picture,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp).clip(CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
             )
             Column {
                 Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -452,7 +453,7 @@ private fun LazyListScope.publicChatItems(
 ) {
     val saved = (conflict.saved as? ChannelListEvent)?.tags?.channels().orEmpty()
     spaceGrid("chat-", fates(saved, diff.channels) { it.eventId }, { it.eventId }) { tag, fate, modifier ->
-        LoadPublicChatChannel(tag.eventId, accountViewModel) { channel ->
+        LoadPublicChatChannel(tag.eventId) { channel ->
             // Subscribes to the channel's metadata on relays and recomposes when it arrives.
             val state by observeChannel(channel, accountViewModel)
             val current = state?.channel ?: channel
@@ -508,7 +509,7 @@ private fun AddressableSpaceTile(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         val event =
             if (note != null) {
                 val state by observeNote(note, accountViewModel)
@@ -789,7 +790,7 @@ private fun ProviderCell(
         Text("—", modifier, color = MaterialTheme.colorScheme.placeholderText)
         return
     }
-    LoadUser(pubKey, accountViewModel) { user ->
+    LoadUser(pubKey) { user ->
         Row(
             modifier.clip(RoundedCornerShape(8.dp)).clickable { nav.nav(Route.Profile(pubKey)) },
             verticalAlignment = Alignment.CenterVertically,
@@ -801,8 +802,8 @@ private fun ProviderCell(
                 model = observedPicture(pubKey, accountViewModel),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp).clip(CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
             )
             ProvideTextStyle(MaterialTheme.typography.labelMedium.copy(color = if (struck) color else MaterialTheme.colorScheme.onSurface, textDecoration = if (struck) TextDecoration.LineThrough else null)) {
                 if (user != null) {

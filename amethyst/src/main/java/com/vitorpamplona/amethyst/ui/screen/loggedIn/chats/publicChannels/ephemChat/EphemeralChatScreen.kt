@@ -51,7 +51,7 @@ fun EphemeralChatScreen(
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            LoadEphemeralChatChannel(channelId, accountViewModel) {
+            LoadEphemeralChatChannel(channelId) {
                 EphemeralChatTopBar(it, accountViewModel, nav)
             }
         },

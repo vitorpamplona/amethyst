@@ -158,6 +158,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Height25Modifier
@@ -856,7 +857,7 @@ private fun DisplayOwnerInformation(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(baseUserHex = userHex, accountViewModel) { loadedUser ->
+    LoadUser(baseUserHex = userHex) { loadedUser ->
         CrossfadeIfEnabled(loadedUser) {
             if (it != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -890,8 +891,8 @@ private fun RelayHeader(
         RenderRelayIcon(
             displayUrl = relay.displayUrl(),
             iconUrl = relayInfo.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             pingInMs = relayStats.pingInMs,
             iconModifier =
                 Modifier
@@ -1422,7 +1423,7 @@ private fun RelayMonitorReportCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                LoadUser(baseUserHex = event.pubKey, accountViewModel) { user ->
+                LoadUser(baseUserHex = event.pubKey) { user ->
                     if (user != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

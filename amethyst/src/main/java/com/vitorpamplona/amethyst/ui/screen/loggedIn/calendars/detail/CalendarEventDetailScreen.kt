@@ -774,7 +774,7 @@ private fun UserRow(
     nav: INav,
     trailing: (@Composable () -> Unit)?,
 ) {
-    LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
+    LoadUser(baseUserHex = pubKey) { user ->
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

@@ -359,7 +359,6 @@ private fun EmojiSelector(
 ) {
     LoadAddressableNote(
         accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
-        accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
@@ -387,7 +386,7 @@ fun EmojiCollectionGallery(
         state = listState,
     ) {
         itemsIndexed(emojiCollections, key = { _, item -> item }) { _, item ->
-            LoadAddressableNote(item, accountViewModel) {
+            LoadAddressableNote(item) {
                 it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
             }
         }

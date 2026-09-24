@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
@@ -279,8 +280,8 @@ fun GroupEntryAvatar(
         model = display.model,
         contentDescription = display.label,
         modifier = Modifier.size(size).clip(CircleShape),
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif = false,
     )
 }

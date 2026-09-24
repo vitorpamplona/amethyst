@@ -140,14 +140,14 @@ enum com.vitorpamplona.amethyst.commons.tor.TorType INTERNAL
 # is exactly why it would never be noticed.
 enum com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode RATE_LIMITED NOT_IMPLEMENTED INSUFFICIENT_BALANCE PAYMENT_FAILED QUOTA_EXCEEDED RESTRICTED UNAUTHORIZED INTERNAL UNSUPPORTED_ENCRYPTION BAD_REQUEST NOT_FOUND EXPIRED UNSUPPORTED_PAYMENT_INSTRUCTION UNSUPPORTED_NETWORK OTHER
 
-enum com.vitorpamplona.amethyst.model.ThemeType SYSTEM LIGHT DARK
-enum com.vitorpamplona.amethyst.model.BooleanType ALWAYS NEVER
-enum com.vitorpamplona.amethyst.model.ConnectivityType ALWAYS NEVER
-enum com.vitorpamplona.amethyst.model.FeatureSetType SIMPLIFIED
-enum com.vitorpamplona.amethyst.model.FontFamilyType SYSTEM
-enum com.vitorpamplona.amethyst.model.FontSizeType NORMAL
-enum com.vitorpamplona.amethyst.model.AccentColorType PURPLE
-enum com.vitorpamplona.amethyst.model.ProfileGalleryType CLASSIC
+enum com.vitorpamplona.amethyst.commons.model.ThemeType SYSTEM LIGHT DARK
+enum com.vitorpamplona.amethyst.commons.model.BooleanType ALWAYS NEVER
+enum com.vitorpamplona.amethyst.commons.model.ConnectivityType ALWAYS NEVER
+enum com.vitorpamplona.amethyst.commons.model.FeatureSetType SIMPLIFIED
+enum com.vitorpamplona.amethyst.commons.model.FontFamilyType SYSTEM
+enum com.vitorpamplona.amethyst.commons.model.FontSizeType NORMAL
+enum com.vitorpamplona.amethyst.commons.model.AccentColorType PURPLE
+enum com.vitorpamplona.amethyst.commons.model.ProfileGalleryType CLASSIC
 enum com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 enum com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 enum com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ChannelExpand

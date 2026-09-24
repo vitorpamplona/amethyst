@@ -111,7 +111,7 @@ fun RelayGroupThreadsScreen(
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
     val channelId = remember(id, relay) { GroupId(id, relay) }
 
-    LoadRelayGroupChannel(channelId, accountViewModel) { channel ->
+    LoadRelayGroupChannel(channelId) { channel ->
         RelayGroupThreads(channel, accountViewModel, nav)
     }
 }

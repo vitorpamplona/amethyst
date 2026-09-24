@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
@@ -794,7 +795,7 @@ private fun RelayIcon(
         contentDescription = stringRes(Res.string.relay_info, url),
         colorFilter = RelayIconFilter,
         modifier = MediumRelayIconModifier,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
     )
 }

@@ -91,7 +91,7 @@ fun LongLiveActivityChannelHeader(
         RenderSummary(activity, callbackUri, accountViewModel, nav)
     }
 
-    LoadAddressableNote(channel.address, accountViewModel) { loadingNote ->
+    LoadAddressableNote(channel.address) { loadingNote ->
         loadingNote?.let { note ->
             Row(
                 lineModifier,

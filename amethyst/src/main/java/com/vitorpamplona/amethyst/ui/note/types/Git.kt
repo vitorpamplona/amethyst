@@ -451,7 +451,7 @@ private fun RenderGitPatchEvent(
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
             Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository, accountViewModel) {
+            LoadAddressableNote(repository) {
                 if (it != null) {
                     RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
@@ -550,7 +550,7 @@ private fun RenderGitIssueEvent(
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
             Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository, accountViewModel) {
+            LoadAddressableNote(repository) {
                 if (it != null) {
                     RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
@@ -610,7 +610,7 @@ private fun RenderGitPullRequestEvent(
     GitCardContainer {
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
-            LoadAddressableNote(repository, accountViewModel) {
+            LoadAddressableNote(repository) {
                 if (it != null) {
                     RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
@@ -751,7 +751,7 @@ private fun RenderGitPullRequestUpdateEvent(
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {
             Spacer(modifier = StdVertSpacer)
-            LoadAddressableNote(repository, accountViewModel) {
+            LoadAddressableNote(repository) {
                 if (it != null) {
                     RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }

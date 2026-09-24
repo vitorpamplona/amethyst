@@ -78,7 +78,7 @@ fun CommunityScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(aTagHex, accountViewModel) {
+    LoadAddressableNote(aTagHex) {
         it?.let {
             PrepareViewModelsCommunityScreen(
                 note = it,

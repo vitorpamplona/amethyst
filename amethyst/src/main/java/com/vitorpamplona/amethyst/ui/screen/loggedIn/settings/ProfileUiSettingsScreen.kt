@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.gallery_style
 import com.vitorpamplona.amethyst.commons.resources.gallery_style_description

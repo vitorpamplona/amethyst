@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
  * Resolves the [GeohashChatChannel] for [geohash] from LocalCache, creating an
@@ -35,7 +34,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun LoadGeohashChannel(
     geohash: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (GeohashChatChannel) -> Unit,
 ) {
     val channel =

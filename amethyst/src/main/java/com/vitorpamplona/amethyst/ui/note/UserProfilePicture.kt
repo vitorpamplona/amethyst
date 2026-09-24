@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ScoreTag
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
@@ -105,7 +106,7 @@ fun DisplayBlankAuthor(
         robot = "authornotfound",
         contentDescription = stringRes(Res.string.unknown_author),
         modifier = nullModifier,
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
     )
 }
 
@@ -117,7 +118,7 @@ fun UserPicture(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(baseUserHex = userHex, accountViewModel) {
+    LoadUser(baseUserHex = userHex) {
         if (it != null) {
             UserPicture(
                 user = it,
@@ -241,7 +242,7 @@ fun NonClickableUserPictures(
             0 -> {}
 
             1 -> {
-                LoadUser(baseUserHex = userHexList.first(), accountViewModel) {
+                LoadUser(baseUserHex = userHexList.first()) {
                     it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
                 }
             }
@@ -249,7 +250,7 @@ fun NonClickableUserPictures(
             2 -> {
                 val userList = userHexList
 
-                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                LoadUser(baseUserHex = userList[0]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -259,7 +260,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                LoadUser(baseUserHex = userList[1]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -274,7 +275,7 @@ fun NonClickableUserPictures(
             3 -> {
                 val userList = userHexList
 
-                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                LoadUser(baseUserHex = userList[0]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -284,7 +285,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                LoadUser(baseUserHex = userList[1]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -294,7 +295,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                LoadUser(baseUserHex = userList[2]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -309,7 +310,7 @@ fun NonClickableUserPictures(
             else -> {
                 val userList = userHexList
 
-                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                LoadUser(baseUserHex = userList[0]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -319,7 +320,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[1], accountViewModel) {
+                LoadUser(baseUserHex = userList[1]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -329,7 +330,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[2], accountViewModel) {
+                LoadUser(baseUserHex = userList[2]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -339,7 +340,7 @@ fun NonClickableUserPictures(
                         )
                     }
                 }
-                LoadUser(baseUserHex = userList[3], accountViewModel) {
+                LoadUser(baseUserHex = userList[3]) {
                     it?.let {
                         BaseUserPicture(
                             it,
@@ -392,7 +393,7 @@ fun BaseUserPicture(
     outerModifier: Modifier = Modifier.size(size),
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        LoadUser(baseUserHex, accountViewModel) {
+        LoadUser(baseUserHex) {
             if (it != null) {
                 ObserveAndDrawInnerUserPicture(it, size, accountViewModel, innerModifier)
 

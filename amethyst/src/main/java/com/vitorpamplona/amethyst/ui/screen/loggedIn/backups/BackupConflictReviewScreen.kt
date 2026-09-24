@@ -422,7 +422,7 @@ internal fun ReviewEntry(
     when (item) {
         is ReviewItem.Person -> PersonEntry(item, accountViewModel, nav)
         is ReviewItem.Thread ->
-            LoadNote(item.eventId, accountViewModel) { note ->
+            LoadNote(item.eventId) { note ->
                 if (note != null) {
                     Column(EntryPadding) {
                         NoteCompose(note, makeItShort = true, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
@@ -433,7 +433,7 @@ internal fun ReviewEntry(
                 }
             }
         is ReviewItem.Addressable ->
-            LoadAddressableNote(item.address, accountViewModel) { note ->
+            LoadAddressableNote(item.address) { note ->
                 if (note != null) {
                     Column(EntryPadding) {
                         NoteCompose(note, makeItShort = true, quotesLeft = 1, accountViewModel = accountViewModel, nav = nav)
@@ -457,7 +457,7 @@ private fun PersonEntry(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(item.pubKey, accountViewModel) { user ->
+    LoadUser(item.pubKey) { user ->
         if (user == null) {
             TextEntry(item.pubKey.toShortDisplay(), item.detail)
         } else {
@@ -482,7 +482,7 @@ private fun PublicChatEntry(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadPublicChatChannel(item.channelId, accountViewModel) { channel ->
+    LoadPublicChatChannel(item.channelId) { channel ->
         // Subscribes to the channel's metadata on relays and recomposes when it arrives.
         val state by observeChannel(channel, accountViewModel)
         val name = state?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()

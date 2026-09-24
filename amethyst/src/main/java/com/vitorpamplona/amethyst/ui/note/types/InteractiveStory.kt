@@ -79,7 +79,7 @@ fun RenderInteractiveStory(
     val currentScene = readingState?.currentScene()
 
     if (currentScene != null && currentScene != rootEvent.address()) {
-        LoadAddressableNote(currentScene, accountViewModel) { currentSceneBaseNote ->
+        LoadAddressableNote(currentScene) { currentSceneBaseNote ->
             currentSceneBaseNote?.let {
                 val currentSceneEvent by observeNoteEvent<InteractiveStoryBaseEvent>(it, accountViewModel)
 
@@ -168,7 +168,7 @@ fun RenderInteractiveStory(
     if (options.isNotEmpty()) {
         Column(Modifier.padding(top = 10.dp)) {
             options.forEach { opt ->
-                LoadAddressableNote(opt.address, accountViewModel) { note ->
+                LoadAddressableNote(opt.address) { note ->
                     if (note != null) {
                         EventFinderFilterAssemblerSubscription(note, accountViewModel)
 

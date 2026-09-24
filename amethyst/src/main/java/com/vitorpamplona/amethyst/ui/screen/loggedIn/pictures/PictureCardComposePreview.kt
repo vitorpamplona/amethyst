@@ -99,7 +99,6 @@ private fun PictureCardComposePreview() {
 
     LoadNote(
         baseNoteHex = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-        accountViewModel = accountViewModel,
     ) { baseNote ->
         ThemeComparisonColumn {
             if (baseNote != null) {
@@ -128,7 +127,6 @@ private fun PictureCardComposeNoTitlePreview() {
 
     LoadNote(
         baseNoteHex = "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
-        accountViewModel = accountViewModel,
     ) { baseNote ->
         ThemeComparisonColumn {
             if (baseNote != null) {
@@ -157,7 +155,6 @@ private fun PictureCardComposeMultiImagePreview() {
 
     LoadNote(
         baseNoteHex = "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
-        accountViewModel = accountViewModel,
     ) { baseNote ->
         ThemeComparisonColumn {
             if (baseNote != null) {

@@ -52,7 +52,7 @@ fun LiveActivityChannelScreen(
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            LoadLiveActivityChannel(channelId, accountViewModel) {
+            LoadLiveActivityChannel(channelId) {
                 LaunchedEffect(it.info) {
                     it.info?.streaming()?.let {
                         OnlineChecker.resetIfOfflineToRetry(it)

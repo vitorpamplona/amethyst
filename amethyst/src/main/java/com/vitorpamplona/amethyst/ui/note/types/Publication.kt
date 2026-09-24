@@ -319,7 +319,7 @@ internal fun PublicationSectionRow(
     val address = ref.address
 
     if (address != null) {
-        LoadAddressableNote(address, accountViewModel) { sectionNote ->
+        LoadAddressableNote(address) { sectionNote ->
             if (sectionNote != null) {
                 ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
             } else {
@@ -327,7 +327,7 @@ internal fun PublicationSectionRow(
             }
         }
     } else if (ref.eventId != null) {
-        LoadNote(ref.eventId!!, accountViewModel) { sectionNote ->
+        LoadNote(ref.eventId!!) { sectionNote ->
             if (sectionNote != null) {
                 ObservedSectionRow(position, ref, sectionNote, accountViewModel, nav)
             } else {

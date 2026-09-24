@@ -862,7 +862,7 @@ fun TagLink(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(baseUserHex = word.hex, accountViewModel) {
+    LoadUser(baseUserHex = word.hex) {
         if (it == null) {
             Text(text = word.segmentText)
         } else {
@@ -879,7 +879,6 @@ fun TagLink(
 @Composable
 fun LoadNote(
     baseNoteHex: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (Note?) -> Unit,
 ) {
     var note by
@@ -903,7 +902,7 @@ fun TagLink(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = word.hex, accountViewModel) {
+    LoadNote(baseNoteHex = word.hex) {
         if (it == null) {
             Text(text = remember { word.segmentText.toShortDisplay() })
         } else {

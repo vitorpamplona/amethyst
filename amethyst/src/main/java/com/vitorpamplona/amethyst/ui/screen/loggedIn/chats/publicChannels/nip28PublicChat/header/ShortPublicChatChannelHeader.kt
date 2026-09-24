@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
@@ -72,8 +73,8 @@ fun ShortPublicChatChannelHeader(
                 contentDescription = stringRes(Res.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()
@@ -115,7 +116,7 @@ fun ShortChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
+    LoadNote(baseNoteHex = channel.idHex) {
         it?.let {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
                 LikeReaction(

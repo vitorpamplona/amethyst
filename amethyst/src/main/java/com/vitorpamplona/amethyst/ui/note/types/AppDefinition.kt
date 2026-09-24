@@ -585,7 +585,7 @@ private fun RelatedEventRow(
     val address = remember(aTag) { Address(aTag.kind, aTag.pubKeyHex, aTag.dTag) }
     val shape = RoundedCornerShape(8.dp)
 
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         if (note == null) return@LoadAddressableNote
 
         val noteState by observeNote(note, accountViewModel)
@@ -709,7 +709,7 @@ fun ByAuthorChip(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { author ->
+    LoadUser(baseUserHex = authorHex) { author ->
         if (author == null) return@LoadUser
 
         Surface(

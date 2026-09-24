@@ -127,7 +127,7 @@ fun RenderEntityRating(
 
     Column(Modifier.fillMaxWidth()) {
         if (targetAddress != null) {
-            LoadAddressableNote(targetAddress, accountViewModel) { targetNote ->
+            LoadAddressableNote(targetAddress) { targetNote ->
                 targetNote?.let {
                     RatedPublicationCard(
                         targetNote = it,
@@ -142,7 +142,7 @@ fun RenderEntityRating(
             // The spec's default mark is `event`, and such a rating names its target by event id
             // rather than by coordinate. Without this the card printed the raw 64-hex id as its
             // title, which tells a reader nothing about what was rated.
-            LoadNote(targetEventId, accountViewModel) { targetNote ->
+            LoadNote(targetEventId) { targetNote ->
                 if (targetNote != null) {
                     RatedNoteCard(targetNote, mark, accountViewModel, nav)
                 } else {

@@ -95,7 +95,7 @@ fun RenderTextModificationEvent(
         }
 
     noteEvent.editedNote()?.let {
-        LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseOriginalNote ->
+        LoadNote(baseNoteHex = it.eventId) { baseOriginalNote ->
             baseOriginalNote?.let {
             }
         }
@@ -133,7 +133,7 @@ fun RenderTextModificationEvent(
             }
 
             noteEvent.editedNote()?.let {
-                LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseNote ->
+                LoadNote(baseNoteHex = it.eventId) { baseNote ->
                     baseNote?.let {
                         val noteState by observeNote(baseNote, accountViewModel)
 

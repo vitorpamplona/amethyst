@@ -58,7 +58,7 @@ fun PostBookmarkListManagementScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = postId, accountViewModel = accountViewModel) {
+    LoadNote(baseNoteHex = postId) {
         it?.let {
             ListManagementView(
                 modifier = Modifier.fillMaxSize().recalculateWindowInsets(),

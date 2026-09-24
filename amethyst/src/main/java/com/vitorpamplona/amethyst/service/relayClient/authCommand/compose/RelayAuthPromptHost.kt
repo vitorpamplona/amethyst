@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread_with
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -404,8 +405,8 @@ private fun RelayHeader(
             contentDescription = null,
             colorFilter = RelayIconFilter,
             modifier = Modifier.size(34.dp).clip(MaterialTheme.shapes.small),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
         )
         Column {
             Text(
@@ -466,7 +467,7 @@ private fun ReasonSentence(
                         InlineTextContent(
                             Placeholder(22.sp, 22.sp, PlaceholderVerticalAlign.TextCenter),
                         ) {
-                            LoadRelayAuthUser(face, accountViewModel) { user ->
+                            LoadRelayAuthUser(face) { user ->
                                 if (user != null) ClickableUserPicture(user, 20.dp, accountViewModel)
                             }
                         },

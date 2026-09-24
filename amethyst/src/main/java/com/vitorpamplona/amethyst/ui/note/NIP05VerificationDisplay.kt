@@ -315,7 +315,7 @@ fun DisplayStatusInner(
         }
 
         nostrATag != null -> {
-            LoadAddressableNote(nostrATag, accountViewModel) { note ->
+            LoadAddressableNote(nostrATag) { note ->
                 if (note != null) {
                     Spacer(modifier = StdHorzSpacer)
                     IconButton(
@@ -339,7 +339,7 @@ fun DisplayStatusInner(
         }
 
         nostrETag != null -> {
-            LoadNote(baseNoteHex = nostrETag.eventId, accountViewModel) {
+            LoadNote(baseNoteHex = nostrETag.eventId) {
                 if (it != null) {
                     Spacer(modifier = StdHorzSpacer)
                     IconButton(
@@ -363,7 +363,7 @@ fun DisplayStatusInner(
         }
 
         nostrPTag != null -> {
-            LoadUser(baseUserHex = nostrPTag, accountViewModel) { user ->
+            LoadUser(baseUserHex = nostrPTag) { user ->
                 if (user != null) {
                     Spacer(modifier = StdHorzSpacer)
                     IconButton(

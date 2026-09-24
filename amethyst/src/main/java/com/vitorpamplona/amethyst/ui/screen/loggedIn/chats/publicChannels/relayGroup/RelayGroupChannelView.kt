@@ -88,7 +88,7 @@ fun RelayGroupChannelView(
 ) {
     if (channelId == null) return
 
-    LoadRelayGroupChannel(channelId, accountViewModel) { group ->
+    LoadRelayGroupChannel(channelId) { group ->
         PrepareChannelViewModels(
             baseChannel = group,
             draft = draft,

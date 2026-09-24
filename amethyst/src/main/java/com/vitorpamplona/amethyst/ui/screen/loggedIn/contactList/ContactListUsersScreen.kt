@@ -57,7 +57,7 @@ fun ContactListUsersScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = noteId, accountViewModel) { note ->
+    LoadNote(baseNoteHex = noteId) { note ->
         if (note == null) {
             Scaffold(
                 topBar = {

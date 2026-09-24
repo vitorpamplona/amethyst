@@ -208,7 +208,7 @@ private fun AwardRow(
         return
     }
 
-    LoadAddressableNote(defAddr, accountViewModel) { defNote ->
+    LoadAddressableNote(defAddr) { defNote ->
         if (defNote == null) {
             StaticAwardRow(
                 definition = null,

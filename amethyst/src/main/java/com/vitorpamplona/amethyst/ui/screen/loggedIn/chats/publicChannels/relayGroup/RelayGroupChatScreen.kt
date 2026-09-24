@@ -54,7 +54,7 @@ fun RelayGroupChatScreen(
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            LoadRelayGroupChannel(channelId, accountViewModel) {
+            LoadRelayGroupChannel(channelId) {
                 RelayGroupTopBar(it, inviteCode, accountViewModel, nav)
             }
         },

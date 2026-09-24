@@ -323,7 +323,7 @@ private fun TrackManagementSection(
     }
 
     tracks.forEachIndexed { index, address ->
-        LoadAddressableNote(address, accountViewModel) { trackNote ->
+        LoadAddressableNote(address) { trackNote ->
             EditableTrackRow(
                 position = index + 1,
                 trackNote = trackNote,
