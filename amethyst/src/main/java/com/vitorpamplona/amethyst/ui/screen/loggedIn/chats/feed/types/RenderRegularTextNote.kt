@@ -26,7 +26,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -40,11 +39,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.types.appendMissingImetaUrls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
-
-// Jumbo sizes step down as the emoji count grows so up to three still fit a line.
-private val JumboEmojiSingle = 50.sp
-private val JumboEmojiPair = 40.sp
-private val JumboEmojiTriple = 32.sp
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiFontSize
 
 @Composable
 fun RenderRegularTextNote(
@@ -68,12 +63,7 @@ fun RenderRegularTextNote(
                     // them is transparent — see NormalChatNote).
                     Text(
                         text = eventContent.trim(),
-                        fontSize =
-                            when (jumboCount) {
-                                1 -> JumboEmojiSingle
-                                2 -> JumboEmojiPair
-                                else -> JumboEmojiTriple
-                            },
+                        fontSize = jumboEmojiFontSize(jumboCount),
                     )
                 } else {
                     val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }

@@ -29,7 +29,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,13 +42,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -61,18 +58,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -88,19 +82,15 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
-import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
-import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
-import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
@@ -108,16 +98,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * One cordn room.
@@ -175,7 +158,6 @@ private fun CordnGroupChat(
     val draft by room.draft.collectAsStateWithLifecycle()
     var replyingTo by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var editing by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
-    var acting by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var attaching by remember { mutableStateOf(false) }
     var attachError by remember { mutableStateOf<String?>(null) }
 
@@ -255,13 +237,13 @@ private fun CordnGroupChat(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            // One clock for every divider in the room, so they cannot disagree.
+            val today = rememberToday()
+
             // Pinned messages sit above the conversation rather than inside it.
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
             // away exactly like everything else.
-            // One clock for every divider in the room, so they cannot disagree.
-            val today = rememberToday()
-
             PinnedRibbon(annotations, scope) { message ->
                 trySend {
                     it.post(
@@ -288,28 +270,61 @@ private fun CordnGroupChat(
                 val rows = messages.asReversed()
 
                 itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
-                    // The row BELOW this one on screen, which in a reversed
-                    // list is the next index — i.e. the older message.
+                    // `rows` runs newest-first and the list is reverse-laid-out,
+                    // so the next index is the older message and renders above.
                     val older = rows.getOrNull(index + 1)
+                    val newer = rows.getOrNull(index - 1)
 
                     CordnMessageRow(
                         message = message,
-                        // Grouped when the same person keeps talking inside a
-                        // few minutes: the avatar and name are repeated once
-                        // per burst instead of once per line, which is most of
-                        // what makes a wall of messages readable.
-                        showAuthor = !message.follows(older),
                         room = room,
                         annotations = annotations,
                         me = me,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
+                        // Grouped when the same person keeps talking inside the
+                        // shared chat window: one avatar and name per burst
+                        // instead of per line, and the bubbles of a burst square
+                        // off against each other — which is most of what makes a
+                        // wall of messages readable.
+                        groupPosition =
+                            remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
+                                cordnGroupPositionFor(newer, message, older)
+                            },
                         // The edit if there is one, and nothing at all if the
                         // message was withdrawn: rendering the original text of
                         // a deleted message would defeat the deletion.
                         text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
                         isEdited = annotations.isEdited(message.envelope.id),
-                        onClick = { acting = message },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onReply = {
+                            replyingTo = message
+                            editing = null
+                        },
+                        onEdit = {
+                            editing = message
+                            replyingTo = null
+                            room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
+                        },
+                        onDelete = {
+                            // Through trySend like the rest: a deletion is an
+                            // annotation, and an annotation of your own comes back
+                            // as an Echo too, so deleting your own message used to
+                            // look like nothing had happened until someone else's
+                            // traffic refreshed the fold.
+                            scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
+                        },
+                        onTogglePin = {
+                            val pinned = annotations.isPinned(message.envelope.id)
+                            scope.launch {
+                                trySend {
+                                    it.post(
+                                        gid = room.gid,
+                                        pinTo = message.target(),
+                                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                                    )
+                                }
+                            }
+                        },
                         onReact = { emoji ->
                             scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
                         },
@@ -418,49 +433,6 @@ private fun CordnGroupChat(
             )
         }
     }
-
-    val actingOn = acting
-    if (actingOn != null) {
-        val message = actingOn
-        MessageActions(
-            message = message,
-            isMine = message.envelope.pubKey == me,
-            isPinned = annotations.isPinned(message.envelope.id),
-            onDismiss = { acting = null },
-            onReply = {
-                replyingTo = message
-                editing = null
-                acting = null
-            },
-            onEdit = {
-                editing = message
-                replyingTo = null
-                room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
-                acting = null
-            },
-            onDelete = {
-                acting = null
-                // Through trySend like the rest: a deletion is an annotation,
-                // and an annotation of your own comes back as an Echo too, so
-                // deleting your own message used to look like nothing had
-                // happened until someone else's traffic refreshed the fold.
-                scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
-            },
-            onTogglePin = {
-                val pinned = annotations.isPinned(message.envelope.id)
-                acting = null
-                scope.launch {
-                    trySend {
-                        it.post(
-                            gid = room.gid,
-                            pinTo = message.target(),
-                            pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                        )
-                    }
-                }
-            },
-        )
-    }
 }
 
 /** The target fields `CordnMessageReferences` needs, straight off a delivery. */
@@ -518,56 +490,6 @@ private fun PinnedRibbon(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MessageActions(
-    message: CordnDeliveredMessage,
-    isMine: Boolean,
-    isPinned: Boolean,
-    onDismiss: () -> Unit,
-    onReply: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onTogglePin: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            ActionRow(stringRes(R.string.cordn_action_reply), onReply)
-            // Pinning is any member's (§5.1), so it is offered on every
-            // message rather than only on your own.
-            ActionRow(
-                label = stringRes(if (isPinned) R.string.cordn_action_unpin else R.string.cordn_action_pin),
-                onClick = onTogglePin,
-            )
-            // Edit and delete are author-only, and the manager refuses them
-            // for anyone else. Hiding them here is the same rule, stated
-            // where it stops being a surprise.
-            if (isMine) {
-                ActionRow(stringRes(R.string.cordn_action_edit), onEdit)
-                ActionRow(stringRes(R.string.cordn_action_delete), onDelete, isDestructive = true)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionRow(
-    label: String,
-    onClick: () -> Unit,
-    isDestructive: Boolean = false,
-) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodyLarge,
-        color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-    )
-}
-
 @Composable
 private fun ComposerBanner(
     label: String,
@@ -597,230 +519,6 @@ private fun CordnChatTopBar(
         },
     )
 }
-
-/** How long a burst from one sender stays one burst. */
-private const val GROUPING_WINDOW_SECONDS = 5 * 60
-
-/** Upper bound on how long a stale "Today" can survive a clock correction. */
-private const val TODAY_POLL_MS = 60_000L
-
-/**
- * Whether this message continues [older]'s burst — same sender, close in time.
- *
- * Time as well as sender, because a reply hours later to your own last message
- * is a new thought, and hiding the name on it reads as though the conversation
- * never paused.
- */
-private fun CordnDeliveredMessage.follows(older: CordnDeliveredMessage?): Boolean {
-    if (older == null) return false
-    if (older.envelope.pubKey != envelope.pubKey) return false
-    if (!sameDayAs(older)) return false
-    return envelope.createdAt - older.envelope.createdAt <= GROUPING_WINDOW_SECONDS
-}
-
-/** Whether both fall on the same local calendar day. A null [older] is a new day. */
-private fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
-    if (older == null) return false
-    return localDayOf(envelope.createdAt) == localDayOf(older.envelope.createdAt)
-}
-
-private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
-
-/**
- * Today, as a value that stops being today when it stops being today.
- *
- * [DaySeparator] used to hold `remember { LocalDate.now() }` of its own. That
- * is a snapshot of the wall clock with nothing to invalidate it, and each
- * separator keeps a separate one, so they can disagree: a separator composed
- * before midnight goes on saying "Today" while the one for the new day says it
- * too. Seen on the tablet -- one room, two "Today" dividers.
- *
- * Polling rather than a single sleep to the next midnight, because a device
- * clock does not only advance: it is corrected, and the tablet this was found
- * on jumped nine hours in one step. Re-assigning an equal [LocalDate] is not a
- * change, so a quiet minute costs no recomposition.
- */
-@Composable
-private fun rememberToday(): LocalDate {
-    val zone = remember { ZoneId.systemDefault() }
-    return produceState(LocalDate.now(zone), zone) {
-        while (true) {
-            val now = ZonedDateTime.now(zone)
-            val untilMidnight = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay(zone)).toMillis()
-            delay(untilMidnight.coerceIn(1_000L, TODAY_POLL_MS))
-            value = LocalDate.now(zone)
-        }
-    }.value
-}
-
-/**
- * The day a run of messages belongs to.
- *
- * Without one, a conversation is an undivided column and "yesterday evening"
- * and "this morning" sit flush against each other.
- */
-@Composable
-private fun DaySeparator(
-    createdAt: Long,
-    today: LocalDate,
-) {
-    val day = remember(createdAt) { localDayOf(createdAt) }
-
-    val label =
-        when (day) {
-            today -> stringRes(Res.string.today)
-            today.minusDays(1) -> stringRes(R.string.cordn_chat_yesterday)
-            // Year included only when it is not this one: printing 2026 on
-            // every divider all year is noise.
-            else ->
-                day.format(
-                    DateTimeFormatter.ofPattern(
-                        if (day.year == today.year) "d MMM" else "d MMM yyyy",
-                    ),
-                )
-        }
-
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HorizontalDivider(Modifier.weight(1f))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        HorizontalDivider(Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun CordnMessageRow(
-    message: CordnDeliveredMessage,
-    room: CordnGroupChatroom,
-    annotations: CordnAnnotationIndex,
-    me: HexKey,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    text: String?,
-    isEdited: Boolean,
-    showAuthor: Boolean,
-    onClick: () -> Unit,
-    onReact: (String) -> Unit,
-) {
-    val mentionsMe = remember(text, me) { text != null && me in CordnMentions.mentioned(text) }
-
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            // A mention is the one reason to pick a message out of a wall of
-            // them. Read from the content rather than from a `p` tag: a tag is
-            // a claim the sender makes about who they addressed, while the
-            // text is what everyone in the room actually sees.
-            .background(if (mentionsMe) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-            .padding(vertical = 6.dp, horizontal = if (mentionsMe) 6.dp else 0.dp),
-    ) {
-        // Name and face, not eight hex characters. The room used to attribute
-        // every message to a prefix of the sender's key while the inbox row
-        // that leads into it, and mentions inside the text below, both
-        // resolved properly — so the one place a sender is named most often
-        // was the one place that did not name them.
-        //
-        // observeUserNameByHex falls back to exactly that hex prefix until the
-        // profile arrives, so nothing regresses while it loads.
-        if (showAuthor) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                UserPicture(
-                    userHex = message.envelope.pubKey,
-                    size = 24.dp,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-                Text(
-                    text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        val thread = CordnMessageReferences.thread(message.envelope.tags)
-        val parent = thread?.let { annotations.byId[it.parentId] }
-        if (parent != null) {
-            Text(
-                text = stringRes(R.string.cordn_action_in_reply_to, annotations.contentOf(parent.envelope.id).orEmpty().take(60)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (text == null) {
-            Text(
-                text = stringRes(R.string.cordn_message_deleted),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            MessageBody(text, accountViewModel, nav)
-            if (isEdited) {
-                Text(
-                    text = stringRes(R.string.cordn_message_edited),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        // Only on a live message: a deleted one must not keep offering its
-        // attachment, and the blob is still on the host either way.
-        if (text != null) {
-            CordnMediaTag.parseAll(message.envelope.tags).forEach { attachment ->
-                CordnAttachment(attachment, room, accountViewModel)
-            }
-        }
-
-        Reactions(annotations.reactions[message.envelope.id].orEmpty(), onReact)
-    }
-}
-
-/**
- * The reaction chips, plus the one quick way to add one.
- *
- * A reaction is a set of pubkeys per emoji in the fold, so the count is the
- * set size — a member who reacted twice with the same emoji counts once, which
- * is what the index already guarantees and what a naive message count would
- * get wrong on a re-sync.
- */
-@Composable
-private fun Reactions(
-    reactions: Map<String, Set<String>>,
-    onReact: (String) -> Unit,
-) {
-    Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        reactions.forEach { (emoji, who) ->
-            AssistChip(
-                onClick = { onReact(emoji) },
-                label = { Text("$emoji ${who.size}", style = MaterialTheme.typography.labelSmall) },
-            )
-        }
-        if (reactions.isEmpty()) {
-            TextButton(onClick = { onReact(DEFAULT_REACTION) }) {
-                Text(DEFAULT_REACTION, style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-/** What the one-tap reaction sends. Anything else goes through a picker later. */
-private const val DEFAULT_REACTION = "\uD83D\uDC4D"
 
 @Composable
 private fun CordnComposer(
@@ -869,7 +567,7 @@ private fun CordnComposer(
  * reading one puts no part of this conversation into it.
  */
 @Composable
-private fun MessageBody(
+internal fun MessageBody(
     text: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -961,7 +659,7 @@ private suspend fun sendAttachment(
  * user's.
  */
 @Composable
-private fun CordnAttachment(
+internal fun CordnAttachment(
     attachment: CordnMediaAttachment,
     room: CordnGroupChatroom,
     accountViewModel: AccountViewModel,
