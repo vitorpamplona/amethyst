@@ -48,8 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -80,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
@@ -228,13 +228,20 @@ private fun CordnGroupChat(
         room.markRead()
     }
 
-    Scaffold(
+    // The same scaffold every other chat screen uses. A bare Scaffold gave this room
+    // neither of the two things it provides: the bars' scroll behaviour, and the IME
+    // inset — without which the composer sat *under* the soft keyboard.
+    DisappearingScaffold(
+        isInvertedLayout = true,
         topBar = {
             CordnChatTopBar(
                 title = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
+                onBack = { nav.popBack() },
                 onInfo = { nav.nav(Route.CordnGroupInfo(room.coordinatorPubKey, room.gid)) },
             )
         },
+        accountViewModel = accountViewModel,
+        allowBarHide = false,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // One clock for every divider in the room, so they cannot disagree.
@@ -367,7 +374,8 @@ private fun CordnGroupChat(
             }
 
             CordnComposer(
-                draft = draft,
+                room = room,
+                accountViewModel = accountViewModel,
                 onAttach = { uri ->
                     scope.launch {
                         attaching = true
@@ -395,9 +403,11 @@ private fun CordnGroupChat(
                     }
                 },
                 attaching = attaching,
-                onDraftChange = { room.draft.value = it },
-                onSend = {
-                    val text = draft.trim()
+                // The field hands its own text over rather than the screen reading
+                // `room.draft`: the two are kept in step by a snapshot collector, which
+                // settles a frame later, and a send must use what is on screen now.
+                onSend = { typed ->
+                    val text = typed.trim()
                     if (text.isEmpty()) return@CordnComposer
 
                     val reply = replyingTo
@@ -504,50 +514,25 @@ private fun ComposerBanner(
 @Composable
 private fun CordnChatTopBar(
     title: String,
+    onBack: () -> Unit,
     onInfo: () -> Unit,
 ) {
     TopAppBar(
         title = { Text(title) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                    contentDescription = stringRes(Res.string.back),
+                )
+            }
+        },
         actions = {
             IconButton(onClick = onInfo) {
                 Icon(MaterialSymbols.Info, contentDescription = stringRes(R.string.cordn_group_info))
             }
         },
     )
-}
-
-@Composable
-private fun CordnComposer(
-    draft: String,
-    attaching: Boolean,
-    onAttach: (Uri) -> Unit,
-    onVoiceNote: (RecordingResult) -> Unit,
-    onDraftChange: (String) -> Unit,
-    onSend: () -> Unit,
-) {
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let(onAttach)
-        }
-
-    Row(
-        Modifier.fillMaxWidth().padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { picker.launch("*/*") }, enabled = !attaching) {
-            Icon(MaterialSymbols.AttachFile, contentDescription = stringRes(R.string.cordn_media_attach))
-        }
-        VoiceNoteButton(enabled = !attaching, onRecorded = onVoiceNote)
-        OutlinedTextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            placeholder = { Text(stringRes(R.string.cordn_composer_hint)) },
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onSend, enabled = draft.isNotBlank()) {
-            Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = stringRes(R.string.cordn_send))
-        }
-    }
 }
 
 /**
@@ -722,7 +707,7 @@ private fun ByteArray.toImageBitmapOrNull(): ImageBitmap? =
  * that appears before anyone reached for it trains people to dismiss it.
  */
 @Composable
-private fun VoiceNoteButton(
+internal fun VoiceNoteButton(
     enabled: Boolean,
     onRecorded: (RecordingResult) -> Unit,
 ) {

@@ -254,8 +254,18 @@ class UserSuggestionState(
         state: TextFieldState,
         word: String,
         item: User,
+        /**
+         * Always insert the resolved `nostr:` URI, never the `@npub1…` short form.
+         *
+         * The short form is only half a mention: it relies on a send-time tagger to
+         * rewrite it and emit the `p` tag. Surfaces that have one (every nostr-event
+         * composer) keep it. cordn does not — its content goes into a sealed envelope
+         * verbatim, and its reader parses `nostr:` URIs out of that content — so an
+         * `@npub1…` there would ship as literal text and mention nobody.
+         */
+        forceNostrUri: Boolean = false,
     ) {
-        val wordToInsert = mentionInsertion(word, item)
+        val wordToInsert = mentionInsertion(word, item, forceNostrUri)
         state.edit {
             val lastWordStart = selection.end - word.length
             replace(lastWordStart, selection.end, wordToInsert)
@@ -280,7 +290,10 @@ class UserSuggestionState(
     private fun mentionInsertion(
         word: String,
         item: User,
+        forceNostrUri: Boolean = false,
     ): String {
+        if (forceNostrUri) return "nostr:${item.toNProfile()} "
+
         val typed = userSearchTermOrNull(word)
         val wasNip05Mention =
             typed != null &&
