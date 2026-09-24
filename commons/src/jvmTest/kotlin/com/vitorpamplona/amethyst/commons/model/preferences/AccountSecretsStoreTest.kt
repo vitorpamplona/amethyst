@@ -184,4 +184,26 @@ class AccountSecretsStoreTest {
 
             assertNull(subject.loadSecrets(npub))
         }
+
+    /**
+     * Delete an account, then add the same npub back.
+     *
+     * DataStore keeps a process-wide registry keyed by file path and releases
+     * an entry only when the owning scope's job *completes* — cancelling it is
+     * just the request. [AccountSecretsEncryptedStores.removeAccount] waits for
+     * that, and without the wait this throws "multiple DataStores active for
+     * the same file" whenever the next open wins the race, which on a loaded
+     * machine it does.
+     */
+    @Test
+    fun anAccountCanBeAddedBackAfterBeingRemoved() =
+        runTest {
+            val subject = stores()
+            subject.saveSecrets(npub, filled)
+            subject.removeAccount(npub)
+
+            subject.saveSecrets(npub, filled)
+
+            assertEquals(filled, subject.loadSecrets(npub))
+        }
 }

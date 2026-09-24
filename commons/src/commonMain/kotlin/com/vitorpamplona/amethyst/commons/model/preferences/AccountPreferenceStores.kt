@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import okio.Path
 
 /**
@@ -92,9 +93,18 @@ class AccountPreferenceStores(
      * would leave it writing the account's settings back out on the next edit,
      * re-creating what this call is meant to erase — and would keep the path
      * registered, so the same account could not be added again.
+     *
+     * Cancelling is not enough on its own, and this is suspend for that
+     * reason. `cancel()` only *asks*; DataStore releases the path when the
+     * scope's job actually completes, so a store opened on it before then
+     * still throws "multiple DataStores active for the same file". The window
+     * is small enough to pass locally and fail on a loaded CI runner.
      */
-    fun removeAccount(npub: String): Boolean {
-        storeCache.get(npub)?.scope?.cancel()
+    suspend fun removeAccount(npub: String): Boolean {
+        storeCache.get(npub)?.scope?.let {
+            it.cancel()
+            it.coroutineContext.job.join()
+        }
         storeCache.remove(npub)
         val path = file(npub)
         if (!platformFileSystem.exists(path)) return false

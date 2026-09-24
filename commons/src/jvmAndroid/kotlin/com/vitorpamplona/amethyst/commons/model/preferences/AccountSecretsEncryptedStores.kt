@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import okio.Path
 
 /**
@@ -103,11 +104,17 @@ class AccountSecretsEncryptedStores(
     /**
      * Drops the account's secrets.
      *
-     * Cancels the store's scope before deleting, so DataStore releases the
-     * path and the same account can be added again in this session.
+     * Cancels the store's scope and waits for it, so DataStore releases the
+     * path and the same account can be added again in this session. The wait
+     * is the point: `cancel()` only asks, and the path stays registered until
+     * the job completes — [AccountPreferenceStores.removeAccount] has the
+     * longer note.
      */
-    fun removeAccount(npub: String): Boolean {
-        storeCache.get(npub)?.scope?.cancel()
+    suspend fun removeAccount(npub: String): Boolean {
+        storeCache.get(npub)?.scope?.let {
+            it.cancel()
+            it.coroutineContext.job.join()
+        }
         storeCache.remove(npub)
         val path = file(npub)
         if (!platformFileSystem.exists(path)) return false
