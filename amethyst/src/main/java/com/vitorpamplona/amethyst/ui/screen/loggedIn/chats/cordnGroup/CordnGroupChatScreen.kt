@@ -101,6 +101,7 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -166,13 +167,43 @@ private fun CordnGroupChat(
     var acting by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var attaching by remember { mutableStateOf(false) }
     var attachError by remember { mutableStateOf<String?>(null) }
+
+    // Why sending says anything at all when it fails: `manager()` is null-safe
+    // all the way down, so a room whose coordinator has no open session
+    // swallowed every send, reaction, edit, delete and pin without a word —
+    // and the composer had already cleared the draft, so the text went with it.
+    // From the outside that is indistinguishable from a message that was sent
+    // and simply never arrived.
+    var sendError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val uploadFailed = stringRes(R.string.cordn_media_upload_failed)
+    val sendFailed = stringRes(R.string.cordn_send_failed)
+    val noSession = stringRes(R.string.cordn_send_no_session)
 
     fun manager() =
         accountViewModel.account.cordnRuntime
             ?.sessionOrNull(room.coordinatorPubKey)
             ?.manager
+
+    // One place for every outbound action, so none of them can go quiet again.
+    // Returns false when it failed, which is what lets the composer put the
+    // draft back rather than eat it.
+    suspend fun trySend(block: suspend (CordnGroupManager) -> Unit): Boolean {
+        val manager = manager()
+        if (manager == null) {
+            sendError = noSession
+            return false
+        }
+        return try {
+            block(manager)
+            sendError = null
+            true
+        } catch (e: Exception) {
+            Log.w("CordnGroupChat", "send failed in ${room.gid}: ${e.message}", e)
+            sendError = e.message ?: sendFailed
+            false
+        }
+    }
 
     val runtime = accountViewModel.account.cordnRuntime
 
@@ -230,7 +261,7 @@ private fun CordnGroupChat(
                         isEdited = annotations.isEdited(message.envelope.id),
                         onClick = { acting = message },
                         onReact = { emoji ->
-                            scope.launch { manager()?.post(room.gid, emoji, reactionTo = message.target()) }
+                            scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
                         },
                     )
                 }
@@ -238,7 +269,7 @@ private fun CordnGroupChat(
 
             HorizontalDivider()
 
-            attachError?.let {
+            (attachError ?: sendError)?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
@@ -305,12 +336,23 @@ private fun CordnGroupChat(
                     editing = null
 
                     scope.launch {
-                        manager()?.post(
-                            gid = room.gid,
-                            content = text,
-                            replyTo = reply?.target(),
-                            editTo = edit?.target(),
-                        )
+                        val sent =
+                            trySend {
+                                it.post(
+                                    gid = room.gid,
+                                    content = text,
+                                    replyTo = reply?.target(),
+                                    editTo = edit?.target(),
+                                )
+                            }
+                        if (!sent) {
+                            // Hand the message back rather than lose it, and put
+                            // the reply or edit it belonged to back with it, so
+                            // trying again means pressing send and nothing else.
+                            room.draft.value = text
+                            replyingTo = reply
+                            editing = edit
+                        }
                     }
                 },
             )
