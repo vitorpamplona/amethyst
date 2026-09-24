@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -183,7 +184,20 @@ class CordnSyncLoop(
                     // subscription that simply timed out.
                     attempt = 0
                 } catch (e: CancellationException) {
-                    throw e
+                    // Only OUR cancellation may end the loop. A coordinator
+                    // that does not answer inside the RPC budget surfaces as
+                    // `TimeoutCancellationException`, which IS a
+                    // `CancellationException` -- rethrowing it ended the loop
+                    // for the rest of the session, so one 20-second hiccup
+                    // turned into permanent silence with the UI still saying
+                    // "catching up". Measured on device: the first
+                    // `msg_fetch_many` timeout stopped cordn sync outright.
+                    if (!isActive) throw e
+
+                    attempt++
+                    val wait = backoffFor(attempt)
+                    _state.value = State.Retrying(attempt, wait, e.message)
+                    delay(wait)
                 } catch (e: Exception) {
                     attempt++
                     val wait = backoffFor(attempt)
@@ -201,7 +215,19 @@ class CordnSyncLoop(
      */
     private suspend fun subscribeUntilGroupsChange(opened: Set<String>) =
         coroutineScope {
-            val subscription = async { source.subscribe(subscribeTimeoutMs, onDelivery) }
+            val subscription =
+                async {
+                    // `msg_sub_many` spends a total-time budget and throws when
+                    // it runs out. That is the stream ending on schedule, not
+                    // an outage -- the loop's job is to open the next one -- so
+                    // it must not reach the backoff, and it must not reach the
+                    // cancellation clause above either.
+                    try {
+                        source.subscribe(subscribeTimeoutMs, onDelivery)
+                    } catch (e: TimeoutCancellationException) {
+                        // budget spent; fall through and re-subscribe
+                    }
+                }
             val changed = async { source.gids.first { it != opened } }
 
             select {

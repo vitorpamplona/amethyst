@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -56,6 +58,25 @@ class CordnSyncLoopTest {
         var subscribes = 0
         var failCatchUpTimes = 0
 
+        /**
+         * How many catchUps blow their RPC budget.
+         *
+         * A real one throws [TimeoutCancellationException] -- a
+         * `CancellationException` -- which is a different failure from
+         * [failCatchUpTimes]'s plain exception and was, for a while, fatal to
+         * the loop. Produced with a real `withTimeout` rather than a
+         * hand-constructed instance, so the test cannot drift from what the
+         * coordinator client actually throws.
+         */
+        var timeOutCatchUpTimes = 0
+
+        /**
+         * How many subscribes spend their budget instead of parking. Bounded,
+         * because a fake that always spends it turns the loop into a spin in
+         * virtual time and the test never returns.
+         */
+        var subscribeSpendsBudgetTimes = 0
+
         /** Handed to onDelivery once per catchUp, to prove the wiring. */
         var deliverOnCatchUp: CordnGroupManager.Delivery? = null
 
@@ -75,6 +96,10 @@ class CordnSyncLoopTest {
 
         override suspend fun catchUp(onDelivery: (CordnGroupManager.Delivery) -> Unit): Int {
             catchUps++
+            if (timeOutCatchUpTimes > 0) {
+                timeOutCatchUpTimes--
+                withTimeout(1) { delay(1_000) }
+            }
             if (failCatchUpTimes > 0) {
                 failCatchUpTimes--
                 throw CordnGroupException("coordinator is down")
@@ -89,6 +114,10 @@ class CordnSyncLoopTest {
         ) {
             subscribes++
             subscribedWith += _gids.value
+            if (subscribeSpendsBudgetTimes > 0) {
+                subscribeSpendsBudgetTimes--
+                withTimeout(1) { delay(1_000) }
+            }
             val opened = closeStream.value
             closeStream.first { it != opened }
         }
@@ -232,6 +261,54 @@ class CordnSyncLoopTest {
 
             assertEquals(2, source.subscribes)
             assertEquals(CordnSyncLoop.State.Live, loop.state.value, "a timeout was treated as an outage")
+            loop.stop()
+        }
+
+    @Test
+    fun `an RPC that times out is retried, not the end of the loop`() =
+        runTest {
+            // A coordinator that does not answer inside the 20-second RPC
+            // budget throws TimeoutCancellationException, which IS a
+            // CancellationException. Rethrowing it ended run() -- the job
+            // completed, the state stayed CatchingUp, and the account received
+            // no cordn message again until the app was restarted. Observed on
+            // device: one msg_fetch_many timeout, then silence.
+            val source = FakeSource()
+            val loop = loopOver(source)
+            source.setGroups("g1")
+            source.timeOutCatchUpTimes = 1
+            loop.start(this)
+            // The budget is virtual time, so it only expires once time moves.
+            advanceTimeBy(10)
+            runCurrent()
+
+            assertIs<CordnSyncLoop.State.Retrying>(loop.state.value, "a timeout ended the loop")
+
+            advanceTimeBy(1_100)
+            runCurrent()
+
+            assertEquals(2, source.catchUps, "it never tried again")
+            assertEquals(CordnSyncLoop.State.Live, loop.state.value)
+            loop.stop()
+        }
+
+    @Test
+    fun `a subscription that spends its budget re-subscribes`() =
+        runTest {
+            // msg_sub_many is given a total-time budget and throws when it runs
+            // out; the stream ending on schedule is the normal case the loop
+            // exists to re-open. As a CancellationException it did neither --
+            // it ended the loop.
+            val source = FakeSource()
+            val loop = loopOver(source)
+            source.setGroups("g1")
+            source.subscribeSpendsBudgetTimes = 1
+            loop.start(this)
+            advanceTimeBy(10)
+            runCurrent()
+
+            assertEquals(CordnSyncLoop.State.Live, loop.state.value, "a spent budget was treated as an outage")
+            assertEquals(2, source.subscribes, "it did not re-subscribe")
             loop.stop()
         }
 

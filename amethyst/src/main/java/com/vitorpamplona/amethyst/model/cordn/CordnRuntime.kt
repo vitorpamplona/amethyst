@@ -57,6 +57,8 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -155,6 +157,18 @@ class CordnRuntime(
                     )
                 loops[config.pubKey] = loop
                 loop.start(scope)
+                // A coordinator that stops answering is otherwise invisible:
+                // the rooms are there, they are simply never updated again, and
+                // the whole sync path logged nothing at all. Only the failing
+                // state is worth a line, and only when it changes.
+                scope.launch {
+                    loop.state
+                        .filterIsInstance<CordnSyncLoop.State.Retrying>()
+                        .distinctUntilChanged()
+                        .collect {
+                            Log.w(TAG, "coordinator ${config.pubKey.take(8)}\u2026 not syncing (attempt ${it.attempt}, retry in ${it.inMs}ms): ${it.reason}")
+                        }
+                }
             }
         }
         // Whatever the store already held, so a relaunch shows its rooms
