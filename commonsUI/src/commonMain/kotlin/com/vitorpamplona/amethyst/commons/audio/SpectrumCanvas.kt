@@ -34,7 +34,14 @@ import kotlinx.coroutines.flow.Flow
  * Collects [spectrum] into a decayed [FloatArray] and optionally runs a monotonic time clock,
  * then calls [draw] inside the Canvas draw lambda. The fast-changing state is read
  * ONLY in the draw lambda, so new frames trigger the draw phase, never recomposition.
- * Pass [animated] = false for non-time-varying styles (bars, radial) to avoid 60fps redraws.
+ *
+ * Frames are paced one per displayed frame through [SpectrumTrail] — they arrive from the decoder in
+ * bursts, and writing a burst straight into state would collapse it into a single draw. The pacing
+ * loop runs every frame but only writes state when a spectrum frame is actually queued, so the redraw
+ * rate still tracks the ~43 Hz the fft produces rather than the display.
+ *
+ * Pass [animated] = false for non-time-varying styles (bars, radial): that drops the monotonic clock,
+ * whose whole purpose is to redraw every frame even when the spectrum has not moved.
  */
 @Composable
 fun SpectrumCanvas(
@@ -47,30 +54,21 @@ fun SpectrumCanvas(
 ) {
     val smoothed = remember { mutableStateOf(FloatArray(0)) }
 
-    // Frames arrive in decoder-sized bursts that run ahead of the audio, so they are queued here and
-    // drawn one per displayed frame. Writing a whole burst straight into `smoothed` would collapse it
-    // into a single draw at the next vsync and the visual would step at the decoder-buffer rate.
-    val pacer = remember(spectrum) { SpectrumPacer() }
-    LaunchedEffect(spectrum) {
-        spectrum.collect { pacer.offer(it) }
+    // Frames arrive in decoder-sized bursts that run ahead of the audio, so they are queued and drawn
+    // one per displayed frame. Writing a whole burst straight into `smoothed` would collapse it into a
+    // single draw at the next vsync and the visual would step at the decoder-buffer rate. Queueing and
+    // decay live in SpectrumTrail so they are testable without a Compose harness.
+    val trail = remember(spectrum, decay) { SpectrumTrail(decay) }
+    LaunchedEffect(spectrum, trail) {
+        spectrum.collect { trail.offer(it) }
     }
 
-    LaunchedEffect(spectrum, decay) {
-        var prev = FloatArray(0)
+    LaunchedEffect(trail) {
         while (true) {
             withFrameMillis { }
-            // Starved: production (~43 Hz) is slower than the display, so this is the common case
-            // between frames. Hold what is already drawn rather than redrawing the same bins.
-            val frame = pacer.next() ?: continue
-            // A fresh array each frame is intentional: mutableStateOf compares by reference, so a new
-            // instance is what signals Compose to redraw. Do NOT switch to in-place mutation.
-            val next =
-                FloatArray(frame.bins.size) { i ->
-                    val prior = if (i < prev.size) prev[i] * decay else 0f
-                    if (frame.bins[i] > prior) frame.bins[i] else prior
-                }
-            smoothed.value = next
-            prev = next
+            // Null means starved. Production (~43 Hz) is slower than the display, so this is the common
+            // case between frames: hold what is drawn rather than redrawing identical bins.
+            smoothed.value = trail.nextOrNull() ?: continue
         }
     }
 
