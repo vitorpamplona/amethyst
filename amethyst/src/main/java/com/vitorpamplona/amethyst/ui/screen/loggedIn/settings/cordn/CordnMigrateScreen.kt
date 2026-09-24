@@ -31,7 +31,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -71,6 +70,8 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_receive
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_replaces_warning
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_scan
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_scan_this
+import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_section_receive
+import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_section_send
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_sign_in_first
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import kotlinx.coroutines.launch
@@ -146,11 +148,21 @@ fun CordnMigrateScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            SendSide(runtime, accountViewModel)
+            // Two boxes, because they are two different devices' jobs and
+            // only one of them is yours today. A rule between them said they
+            // were separate without saying which was which — and doing the
+            // wrong one here hands your account to another phone.
+            SettingsSection(Res.string.cordn_migrate_section_send) {
+                SettingsFormBlock {
+                    SendSide(runtime, accountViewModel)
+                }
+            }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
-            ReceiveSide(runtime, accountViewModel)
+            SettingsSection(Res.string.cordn_migrate_section_receive) {
+                SettingsFormBlock {
+                    ReceiveSide(runtime, accountViewModel)
+                }
+            }
         }
     }
 }

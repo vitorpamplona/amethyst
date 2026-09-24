@@ -32,9 +32,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -56,11 +53,15 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_export
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_passphrase
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_restore
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -191,57 +192,66 @@ fun CordnBackupScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            OutlinedTextField(
-                value = passphrase,
-                onValueChange = {
-                    passphrase = it
-                    error = null
-                },
-                label = { Text(stringRes(R.string.cordn_backup_passphrase)) },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(stringRes(R.string.cordn_backup_contents_title), style = MaterialTheme.typography.titleSmall)
-                    Text(stringRes(R.string.cordn_backup_contents_body), style = MaterialTheme.typography.bodySmall)
+            // The passphrase is its own section because it governs both of the
+            // two below: the same word exports and restores, and a field
+            // floating above two unrelated-looking cards did not say so.
+            SettingsSection(Res.string.cordn_backup_section_passphrase) {
+                SettingsFormBlock {
+                    OutlinedTextField(
+                        value = passphrase,
+                        onValueChange = {
+                            passphrase = it
+                            error = null
+                        },
+                        label = { Text(stringRes(R.string.cordn_backup_passphrase)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
-            Button(
-                onClick = { saver.launch("cordn-backup.bin") },
-                // No passphrase, no export. The file carries ratchet trees and
-                // private key material; there is no version of it that is safe
-                // to write unprotected.
-                enabled = !busy && passphrase.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // Key derivation here is scrypt, which is slow on purpose, so
-                // a greyed-out button was the only sign anything was happening
-                // for several seconds.
-                BusyLabel(busy, stringRes(R.string.cordn_backup_export))
+            SettingsSection(Res.string.cordn_backup_section_export) {
+                SettingsFormBlock {
+                    Text(stringRes(R.string.cordn_backup_contents_title), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = stringRes(R.string.cordn_backup_contents_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Button(
+                        onClick = { saver.launch("cordn-backup.bin") },
+                        // No passphrase, no export. The file carries ratchet
+                        // trees and private key material; there is no version
+                        // of it that is safe to write unprotected.
+                        enabled = !busy && passphrase.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        // Key derivation here is scrypt, which is slow on
+                        // purpose, so a greyed-out button was the only sign
+                        // anything was happening for several seconds.
+                        BusyLabel(busy, stringRes(R.string.cordn_backup_export))
+                    }
+                }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SettingsSection(Res.string.cordn_backup_section_restore) {
+                SettingsFormBlock {
+                    Text(
+                        text = stringRes(R.string.cordn_backup_restore_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
-            Text(stringRes(R.string.cordn_backup_restore_title), style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = stringRes(R.string.cordn_backup_restore_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Button(
-                onClick = { picker.launch("*/*") },
-                enabled = !busy && passphrase.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                BusyLabel(busy, stringRes(R.string.cordn_backup_restore))
+                    Button(
+                        onClick = { picker.launch("*/*") },
+                        enabled = !busy && passphrase.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        BusyLabel(busy, stringRes(R.string.cordn_backup_restore))
+                    }
+                }
             }
         }
     }

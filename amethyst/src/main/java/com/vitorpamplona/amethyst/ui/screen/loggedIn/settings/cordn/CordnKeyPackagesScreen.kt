@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_section
 import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.model.cordn.CordnKeyPackageRow
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
@@ -128,17 +130,29 @@ fun CordnKeyPackagesScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            if (coordinators.isEmpty()) {
-                Text(
-                    text = stringRes(R.string.cordn_coordinators_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // One section holding every coordinator rather than one each:
+            // SettingsSection titles come from a StringResource and a
+            // coordinator's label is runtime text, so a section per
+            // coordinator is not something this primitive can say. The
+            // dividers stay, inside, where they now separate peers within a
+            // box instead of floating in open page.
+            SettingsSection(Res.string.cordn_keypackages_section) {
+                SettingsFormBlock {
+                    if (coordinators.isEmpty()) {
+                        Text(
+                            text = stringRes(R.string.cordn_coordinators_none),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-            coordinators.forEach { config ->
-                CoordinatorKeyPackages(config, runtime)
-                HorizontalDivider()
+                    coordinators.forEachIndexed { index, config ->
+                        // Between, not after: a rule under the last one drew a
+                        // line to nothing.
+                        if (index > 0) HorizontalDivider()
+                        CoordinatorKeyPackages(config, runtime)
+                    }
+                }
             }
         }
     }

@@ -60,11 +60,13 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_no_coordinator
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_not_joinable
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_paste
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_section_input
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -122,49 +124,56 @@ fun CordnLinkScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            OutlinedTextField(
-                value = input,
-                onValueChange = {
-                    input = it
-                    // Clearing on edit rather than re-parsing per keystroke: a
-                    // half-typed ref is always invalid, and showing that while
-                    // someone is still pasting is noise, not feedback.
-                    inspection = null
-                    requestState = null
-                },
-                label = { Text(stringResource(Res.string.cordn_link_field)) },
-                singleLine = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { inspection = CordnLinkInspection.of(input) },
-                    enabled = input.isNotBlank(),
-                ) {
-                    Text(stringResource(Res.string.cordn_link_inspect))
-                }
-                OutlinedButton(
-                    onClick = {
-                        clipboard.getText()?.text?.let {
+            // The field, its buttons and the scanner are one thing to do; the
+            // verdict below is another. Boxing the input says where the screen
+            // asks something of you and where it answers.
+            SettingsSection(Res.string.cordn_link_section_input) {
+                SettingsFormBlock {
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = {
                             input = it
-                            inspection = CordnLinkInspection.of(it)
-                        }
-                    },
-                ) {
-                    Text(stringResource(Res.string.cordn_link_paste))
-                }
-                OutlinedButton(onClick = { scanning = true }) {
-                    Text(stringRes(R.string.cordn_link_scan))
-                }
-                if (input.isNotEmpty()) {
-                    OutlinedButton(
-                        onClick = {
-                            input = ""
+                            // Clearing on edit rather than re-parsing per keystroke: a
+                            // half-typed ref is always invalid, and showing that while
+                            // someone is still pasting is noise, not feedback.
                             inspection = null
+                            requestState = null
                         },
-                    ) {
-                        Text(stringResource(Res.string.cordn_link_clear))
+                        label = { Text(stringResource(Res.string.cordn_link_field)) },
+                        singleLine = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { inspection = CordnLinkInspection.of(input) },
+                            enabled = input.isNotBlank(),
+                        ) {
+                            Text(stringResource(Res.string.cordn_link_inspect))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                clipboard.getText()?.text?.let {
+                                    input = it
+                                    inspection = CordnLinkInspection.of(it)
+                                }
+                            },
+                        ) {
+                            Text(stringResource(Res.string.cordn_link_paste))
+                        }
+                        OutlinedButton(onClick = { scanning = true }) {
+                            Text(stringRes(R.string.cordn_link_scan))
+                        }
+                        if (input.isNotEmpty()) {
+                            OutlinedButton(
+                                onClick = {
+                                    input = ""
+                                    inspection = null
+                                },
+                            ) {
+                                Text(stringResource(Res.string.cordn_link_clear))
+                            }
+                        }
                     }
                 }
             }
