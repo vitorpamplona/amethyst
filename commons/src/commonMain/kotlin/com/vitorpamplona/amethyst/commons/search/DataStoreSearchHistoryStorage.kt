@@ -18,38 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.search
 
-import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
 import kotlinx.coroutines.flow.first
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Where Android keeps the search history: one `datastore/search_history.preferences_pb` file.
+ * [SearchHistoryStorage] on a DataStore of its own — `search_history` under the
+ * front end's datastore directory.
  *
- * The history itself — what it holds, how much of it, in what order — is
- * [com.vitorpamplona.amethyst.commons.search.SearchHistory] in commons, shared with Desktop. This
- * is only the two strings and the file they live in.
- *
- * Device-global rather than per-account, like the drawer's collapse state beside it: what you
- * searched for is a property of this phone, and it is never published to a relay.
+ * Takes the store rather than a directory: the search screen is rebuilt per
+ * seeded query, and DataStore refuses a second live instance on a path that
+ * already has one, so who owns the instance matters. Handing it in means the
+ * caller's store holder is the single registry rather than this class keeping a
+ * private one of its own.
  */
 class DataStoreSearchHistoryStorage(
-    private val filesDir: File,
+    private val store: DataStore<Preferences>,
 ) : SearchHistoryStorage {
-    constructor(context: Context) : this(context.applicationContext.filesDir)
-
-    // DataStore v1 throws if two instances are ever active on the same file, and the search screen
-    // is rebuilt per seeded query, so the store is shared per absolute path across the process.
-    private val store: DataStore<Preferences> get() = dataStoreFor(File(filesDir, "datastore/search_history.preferences_pb"))
-
     override suspend fun read(key: String): String? = store.data.first()[stringPreferencesKey(key)]
 
     override suspend fun write(
@@ -62,11 +51,6 @@ class DataStoreSearchHistoryStorage(
     }
 
     companion object {
-        private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
-
-        private fun dataStoreFor(file: File): DataStore<Preferences> =
-            stores.computeIfAbsent(file.absolutePath) {
-                PreferenceDataStoreFactory.create(produceFile = { file })
-            }
+        const val FILE_NAME = "search_history"
     }
 }

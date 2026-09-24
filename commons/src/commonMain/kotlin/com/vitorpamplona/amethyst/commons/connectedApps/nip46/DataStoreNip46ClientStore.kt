@@ -18,20 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.connectedApps.nip46
+package com.vitorpamplona.amethyst.commons.connectedApps.nip46
 
-import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.flow.first
-import java.io.File
-import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Single-file DataStore-backed [Nip46ClientStore]. Every connected client's
@@ -41,14 +36,10 @@ import java.util.concurrent.ConcurrentHashMap
  * individually so no serialization library is needed; [relays] is newline-joined.
  */
 class DataStoreNip46ClientStore(
-    private val filesDir: File,
+    private val dataStore: DataStore<Preferences>,
 ) : Nip46ClientStore {
-    constructor(context: Context) : this(context.applicationContext.filesDir)
-
-    private val store: DataStore<Preferences> get() = dataStoreFor(File(filesDir, "datastore/nip46_clients.preferences_pb"))
-
     override suspend fun load(coordinate: String): Nip46ClientInfo? {
-        val prefs = store.data.first()
+        val prefs = dataStore.data.first()
         if (prefs[coordKey(coordinate)] == null) return null
         return Nip46ClientInfo(
             name = prefs[nameKey(coordinate)],
@@ -62,7 +53,7 @@ class DataStoreNip46ClientStore(
         coordinate: String,
         info: Nip46ClientInfo,
     ) {
-        store.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[coordKey(coordinate)] = coordinate
             info.name?.let { prefs[nameKey(coordinate)] = it } ?: prefs.remove(nameKey(coordinate))
             info.url?.let { prefs[urlKey(coordinate)] = it } ?: prefs.remove(urlKey(coordinate))
@@ -72,7 +63,7 @@ class DataStoreNip46ClientStore(
     }
 
     override suspend fun remove(coordinate: String) {
-        store.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(coordKey(coordinate))
             prefs.remove(nameKey(coordinate))
             prefs.remove(urlKey(coordinate))
@@ -82,7 +73,7 @@ class DataStoreNip46ClientStore(
     }
 
     override suspend fun all(): Map<String, Nip46ClientInfo> {
-        val prefs = store.data.first()
+        val prefs = dataStore.data.first()
         val result = mutableMapOf<String, Nip46ClientInfo>()
         for ((key, value) in prefs.asMap()) {
             if (!key.name.startsWith(COORD_PREFIX)) continue
@@ -111,18 +102,20 @@ class DataStoreNip46ClientStore(
     private fun relaysKey(coordinate: String) = stringPreferencesKey("relays:${hash(coordinate)}")
 
     companion object {
-        private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
-
-        private fun dataStoreFor(file: File): DataStore<Preferences> =
-            stores.computeIfAbsent(file.absolutePath) {
-                PreferenceDataStoreFactory.create(produceFile = { file })
-            }
+        const val FILE_NAME = "nip46_clients"
 
         private const val COORD_PREFIX = "coord:"
 
-        private fun hash(coordinate: String): String {
-            val digest = MessageDigest.getInstance("SHA-256").digest(coordinate.toByteArray())
-            return digest.take(8).joinToString("") { "%02x".format(it) }
-        }
+        /**
+         * The first 8 bytes of the coordinate's SHA-256, lower-case hex.
+         *
+         * This is a stored key, so it must keep producing exactly what
+         * `MessageDigest.getInstance("SHA-256")` plus `"%02x".format(byte)` did
+         * on Android — a different digest here would orphan every client a user
+         * has already authorized rather than fail loudly.
+         * `DataStoreNip46ClientStoreTest` pins three coordinates against hashes
+         * computed outside this codebase.
+         */
+        internal fun hash(coordinate: String): String = sha256(coordinate.encodeToByteArray()).copyOfRange(0, 8).toHexKey()
     }
 }
