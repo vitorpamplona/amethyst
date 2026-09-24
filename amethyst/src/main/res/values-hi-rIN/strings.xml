@@ -295,6 +295,7 @@
         <item quantity="other">श्रमप्रमाण खनन… (%1$d पत्र पंक्ति में)</item>
     </plurals>
     <string name="pow_mining_title">श्रमप्रमाण खनन</string>
+    <string name="pow_notification_sending">पुनःप्रसारकों को भेजा जा रहा है…</string>
     <string name="pow_notification_cancel_all">निरस्त</string>
     <string name="pow_time_left">लगभग %1$s शेष</string>
     <string name="pow_time_left_soon">अब किसी भी क्षण</string>
@@ -349,4 +350,322 @@
     <string name="mute_button">ध्वनि सक्रिय। मौन करने के लिए टाँकें</string>
     <string name="play">चलाएँ</string>
     <string name="pause">विराम</string>
+    <string name="backup_conflict_title">आपने अपना %1$s अन्य क्रमक में परिवर्तित किया</string>
+    <string name="backup_conflict_removed">हटाए गए (%1$s)</string>
+    <string name="backup_conflict_added">जोडे गए (%1$s)</string>
+    <string name="backup_conflict_changed">परिवर्तित (%1$s)</string>
+    <string name="backup_conflict_private_cleared">आपने सभी निजी (रहस्यीकृत) वस्तुओं को हटा दिया।</string>
+    <string name="backup_conflict_private_changed">आपने निजी (रहस्यीकृत) वस्तुओं का परिवर्तन भी किया। उनकी तुलना यहाँ नहीं की जा सकती।</string>
+    <string name="backup_conflict_private_added">आपने निजी (रहस्यीकृत) वस्तुओं को जोडा।</string>
+    <string name="backup_conflict_restore_mine">सुरक्षित संस्करण पुनःस्थापन</string>
+    <string name="backup_review_saved">इस यन्त्र पर</string>
+    <string name="backup_review_new">नया संस्करण</string>
+    <string name="backup_review_not_set">स्थापित नहीं</string>
+    <string name="backup_conflict_count_removed">%1$s हटाए गए</string>
+    <string name="backup_conflict_count_added">%1$s जोडे गए</string>
+    <string name="backup_conflict_count_changed">%1$s परिवर्तित</string>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">आपने %1$d व्यक्ति का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d व्यक्तियों का अनुगमन हटाए</item>
+    </plurals>
+    <string name="backup_card_accept">स्वीकार</string>
+    <string name="backup_review_title_updated">%1$s अद्यतनकृत</string>
+    <string name="backup_review_title_cleared">%1$s पारित</string>
+    <string name="backup_review_changed_by_other_app">अन्य क्रमक में परिवर्तित। %1$s</string>
+    <string name="backup_action_keep_count">रखें %1$s</string>
+    <string name="backup_action_restore_count">पुनःस्थापन %1$s</string>
+    <string name="backup_action_remute">पुनःमौन %1$s</string>
+    <string name="backup_action_rejoin">पुनःजुडें %1$s</string>
+    <string name="backup_action_restore_profile">परिचय पुनःस्थापध</string>
+    <string name="backup_action_restore_relays">पुनःप्रसारक पुनःस्थापन</string>
+    <string name="backup_review_kept_count">%1$s रखे गए</string>
+    <string name="backup_review_dropped_count">%1$s परित्यक्त</string>
+    <string name="backup_review_new_count">%1$s नए</string>
+    <string name="backup_review_tab_dropped">परित्यक्त। %1$s</string>
+    <string name="backup_review_tab_new">नए। %1$s</string>
+    <string name="backup_review_tab_edited">सम्पादित। %1$s</string>
+    <string name="backup_review_search_people">%1$s लोग खोजें</string>
+    <string name="backup_review_nothing_here">यहाँ कुछ नहीं</string>
+    <string name="backup_review_unmuted">%1$s मौनावस्था हटाए गए</string>
+    <string name="backup_review_unmuted_explainer">ये पुनः आपके सूचनावलियों तक अभिगम्य</string>
+    <string name="backup_review_newly_muted">%1$s नए मौनकृत</string>
+    <string name="backup_review_words_and_hashtags">शब्द तथा विषयसूचक</string>
+    <string name="backup_review_names_and_more">%1$s तथा %2$s अधिक</string>
+    <string name="backup_review_private_wiped_title">आपने सभी निजी वस्तुओं को हटा दिया</string>
+    <string name="backup_review_private_wiped_body">वे रहस्यीकृत हैं। इसलिए केवल आप देख सकते हैं कि वे क्या थे। पुनःस्थापन से सब लौटके आ जाएँगे।</string>
+    <string name="backup_review_private_added_title">आपने वस्तुओं को निजी किया</string>
+    <string name="backup_review_private_added_body">वे अब रहस्यीकृत हैं। जो कि सम्भाव्यतः ऊपर के सार्वजनिक वस्तुओं का गन्तव्य था।</string>
+    <string name="backup_review_private_changed_title">आपने निजी वस्तुओं का परिवर्तन किया</string>
+    <string name="backup_review_private_changed_body">वे रहस्यीकृत हैं। इसलिए उनकी तुलना यहाँ नहीं की जा सकती।</string>
+    <string name="backup_review_gone">चला गया</string>
+    <string name="backup_review_new_tag">नव्य</string>
+    <string name="backup_review_dropped_tag">परित्यक्त</string>
+    <string name="backup_review_demoted_tag">स्थानान्तरित</string>
+    <string name="backup_review_units_tag">इकाई</string>
+    <string name="backup_review_left_tag">शेष</string>
+    <string name="backup_review_renamed_tag">पुनःनामकृत</string>
+    <string name="backup_review_outbox">निर्गतपेटिका</string>
+    <string name="backup_review_outbox_explainer">आप जहाँ प्रकाशित करते हैं</string>
+    <string name="backup_review_inbox">आगतपेटिका</string>
+    <string name="backup_review_inbox_explainer">जहाँ अन्य आप तक अभिगमन करते हैं</string>
+    <string name="backup_review_key_replaced">ग्राहक कुंचिका प्रतिस्थापित</string>
+    <string name="backup_review_key_removed">ग्राहक कुंचिका हटाया गया</string>
+    <string name="backup_review_key_warning">नटज्साप आगे से इस कुंचिका से बद्ध होंगे। यदि इस यन्त्र में वह नहीं है तो आप सम्भाव्यतः उनको यहाँ नहीं चुका सकते।</string>
+    <string name="backup_review_left">शेष</string>
+    <string name="backup_review_joined">जुड गए</string>
+    <string name="backup_review_renamed">पुनःनामकृत</string>
+    <string name="backup_review_was_named">पूर्वतः %1$s था</string>
+    <string name="backup_action_block_again">पुनःबाधित करें %1$s को</string>
+    <string name="backup_action_restore_feeds">सूचनावलियाँ पुनःस्थापन</string>
+    <string name="backup_action_restore_topics">विषय पुनःस्थापन</string>
+    <string name="backup_action_restore_places">स्थल पुनःस्थापन</string>
+    <string name="backup_action_restore_providers">प्रदाता पुनःस्थापन</string>
+    <string name="backup_action_restore_wallet">धनकोष पुनःस्थापन</string>
+    <string name="backup_review_kept">रखे गए</string>
+    <string name="backup_review_receiving_tag">ग्रहण मध्य</string>
+    <string name="backup_review_listed_tag">सूचीबद्ध</string>
+    <string name="backup_review_searching_tag">खोज मध्य</string>
+    <string name="backup_review_storing_tag">अभिलेखन मध्य</string>
+    <string name="backup_review_trusted_tag">विश्वसनीय</string>
+    <string name="backup_review_untrusted_tag">अविश्वसनीय</string>
+    <string name="backup_review_unblocked">%1$s अबाधित</string>
+    <string name="backup_review_unblocked_explainer">अमेथिस्ट पुनः उनसे जुडेगा</string>
+    <string name="backup_review_no_longer_blocked">अब से बाधित नहीं</string>
+    <string name="backup_review_newly_blocked">नव्यतः बाधित</string>
+    <string name="backup_review_still_blocked">अभी भी बाधित</string>
+    <string name="backup_review_allowed_tag">अनुमत</string>
+    <string name="backup_review_moved_tag">स्थानान्तरित</string>
+    <string name="backup_review_feed">सूचनावली</string>
+    <string name="backup_review_topics_gone">विषय हटाए गए</string>
+    <string name="backup_review_places_gone">स्थल हटाए गए</string>
+    <string name="backup_review_new_count_caption">नव्य</string>
+    <string name="backup_review_hashtags_you_follow">विषयसूचक जिनका आप अनुगमन करते हैं</string>
+    <string name="backup_review_places_you_follow">स्थल जिनका आप अनुगमन करते हैं</string>
+    <string name="backup_review_services_changed">%2$s में से %1$s सेवाएँ परिवर्तित</string>
+    <string name="backup_review_services_changed_explainer">वे अब अन्य व्यक्ति से आते है। अथवा किसी से नहीं</string>
+    <string name="backup_review_service">सेवा</string>
+    <string name="backup_review_service_rank">श्रेणी</string>
+    <string name="backup_review_service_followers">अनुचर</string>
+    <string name="backup_review_service_topics">विषयसूची</string>
+    <string name="backup_review_trust_warning">श्रेणीयाँ तथा अनुचर गिनती तथा कचरालेख छालन जो आप देखते हैं इन प्रदाताओं से आते हैं।</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">आपको भुगतान करने की %1$d विधि हटाया गया</item>
+        <item quantity="other">आपको भुगतान करने की %1$d विधियाँ हटाए गए</item>
+    </plurals>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d प्रस्ताव हटाया गया</item>
+        <item quantity="other">%1$d प्रस्ताव हटाए गए</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">लोग जो आपको भुगतान करते हैं उसी को देखते हैं जो इस सूची में है।</string>
+    <string name="backup_review_offer">बोल्ट॰बारह प्रस्ताव</string>
+    <string name="backup_review_encrypted_cleared">आपने उसे रिक्त किया</string>
+    <string name="backup_review_encrypted_added">आपने उसे बनाया</string>
+    <string name="backup_review_encrypted_changed">आपने उसे परिवर्तित किया</string>
+    <string name="backup_review_wallet_body">आपके धनकोष के टकसाल तथा कुंचिकाएँ आपके लिए रहस्यीकृत हैं। इसलिए उनकी तुलना वस्तु प्रति वस्तु यहाँ नहीं की जा सकती। पुनःस्थापन उन्हीं को लौट डालेगा जिनका अभिलेखन इस यन्त्र ने किया।</string>
+    <string name="backup_review_concord_body">आपके कोंकोर्ड समुदाय आपके लिए रहस्यीकृत हैं। इसलिए उनकी तुलना यहाँ नहीं की जा सकती। पुनःस्थापन उन्हीं को लौट डालेगा जिनका अभिलेखन इस यन्त्र ने किया।</string>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">आपने %1$d की मौनावस्था हटाया</item>
+        <item quantity="other">आपने %1$d की मौनावस्था हटाए</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">आपने %1$d परिचय प्रपत्रस्थान हटाया</item>
+        <item quantity="other">आपने %1$d परिचय प्रपत्रस्थान हटाए</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">आपने %1$d सार्वजनिक पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d सार्वजनिक पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">आपने %1$d सीधासन्देश पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d सीधासन्देश पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">आपने %1$d समूहचर्चा कुंचिका पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d समूहचर्चा कुंचिका पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">आपने %1$d खोज पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d खोज पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">आपने %1$d अनुक्रमणीकार पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d अनुक्रमणीकार पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">आपने %1$d पुनःप्रसारक सूचनावली हटाया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारक सूचनावलियाँ हटाए</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">आपने %1$d निजी पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d निजी पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">आपने %1$d पुनःप्रसारक पर विश्वास करना रोक दिया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारकों पर विश्वास करना रोक दिए</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">आपने %1$d पुनःप्रसारक अबाधित किया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारकों को अबाधित किए</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">आपने %1$d सार्वजनिक चर्चा छोड दिया</item>
+        <item quantity="other">आपने %1$d सार्वजनिक चर्चाओं को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">आपने %1$d समुदाय छोड दिया</item>
+        <item quantity="other">आपने %1$d समुदायों को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">आपने %1$d चर्चाशाला छोड दिया</item>
+        <item quantity="other">आपने %1$d चर्चाशालाओं को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">आपने %1$d समूह छोड दिया</item>
+        <item quantity="other">आपने %1$d समूहों को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">आपने %1$d इष्ट सूचनावली हटाया</item>
+        <item quantity="other">आपने %1$d इष्ट सूचनावलियों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">आपने %1$d विषयसूचक का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d विषयसूचकों का अनुगमन हटाए</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">आपने %1$d स्थल का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d स्थलों का अनुगमन हटाए</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">आपने %1$d विश्वाससेवा प्रदाता परिवर्तित किया</item>
+        <item quantity="other">आपने %1$d विश्वाससेवाओं के प्रदाता को परिवर्तित किया</item>
+    </plurals>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">आपने %1$d नटज्साप टकसाल हटाया</item>
+        <item quantity="other">आपने %1$d नटज्साप टकसालों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">आपने %1$d भुगतान प्राप्त करने की विधि हटाया</item>
+        <item quantity="other">आपने %1$d भुगतान प्राप्त करने के विधियों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">आपने %1$d बोल्ट॰बारह प्रस्ताव हटाया</item>
+        <item quantity="other">आपने %1$d बोल्ट॰बारह प्रस्तावों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s तथा %2$d जोडा</item>
+        <item quantity="other">%1$s तथा %2$d जोडे</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s तथा %2$d का अनुगमन किया</item>
+        <item quantity="other">%1$s तथा %2$d का अनुगमन किए</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s तथा %2$d को मौनकृत किया</item>
+        <item quantity="other">%1$s तथा %2$d को मौनकृत किए</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s तथा %2$d से जुडे</item>
+        <item quantity="other">%1$s तथा %2$d से जुडे</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s तथा %2$d बाधित किया</item>
+        <item quantity="other">%1$s तथा %2$d को बाधित किए</item>
+    </plurals>
+    <string name="backup_card_app_settings">आपके अमेथिस्ट समचरणीकृत क्रमक स्थापना विकल्पों को परिवर्तित किया गया एक अन्य क्रमक में और वह अमेथिस्ट नहीं था। इससे समस्याएँ उत्पन्न हो सकते हैं।</string>
+    <string name="backup_card_nutzap_key_replaced">आपने अपनी नटज्साप कुंचिका का प्रतिस्थापन किया</string>
+    <string name="backup_card_nutzap_key_removed">आपने अपनी नटज्साप कुंचिका को हटाया</string>
+    <string name="backup_card_wallet_emptied">आपने अपना काशयू धनकोष रिक्त किया</string>
+    <string name="backup_card_wallet_rewritten">आपने अपने काशयू धनकोष को परिवर्तित किया</string>
+    <string name="backup_card_concord_emptied">आपने अपनी कोंकोर्ड सूची रिक्त की</string>
+    <string name="backup_card_concord_rewritten">आपने अपनी कोंकोर्ड सूची का परिवर्तन किया</string>
+    <string name="backup_conflict_keep_new">नया संस्करण का उपयोग करें</string>
+    <string name="backup_conflict_relay_read_only">पठनेवशक्य</string>
+    <string name="backup_conflict_relay_write_only">लेखनेवशक्य</string>
+    <string name="backup_conflict_relay_read_write">पठन तथा लेखन</string>
+    <string name="backup_type_profile">परिचय</string>
+    <string name="backup_type_profile_explainer">आपका नाम चित्र चरित तथा भुगतान पते। जैसे सब को दिखते हैं वैसे।</string>
+    <string name="backup_type_follow_list">अनुचरण सूची</string>
+    <string name="backup_type_follow_list_explainer">निर्णय करता है किसके पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_mute_list">मौन सूची</string>
+    <string name="backup_type_mute_list_explainer">छिपाता है लोग शब्द विषयसूचक तथा सूत्र उन सब में से जो आप देखते हैं।</string>
+    <string name="backup_type_outbox_inbox_relays">सार्वजनिक पुनःप्रसारक सूची</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">सबको बताता है आपके पत्र कहाँ प्राप्त करें तथा आपको उत्तर तथा उल्लेखों को कहाँ भेजें।</string>
+    <string name="backup_type_dm_relays">सीधासन्देश पुनःप्रसारक सूची</string>
+    <string name="backup_type_dm_relays_explainer">जहाँ अन्य आपके निजी सन्देश भेजते हैं।</string>
+    <string name="backup_type_key_package_relays">समूहचर्चा कुंचिका पुनःप्रसारक</string>
+    <string name="backup_type_key_package_relays_explainer">जहाँ अन्य उन कुंचिकाओं को प्राप्त करते हैं आपको रहस्यीकृत समूहचर्चाओं में जोडने के लिए।</string>
+    <string name="backup_type_search_relays">खोज पुनःप्रसारक सूची</string>
+    <string name="backup_type_search_relays_explainer">उपयुक्त पुनःप्रसारक जब आप खोजते हैं।</string>
+    <string name="backup_type_indexer_relays">अनुक्रमणीकार पुनःप्रसारक सूची</string>
+    <string name="backup_type_indexer_relays_explainer">पुनःप्रसारक उपयुक्त अन्य लोगों के परिचय तथा पुनःप्रसारक सूचियों को प्राप्त करने के लिए।</string>
+    <string name="backup_type_relay_feeds">इष्ट पुनःप्रसारक सूचनावलियाँ</string>
+    <string name="backup_type_relay_feeds_explainer">पुनःप्रसारक जिनका आप वीक्षण करते हैं सूचनावलियों के रूप में।</string>
+    <string name="backup_type_blocked_relays">बाधित पुनःप्रसारक सूची</string>
+    <string name="backup_type_blocked_relays_explainer">पुनःप्रसारक जिनसे यह क्रमक कभी भी संयोजन नहीं करता।</string>
+    <string name="backup_type_trusted_relays">विश्वसनीय पुनःप्रसारक सूची</string>
+    <string name="backup_type_trusted_relays_explainer">पुनःप्रसारक जिनपर आप पर्याप्त विश्वास करते हैं बिना पूछे उनसे संयोजन करने के लिए।</string>
+    <string name="backup_type_private_outbox_relays">निजी पुनःप्रसारक सूची</string>
+    <string name="backup_type_private_outbox_relays_explainer">जहाँ आपके पाण्डुलिपियाँ तथा निजी जानकारी रखे जाते हैं।</string>
+    <string name="backup_type_app_settings">समचरणीकृत क्रमक स्थापना विकल्प</string>
+    <string name="backup_type_app_settings_explainer">अमेथिस्ट स्थापना विकल्प समचरणीकृत आपके यन्त्रों में। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_public_chats">सार्वजनिक चर्चा सूची</string>
+    <string name="backup_type_public_chats_explainer">सार्वजनिक चर्चाएँ जिनसे आप जुडे।</string>
+    <string name="backup_type_communities">समुदाय सूची</string>
+    <string name="backup_type_communities_explainer">समुदाय जिनसे आप जुडे।</string>
+    <string name="backup_type_hashtags">अनुचरित विषयसूचक</string>
+    <string name="backup_type_hashtags_explainer">विषयसूचक जिससे युक्त पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_geohashes">अनुचरित स्थान</string>
+    <string name="backup_type_geohashes_explainer">स्थान जहाँ से पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_favorite_algo_feeds">इष्ट सूचनावली सूची</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">कलनविध्यात्मक सूचनावलियाँ जिनको आपने अभिलेखित किया।</string>
+    <string name="backup_type_ephemeral_chats">अस्थायी चर्चा सूची</string>
+    <string name="backup_type_ephemeral_chats_explainer">अस्थायी चर्चा शालाएँ जिनसे आप जुडे।</string>
+    <string name="backup_type_relay_groups">समूह सूची</string>
+    <string name="backup_type_relay_groups_explainer">पुनःप्रसारक आधारित समूह जिनसे आप जुडे।</string>
+    <string name="backup_type_concord_communities">कोंकोर्ड समुदाय सूची</string>
+    <string name="backup_type_concord_communities_explainer">कोंकोर्ड समुदाय जिनसे आप जुडे। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_trust_providers">विश्वाससेवा प्रदाता सूची</string>
+    <string name="backup_type_trust_providers_explainer">सेवाएँ जिनपर आप विश्वास करते है आपके लिए लोगों का सत्यापन तथा श्रेणीकरण करने के लिए।</string>
+    <string name="backup_type_cashu_wallet">काशयू धनकोष</string>
+    <string name="backup_type_cashu_wallet_explainer">आपके ईकाश धनकोष स्थापना विकल्प तथा टकसाल। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_nutzap_info">नटज्साप प्राप्ती स्थापना विकल्प</string>
+    <string name="backup_type_nutzap_info_explainer">टकसाल तथा कुंचिका जिनका उपयोग अन्य करते हैं आपको नटज्साप भेजने के लिए।</string>
+    <string name="backup_type_payment_targets">भुगतान पते</string>
+    <string name="backup_type_payment_targets_explainer">विधियाँ जिनसे अन्य लोग आपको भुगतान कर सके।</string>
+    <string name="backup_type_bolt12_offers">बोल्ट॰बारह प्रस्ताव</string>
+    <string name="backup_type_bolt12_offers_explainer">लैटनिंग प्रस्ताव जिनका उपयोग करके अन्य लोग आपको भुगतान करते हैं।</string>
+    <string name="backup_type_other">सूची</string>
+    <string name="backup_type_other_explainer">इस यन्त्र पर अभिलेखित सूची।</string>
+    <string name="backup_entry_profile_field">परिचय प्रपत्रस्थान</string>
+    <string name="backup_entry_person">लोग</string>
+    <string name="backup_entry_hashtag">विषयसूचक</string>
+    <string name="backup_entry_word">शब्द</string>
+    <string name="backup_entry_thread">सूत्र</string>
+    <string name="backup_entry_public_chat">सार्वजनिक चर्चाएँ</string>
+    <string name="backup_entry_community">समुदाय</string>
+    <string name="backup_entry_algo_feed">सूचनावलियाँ</string>
+    <string name="backup_entry_location">स्थान</string>
+    <string name="backup_entry_relay">पुनःप्रसारक</string>
+    <string name="backup_entry_relay_group">समूह</string>
+    <string name="backup_entry_chat_room">चर्चा शालाएँ</string>
+    <string name="backup_entry_trust_provider">विश्वाससेवा प्रदाता</string>
+    <string name="backup_entry_mint">टकसाल</string>
+    <string name="backup_entry_nutzap_key">नटज्साप कुंचिकाएँ</string>
+    <string name="backup_entry_payment_target">भुगतान पते</string>
+    <string name="backup_entry_offer">प्रस्ताव</string>
+    <string name="backup_entry_identity_claim">सम्बन्धित व्यक्तिगण</string>
+    <string name="backup_entry_other">अन्य प्रविष्टियाँ</string>
+    <string name="backup_profile_field_name">प्रयोक्तानाम</string>
+    <string name="backup_profile_field_display_name">प्रदर्शन नाम</string>
+    <string name="backup_profile_field_about">जानकारी</string>
+    <string name="backup_profile_field_picture">चित्र</string>
+    <string name="backup_profile_field_banner">ध्वज</string>
+    <string name="backup_profile_field_website">जालस्थान</string>
+    <string name="backup_profile_field_nip05">नोस्टर पता</string>
+    <string name="backup_profile_field_lud16">लैटनिंग पता</string>
+    <string name="backup_profile_field_lud06">लैटनिंग जालपता</string>
+    <string name="backup_profile_field_pronouns">सर्वनाम</string>
+    <string name="backup_profile_field_birthday">जन्मदिन</string>
+    <string name="backup_profile_field_clink_offer">क्लिंक॰ प्रस्ताव</string>
+    <string name="backup_profile_field_bot">क्रमचर चिह्न</string>
 </resources>

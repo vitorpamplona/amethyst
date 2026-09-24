@@ -295,6 +295,7 @@
         <item quantity="other">Proof of work bányászata… (%1$d bejegyzés a sorban)</item>
     </plurals>
     <string name="pow_mining_title">„Munkabizonyítás” bányászata</string>
+    <string name="pow_notification_sending">Küldés az átjátszókra…</string>
     <string name="pow_notification_cancel_all">Mégse</string>
     <string name="pow_time_left">≈ %1$s van hátra</string>
     <string name="pow_time_left_soon">mostmár bármelyik pillanatban</string>
@@ -349,4 +350,322 @@
     <string name="mute_button">Hang bekapcsolva. Koppintson a némításhoz</string>
     <string name="play">Lejátszás</string>
     <string name="pause">Szüneteltetés</string>
+    <string name="backup_conflict_title">Ön módosította a következőt: %1$s, egy másik alkalmazásban</string>
+    <string name="backup_conflict_removed">Eltávolítva (%1$s)</string>
+    <string name="backup_conflict_added">Hozzáadva (%1$s)</string>
+    <string name="backup_conflict_changed">Módosítva (%1$s)</string>
+    <string name="backup_conflict_private_cleared">Ön eltávolította az összes privát (titkosított) elemet.</string>
+    <string name="backup_conflict_private_changed">Ön privát (titkosított) elemeket is módosított. Ezek itt nem hasonlíthatók össze.</string>
+    <string name="backup_conflict_private_added">Ön privát (titkosított) elemeket adott hozzá.</string>
+    <string name="backup_conflict_restore_mine">Mentett verzió visszaállítása</string>
+    <string name="backup_review_saved">Ezen az eszközön</string>
+    <string name="backup_review_new">Új verzió</string>
+    <string name="backup_review_not_set">Nincs beállítva</string>
+    <string name="backup_conflict_count_removed">%1$s eltávolítva</string>
+    <string name="backup_conflict_count_added">%1$s hozzáadva</string>
+    <string name="backup_conflict_count_changed">%1$s módosítva</string>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">%1$d személyt nem követ többé</item>
+        <item quantity="other">%1$d személyt nem követ többé</item>
+    </plurals>
+    <string name="backup_card_accept">Elfogadás</string>
+    <string name="backup_review_title_updated">%1$s frissítve</string>
+    <string name="backup_review_title_cleared">%1$s törölve</string>
+    <string name="backup_review_changed_by_other_app">Módosítva egy másik alkalmazásban · %1$s</string>
+    <string name="backup_action_keep_count">%1$s megtartása</string>
+    <string name="backup_action_restore_count">%1$s visszaállítása</string>
+    <string name="backup_action_remute">%1$s újbóli némítása</string>
+    <string name="backup_action_rejoin">Újbóli csatlakozás ehhez: %1$s</string>
+    <string name="backup_action_restore_profile">Profil visszaállítása</string>
+    <string name="backup_action_restore_relays">Átjátszók visszaállítása</string>
+    <string name="backup_review_kept_count">%1$s megtartva</string>
+    <string name="backup_review_dropped_count">%1$s elvetve</string>
+    <string name="backup_review_new_count">%1$s új</string>
+    <string name="backup_review_tab_dropped">Elvetve · %1$s</string>
+    <string name="backup_review_tab_new">Új · %1$s</string>
+    <string name="backup_review_tab_edited">Szerkesztve · %1$s</string>
+    <string name="backup_review_search_people">%1$s személy keresése</string>
+    <string name="backup_review_nothing_here">Itt nincs semmi</string>
+    <string name="backup_review_unmuted">%1$s némítása feloldva</string>
+    <string name="backup_review_unmuted_explainer">Ezek újra megjelenhetnek a hírfolyamaiban</string>
+    <string name="backup_review_newly_muted">%1$s újonnan némítva</string>
+    <string name="backup_review_words_and_hashtags">Szavak és kulcsszavak</string>
+    <string name="backup_review_names_and_more">%1$s és %2$s további</string>
+    <string name="backup_review_private_wiped_title">Ön eltávolította az összes privát elemet</string>
+    <string name="backup_review_private_wiped_body">Titkosítva vannak, így csak Ön láthatja, mik voltak. A visszaállítás mindet visszahozza.</string>
+    <string name="backup_review_private_added_title">Ön priváttá tette az elemeket</string>
+    <string name="backup_review_private_added_body">Most már titkosítva vannak, valószínűleg ide kerültek a fenti nyilvános elemek.</string>
+    <string name="backup_review_private_changed_title">Ön módosította a privát elemeket</string>
+    <string name="backup_review_private_changed_body">Titkosítva vannak, így itt nem hasonlíthatók össze.</string>
+    <string name="backup_review_gone">Eltűnt</string>
+    <string name="backup_review_new_tag">Új</string>
+    <string name="backup_review_dropped_tag">Elvetve</string>
+    <string name="backup_review_demoted_tag">Áthelyezve</string>
+    <string name="backup_review_units_tag">Egységek</string>
+    <string name="backup_review_left_tag">Elhagyva</string>
+    <string name="backup_review_renamed_tag">Átnevezve</string>
+    <string name="backup_review_outbox">Kimenő</string>
+    <string name="backup_review_outbox_explainer">ahol közzétesz</string>
+    <string name="backup_review_inbox">Bejövő</string>
+    <string name="backup_review_inbox_explainer">ahol mások elérik Önt</string>
+    <string name="backup_review_key_replaced">Fogadási kulcs lecserélve</string>
+    <string name="backup_review_key_removed">Fogadási kulcs eltávolítva</string>
+    <string name="backup_review_key_warning">A nutzapok ehhez az új kulcshoz lesznek kötve. Ha ez az eszköz nem rendelkezik vele, lehet, hogy itt nem tudja beváltani őket.</string>
+    <string name="backup_review_left">elhagyta a csoportot</string>
+    <string name="backup_review_joined">csatlakozott</string>
+    <string name="backup_review_renamed">átnevezte</string>
+    <string name="backup_review_was_named">„%1$s” volt</string>
+    <string name="backup_action_block_again">%1$s újbóli letiltása</string>
+    <string name="backup_action_restore_feeds">Hírfolyamok visszaállítása</string>
+    <string name="backup_action_restore_topics">Témák visszaállítása</string>
+    <string name="backup_action_restore_places">Helyek visszaállítása</string>
+    <string name="backup_action_restore_providers">Szolgáltatók visszaállítása</string>
+    <string name="backup_action_restore_wallet">Pénztárca visszaállítása</string>
+    <string name="backup_review_kept">megtartva</string>
+    <string name="backup_review_receiving_tag">Fogadás</string>
+    <string name="backup_review_listed_tag">Listázva</string>
+    <string name="backup_review_searching_tag">Keresés</string>
+    <string name="backup_review_storing_tag">Tárolás</string>
+    <string name="backup_review_trusted_tag">Megbízható</string>
+    <string name="backup_review_untrusted_tag">Nem megbízható</string>
+    <string name="backup_review_unblocked">%1$s letiltása feloldva</string>
+    <string name="backup_review_unblocked_explainer">Az Amethyst újra kapcsolódni fog hozzájuk</string>
+    <string name="backup_review_no_longer_blocked">Már nincs letiltva</string>
+    <string name="backup_review_newly_blocked">Újonnan letiltva</string>
+    <string name="backup_review_still_blocked">Továbbra is le van tiltva</string>
+    <string name="backup_review_allowed_tag">Engedélyezve</string>
+    <string name="backup_review_moved_tag">Áthelyezve</string>
+    <string name="backup_review_feed">Hírfolyam</string>
+    <string name="backup_review_topics_gone">eltűnt témák</string>
+    <string name="backup_review_places_gone">eltűnt helyek</string>
+    <string name="backup_review_new_count_caption">új</string>
+    <string name="backup_review_hashtags_you_follow">Ön által követett kulcsszavak</string>
+    <string name="backup_review_places_you_follow">Ön által követett helyek</string>
+    <string name="backup_review_services_changed">%2$s szolgáltatásból %1$s módosult</string>
+    <string name="backup_review_services_changed_explainer">Most már valaki mástól vagy senkitől sem származnak</string>
+    <string name="backup_review_service">Szolgáltatás</string>
+    <string name="backup_review_service_rank">Rang</string>
+    <string name="backup_review_service_followers">Követők</string>
+    <string name="backup_review_service_topics">Témák</string>
+    <string name="backup_review_trust_warning">A látott rangok, követőszámok és a kéretlen tartalomszűrés ezektől a szolgáltatóktól származnak.</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">%1$d fizetési mód eltávolítva</item>
+        <item quantity="other">%1$d fizetési mód eltávolítva</item>
+    </plurals>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d ajánlat eltávolítva</item>
+        <item quantity="other">%1$d ajánlat eltávolítva</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">A fizető emberek csak azt látják, ami ebben a listában van.</string>
+    <string name="backup_review_offer">BOLT12 ajánlat</string>
+    <string name="backup_review_encrypted_cleared">Ön kiürítette</string>
+    <string name="backup_review_encrypted_added">Ön hozta létre</string>
+    <string name="backup_review_encrypted_changed">Ön módosította</string>
+    <string name="backup_review_wallet_body">A saját pénztárca pénzverdéi és kulcsai Önhöz vannak titkosítva, így itt nem hasonlíthatók össze tételesen. A visszaállítás pontosan azt hozza vissza, amit ez az eszköz mentett.</string>
+    <string name="backup_review_concord_body">A Concord közösségei Önhöz vannak titkosítva, így itt nem hasonlíthatók össze. A visszaállítás pontosan azt hozza vissza, amit ez az eszköz mentett.</string>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">Ön %1$d dolog némítását oldotta fel</item>
+        <item quantity="other">%1$d dolog némítását oldotta fel</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">Ön %1$d profilmezőt távolított el</item>
+        <item quantity="other">%1$d profilmezőt távolított el</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">Ön %1$d nyilvános átjátszót távolított el</item>
+        <item quantity="other">%1$d nyilvános átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">Ön %1$d privát üzenetátjátszót távolított el</item>
+        <item quantity="other">%1$d privát üzenet átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">Ön %1$d csoportos csevegési kulcsátjátszót távolított el</item>
+        <item quantity="other">%1$d csoportcsevegés kulcs átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">Ön %1$d kereső átjátszót távolított el</item>
+        <item quantity="other">%1$d kereső átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">Ön %1$d indexelő átjátszót távolított el</item>
+        <item quantity="other">%1$d indexelő átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">Ön %1$d átjátszó-hírfolyamot távolított el</item>
+        <item quantity="other">%1$d átjátszó hírfolyamot távolított el</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">Ön %1$d privát átjátszót távolított el</item>
+        <item quantity="other">%1$d privát átjátszót távolított el</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">Ön %1$d átjátszóban nem bízik többé</item>
+        <item quantity="other">%1$d átjátszóban nem bízik többé</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">Ön %1$d átjátszó letiltását oldotta fel</item>
+        <item quantity="other">%1$d átjátszó blokkolását oldotta fel</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">Ön %1$d nyilvános csevegést hagyott el</item>
+        <item quantity="other">%1$d nyilvános csevegést hagyott el</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">Ön %1$d közösséget hagyott el</item>
+        <item quantity="other">%1$d közösséget hagyott el</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">Ön %1$d csevegőszobát hagyott el</item>
+        <item quantity="other">%1$d csevegőszobát hagyott el</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">Ön %1$d csoportot hagyott el</item>
+        <item quantity="other">%1$d csoportot hagyott el</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">Ön %1$d kedvenc hírfolyamot távolított el</item>
+        <item quantity="other">%1$d kedvenc hírfolyamot távolított el</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">Ön %1$d kulcsszót nem követ többé</item>
+        <item quantity="other">%1$d hashtaget nem követ többé</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">Ön %1$d helyet nem követ többé</item>
+        <item quantity="other">%1$d helyet nem követ többé</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">Ön %1$d bizalmi szolgáltatás szolgáltatóját módosította</item>
+        <item quantity="other">%1$d bizalmi szolgáltatás szolgáltatóját változtatta meg</item>
+    </plurals>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">Ön %1$d nutzap pénzverdét távolított el</item>
+        <item quantity="other">%1$d nutzap pénzverdét távolított el</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">Ön %1$d fizetési módot távolított el</item>
+        <item quantity="other">%1$d fizetési módot távolított el</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">Ön %1$d BOLT12 ajánlatot távolított el</item>
+        <item quantity="other">%1$d BOLT12 ajánlatot távolított el</item>
+    </plurals>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s és %2$d hozzáadva</item>
+        <item quantity="other">%1$s és %2$d hozzáadva</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s és %2$d követve</item>
+        <item quantity="other">%1$s és %2$d követve</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s és %2$d némítva</item>
+        <item quantity="other">%1$s és %2$d némítva</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s és %2$d csatlakozva</item>
+        <item quantity="other">%1$s és %2$d csatlakozva</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s és %2$d letiltva</item>
+        <item quantity="other">%1$s és %2$d letiltva</item>
+    </plurals>
+    <string name="backup_card_app_settings">A szinkronizált Amethyst alkalmazásbeállításai egy másik, nem Amethyst alkalmazásban módosultak. Ez problémákat okozhat.</string>
+    <string name="backup_card_nutzap_key_replaced">Ön lecserélte a nutzap kulcsát</string>
+    <string name="backup_card_nutzap_key_removed">Ön eltávolította a nutzap kulcsát</string>
+    <string name="backup_card_wallet_emptied">Ön kiürítette a Cashu pénztárcáját</string>
+    <string name="backup_card_wallet_rewritten">Ön módosította a Cashu pénztárcáját</string>
+    <string name="backup_card_concord_emptied">Ön kiürítette a Concord listáját</string>
+    <string name="backup_card_concord_rewritten">Ön módosította a Concord listáját</string>
+    <string name="backup_conflict_keep_new">Új verzió használata</string>
+    <string name="backup_conflict_relay_read_only">csak olvasható</string>
+    <string name="backup_conflict_relay_write_only">csak írható</string>
+    <string name="backup_conflict_relay_read_write">olvasás és írás</string>
+    <string name="backup_type_profile">profil</string>
+    <string name="backup_type_profile_explainer">Az Ön neve, képe, bemutatkozása és fizetési címei, ahogy mindenki látja őket.</string>
+    <string name="backup_type_follow_list">követési lista</string>
+    <string name="backup_type_follow_list_explainer">Meghatározza, kinek a bejegyzései jelenjenek meg a kezdőlapon.</string>
+    <string name="backup_type_mute_list">némítási lista</string>
+    <string name="backup_type_mute_list_explainer">Elrejti a személyeket, szavakat, kulcsszavakat és beszélgetéseket mindenből, amit lát.</string>
+    <string name="backup_type_outbox_inbox_relays">nyilvános átjátszólista</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">Megmondja mindenkinek, hol találhatók a bejegyzései, és hová küldjék a válaszokat és említéseket.</string>
+    <string name="backup_type_dm_relays">privát üzenet átjátszólista</string>
+    <string name="backup_type_dm_relays_explainer">Ahová mások kézbesítik a privát üzeneteit.</string>
+    <string name="backup_type_key_package_relays">csoportos csevegési kulcsátjátszók</string>
+    <string name="backup_type_key_package_relays_explainer">Ahol mások megtalálják a kulcsokat, hogy titkosított csoportos csevegésekhez adhassák Önt.</string>
+    <string name="backup_type_search_relays">kereső átjátszólista</string>
+    <string name="backup_type_search_relays_explainer">Kereséskor használt átjátszók.</string>
+    <string name="backup_type_indexer_relays">indexelő átjátszólista</string>
+    <string name="backup_type_indexer_relays_explainer">Azok az átjátszók, amelyeket mások profiljainak és átjátszólistáinak megtalálásához használnak.</string>
+    <string name="backup_type_relay_feeds">kedvenc átjátszóhírfolyamok</string>
+    <string name="backup_type_relay_feeds_explainer">Olyan átjátszók, amelyeket hírfolyamként böngész.</string>
+    <string name="backup_type_blocked_relays">letiltott átjátszólista</string>
+    <string name="backup_type_blocked_relays_explainer">Átjátszók, amelyekhez ez az alkalmazás soha nem kapcsolódik.</string>
+    <string name="backup_type_trusted_relays">megbízható átjátszólista</string>
+    <string name="backup_type_trusted_relays_explainer">Átjátszók, amelyekhez kérdezés nélkül kapcsolódhat.</string>
+    <string name="backup_type_private_outbox_relays">privát átjátszólista</string>
+    <string name="backup_type_private_outbox_relays_explainer">Ahol a piszkozatai és privát adatai tárolódnak.</string>
+    <string name="backup_type_app_settings">szinkronizált alkalmazásbeállítások</string>
+    <string name="backup_type_app_settings_explainer">Az eszközök között szinkronizált Amethyst-beállítások. Titkosítva vannak, így csak a jelenlétük hasonlítható össze.</string>
+    <string name="backup_type_public_chats">nyilvános csevegési lista</string>
+    <string name="backup_type_public_chats_explainer">Nyilvános csevegések, amelyekhez csatlakozott.</string>
+    <string name="backup_type_communities">közösséglista</string>
+    <string name="backup_type_communities_explainer">Közösségek, amelyekhez csatlakozott.</string>
+    <string name="backup_type_hashtags">követett kulcsszavak</string>
+    <string name="backup_type_hashtags_explainer">Kulcsszavak, amelyek bejegyzései megjelennek a hírfolyamban.</string>
+    <string name="backup_type_geohashes">követett helyek</string>
+    <string name="backup_type_geohashes_explainer">Helyek, amelyek bejegyzései megjelennek a hírfolyamaiban.</string>
+    <string name="backup_type_favorite_algo_feeds">kedvenc hírfolyamlista</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">Mentett algoritmus-hírfolyamok.</string>
+    <string name="backup_type_ephemeral_chats">rövid életű csevegési lista</string>
+    <string name="backup_type_ephemeral_chats_explainer">Rövid életű csevegőszobák, amelyekhez csatlakozott.</string>
+    <string name="backup_type_relay_groups">csoportlista</string>
+    <string name="backup_type_relay_groups_explainer">Átjátszó-alapú csoportok, amelyekhez csatlakozott.</string>
+    <string name="backup_type_concord_communities">Concord közösséglista</string>
+    <string name="backup_type_concord_communities_explainer">A Concord közösségek, amelyekhez csatlakozott. Titkosítva vannak, így csak a jelenlétük hasonlítható össze.</string>
+    <string name="backup_type_trust_providers">bizalmi szolgáltatólista</string>
+    <string name="backup_type_trust_providers_explainer">A szolgáltatások, amelyekben megbízik, hogy rangsorolják és ellenőrizzék Önnek az embereket.</string>
+    <string name="backup_type_cashu_wallet">Cashu pénztárca</string>
+    <string name="backup_type_cashu_wallet_explainer">Az ecash pénztárca beállításai és pénzverdéi. Titkosítva vannak, így csak a jelenlétük hasonlítható össze.</string>
+    <string name="backup_type_nutzap_info">nutzap fogadási beállítások</string>
+    <string name="backup_type_nutzap_info_explainer">A pénzverdék és a kulcs, amelyeket mások a nutzapok küldéséhez használnak az Ön számára.</string>
+    <string name="backup_type_payment_targets">fizetési címek</string>
+    <string name="backup_type_payment_targets_explainer">A módok, ahogy mások fizethetnek Önnek.</string>
+    <string name="backup_type_bolt12_offers">BOLT12 ajánlatok</string>
+    <string name="backup_type_bolt12_offers_explainer">A lightning ajánlatok, amelyeket mások a fizetéshez használnak az Ön számára.</string>
+    <string name="backup_type_other">lista</string>
+    <string name="backup_type_other_explainer">Egy listaelem ezen az eszközön mentve.</string>
+    <string name="backup_entry_profile_field">Profilmezők</string>
+    <string name="backup_entry_person">Személyek</string>
+    <string name="backup_entry_hashtag">Kulcsszavak</string>
+    <string name="backup_entry_word">Szavak</string>
+    <string name="backup_entry_thread">Beszélgetések</string>
+    <string name="backup_entry_public_chat">Nyilvános csevegések</string>
+    <string name="backup_entry_community">Közösségek</string>
+    <string name="backup_entry_algo_feed">Hírfolyamok</string>
+    <string name="backup_entry_location">Helyek</string>
+    <string name="backup_entry_relay">Átjátszók</string>
+    <string name="backup_entry_relay_group">Csoportok</string>
+    <string name="backup_entry_chat_room">Csevegőszobák</string>
+    <string name="backup_entry_trust_provider">Bizalmi szolgáltatók</string>
+    <string name="backup_entry_mint">Pénzverdék</string>
+    <string name="backup_entry_nutzap_key">Nutzap kulcsok</string>
+    <string name="backup_entry_payment_target">Fizetési címek</string>
+    <string name="backup_entry_offer">Ajánlatok</string>
+    <string name="backup_entry_identity_claim">Kapcsolt identitások</string>
+    <string name="backup_entry_other">Egyéb bejegyzések</string>
+    <string name="backup_profile_field_name">Felhasználónév</string>
+    <string name="backup_profile_field_display_name">Megjelenített név</string>
+    <string name="backup_profile_field_about">Névjegy</string>
+    <string name="backup_profile_field_picture">Kép</string>
+    <string name="backup_profile_field_banner">Borító</string>
+    <string name="backup_profile_field_website">Weboldal</string>
+    <string name="backup_profile_field_nip05">Nostr-cím</string>
+    <string name="backup_profile_field_lud16">Lightning-cím</string>
+    <string name="backup_profile_field_lud06">LNURL</string>
+    <string name="backup_profile_field_pronouns">Névmások</string>
+    <string name="backup_profile_field_birthday">Születésnap</string>
+    <string name="backup_profile_field_clink_offer">CLINK-ajánlat</string>
+    <string name="backup_profile_field_bot">Bot jelölő</string>
 </resources>
