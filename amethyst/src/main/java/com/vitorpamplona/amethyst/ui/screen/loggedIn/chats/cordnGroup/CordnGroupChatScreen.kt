@@ -383,6 +383,10 @@ private fun CordnGroupChat(
                         try {
                             sendAttachment(context, accountViewModel, room, uri)
                         } catch (e: Exception) {
+                            // A failed attachment left no trace anywhere; the
+                            // banner tells the person, this tells whoever has
+                            // to work out why.
+                            Log.w("CordnGroupChat", "attachment failed in ${room.gid}: ${e.message}", e)
                             attachError = e.message ?: uploadFailed
                         } finally {
                             attaching = false
@@ -580,6 +584,11 @@ internal fun MessageBody(
     }
 }
 
+/** A reason an attachment did not go, in words meant for the person who tried. */
+private class CordnAttachmentException(
+    message: String,
+) : Exception(message)
+
 /**
  * Encrypts the picked file and sends it as an attachment on an empty message.
  *
@@ -593,15 +602,31 @@ private suspend fun sendAttachment(
     room: CordnGroupChatroom,
     uri: Uri,
 ) {
-    val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey) ?: return
-    val group = session.manager.group(room.gid) ?: return
+    // Every step here used to `?: return`, which reads as "nothing to do" and
+    // behaves as "the attach button does nothing at all": the picker closed,
+    // the spinner ended, and no message and no error appeared. Measured on the
+    // tablet — attaching a PNG produced no message, no error and no log line.
+    // Each one is now a reason a person can act on.
+    val session =
+        accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+    val group =
+        session.manager.group(room.gid)
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
 
     val resolver = context.contentResolver
     val mime = resolver.getType(uri) ?: CordnBlobUpload.OPAQUE
     val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
-    val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
+    val bytes =
+        withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } }
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
 
-    val tag = CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context) ?: return
+    // Null means the account has no Blossom server, which is a setting the
+    // person can change — the one failure here that is entirely actionable,
+    // and the one that was hardest to notice.
+    val tag =
+        CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context)
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
     // Into the room as well, for the same reason every other send is: an
     // attachment of your own echoes back as an Echo and would otherwise be
     // invisible to the person who sent it.
