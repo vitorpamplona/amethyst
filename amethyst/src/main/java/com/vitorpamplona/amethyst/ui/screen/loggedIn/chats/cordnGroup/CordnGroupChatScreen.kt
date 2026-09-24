@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.AutoScrollToNewest
@@ -938,6 +939,26 @@ internal fun CordnAttachment(
     val cipher = remember(attachment, mediaKey) { CordnMediaCipher(mediaKey, attachment) }
     Amethyst.instance.keyCache.add(attachment.url, cipher, attachment.mimeType)
 
+    // A voice note is audio, and audio has no picture: sent down the video
+    // branch below it plays on a blank video surface. The Note-free player is
+    // the same one the other chats reach, which cordn cannot get to through a
+    // Note because its messages never enter LocalCache. §4 carries no waveform,
+    // so the bars are absent and the transport is not.
+    if (attachment.isAudio) {
+        Box(Modifier.padding(top = 6.dp)) {
+            RenderAudioWaveformPlayer(
+                mediaUrl = attachment.url,
+                title = attachment.filename,
+                mimeType = attachment.mimeType,
+                waveform = null,
+                authorName = null,
+                callbackUri = null,
+                accountViewModel = accountViewModel,
+            )
+        }
+        return
+    }
+
     val content =
         remember(attachment, mediaKey) {
             val dim = attachment.dimensions?.let { DimensionTag.parse(it) }
@@ -954,8 +975,6 @@ internal fun CordnAttachment(
                     encryptionNonce = attachment.nonceBytes,
                 )
             } else {
-                // Audio lands here too, which is what makes a voice note play
-                // in the bubble rather than read as a file to open.
                 EncryptedMediaUrlVideo(
                     url = attachment.url,
                     description = attachment.filename,

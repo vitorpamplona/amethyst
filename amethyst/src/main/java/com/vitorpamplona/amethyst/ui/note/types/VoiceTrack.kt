@@ -148,41 +148,76 @@ fun RenderAudioWithWaveform(
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            Modifier.fillMaxWidth().height(100.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GetMediaItem(
-                videoUri = mediaUrl,
-                title = title,
-                artworkUri = null,
-                authorName = note.author?.toBestDisplayName(),
-                callbackUri = callbackUri,
-                mimeType = mimeType,
-                aspectRatio = null,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
-                keepPlaying = false,
-                waveformData = waveform,
-            ) { mediaItem ->
-                GetVideoController(
-                    mediaItem = mediaItem,
-                    muted = false,
-                ) { controller ->
-                    PauseControllerWhenInBackground(controller)
-                    RenderVoicePlayer(
-                        mediaItem = mediaItem,
-                        controllerState = controller,
-                        waveform = waveform,
-                        borderModifier = MaterialTheme.colorScheme.imageModifier,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-        }
+        RenderAudioWaveformPlayer(
+            mediaUrl = mediaUrl,
+            title = title,
+            mimeType = mimeType,
+            waveform = waveform,
+            authorName = note.author?.toBestDisplayName(),
+            callbackUri = callbackUri,
+            accountViewModel = accountViewModel,
+        )
 
         if (noteEvent.hasHashtags()) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 DisplayUncitedHashtags(noteEvent, callbackUri, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+/**
+ * The voice player on its own, with no [Note] behind it.
+ *
+ * Separated because a chat that carries audio does not necessarily have a Note
+ * to hand: cordn messages never enter LocalCache, so the only way they can show
+ * the same player as every other chat is for the player not to demand one. The
+ * Note-shaped overload above is this plus the hashtag row, which is the only
+ * part that genuinely needs the event.
+ *
+ * [waveform] may be null. Nothing that arrives as an encrypted blob carries one
+ * today, and the player then shows its transport controls without the bars —
+ * still the voice UI, which is the point, rather than a video surface with no
+ * picture in it.
+ */
+@Composable
+fun RenderAudioWaveformPlayer(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
+    authorName: String?,
+    callbackUri: String?,
+    accountViewModel: AccountViewModel,
+) {
+    Row(
+        Modifier.fillMaxWidth().height(100.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GetMediaItem(
+            videoUri = mediaUrl,
+            title = title,
+            artworkUri = null,
+            authorName = authorName,
+            callbackUri = callbackUri,
+            mimeType = mimeType,
+            aspectRatio = null,
+            proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
+            keepPlaying = false,
+            waveformData = waveform,
+        ) { mediaItem ->
+            GetVideoController(
+                mediaItem = mediaItem,
+                muted = false,
+            ) { controller ->
+                PauseControllerWhenInBackground(controller)
+                RenderVoicePlayer(
+                    mediaItem = mediaItem,
+                    controllerState = controller,
+                    waveform = waveform,
+                    borderModifier = MaterialTheme.colorScheme.imageModifier,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
     }
