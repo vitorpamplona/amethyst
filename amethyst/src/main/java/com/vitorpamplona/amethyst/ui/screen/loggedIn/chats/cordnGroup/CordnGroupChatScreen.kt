@@ -92,7 +92,9 @@ import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -560,12 +562,31 @@ private fun CordnMessageRow(
             .background(if (mentionsMe) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .padding(vertical = 6.dp, horizontal = if (mentionsMe) 6.dp else 0.dp),
     ) {
-        Text(
-            text = message.envelope.pubKey.take(8),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // Name and face, not eight hex characters. The room used to attribute
+        // every message to a prefix of the sender's key while the inbox row
+        // that leads into it, and mentions inside the text below, both
+        // resolved properly — so the one place a sender is named most often
+        // was the one place that did not name them.
+        //
+        // observeUserNameByHex falls back to exactly that hex prefix until the
+        // profile arrives, so nothing regresses while it loads.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            UserPicture(
+                userHex = message.envelope.pubKey,
+                size = 24.dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            Text(
+                text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         val thread = CordnMessageReferences.thread(message.envelope.tags)
         val parent = thread?.let { annotations.byId[it.parentId] }

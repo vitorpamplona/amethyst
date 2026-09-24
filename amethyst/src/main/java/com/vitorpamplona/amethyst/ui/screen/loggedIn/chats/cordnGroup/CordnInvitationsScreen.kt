@@ -60,7 +60,9 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitation
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitations
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
@@ -164,6 +166,8 @@ fun CordnInvitationsScreen(
                 loaded.pending.forEach { invitation ->
                     InvitationCard(
                         invitation = invitation,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                         onAccept = {
                             scope.launch {
                                 try {
@@ -227,9 +231,17 @@ fun CordnInvitationsScreen(
     }
 }
 
+/** Faces on the invitation card before it folds into "+N". */
+private const val MEMBER_FACES = 5
+
+/** How many of them are also named in full underneath. */
+private const val MEMBER_NAMES = 3
+
 @Composable
 private fun InvitationCard(
     invitation: CordnInvitation,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
 ) {
@@ -251,6 +263,43 @@ private fun InvitationCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // Who, not just how many. This is the moment someone decides
+            // whether to join an encrypted group, and the roster is already in
+            // the Welcome — printing only its size withheld the one fact the
+            // decision actually turns on.
+            if (welcome.members.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    welcome.members.take(MEMBER_FACES).forEach { member ->
+                        UserPicture(
+                            userHex = member,
+                            size = 28.dp,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                    if (welcome.members.size > MEMBER_FACES) {
+                        Text(
+                            text = stringRes(R.string.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                // Resolved through `map`, which is inline and so keeps the
+                // composable context; joinToString's transform is not.
+                val names = welcome.members.take(MEMBER_NAMES).map { observeUserNameByHex(it, accountViewModel) }
+                Text(
+                    // Named in full for the first few, so a decision does not
+                    // rest on recognising an avatar.
+                    text = names.joinToString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
                 text =
                     stringRes(

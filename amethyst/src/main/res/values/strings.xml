@@ -365,6 +365,8 @@
     <string name="cordn_invitations_accept">Join</string>
     <string name="cordn_invitations_decline">Decline</string>
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_info_admin_badge">Admin</string>
+    <string name="cordn_invitations_members_more">+%1$d more</string>
     <string name="cordn_invitations_via">Through %1$s</string>
     <string name="cordn_invitations_none">No invitations waiting.</string>
     <string name="cordn_invitations_no_coordinators">You have no coordinator open. cordn invitations arrive through a coordinator, so there is nowhere to look yet.</string>
