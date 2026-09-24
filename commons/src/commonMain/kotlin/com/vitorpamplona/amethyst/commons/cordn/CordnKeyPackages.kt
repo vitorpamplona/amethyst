@@ -270,6 +270,13 @@ class CordnKeyPackages(
             // failing to supply.
             signingKey = ByteArray(0),
             keyPackageExtensions = if (lastResort) listOf(CordnGroupPolicy.lastResortExtension()) else emptyList(),
+            // A last-resort package carries its marker inside app_data_dictionary
+            // (0x0006), so its leaf has to say it understands that carrier.
+            // CordnGroupPolicy has had the right set for this all along and
+            // nothing was calling it, which left every last-resort KeyPackage
+            // advertising one type short of what it used.
+            capabilities =
+                if (lastResort) CordnGroupPolicy.lastResortLeafCapabilities() else CordnGroupPolicy.defaultLeafCapabilities,
         )
     }
 

@@ -114,6 +114,20 @@ interface MlsGroupPolicy {
      */
     val commitExporter: MlsExporterLabel? get() = null
 
+    /**
+     * Extension types this binding's own members are known to support, even
+     * when an older member's leaf does not advertise them.
+     *
+     * RFC 9420 §13.4 makes every GroupContext extension mandatory for every
+     * member, and the engine enforces that from leaf capabilities. A binding
+     * whose own group-metadata extension predates it advertising that type has
+     * groups in the wild that would fail the check; listing the type here is
+     * how such a binding keeps them working, and it is the binding's statement
+     * about its own members - not a licence to skip the rule for types nobody
+     * declared.
+     */
+    val knownExtensionTypes: Set<Int> get() = emptySet()
+
     companion object {
         /** RFC 9420 exactly as written: any member may commit anything valid. */
         val Permissive: MlsGroupPolicy = object : MlsGroupPolicy {}

@@ -286,7 +286,18 @@ class CordnGroupManager(
         bundleFor: suspend (String) -> KeyPackageBundle?,
         gidFor: (MlsGroup) -> String? = ::gidFrom,
     ): WelcomeInbox {
-        val pending = call { coordinator.takeWelcomes(drainRetirements()) }
+        // Drained into a local first: passing the drain inline emptied the
+        // queue before the call, so a failing takeWelcomes dropped those acks
+        // for good and the coordinator kept re-serving what we had consumed.
+        // The join-request path already re-queues on failure; this matches it.
+        val acks = drainRetirements()
+        val pending =
+            try {
+                call { coordinator.takeWelcomes(acks) }
+            } catch (e: Exception) {
+                pendingRetirements += acks
+                throw e
+            }
         val opened = mutableListOf<OpenedWelcome>()
         val skipped = mutableListOf<SkippedWelcome>()
         val stale = mutableListOf<ConsumedWelcomeRef>()

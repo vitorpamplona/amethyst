@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.Proposal
 import com.vitorpamplona.quartz.mls.messages.ProposalType
+import com.vitorpamplona.quartz.mls.tree.Capabilities
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
@@ -181,7 +182,9 @@ class AppDataUpdateProposalTest {
         // GroupContextExtensions proposal already produced, regardless of the
         // order the two appear in the proposal list. Propose them in the
         // "wrong" order to prove we do not simply follow list order.
-        val group = MlsGroup.create(creator)
+        // Advertised, because installing the dictionary as a GroupContext
+        // extension puts it under RFC 9420 §13.4: every member must support it.
+        val group = MlsGroup.create(creator, capabilities = Capabilities(extensions = listOf(AppDataDictionary.EXTENSION_TYPE)))
         group.proposeAppDataUpdate(AppComponentIds.GROUP_PROFILE_V1, profileA)
         group.proposeGroupContextExtensions(
             listOf(AppDataDictionary(listOf(ComponentData(AppComponentIds.ADMIN_POLICY_V1, adminPolicy))).toExtension()),

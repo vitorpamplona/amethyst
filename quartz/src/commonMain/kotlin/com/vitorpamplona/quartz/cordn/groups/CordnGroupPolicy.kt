@@ -78,6 +78,16 @@ object CordnGroupPolicy : MlsGroupPolicy {
         get() = Capabilities(extensions = listOf(CordnGroupMetadata.EXTENSION_TYPE))
 
     /**
+     * None, deliberately.
+     *
+     * `spec/01.md` §6 requires a member of a group using `0xC04D` to advertise
+     * it, and the reference client does — so RFC 9420 §13.4 can be enforced
+     * here from capabilities alone, with no exemption to weaken it. cordn has
+     * no deployed groups predating that rule to be kind to.
+     */
+    override val knownExtensionTypes: Set<Int> = emptySet()
+
+    /**
      * None.
      *
      * `spec/01.md` §6 says a group MAY omit the metadata extension entirely

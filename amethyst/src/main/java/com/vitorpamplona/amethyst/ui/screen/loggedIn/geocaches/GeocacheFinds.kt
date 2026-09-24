@@ -22,39 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.nipCCGeocaching.ui.rememberFoundCacheIds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 
-/**
- * The addresses the signed-in user has already logged a find on, as `37516:pubkey:d` strings.
- *
- * Derived from the Finds feed rather than scanning the cache directly, so it tracks a new log
- * the moment the feed does — which is what makes a hunt's progress bar move as you walk it.
- */
+/** The addresses the signed-in user has already logged a find on, from their Finds feed. */
 @Composable
 fun rememberMyFoundCacheIds(accountViewModel: AccountViewModel): Set<String> {
     val finds by accountViewModel.feedStates.geocacheFindsFeed.feedContent
         .collectAsStateWithLifecycle()
 
-    return when (val state = finds) {
-        is FeedState.Loaded -> rememberFoundCacheIds(state)
-        else -> emptySet()
-    }
-}
-
-/**
- * Collects the loaded feed's own flow. [FeedState.Loaded] is handed out once and then mutated
- * through its inner flow, so reading `.value` here would freeze the set at whatever the feed held
- * when the hunt screen first composed — the progress bar would never move.
- */
-@Composable
-private fun rememberFoundCacheIds(state: FeedState.Loaded): Set<String> {
-    val loaded by state.feed.collectAsStateWithLifecycle()
-
-    return remember(loaded) {
-        loaded.list.mapNotNullTo(mutableSetOf()) { (it.event as? GeocacheFoundLogEvent)?.geocacheId() }
-    }
+    return rememberFoundCacheIds(finds)
 }

@@ -324,17 +324,44 @@ class CordnFixtureCoordinator(
                 }
 
                 CoordinatorMethod.JOIN_REQUEST_STORE.wire -> {
+                    // One `at`, stored and returned. Taking it once and using
+                    // it twice is the point: the caller acks with what it was
+                    // told, so a stored value that differs by even one can
+                    // never be retired.
+                    val at = clock++
                     joinRequests +=
                         buildJsonObject {
                             put(CoordinatorFields.GID, args.str(CoordinatorFields.GID))
                             put(CoordinatorFields.PK, caller.orEmpty())
                             put(CoordinatorFields.KP_REF, args.str(CoordinatorFields.KP_REF))
-                            put(CoordinatorFields.AT, clock++)
+                            put(CoordinatorFields.AT, at)
                         }
-                    buildJsonObject { put(CoordinatorFields.AT, clock) }
+                    buildJsonObject { put(CoordinatorFields.AT, at) }
                 }
 
                 CoordinatorMethod.JOIN_REQUEST_TAKE_MANY.wire -> {
+                    // `consumed` retires, exactly as `welcome_take` does above.
+                    // Ignoring it made retirement a no-op in every test that
+                    // runs against this fixture, so an answered request came
+                    // back forever and nothing could catch it.
+                    val consumed =
+                        args[CoordinatorFields.CONSUMED]
+                            ?.jsonArray
+                            ?.map {
+                                Triple(
+                                    it.jsonObject.str(CoordinatorFields.GID),
+                                    it.jsonObject.str(CoordinatorFields.PK),
+                                    it.jsonObject[CoordinatorFields.AT]!!.jsonPrimitive.long,
+                                )
+                            }.orEmpty()
+                    joinRequests.removeAll { r ->
+                        consumed.any {
+                            it.first == r.str(CoordinatorFields.GID) &&
+                                it.second == r.str(CoordinatorFields.PK) &&
+                                it.third == r[CoordinatorFields.AT]!!.jsonPrimitive.long
+                        }
+                    }
+
                     val gids = args[CoordinatorFields.GROUPS]!!.jsonArray.map { it.jsonObject.str(CoordinatorFields.GID) }
                     buildJsonObject {
                         put(

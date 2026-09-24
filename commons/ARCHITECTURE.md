@@ -89,6 +89,8 @@ in `commonsUI`, under the same package.
 | `account`      | mixed | New-account bootstrap events; the logged-off login/sign-up buttons in `commonsUI` `account/ui/login` and `account/ui/signup`. |
 | `onchain`      | mixed | On-chain zap splitting/broadcasting; user-facing failure strings in `commonsUI` `onchain/ui`. |
 | `marmot`       | mixed | MLS group-chat event processing; group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. |
+| `cyberspace`   | no  | `CYBERSPACE_V2` §7.7 region-bag search: the free quote off a bag's `hint`/`h` tags, the device-measured budget, and the cold sweep flow over quartz's `RegionSweep`. The protocol itself (coordinates, Cantor trees, keys, the bag) is `quartz/.../cyberspace`. |
+| `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
@@ -140,7 +142,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 | `napplet`      | mixed | Protocol/permission logic here; `NappletWebContract` (serves the shell/shim from `composeResources`) in `commonsUI`. |
 | `favorites`, `nip30CustomEmojis`, `nip34Git`, `nip85TrustedAssertions`, `nip53LiveActivities` | mixed | Logic here; each feature's `ui/` (or the flat `FavoriteAppIcon`, `EmojiSuggestionState`) in `commonsUI`. |
 | `chats` | yes | Composables shared by every chat kind (DMs, public chats, relay groups, concord): unread badge, divisors, system messages, author line, send button, reply toggle, new-conversation screen. Chat *models* are in `model/chats`. |
-| `nip17Dm`, `nip23LongContent`, `nip28PublicChat`, `nip29RelayGroups`, `nip51Lists`, `nip52Calendar`, `nip56Reports`, `nip72ModCommunities`, `nipC0CodeSnippets`, `nipCCGeocaching`, `birdstar`, `buzz`, `cashu`, `concord`, `ephemChat`, `music`, `mediaServers`, `browser`, `profile`, `napplet` | yes / mixed | Single-feature UI under `<feature>/ui` (named after the `quartz` package, or its concern name when `quartz` has none). Where the package also has logic (`cashu`, `browser`, `napplet`, `profile`) that part stays here; the `buzz` and `concord` models are in `model/buzz` and `model/concord`. |
+| `nip17Dm`, `nip23LongContent`, `nip28PublicChat`, `nip29RelayGroups`, `nip32Labeling`, `nip43RelayMembers`, `nip51Lists`, `nip52Calendar`, `nip56Reports`, `nip72ModCommunities`, `nip73ExternalIds`, `nip99Classifieds`, `nipC0CodeSnippets`, `nipCCGeocaching`, `birdstar`, `nipsOnNostr`, `buzz`, `cashu`, `concord`, `music`, `mediaServers`, `browser`, `profile`, `napplet` | yes / mixed | Single-feature UI under `<feature>/ui` (named after the `quartz` package, or its concern name when `quartz` has none). Where the package also has logic (`cashu`, `browser`, `napplet`, `profile`) that part stays here; the `buzz` and `concord` models are in `model/buzz` and `model/concord`. |
 
 ### Mixed (documented debt — see §4)
 | Package        | UI? | Purpose |

@@ -60,18 +60,38 @@ class GroupContextExtensionsRuleTest {
     }
 
     @Test
-    fun anUnknownExtensionTypeIsNotAReasonToRefuseACommit() {
-        // RFC 9420 §12.1.7 lists exactly one validity rule for this proposal,
-        // and "we recognise every type" is not it. An extension we do not
-        // understand is one we do not act on; a group that needs it understood
-        // says so with required_capabilities.
-        val group = MlsGroup.create(alice)
+    fun anUnknownExtensionTypeIsInstalledWhenEveryMemberAdvertisesIt() {
+        // "We recognise the type" is not the rule. RFC 9420 §13.4 makes the
+        // test membership: "an extension in use by the group MUST be supported
+        // by all members of the group", read off leaf capabilities. So a type
+        // this code has never heard of installs fine, provided the leaves say
+        // they support it.
+        //
+        // An earlier version of this test asserted the opposite - that an
+        // unknown type installs unconditionally - on the reading that §12.1.7
+        // states the only rule. §12.1.7 does state the only rule *it* has;
+        // §13.4 is where the membership requirement lives.
+        val group = MlsGroup.create(alice, capabilities = Capabilities(extensions = listOf(appExtension)))
         group.proposeGroupContextExtensions(listOf(Extension(appExtension, byteArrayOf(1, 2, 3))))
         group.commit()
 
         assertTrue(
             group.extensions.any { it.extensionType == appExtension },
             "the extension must be installed, not rejected",
+        )
+    }
+
+    @Test
+    fun anExtensionThisMemberDoesNotAdvertiseIsRejected() {
+        // The same proposal, from a leaf that never claimed the capability.
+        // Accepting it would put the group in a state §13.4 forbids.
+        val group = MlsGroup.create(alice)
+        group.proposeGroupContextExtensions(listOf(Extension(appExtension, byteArrayOf(1, 2, 3))))
+
+        val error = assertFailsWith<IllegalArgumentException> { group.commit() }
+        assertTrue(
+            error.message?.contains("Unsupported extension type") == true,
+            "unexpected message: ${error.message}",
         )
     }
 
@@ -105,7 +125,10 @@ class GroupContextExtensionsRuleTest {
     fun theReplacementIsWholesaleNotAMerge() {
         // §12.1.7: "This is a wholesale replacement, not a merge. An extension
         // is only carried over if the sender of the proposal includes it."
-        val group = MlsGroup.create(alice)
+        //
+        // Both types are advertised so that §13.4 is satisfied throughout and
+        // this test fails only on the replacement rule it is about.
+        val group = MlsGroup.create(alice, capabilities = Capabilities(extensions = listOf(appExtension, 0xC04E)))
         group.proposeGroupContextExtensions(listOf(Extension(appExtension, byteArrayOf(1))))
         group.commit()
 

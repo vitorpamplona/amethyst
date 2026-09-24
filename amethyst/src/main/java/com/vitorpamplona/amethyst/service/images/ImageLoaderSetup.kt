@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
+import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
@@ -107,11 +108,13 @@ class ImageLoaderSetup {
                         add(VideoFrameDecoder.Factory())
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
+                        add(SnoFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
                         add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
+                        add(SnoFetcher.SKeyer)
                         add(ThumbHashFetcher.TKeyer)
                         add(ProfilePictureFetcher.BKeyer)
                         add(OkHttpFactory(callFactory, concurrentRequests, readAuth))

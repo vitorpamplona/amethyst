@@ -114,4 +114,21 @@ class Ed25519Test {
     ) {
         kotlin.test.assertContentEquals(expected, actual)
     }
+
+    @Test
+    fun keyPairFromSeedMatchesRfc8032TestVector1() {
+        val seed = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60".hexToByteArray()
+        val kp = Ed25519.keyPairFromSeed(seed)
+        assertContentEquals("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a".hexToByteArray(), kp.publicKey)
+        assertContentEquals(seed + kp.publicKey, kp.privateKey)
+    }
+
+    @Test
+    fun keyPairFromSeedSignsLikeTheGeneratedPair() {
+        val generated = Ed25519.generateKeyPair()
+        val rebuilt = Ed25519.keyPairFromSeed(generated.privateKey.copyOfRange(0, 32))
+        assertEquals(generated, rebuilt)
+        val msg = "hi".encodeToByteArray()
+        assertTrue(Ed25519.verify(msg, Ed25519.sign(msg, rebuilt.privateKey), generated.publicKey))
+    }
 }
