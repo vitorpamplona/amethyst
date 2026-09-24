@@ -70,10 +70,10 @@ import com.vitorpamplona.amethyst.commons.resources.workout_minutes
 import com.vitorpamplona.amethyst.commons.resources.workout_notes
 import com.vitorpamplona.amethyst.commons.resources.workout_seconds
 import com.vitorpamplona.amethyst.commons.resources.workout_title
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag

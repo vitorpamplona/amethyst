@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
 import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheChips
 import com.vitorpamplona.amethyst.commons.ui.note.GeocacheDetailHero
@@ -100,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.specSummary
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.note.types.distanceToCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -26,9 +26,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
-import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 

@@ -23,22 +23,19 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.note.PlayIcon
+import com.vitorpamplona.amethyst.commons.ui.note.UserNameText
 import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -46,7 +43,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 
@@ -113,53 +109,16 @@ fun UsernameDisplay(
         // the account's own nickname for this user wins over the user's metadata;
         // its custom emojis resolve against the contact card's tags, not the profile's
         val petName = nickname?.petName
-        val name = petName ?: it?.info?.bestName()
-        if (name != null) {
-            UserDisplay(name, if (petName != null) nickname?.tags else it?.tags, weight, fontWeight, textColor, textAlign)
-        } else {
-            NPubDisplay(baseUser, weight, fontWeight, textColor, textAlign)
-        }
+        UserNameText(
+            user = baseUser,
+            displayName = petName ?: it?.info?.bestName(),
+            tags = if (petName != null) nickname?.tags else it?.tags,
+            modifier = weight,
+            fontWeight = fontWeight,
+            textColor = textColor,
+            textAlign = textAlign,
+        )
     }
-}
-
-@Composable
-private fun NPubDisplay(
-    user: User,
-    modifier: Modifier,
-    fontWeight: FontWeight = FontWeight.Bold,
-    textColor: Color = Color.Unspecified,
-    textAlign: TextAlign? = null,
-) {
-    Text(
-        text = remember { user.pubkeyDisplayHex() },
-        fontWeight = fontWeight,
-        modifier = modifier,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        color = textColor,
-        textAlign = textAlign,
-    )
-}
-
-@Composable
-private fun UserDisplay(
-    bestDisplayName: String,
-    tags: ImmutableListOfLists<String>?,
-    modifier: Modifier,
-    fontWeight: FontWeight = FontWeight.Bold,
-    textColor: Color = Color.Unspecified,
-    textAlign: TextAlign? = null,
-) {
-    CreateTextWithEmoji(
-        text = bestDisplayName,
-        tags = tags,
-        fontWeight = fontWeight,
-        textAlign = textAlign,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier,
-        color = textColor,
-    )
 }
 
 @Composable

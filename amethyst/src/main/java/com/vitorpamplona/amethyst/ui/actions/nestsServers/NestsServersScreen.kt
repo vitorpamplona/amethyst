@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.nests_servers_relay_label
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_remove
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_title
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_use_defaults
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategoryWithButton

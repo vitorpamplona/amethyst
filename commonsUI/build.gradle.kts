@@ -204,6 +204,9 @@ kotlin {
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
+                // SafeImeInsetsTest mocks the android.view.View its per-window cache is keyed on.
+                implementation(libs.mockk)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 

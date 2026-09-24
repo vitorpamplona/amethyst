@@ -25,8 +25,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
-import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
-import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
+import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
 
 enum class KeyboardState {
     Opened,
