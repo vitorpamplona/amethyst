@@ -30,6 +30,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 
@@ -92,8 +93,16 @@ class SecretEncryptionTest {
         assertThrows(Exception::class.java) { subject("second.key").decrypt(ciphertext) }
     }
 
+    private fun isPosix() = FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+
     @Test
     fun keyFileIsOwnerOnly() {
+        // Windows has no POSIX permissions, and `restrictToOwner` is documented
+        // as a silent no-op there — the user profile's NTFS ACLs apply instead.
+        // Asking for them anyway raises UnsupportedOperationException, which is
+        // how this failed on the Windows CI runner while passing everywhere else.
+        if (!isPosix()) return
+
         subject().encrypt("x".encodeToByteArray())
 
         val perms = Files.getPosixFilePermissions(File(folder.root, "secret.key").toPath())
