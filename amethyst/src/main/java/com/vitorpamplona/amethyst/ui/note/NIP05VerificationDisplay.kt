@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip05_checking
 import com.vitorpamplona.amethyst.commons.resources.nip05_failed
 import com.vitorpamplona.amethyst.commons.resources.nip05_verified
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -467,7 +467,7 @@ fun RenderNIP05VerifiedSymbol(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    CrossfadeIfEnabled(targetState = state, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = state) {
         when (it) {
             is Nip05VerifState.Verifying, is Nip05VerifState.NotStarted -> {
                 // Treat "not started" and "in flight" as a single loading visual so the

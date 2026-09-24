@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_mint_label
 import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.note.OpenInNewIcon
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import kotlinx.collections.immutable.ImmutableList
@@ -93,7 +93,7 @@ fun CashuPreview(
         }
     }
 
-    CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview", accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview") {
         when (it) {
             is GenericLoadable.Loaded<ImmutableList<CashuToken>> -> {
                 CashuPreview(it.loaded, accountViewModel)

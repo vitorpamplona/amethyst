@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.discover_live_v2
 import com.vitorpamplona.amethyst.commons.resources.discover_marketplace
 import com.vitorpamplona.amethyst.commons.resources.discover_reads
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
@@ -337,7 +337,6 @@ private fun RenderDiscoverFeed(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderDiscoverFeed",
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -381,7 +380,6 @@ private fun RenderDiscoverFeed(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderDiscoverFeed",
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {

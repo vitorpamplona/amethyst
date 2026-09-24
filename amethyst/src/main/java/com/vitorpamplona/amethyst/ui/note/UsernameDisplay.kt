@@ -34,6 +34,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.note.PlayIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserNameText
 import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier
@@ -42,7 +43,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 
@@ -87,7 +87,7 @@ fun WatchAuthorWithBlank(
         inner(noteAuthor)
     } else {
         val authorState by observeNote(baseNote, accountViewModel)
-        CrossfadeIfEnabled(targetState = authorState.note.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
+        CrossfadeIfEnabled(targetState = authorState.note.author, modifier = modifier, label = "WatchAuthorWithBlank") { newAuthor ->
             inner(newAuthor)
         }
     }
@@ -105,7 +105,7 @@ fun UsernameDisplay(
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
     val nickname by observeUserNickname(baseUser, accountViewModel)
 
-    CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
         // the account's own nickname for this user wins over the user's metadata;
         // its custom emojis resolve against the contact card's tags, not the profile's
         val petName = nickname?.petName

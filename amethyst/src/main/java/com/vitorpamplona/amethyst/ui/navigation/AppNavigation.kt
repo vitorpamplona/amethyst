@@ -58,9 +58,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccoun
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
-import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -361,13 +359,8 @@ fun AppNavigation(
     // can't read LocalScreenLayout (see NavTransitionTier).
     SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
 
-    val featureSet by accountViewModel.settings.uiSettingsFlow.featureSet
-        .collectAsStateWithLifecycle()
-
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
-        // Shared composables read this instead of the AccountViewModel's performance-mode flag.
-        LocalAnimationsEnabled provides (featureSet != FeatureSetType.PERFORMANCE),
         LocalTabReselectCoordinator provides tabReselectCoordinator,
         // Provide the shared finder CompositionLocals so any commons composable that
         // uses the no-arg observeUser*/EventFinderFilterAssemblerSubscription(note)

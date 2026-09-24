@@ -49,11 +49,11 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.components.AddButton
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.RemoveButton
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.getGradient
@@ -189,7 +189,7 @@ private fun EmojiListOptions(
                 usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
             }
 
-            CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions", accountViewModel = accountViewModel) {
+            CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions") {
                 if (it != true) {
                     AddButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.addEmojiPack(emojiPackNote) }
                 } else {

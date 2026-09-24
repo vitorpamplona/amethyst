@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip72ModCommunities.ui.NewCommunityButton
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
@@ -47,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarP
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -125,7 +125,6 @@ private fun RenderCommunitiesFeed(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderCommunitiesFeed",
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> FeedEmpty(feedContentState::invalidateData)

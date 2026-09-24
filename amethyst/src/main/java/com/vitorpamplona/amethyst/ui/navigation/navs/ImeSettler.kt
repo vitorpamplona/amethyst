@@ -43,7 +43,7 @@ const val IME_SETTLE_TIMEOUT_MS = 700L
  * [WindowInsetsAnimationCompat][androidx.core.view.WindowInsetsAnimationCompat] is cancelled before
  * its terminal (zero) frame reaches Compose. `WindowInsets.ime` is a single app-wide holder, so it
  * stays "animating" and every IME padding in the app — not just the screen being left — freezes at
- * the keyboard height. [SafeImeInsets] is the backstop for when that freeze turns out to be
+ * the keyboard height. [SafeImeInsets][com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] is the backstop for when that freeze turns out to be
  * permanent; this is the prevention, and it is the cheaper of the two because it keeps the padding
  * from ever being wrong.
  *
@@ -63,7 +63,7 @@ fun interface ImeSettler {
 }
 
 /**
- * Reads the same [SafeImeInsets] that drives `Modifier.imePaddingSafe()`, so the settler and the
+ * Reads the same [SafeImeInsets][com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] that drives `Modifier.imePaddingSafe()`, so the settler and the
  * padding can never disagree about whether the keyboard is gone. Reading the raw `WindowInsets.ime`
  * here would make every navigation burn the full [IME_SETTLE_TIMEOUT_MS] once the inset is stranded,
  * waiting on a value that is never going to move again.

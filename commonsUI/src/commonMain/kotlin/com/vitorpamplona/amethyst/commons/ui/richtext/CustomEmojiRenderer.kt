@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,32 +60,20 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 
 /**
- * Inline custom emoji: renders [text], replacing each `:shortcode:` present in
- * [emojis] with its image. Universal to every front end, so it lives in the
- * shared core rather than the platform seam. Falls back to plain [Text] when the
- * text carries no known emoji.
- *
- * Cross-platform equivalent of Amethyst's `CreateTextWithEmoji`, built on quartz's
- * [CustomEmoji.assembleAnnotatedList] + [InLineIconRenderer].
+ * Inline custom emoji: renders [text], replacing each `:shortcode:` present in [emojis] with its
+ * image. Falls back to plain [Text] when the text carries no known emoji. Same path as
+ * [CreateTextWithEmoji], so rich text and names resolve emojis identically.
  */
 @Composable
 fun RenderCustomEmoji(
     text: String,
     emojis: ImmutableMap<String, String>,
     modifier: Modifier = Modifier,
-) {
-    val renderable = remember(text, emojis) { CustomEmoji.assembleAnnotatedList(text, emojis) }
-
-    if (renderable.isNullOrEmpty()) {
-        Text(text, modifier)
-    } else {
-        InLineIconRenderer(renderable, LocalTextStyle.current.toSpanStyle(), modifier = modifier)
-    }
-}
+) = CreateTextWithEmoji(text = text, emojis = emojis, modifier = modifier)
 
 /**
  * Renders an already-assembled list of [CustomEmoji.Renderable]s: text spans as
- * text, image spans as inline [AsyncImage]s sized to ~1.1× the current font.
+ * text, image spans as inline [AsyncImage]s sized to ~1.1x the current font.
  */
 @Composable
 fun InLineIconRenderer(
@@ -93,18 +83,16 @@ fun InLineIconRenderer(
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
+    textAlign: TextAlign? = null,
 ) {
-    val placeholderSize =
-        remember(fontSize) {
-            if (fontSize == TextUnit.Unspecified) 22.sp else fontSize.times(1.1f)
-        }
+    val placeholderSize = remember(fontSize) { emojiPlaceholderSize(fontSize) }
 
     // Remembered like annotatedText below: rebuilding this map handed Text a
     // fresh unstable Map (plus a Placeholder and lambda per emoji) on every
     // recomposition of every name/note with a custom emoji.
     val inlineContent =
         remember(wordsInOrder, placeholderSize) {
-            wordsInOrder.buildInlineContent(placeholderSize)
+            wordsInOrder.buildInlineContent(placeholderSize, imagePadding = 0.dp)
         }
 
     val annotatedText =
@@ -126,13 +114,19 @@ fun InLineIconRenderer(
         text = annotatedText,
         inlineContent = inlineContent,
         fontSize = fontSize,
+        textAlign = textAlign,
         maxLines = maxLines,
         overflow = overflow,
         modifier = modifier,
     )
 }
 
-private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(placeholderSize: TextUnit): Map<String, InlineTextContent> =
+private fun emojiPlaceholderSize(fontSize: TextUnit): TextUnit = if (fontSize == TextUnit.Unspecified) 22.sp else fontSize.times(1.1f)
+
+private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(
+    placeholderSize: TextUnit,
+    imagePadding: Dp,
+): Map<String, InlineTextContent> =
     mapIndexedNotNull { idx, value ->
         if (value is CustomEmoji.ImageUrlType) {
             "inlineContent$idx" to
@@ -146,7 +140,7 @@ private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(placeholder
                     AsyncImage(
                         model = value.url,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 0.dp),
+                        modifier = Modifier.fillMaxSize().padding(imagePadding),
                     )
                 }
         } else {
@@ -154,74 +148,73 @@ private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(placeholder
         }
     }.associate { it.first to it.second }
 
+/**
+ * Calls [onEmojiText] with [text] split into text and emoji spans when it resolves any custom emoji
+ * from the event's [tags], and [onRegularText] otherwise (and while the split is being assembled).
+ */
 @Composable
 fun CustomEmojiChecker(
     text: String,
     tags: ImmutableListOfLists<String>?,
     onRegularText: @Composable (String) -> Unit,
     onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
-) {
-    val mayContainEmoji by remember(text, tags) {
-        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, tags?.lists))
-    }
+) = EmojiChecker(
+    text = text,
+    source = tags,
+    mightContainEmoji = { CustomEmoji.fastMightContainEmoji(text, tags?.lists) },
+    assemble = { CustomEmoji.assembleAnnotatedList(text, tags?.lists) },
+    onRegularText = onRegularText,
+    onEmojiText = onEmojiText,
+)
 
-    if (mayContainEmoji) {
-        var emojiList by
-            remember(text, tags) {
-                mutableStateOf<ImmutableList<CustomEmoji.Renderable>?>(null)
-            }
-
-        LaunchedEffect(text, tags) {
-            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, tags?.lists)
-            if (newEmojiList != null) {
-                emojiList = newEmojiList
-            }
-        }
-
-        emojiList?.let {
-            onEmojiText(it)
-        } ?: run {
-            onRegularText(text)
-        }
-    } else {
-        onRegularText(text)
-    }
-}
-
+/** [CustomEmojiChecker] for an already-resolved `shortcode -> url` map. */
 @Composable
 fun CustomEmojiChecker(
     text: String,
     emojis: ImmutableMap<String, String>,
     onRegularText: @Composable (String) -> Unit,
     onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
+) = EmojiChecker(
+    text = text,
+    source = emojis,
+    mightContainEmoji = { CustomEmoji.fastMightContainEmoji(text, emojis) },
+    assemble = { CustomEmoji.assembleAnnotatedList(text, emojis) },
+    onRegularText = onRegularText,
+    onEmojiText = onEmojiText,
+)
+
+/**
+ * The one implementation behind both [CustomEmojiChecker]s. [source] is whatever the emoji come
+ * from (tags or a map); it keys the cached answers together with [text].
+ */
+@Composable
+private fun EmojiChecker(
+    text: String,
+    source: Any?,
+    mightContainEmoji: () -> Boolean,
+    assemble: () -> ImmutableList<CustomEmoji.Renderable>?,
+    onRegularText: @Composable (String) -> Unit,
+    onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
 ) {
-    val mayContainEmoji by remember(text, emojis) {
-        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, emojis))
-    }
+    val mayContainEmoji = remember(text, source) { mightContainEmoji() }
 
     if (mayContainEmoji) {
-        var emojiList by
-            remember(text, emojis) {
-                mutableStateOf<ImmutableList<CustomEmoji.Renderable>?>(null)
-            }
+        var emojiList by remember(text, source) { mutableStateOf<ImmutableList<CustomEmoji.Renderable>?>(null) }
 
-        LaunchedEffect(text, emojis) {
-            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, emojis)
+        LaunchedEffect(text, source) {
+            val newEmojiList = assemble()
             if (newEmojiList != null) {
                 emojiList = newEmojiList
             }
         }
 
-        emojiList?.let {
-            onEmojiText(it)
-        } ?: run {
-            onRegularText(text)
-        }
+        emojiList?.let { onEmojiText(it) } ?: onRegularText(text)
     } else {
         onRegularText(text)
     }
 }
 
+/** [text] with its custom emojis, resolved from the event's [tags]. */
 @Composable
 fun CreateTextWithEmoji(
     text: String,
@@ -233,43 +226,14 @@ fun CreateTextWithEmoji(
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
-) {
-    CustomEmojiChecker(
-        text,
-        tags,
-        onEmojiText = {
-            val textColor =
-                color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
-            val style =
-                LocalTextStyle.current
-                    .merge(
-                        TextStyle(
-                            color = textColor,
-                            textAlign = TextAlign.Unspecified,
-                            fontWeight = fontWeight,
-                            fontSize = fontSize,
-                        ),
-                    ).toSpanStyle()
+) = CustomEmojiChecker(
+    text = text,
+    tags = tags,
+    onRegularText = { PlainText(it, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier) },
+    onEmojiText = { EmojiText(it, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier) },
+)
 
-            InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
-        },
-        onRegularText = {
-            val textColor =
-                color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
-            Text(
-                text = it,
-                color = textColor,
-                textAlign = textAlign,
-                fontWeight = fontWeight,
-                fontSize = fontSize,
-                maxLines = maxLines,
-                overflow = overflow,
-                modifier = modifier,
-            )
-        },
-    )
-}
-
+/** [text] with its custom emojis, resolved from an already-built `shortcode -> url` map. */
 @Composable
 fun CreateTextWithEmoji(
     text: String,
@@ -281,45 +245,70 @@ fun CreateTextWithEmoji(
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
+) = CustomEmojiChecker(
+    text = text,
+    emojis = emojis,
+    onRegularText = { PlainText(it, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier) },
+    onEmojiText = { EmojiText(it, color, textAlign, fontWeight, fontSize, maxLines, overflow, modifier) },
+)
+
+@Composable
+private fun resolveTextColor(color: Color): Color = color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
+
+@Composable
+private fun PlainText(
+    text: String,
+    color: Color,
+    textAlign: TextAlign?,
+    fontWeight: FontWeight?,
+    fontSize: TextUnit,
+    maxLines: Int,
+    overflow: TextOverflow,
+    modifier: Modifier,
 ) {
-    val textColor =
-        color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
-
-    CustomEmojiChecker(
-        text,
-        emojis,
-        onEmojiText = {
-            val currentStyle = LocalTextStyle.current
-            val style =
-                remember(currentStyle) {
-                    currentStyle
-                        .merge(
-                            TextStyle(
-                                color = textColor,
-                                textAlign = TextAlign.Unspecified,
-                                fontWeight = fontWeight,
-                                fontSize = fontSize,
-                            ),
-                        ).toSpanStyle()
-                }
-
-            InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
-        },
-        onRegularText = {
-            Text(
-                text = it,
-                color = textColor,
-                textAlign = textAlign,
-                fontWeight = fontWeight,
-                fontSize = fontSize,
-                maxLines = maxLines,
-                overflow = overflow,
-                modifier = modifier,
-            )
-        },
+    Text(
+        text = text,
+        color = resolveTextColor(color),
+        textAlign = textAlign,
+        fontWeight = fontWeight,
+        fontSize = fontSize,
+        maxLines = maxLines,
+        overflow = overflow,
+        modifier = modifier,
     )
 }
 
+@Composable
+private fun EmojiText(
+    words: ImmutableList<CustomEmoji.Renderable>,
+    color: Color,
+    textAlign: TextAlign?,
+    fontWeight: FontWeight?,
+    fontSize: TextUnit,
+    maxLines: Int,
+    overflow: TextOverflow,
+    modifier: Modifier,
+) {
+    val textColor = resolveTextColor(color)
+    val currentStyle = LocalTextStyle.current
+    // Keyed on everything merged in: keying on the ambient style alone kept the first color /
+    // weight / size when the caller changed them (e.g. a row turning selected).
+    val style =
+        remember(currentStyle, textColor, fontWeight, fontSize) {
+            currentStyle
+                .merge(
+                    TextStyle(
+                        color = textColor,
+                        fontWeight = fontWeight,
+                        fontSize = fontSize,
+                    ),
+                ).toSpanStyle()
+        }
+
+    InLineIconRenderer(words, style, fontSize, maxLines, overflow, modifier, textAlign)
+}
+
+/** A clickable [clickablePart] with its custom emojis resolved from [tags]. */
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
@@ -328,34 +317,33 @@ fun CreateClickableTextWithEmoji(
     style: TextStyle,
     onClick: () -> Unit,
 ) {
+    val currentOnClick by rememberUpdatedState(onClick)
     CustomEmojiChecker(
         text = clickablePart,
         tags = tags,
         onRegularText = {
-            Text(
-                text =
+            val linkStyle = remember(style) { TextLinkStyles(style = style.toSpanStyle()) }
+            val annotated =
+                remember(it, linkStyle) {
                     buildAnnotatedString {
-                        withLink(
-                            LinkAnnotation.Clickable(
-                                "me",
-                                TextLinkStyles(style = style.toSpanStyle()),
-                            ) {
-                                onClick()
-                            },
-                        ) {
-                            append(clickablePart)
+                        withLink(LinkAnnotation.Clickable("me", linkStyle) { currentOnClick() }) {
+                            append(it)
                         }
-                    },
-                style = style,
-                maxLines = maxLines,
-            )
+                    }
+                }
+            Text(text = annotated, style = style, maxLines = maxLines)
         },
         onEmojiText = {
-            ClickableInLineIconRenderer(it, maxLines, style.toSpanStyle(), onClick = onClick)
+            val spanStyle = remember(style) { style.toSpanStyle() }
+            ClickableInLineIconRenderer(it, maxLines, spanStyle, onClick = { currentOnClick() })
         },
     )
 }
 
+/**
+ * [InLineIconRenderer] where the whole run (text and emoji) is one link that calls [onClick], with
+ * an optional non-clickable [suffix].
+ */
 @Composable
 fun ClickableInLineIconRenderer(
     wordsInOrder: ImmutableList<CustomEmoji.Renderable>,
@@ -365,58 +353,35 @@ fun ClickableInLineIconRenderer(
     nonClickableStype: SpanStyle? = null,
     onClick: () -> Unit,
 ) {
-    val placeholderSize =
-        remember(style) {
-            if (style.fontSize == TextUnit.Unspecified) 22.sp else style.fontSize.times(1.1f)
+    val currentOnClick by rememberUpdatedState(onClick)
+    val placeholderSize = remember(style.fontSize) { emojiPlaceholderSize(style.fontSize) }
+
+    // Remembered for the same reason as InLineIconRenderer's: this renders every clickable name
+    // with emoji in a feed, and rebuilding both on each recomposition allocated a new map,
+    // placeholders, lambdas and string every time.
+    val inlineContent =
+        remember(wordsInOrder, placeholderSize) {
+            wordsInOrder.buildInlineContent(placeholderSize, imagePadding = 1.dp)
         }
 
-    val inlineContent =
-        wordsInOrder
-            .mapIndexedNotNull { idx, value ->
-                if (value is CustomEmoji.ImageUrlType) {
-                    Pair(
-                        "inlineContent$idx",
-                        InlineTextContent(
-                            Placeholder(
-                                width = placeholderSize,
-                                height = placeholderSize,
-                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-                            ),
-                        ) {
-                            AsyncImage(
-                                model = value.url,
-                                contentDescription = null,
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .padding(1.dp),
-                            )
-                        },
-                    )
-                } else {
-                    null
-                }
-            }.associate { it.first to it.second }
-
     val annotatedText =
-        buildAnnotatedString {
-            wordsInOrder.forEachIndexed { idx, value ->
-                withLink(
-                    LinkAnnotation.Clickable("link", TextLinkStyles(style)) {
-                        onClick()
-                    },
-                ) {
-                    if (value is CustomEmoji.TextType) {
-                        append(value.text)
-                    } else if (value is CustomEmoji.ImageUrlType) {
-                        appendInlineContent("inlineContent$idx", "[icon]")
+        remember(wordsInOrder, style, suffix, nonClickableStype) {
+            val linkStyles = TextLinkStyles(style)
+            buildAnnotatedString {
+                wordsInOrder.forEachIndexed { idx, value ->
+                    withLink(LinkAnnotation.Clickable("link", linkStyles) { currentOnClick() }) {
+                        when (value) {
+                            is CustomEmoji.TextType -> append(value.text)
+                            is CustomEmoji.ImageUrlType -> appendInlineContent("inlineContent$idx", "[icon]")
+                            else -> {}
+                        }
                     }
                 }
-            }
 
-            if (suffix != null && nonClickableStype != null) {
-                withStyle(nonClickableStype) {
-                    append(suffix)
+                if (suffix != null && nonClickableStype != null) {
+                    withStyle(nonClickableStype) {
+                        append(suffix)
+                    }
                 }
             }
         }

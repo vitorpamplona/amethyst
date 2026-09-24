@@ -28,4 +28,9 @@ actual suspend fun Clipboard.setText(text: String) {
     UIPasteboard.generalPasteboard.string = text
 }
 
-actual suspend fun Clipboard.getText(): String? = UIPasteboard.generalPasteboard.string
+// hasStrings answers without reading the pasteboard, so it never shows the iOS 16+ "Allow Paste"
+// prompt; only an actual read of text that is there can.
+actual suspend fun Clipboard.getText(): String? {
+    val pasteboard = UIPasteboard.generalPasteboard
+    return if (pasteboard.hasStrings) pasteboard.string else null
+}

@@ -30,9 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
@@ -53,7 +53,7 @@ fun RoomNameOnlyDisplay(
         .subject
         .collectAsStateWithLifecycle()
 
-    CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier = modifier) {
         if (!it.isNullOrBlank()) {
             DisplayRoomSubject(it, fontWeight)
         } else {
@@ -120,7 +120,7 @@ fun RoomNameDisplay(
         .subject
         .collectAsStateWithLifecycle()
 
-    CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier = modifier) {
         if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
@@ -187,7 +187,7 @@ fun ShortUsernameDisplay(
             userInfo?.info?.firstName() ?: baseUser.pubkeyDisplayHex()
         }
 
-    CrossfadeIfEnabled(targetState = firstName, modifier = weight, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = firstName, modifier = weight) {
         CreateTextWithEmoji(
             text = it,
             tags = userInfo?.tags,
