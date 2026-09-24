@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
@@ -40,8 +41,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * back. Construct once, eagerly.
  */
 @Stable
-class RelayGroupDeletionPreferences(
-    private val context: Context,
+class RelayGroupDeletionStore(
+    private val store: DataStore<Preferences>,
     private val scope: CoroutineScope,
 ) {
     init {
@@ -54,7 +55,7 @@ class RelayGroupDeletionPreferences(
 
     private suspend fun restoreFromDisk() {
         try {
-            val raw = context.sharedPreferencesDataStore.data.first()[KEY] ?: return
+            val raw = store.data.first()[KEY] ?: return
             if (raw.isNotEmpty()) RelayGroupDeletions.restore(raw)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -64,7 +65,7 @@ class RelayGroupDeletionPreferences(
 
     private suspend fun persist(keys: Set<String>) {
         try {
-            context.sharedPreferencesDataStore.edit { prefs -> prefs[KEY] = keys }
+            store.edit { prefs -> prefs[KEY] = keys }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("RelayGroupDeletionPrefs") { "Error writing deleted channels: ${e.message}" }

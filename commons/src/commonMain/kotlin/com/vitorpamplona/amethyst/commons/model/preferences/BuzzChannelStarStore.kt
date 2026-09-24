@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
@@ -42,8 +43,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * then writes every later change back. Construct once per account, eagerly.
  */
 @Stable
-class BuzzChannelStarPreferences(
-    private val context: Context,
+class BuzzChannelStarStore(
+    private val store: DataStore<Preferences>,
     private val scope: CoroutineScope,
     private val pubKeyHex: HexKey,
     private val stars: BuzzChannelStars,
@@ -60,7 +61,7 @@ class BuzzChannelStarPreferences(
 
     private suspend fun restoreFromDisk() {
         try {
-            val prefs = context.sharedPreferencesDataStore.data.first()
+            val prefs = store.data.first()
             // Fall back to the pre-namespacing device-global key so an upgrade doesn't unpin
             // everything. That set is what every account already saw; the next toggle writes to this
             // account's own key and takes over. The legacy key is left for other accounts to seed
@@ -78,7 +79,7 @@ class BuzzChannelStarPreferences(
             // Always write the starred set, empty included — never remove the key. An absent key
             // means "never migrated" and re-seeds from the legacy one above, so removing it
             // would undo the user's last removal on the next launch.
-            context.sharedPreferencesDataStore.edit { prefs -> prefs[key] = ids }
+            store.edit { prefs -> prefs[key] = ids }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("BuzzChannelStarPrefs") { "Error writing starred channels: ${e.message}" }

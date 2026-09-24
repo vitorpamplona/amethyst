@@ -18,17 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The migration precedence in [BuzzAttestationPreferences.restoreFrom]: which of the two on-disk
+ * The migration precedence in [BuzzAttestationStore.restoreFrom]: which of the two on-disk
  * shapes wins when the held attestation moved from one device-global list to a per-account key.
  *
- * The store itself needs a `Context`, so the decision is pulled out as a pure function — this is
+ * The store itself needs a DataStore, so the decision is pulled out as a pure function — this is
  * the part with the sharp edge, and it is the part the DataStore round-trip cannot express.
  */
 class BuzzAttestationRestoreTest {
@@ -46,12 +46,12 @@ class BuzzAttestationRestoreTest {
 
     @Test
     fun nothingSavedAnywhereRestoresNothing() {
-        assertNull(BuzzAttestationPreferences.restoreFrom(null, null, me))
+        assertNull(BuzzAttestationStore.restoreFrom(null, null, me))
     }
 
     @Test
     fun thisAccountsOwnKeyWins() {
-        val restored = BuzzAttestationPreferences.restoreFrom(saved(), legacyList(me), me)
+        val restored = BuzzAttestationStore.restoreFrom(saved(), legacyList(me), me)
         assertEquals(owner, restored?.ownerPubKey)
     }
 
@@ -61,12 +61,12 @@ class BuzzAttestationRestoreTest {
         // per-account key, which is indistinguishable from "never migrated" — so the next launch
         // seeded it straight back out of the legacy list, which nothing ever clears. An explicit
         // tombstone is the only thing that can say "migrated, and holding nothing".
-        assertNull(BuzzAttestationPreferences.restoreFrom("", legacyList(me), me))
+        assertNull(BuzzAttestationStore.restoreFrom("", legacyList(me), me))
     }
 
     @Test
     fun aNeverMigratedAccountTakesItsOwnEntryFromTheLegacyList() {
-        val restored = BuzzAttestationPreferences.restoreFrom(null, legacyList(someoneElse, me), me)
+        val restored = BuzzAttestationStore.restoreFrom(null, legacyList(someoneElse, me), me)
         assertEquals(owner, restored?.ownerPubKey)
     }
 
@@ -74,6 +74,6 @@ class BuzzAttestationRestoreTest {
     fun anotherAgentsLegacyEntryIsNeverPickedUp() {
         // The legacy list was already agent-keyed, so the migration is exact rather than
         // best-effort: there is no shared blob to accidentally inherit.
-        assertNull(BuzzAttestationPreferences.restoreFrom(null, legacyList(someoneElse), me))
+        assertNull(BuzzAttestationStore.restoreFrom(null, legacyList(someoneElse), me))
     }
 }

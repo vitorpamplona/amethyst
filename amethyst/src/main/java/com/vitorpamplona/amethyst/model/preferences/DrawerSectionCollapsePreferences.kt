@@ -45,7 +45,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * headings are folded is a per-device view choice, so unlike the hidden rows beside it in the drawer
  * it is never published to relays.
  *
- * Mirrors [RelayGroupDeletionPreferences]: app-wide (not per-account), loads the saved names on
+ * Mirrors [RelayGroupDeletionStore]: app-wide (not per-account), loads the saved names on
  * construction, then writes every later change back. Takes the [DataStore] rather than a `Context`
  * so the whole cycle is exercised by a plain unit test against a temp file.
  *

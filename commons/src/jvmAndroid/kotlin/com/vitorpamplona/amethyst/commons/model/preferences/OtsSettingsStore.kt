@@ -18,50 +18,61 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.OtsSettings
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Persistent storage for [OtsSettings], following the same pattern as
- * [NamecoinSharedPreferences].
+ * Persistent storage for [OtsSettings] — which blockchain explorer the user
+ * has pointed OpenTimestamps at.
  *
- * Uses the app-wide [sharedPreferencesDataStore] so OTS explorer settings
- * are global — not per-account.
+ * App-wide, not per-account, and shares [AppPreferenceStores.SHARED_SETTINGS]
+ * with the other global settings groups under its own `ots.` key prefix.
+ *
+ * Lives in `jvmAndroid` rather than `commonMain` only because [OtsSettings]
+ * does: it names OkHttp's explorer constants, and OkHttp is JVM-bound. Android
+ * and Desktop still share it.
+ *
+ * [initial] is taken rather than read here because the current value has to be
+ * available synchronously from [current] — a resolver builder reads it from a
+ * non-suspending lambda. The caller loads it with [load] and decides how to
+ * wait; commonMain has no `runBlocking` to hide that decision behind.
  */
 @Stable
-class OtsSharedPreferences(
-    private val context: Context,
-    private val scope: CoroutineScope,
+class OtsSettingsStore(
+    private val store: DataStore<Preferences>,
+    initial: OtsSettings,
 ) {
     companion object {
         val KEY_CUSTOM_EXPLORER_URL = stringPreferencesKey("ots.customExplorerUrl")
+
+        /** The stored settings, or [OtsSettings.DEFAULT] if unset or unreadable. */
+        suspend fun load(store: DataStore<Preferences>): OtsSettings =
+            try {
+                val url = store.data.first()[KEY_CUSTOM_EXPLORER_URL]?.takeIf { it.isNotBlank() }
+                OtsSettings(customExplorerUrl = url)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("OtsSettingsStore") { "Error reading DataStore: ${e.message}" }
+                OtsSettings.DEFAULT
+            }
     }
 
-    /**
-     * Current settings, loaded synchronously at init to avoid races.
-     */
-    private val _settings =
-        MutableStateFlow(
-            runBlocking { loadFromDisk() ?: OtsSettings.DEFAULT },
-        )
+    private val _settings = MutableStateFlow(initial)
     val settings: StateFlow<OtsSettings> = _settings
 
     /** Synchronous snapshot — safe to call from resolver builder lambdas. */
     val current: OtsSettings get() = _settings.value
-
-    // ── Mutators ───────────────────────────────────────────────────────
 
     suspend fun setCustomExplorerUrl(url: String?) {
         val normalized = url?.trim()?.takeIf { it.isNotBlank() }
@@ -72,12 +83,10 @@ class OtsSharedPreferences(
         persist(OtsSettings.DEFAULT)
     }
 
-    // ── Internal ───────────────────────────────────────────────────────
-
     private suspend fun persist(settings: OtsSettings) {
         _settings.value = settings
         try {
-            context.sharedPreferencesDataStore.edit { prefs ->
+            store.edit { prefs ->
                 val customExplorerUrl = settings.customExplorerUrl
                 if (customExplorerUrl != null) {
                     prefs[KEY_CUSTOM_EXPLORER_URL] = customExplorerUrl
@@ -87,18 +96,7 @@ class OtsSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("OtsPrefs") { "Error writing DataStore: ${e.message}" }
+            Log.e("OtsSettingsStore") { "Error writing DataStore: ${e.message}" }
         }
     }
-
-    private suspend fun loadFromDisk(): OtsSettings? =
-        try {
-            val prefs = context.sharedPreferencesDataStore.data.first()
-            val url = prefs[KEY_CUSTOM_EXPLORER_URL]?.takeIf { it.isNotBlank() }
-            OtsSettings(customExplorerUrl = url)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("OtsPrefs") { "Error reading DataStore: ${e.message}" }
-            null
-        }
 }

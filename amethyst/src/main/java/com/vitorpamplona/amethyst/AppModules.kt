@@ -32,6 +32,12 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
@@ -62,13 +68,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
-import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
-import com.vitorpamplona.amethyst.model.preferences.BuzzWorkspacePreferences
 import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.RelayGroupDeletionPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.sharedPreferencesDataStore
@@ -258,14 +258,20 @@ class AppModules(
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
     val namecoinPrefs by lazy {
-        Log.d("AppModules", "NamecoinSharedPreferences Init")
-        NamecoinSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "NamecoinSettingsStore Init")
+        NamecoinSettingsStore(appContext.sharedPreferencesDataStore, applicationIOScope)
     }
 
     // OTS blockchain explorer preferences (global, like Tor settings)
+    //
+    // The blocking load is the one the store used to do inside its own
+    // constructor: `current` has to answer synchronously for the resolver
+    // builder, so somebody has to wait. It is explicit here rather than hidden
+    // in commonMain, which has no runBlocking to hide it behind.
     val otsPrefs by lazy {
-        Log.d("AppModules", "OtsSharedPreferences Init")
-        OtsSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "OtsSettingsStore Init")
+        val store = appContext.sharedPreferencesDataStore
+        OtsSettingsStore(store, runBlocking { OtsSettingsStore.load(store) })
     }
 
     // App services that should be run as soon as there are subscribers to their
@@ -308,7 +314,8 @@ class AppModules(
     // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
-    val relayGroupDeletionPrefs = RelayGroupDeletionPreferences(appContext, applicationIOScope)
+    val relayGroupDeletionPrefs =
+        RelayGroupDeletionStore(appContext.sharedPreferencesDataStore, applicationIOScope)
 
     // Restore + persist which drawer section headings the user has folded away, so the side menu
     // opens the way they left it (device-global: a collapsed heading is a per-device view choice,
@@ -969,11 +976,11 @@ class AppModules(
             // start — Buzz membership is server-side) and the starred channels. Per account: the
             // joined set makes a relay first-party for NIP-42, and a star is personal.
             startBuzzPersistence = { account ->
-                BuzzWorkspacePreferences(appContext, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarPreferences(appContext, account.scope, account.pubKey, account.buzzChannelStars)
+                BuzzWorkspaceStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzChannelStars)
                 // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
                 // first Buzz-relay AUTH rather than after it.
-                BuzzAttestationPreferences(appContext, account.scope, account.pubKey, account.buzzAttestation)
+                BuzzAttestationStore(appContext.sharedPreferencesDataStore, account.scope, account.pubKey, account.buzzAttestation)
             },
         )
 

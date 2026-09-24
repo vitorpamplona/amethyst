@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
@@ -49,8 +50,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * by the same gate that rejects a mistyped one. Construct once per account, eagerly.
  */
 @Stable
-class BuzzAttestationPreferences(
-    private val context: Context,
+class BuzzAttestationStore(
+    private val store: DataStore<Preferences>,
     private val scope: CoroutineScope,
     private val pubKeyHex: HexKey,
     private val attestation: BuzzHeldAttestations,
@@ -84,7 +85,7 @@ class BuzzAttestationPreferences(
 
     private suspend fun restoreFromDisk() {
         try {
-            val prefs = context.sharedPreferencesDataStore.data.first()
+            val prefs = store.data.first()
             // put() verifies, so a credential that no longer checks out is dropped either way.
             restoreFrom(prefs[key], prefs[LEGACY_KEY], pubKeyHex)?.let(attestation::put)
         } catch (e: Exception) {
@@ -95,7 +96,7 @@ class BuzzAttestationPreferences(
 
     private suspend fun persist(held: OwnerAttestation?) {
         try {
-            context.sharedPreferencesDataStore.edit { prefs ->
+            store.edit { prefs ->
                 // Write [NONE] rather than removing the key: removing it is indistinguishable from
                 // never having migrated, which would let the legacy list re-seed a credential the
                 // user just deleted. See [restoreFrom].
@@ -126,7 +127,7 @@ class BuzzAttestationPreferences(
 
         /**
          * Which attestation to reinstate, given this account's saved value and the pre-namespacing
-         * device-global list. Pure, so the migration precedence is testable without a `Context`.
+         * device-global list. Pure, so the migration precedence is testable without a store.
          *
          * [saved] wins whenever it is present, [NONE] included. Only a never-migrated account falls
          * back to [legacy], and it takes just the entry issued to its own key — that list was

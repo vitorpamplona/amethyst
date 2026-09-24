@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.preferences
+package com.vitorpamplona.amethyst.commons.model.preferences
 
-import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -39,20 +40,20 @@ import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Persistent storage for [NamecoinSettings], following the same pattern as
- * [TorSharedPreferences].
+ * Persistent storage for [NamecoinSettings] — which ElectrumX servers and
+ * backend resolve `.bit` names, and the certificates the user has pinned.
  *
- * Uses the app-wide [sharedPreferencesDataStore] so Namecoin resolution
- * settings (like Tor settings) are global — not per-account.
+ * App-wide, not per-account, and shares [AppPreferenceStores.SHARED_SETTINGS]
+ * with the other global settings groups under its own `namecoin.` key prefix.
  *
  * The current settings are available synchronously via [settings] (a
  * [StateFlow]) and can be read in non-suspend contexts (e.g. in a
  * `serverListProvider` lambda).
  */
 @Stable
-class NamecoinSharedPreferences(
-    private val context: Context,
-    private val scope: CoroutineScope,
+class NamecoinSettingsStore(
+    private val store: DataStore<Preferences>,
+    scope: CoroutineScope,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -148,18 +149,18 @@ class NamecoinSharedPreferences(
 
     private suspend fun savePinnedCerts(certs: List<String>) {
         try {
-            context.sharedPreferencesDataStore.edit { prefs ->
+            store.edit { prefs ->
                 prefs[KEY_PINNED_CERTS] = json.encodeToString(certs)
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs") { "Error writing pinned certs: ${e.message}" }
+            Log.e("NamecoinSettingsStore") { "Error writing pinned certs: ${e.message}" }
         }
     }
 
     private suspend fun loadPinnedCertsFromDisk(): List<String> =
         try {
-            val prefs = context.sharedPreferencesDataStore.data.first()
+            val prefs = store.data.first()
             val certsJson = prefs[KEY_PINNED_CERTS]
             if (certsJson != null) {
                 json.decodeFromString<List<String>>(certsJson)
@@ -176,7 +177,7 @@ class NamecoinSharedPreferences(
     private suspend fun persist(settings: NamecoinSettings) {
         _settings.value = settings
         try {
-            context.sharedPreferencesDataStore.edit { prefs ->
+            store.edit { prefs ->
                 prefs[KEY_ENABLED] = settings.enabled
                 prefs[KEY_CUSTOM_SERVERS] =
                     json.encodeToString(
@@ -189,13 +190,13 @@ class NamecoinSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs") { "Error writing DataStore: ${e.message}" }
+            Log.e("NamecoinSettingsStore") { "Error writing DataStore: ${e.message}" }
         }
     }
 
     private suspend fun loadFromDisk(): NamecoinSettings? =
         try {
-            val prefs = context.sharedPreferencesDataStore.data.first()
+            val prefs = store.data.first()
             val enabled = prefs[KEY_ENABLED] ?: true
             val serversJson = prefs[KEY_CUSTOM_SERVERS]
             val servers =
@@ -236,7 +237,7 @@ class NamecoinSharedPreferences(
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs") { "Error reading DataStore: ${e.message}" }
+            Log.e("NamecoinSettingsStore") { "Error reading DataStore: ${e.message}" }
             null
         }
 }
