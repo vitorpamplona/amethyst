@@ -46,9 +46,22 @@ fun SpectrumCanvas(
     draw: DrawScope.(bins: FloatArray, timeSec: Float, palette: VisualizerPalette) -> Unit,
 ) {
     val smoothed = remember { mutableStateOf(FloatArray(0)) }
+
+    // Frames arrive in decoder-sized bursts that run ahead of the audio, so they are queued here and
+    // drawn one per displayed frame. Writing a whole burst straight into `smoothed` would collapse it
+    // into a single draw at the next vsync and the visual would step at the decoder-buffer rate.
+    val pacer = remember(spectrum) { SpectrumPacer() }
+    LaunchedEffect(spectrum) {
+        spectrum.collect { pacer.offer(it) }
+    }
+
     LaunchedEffect(spectrum, decay) {
         var prev = FloatArray(0)
-        spectrum.collect { frame ->
+        while (true) {
+            withFrameMillis { }
+            // Starved: production (~43 Hz) is slower than the display, so this is the common case
+            // between frames. Hold what is already drawn rather than redrawing the same bins.
+            val frame = pacer.next() ?: continue
             // A fresh array each frame is intentional: mutableStateOf compares by reference, so a new
             // instance is what signals Compose to redraw. Do NOT switch to in-place mutation.
             val next =
