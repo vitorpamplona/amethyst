@@ -67,6 +67,21 @@ trap stack_down EXIT
 stack_require
 command -v npm >/dev/null 2>&1 || { echo "npm is needed to install @cordn/cli"; exit 2; }
 
+# A stuck reference client should fail the run rather than hang it, but macOS
+# ships no `timeout` (it is GNU coreutils; `gtimeout` if Homebrew installed
+# them). Without this the whole harness died at the first `ref` call with
+# nothing but "could not read the reference client's pubkey", because ref()
+# folds stderr into the output it parses and "command not found" matches no
+# field. Running untimed is better than not running.
+if command -v timeout >/dev/null 2>&1; then
+    REF_TIMEOUT="timeout 120"
+elif command -v gtimeout >/dev/null 2>&1; then
+    REF_TIMEOUT="gtimeout 120"
+else
+    REF_TIMEOUT=""
+    echo "note: no timeout(1) — the reference client runs untimed"
+fi
+
 step "boot geode on $RELAY and the reference coordinator"
 stack_up
 ok "coordinator $COORD"
@@ -88,7 +103,8 @@ ok "$("$CORDN" --version 2>/dev/null || echo unknown)"
 amy() { HOME="$WORK/amy" "$AMY" --account a --secret-backend ncryptsec "$@" 2>/dev/null; }
 amy2() { HOME="$WORK/amy2" "$AMY" --account b --secret-backend ncryptsec "$@" 2>/dev/null; }
 ref() {
-    timeout 120 "$CORDN" \
+    # shellcheck disable=SC2086  # REF_TIMEOUT is a command prefix, or empty
+    $REF_TIMEOUT "$CORDN" \
         --private-key-file "$WORK/ref.key" \
         --server-pubkey "$COORD" \
         --relay "$RELAY" \

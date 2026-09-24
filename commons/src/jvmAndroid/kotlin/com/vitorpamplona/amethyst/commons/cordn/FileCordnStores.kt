@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.quartz.cordn.sync.EchoState
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -109,6 +110,8 @@ object CordnStorageLayout {
     /** Comfortably under the 255-byte limit every filesystem we target has. */
     private const val MAX_NAME = 200
 }
+
+private const val TAG = "CordnStores"
 
 /**
  * Writes a blob to [file] so that a crash leaves either the old bytes or the
@@ -357,6 +360,15 @@ class FileCordnCoordinatorStore(
                 // A list written by a future build, or one the keystore can no
                 // longer decrypt. Returning nothing loses the coordinators but
                 // keeps the account usable; throwing here would fail login.
+                //
+                // Say so, though. Losing this list loses every cordn group with
+                // it — the MLS state stays on disk but a gid whose coordinator
+                // is unknown is not a group anyone can open — and silently it
+                // looks exactly like an account that never had a coordinator:
+                // the rooms are gone from the inbox and the invitations screen
+                // says there is nowhere to look. One line is the difference
+                // between a diagnosable fault and a mystery.
+                Log.w(TAG, "could not read ${stored.length()} bytes of coordinators, losing them: ${e.message}", e)
                 emptyList()
             }
         }

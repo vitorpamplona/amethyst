@@ -170,12 +170,21 @@ fun ChatroomHeaderCompose(
     // joined Marmot/NIP-29 group with no messages yet (an event-less placeholder carrying its channel
     // as a gatherer). Render these directly instead of waiting for an event that never arrives, which
     // would blank the row.
+    //
+    // A cordn room has no event *ever*, not just before its first message: its
+    // messages are MLS envelopes that never become Notes (§3.3 of
+    // amethyst/plans/2026-09-19-cordn-ui.md), so the row is only ever a carrier
+    // for the room in `inGatherers`. Leaving it out of this list sent every
+    // cordn room down the branch that waits for an event and drew `BlankNote()`
+    // instead — the room was in the feed, correctly, and simply had no pixels.
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
             baseNote is ConcordServerRoomNote ||
             (
                 baseNote.event == null &&
-                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel } == true
+                    baseNote.inGatherers?.any {
+                        it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel || it is CordnGroupChatroom
+                    } == true
             )
 
     if (baseNote.event != null || rendersWithoutEvent) {

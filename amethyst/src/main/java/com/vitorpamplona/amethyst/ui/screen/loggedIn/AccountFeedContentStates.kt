@@ -184,6 +184,39 @@ class AccountFeedContentStates(
             }
         }
 
+        // Same for cordn, and more so: a cordn message is an MLS envelope that
+        // never enters LocalCache at all (§3.3 of
+        // amethyst/plans/2026-09-19-cordn-ui.md), so nothing about a cordn room
+        // can ever reach the additive path. Without this the inbox never shows
+        // a cordn room — not when one is created, not when a Welcome is
+        // accepted, and not after a relaunch that restored it — and since the
+        // room list is the only way back into a room, a group became
+        // unreachable the moment its screen was closed.
+        //
+        // `all` carries the rooms themselves, so it bumps on create, join,
+        // restore and every message that moves a room's preview; sample() keeps
+        // the restore burst, when every coordinator's groups arrive at once,
+        // from rebuilding the feed once per room.
+        //
+        // No drop(1), unlike the collectors around it. Those drop the replay
+        // because the feed's first build already saw their state; cordn's
+        // restore runs in its own launch from Account's constructor and often
+        // finishes *after* that build, so the current value is exactly the one
+        // that matters — a StateFlow replays it on subscribe and dropping it
+        // waits for a change that, for an account whose rooms are all restored
+        // rather than newly created, never comes. The cost of keeping it is one
+        // extra rebuild at login.
+        account.cordnRuntime?.let { runtime ->
+            scope.launch(Dispatchers.IO) {
+                @OptIn(FlowPreview::class)
+                runtime.groups.all
+                    .sample(500)
+                    .collect {
+                        dmKnown.invalidateData()
+                    }
+            }
+        }
+
         // Same for the NIP-29 joined-group list (kind 10009): joining/leaving changes the list but
         // doesn't flow through newEventBundles, so force a rebuild — otherwise a just-joined group
         // (whose messages haven't loaded yet) wouldn't appear on the Messages tab until a later event.
