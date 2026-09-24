@@ -365,6 +365,7 @@
     <string name="cordn_invitations_accept">Join</string>
     <string name="cordn_invitations_decline">Decline</string>
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
     <string name="cordn_coordinators_discover">Coordinators announcing themselves</string>
     <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
     <string name="cordn_coordinators_discover_action">Look for coordinators</string>

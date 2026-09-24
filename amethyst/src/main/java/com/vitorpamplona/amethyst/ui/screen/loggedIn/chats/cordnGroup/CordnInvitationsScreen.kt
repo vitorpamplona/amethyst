@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitation
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitations
@@ -145,7 +146,10 @@ fun CordnInvitationsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (runtime == null) {
-                Text(stringRes(R.string.cordn_group_unavailable))
+                EmptyState(
+                    title = stringRes(R.string.cordn_group_unavailable),
+                    description = stringRes(R.string.cordn_group_unavailable_detail),
+                )
                 return@Column
             }
 

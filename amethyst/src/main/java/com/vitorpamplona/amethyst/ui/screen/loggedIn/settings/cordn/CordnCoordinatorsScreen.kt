@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
@@ -108,9 +109,13 @@ fun CordnCoordinatorsScreen(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_coordinators_title), nav) },
     ) { padding ->
         if (runtime == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            // The app's own empty state, centred and titled, rather than a
+            // sentence stranded in the top-left corner.
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 

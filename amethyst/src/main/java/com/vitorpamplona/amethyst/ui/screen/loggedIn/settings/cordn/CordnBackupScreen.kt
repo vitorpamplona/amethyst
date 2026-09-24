@@ -38,9 +38,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +57,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -138,13 +142,37 @@ fun CordnBackupScreen(
             pendingRestore = uri
         }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Outcomes go to a snackbar rather than two Text lines at the bottom of a
+    // scrolling form. They were easy to scroll past, they never left once
+    // shown, and an export that had just failed sat under a button that looked
+    // ready to try again.
+    LaunchedEffect(status) {
+        status?.let {
+            snackbarHostState.showSnackbar(it)
+            status = null
+        }
+    }
+    LaunchedEffect(error) {
+        error?.let {
+            snackbarHostState.showSnackbar(it)
+            error = null
+        }
+    }
+
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_backup_title), nav) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (runtime == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            // The app's own empty state, centred and titled, rather than a
+            // sentence stranded in the top-left corner.
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -193,7 +221,10 @@ fun CordnBackupScreen(
                 enabled = !busy && passphrase.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.cordn_backup_export))
+                // Key derivation here is scrypt, which is slow on purpose, so
+                // a greyed-out button was the only sign anything was happening
+                // for several seconds.
+                BusyLabel(busy, stringRes(R.string.cordn_backup_export))
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -210,11 +241,8 @@ fun CordnBackupScreen(
                 enabled = !busy && passphrase.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.cordn_backup_restore))
+                BusyLabel(busy, stringRes(R.string.cordn_backup_restore))
             }
-
-            status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
         }
     }
 
