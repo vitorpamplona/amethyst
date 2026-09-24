@@ -29,7 +29,7 @@ import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 
 internal class KeyStoreEncryption {
     companion object {
@@ -46,6 +46,12 @@ internal class KeyStoreEncryption {
         private const val GCM_PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
         private const val PURPOSE = KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         private const val KEY_ALIAS = "AMETHYST_AES_KEY"
+
+        /** GCM's authentication tag, in bits. 128 is the default and the maximum. */
+        private const val TAG_BITS = 128
+
+        /** GCM's nonce, in bytes — what [encrypt] prefixes to its output. */
+        private const val IV_BYTES = 12
 
         private fun transformationFor(padding: String) = "$ALGORITHM/$BLOCK_MODE/$padding"
 
@@ -155,11 +161,18 @@ internal class KeyStoreEncryption {
 
     fun decrypt(bytes: ByteArray): ByteArray {
         try {
-            // Extracts IV and decrypts the data
-            val iv = bytes.copyOfRange(0, 12) // GCM mode uses 12-byte IV
-            val data = bytes.copyOfRange(12, bytes.size)
+            val iv = bytes.copyOfRange(0, IV_BYTES)
+            val data = bytes.copyOfRange(IV_BYTES, bytes.size)
             val cipher = ciphers.get()
-            cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
+            // A GCMParameterSpec, not an IvParameterSpec. [BLOCK_MODE] is GCM,
+            // and AndroidKeyStore's GCM implementation rejects anything else
+            // outright — "Only GCMParameterSpec supported". Encrypting never
+            // noticed, because that direction lets the cipher choose its own
+            // nonce and passes no spec at all, so every store built on this
+            // class could write bytes it was then unable to read back: cordn
+            // lost its coordinators on each launch, and Marmot and the
+            // encrypted DataStore read nothing they had saved.
+            cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(TAG_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {
             cachedKey = null
