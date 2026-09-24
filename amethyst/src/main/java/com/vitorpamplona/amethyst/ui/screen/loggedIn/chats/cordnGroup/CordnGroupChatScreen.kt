@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.AutoScrollToNewest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -331,14 +333,19 @@ private fun CordnGroupChat(
                 }
             }
 
+            // The same rule every other chat follows: your own message always
+            // pulls the view onto it, someone else's only while you are already
+            // at the bottom, and history you scrolled up to read is left alone.
+            val newest = rows.firstOrNull()?.envelope
+            AutoScrollToNewest(listState, newest?.id, mine = newest?.pubKey == me)
+
             LazyColumn(
                 state = listState,
                 // Anchored at the bottom like every other chat: a room opens on
-                // its newest message, and an arrival while you sit at the
-                // bottom keeps you there instead of pushing the conversation up
-                // out of view. `messages` is oldest-first, so the rows are
-                // reversed to match.
+                // its newest message. `messages` is oldest-first, so the rows
+                // are reversed to match.
                 reverseLayout = true,
+                contentPadding = FeedPadding,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             ) {
                 itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
@@ -347,80 +354,94 @@ private fun CordnGroupChat(
                     val older = rows.getOrNull(index + 1)
                     val newer = rows.getOrNull(index - 1)
 
-                    CordnMessageRow(
-                        message = message,
-                        room = room,
-                        annotations = annotations,
-                        me = me,
-                        // Grouped when the same person keeps talking inside the
-                        // shared chat window: one avatar and name per burst
-                        // instead of per line, and the bubbles of a burst square
-                        // off against each other — which is most of what makes a
-                        // wall of messages readable.
-                        groupPosition =
-                            remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
-                                cordnGroupPositionFor(newer, message, older)
+                    // Send/arrival motion, as in the shared feed: a new row fades
+                    // in and the ones above slide to make room, so a sent message
+                    // enters instead of appearing.
+                    val itemModifier =
+                        if (accountViewModel.settings.isPerformanceMode()) {
+                            Modifier
+                        } else {
+                            Modifier.animateItem()
+                        }
+
+                    // One Column, so the item is a single placeable. `reverseLayout`
+                    // mirrors each of an item's placeables about the main axis, which
+                    // inverts the order of siblings emitted side by side — but it does
+                    // not reach inside a layout, so this Column still reads top to
+                    // bottom. Both headers are therefore composed BEFORE the bubble
+                    // they introduce: the date above the whole day, then the unread
+                    // line immediately against the message.
+                    Column(modifier = itemModifier) {
+                        // Starts a new day when it differs from the older row, which
+                        // under reverseLayout is the one rendered above.
+                        if (!message.sameDayAs(older)) {
+                            DaySeparator(message.envelope.createdAt, today)
+                        }
+
+                        if (message.envelope.id == firstUnreadId) {
+                            UnreadDivider()
+                        }
+
+                        CordnMessageRow(
+                            message = message,
+                            room = room,
+                            annotations = annotations,
+                            me = me,
+                            // Grouped when the same person keeps talking inside the
+                            // shared chat window: one avatar and name per burst
+                            // instead of per line, and the bubbles of a burst square
+                            // off against each other — which is most of what makes a
+                            // wall of messages readable.
+                            groupPosition =
+                                remember(newer?.envelope?.id, message.envelope.id, older?.envelope?.id) {
+                                    cordnGroupPositionFor(newer, message, older)
+                                },
+                            // The edit if there is one, and nothing at all if the
+                            // message was withdrawn: rendering the original text of
+                            // a deleted message would defeat the deletion.
+                            text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
+                            isEdited = annotations.isEdited(message.envelope.id),
+                            shouldHighlight = highlighted == message.envelope.id,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onHighlightFinished = { highlighted = null },
+                            onScrollToMessage = jumpTo,
+                            onReply = {
+                                replyingTo = message
+                                editing = null
                             },
-                        // The edit if there is one, and nothing at all if the
-                        // message was withdrawn: rendering the original text of
-                        // a deleted message would defeat the deletion.
-                        text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
-                        isEdited = annotations.isEdited(message.envelope.id),
-                        shouldHighlight = highlighted == message.envelope.id,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onHighlightFinished = { highlighted = null },
-                        onScrollToMessage = jumpTo,
-                        onReply = {
-                            replyingTo = message
-                            editing = null
-                        },
-                        onEdit = {
-                            editing = message
-                            replyingTo = null
-                            room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
-                        },
-                        onDelete = {
-                            // Through trySend like the rest: a deletion is an
-                            // annotation, and an annotation of your own comes back
-                            // as an Echo too, so deleting your own message used to
-                            // look like nothing had happened until someone else's
-                            // traffic refreshed the fold.
-                            scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
-                        },
-                        onTogglePin = {
-                            val pinned = annotations.isPinned(message.envelope.id)
-                            scope.launch {
-                                trySend {
-                                    it.post(
-                                        gid = room.gid,
-                                        pinTo = message.target(),
-                                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                                    )
+                            onEdit = {
+                                editing = message
+                                replyingTo = null
+                                room.draft.value = annotations.contentOf(message.envelope.id).orEmpty()
+                            },
+                            onDelete = {
+                                // Through trySend like the rest: a deletion is an
+                                // annotation, and an annotation of your own comes back
+                                // as an Echo too, so deleting your own message used to
+                                // look like nothing had happened until someone else's
+                                // traffic refreshed the fold.
+                                scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
+                            },
+                            onTogglePin = {
+                                val pinned = annotations.isPinned(message.envelope.id)
+                                scope.launch {
+                                    trySend {
+                                        it.post(
+                                            gid = room.gid,
+                                            pinTo = message.target(),
+                                            pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        onReact = { emoji ->
-                            scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
-                        },
-                    )
-
-                    // Both are emitted after the row, which in a reversed list puts
-                    // them above it — so the later one draws higher. The unread line
-                    // belongs against the message, the date above the whole day.
-                    if (message.envelope.id == firstUnreadId) {
-                        UnreadDivider()
-                    }
-
-                    // Drawn under the first message of each day, which in a
-                    // reversed list means comparing against the older row.
-                    if (!message.sameDayAs(older)) {
-                        DaySeparator(message.envelope.createdAt, today)
+                            },
+                            onReact = { emoji ->
+                                scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
+                            },
+                        )
                     }
                 }
             }
-
-            HorizontalDivider()
 
             (attachError ?: sendError)?.let {
                 Text(
