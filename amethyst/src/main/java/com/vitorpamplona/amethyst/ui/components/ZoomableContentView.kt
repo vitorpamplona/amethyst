@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
@@ -749,12 +750,7 @@ fun BaseMediaContent.isAnimatedMedia(): Boolean =
     if (this is MediaUrlContent) {
         mimeType == "image/gif" ||
             mimeType == "image/avif" ||
-            url.endsWith(".gif", ignoreCase = true) ||
-            url.contains(".gif?", ignoreCase = true) ||
-            url.contains(".gif#", ignoreCase = true) ||
-            url.endsWith(".avif", ignoreCase = true) ||
-            url.contains(".avif?", ignoreCase = true) ||
-            url.contains(".avif#", ignoreCase = true)
+            isAnimatedMediaUrl(url)
     } else if (this is MediaPreloadedContent) {
         mimeType == "image/gif" ||
             mimeType == "image/avif" ||

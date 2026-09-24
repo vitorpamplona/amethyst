@@ -62,8 +62,13 @@ fun observeUserPicture(
     user: User,
     userFinder: UserFinderFilterAssembler,
     account: UserFinderAccount,
+    // Callers that already hold a subscription for the same user (e.g. an author avatar that
+    // also observes the contact-card score) pass false to skip a redundant relay subscription.
+    subscribe: Boolean = true,
 ): State<String?> {
-    UserFinderFilterAssemblerSubscription(user, account, userFinder)
+    if (subscribe) {
+        UserFinderFilterAssemblerSubscription(user, account, userFinder)
+    }
 
     val flow =
         remember(user) {

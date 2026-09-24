@@ -74,12 +74,12 @@ import com.vitorpamplona.amethyst.commons.resources.badge_awardees_label
 import com.vitorpamplona.amethyst.commons.resources.badge_untitled
 import com.vitorpamplona.amethyst.commons.resources.reject_badge
 import com.vitorpamplona.amethyst.commons.resources.unaccept_badge
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

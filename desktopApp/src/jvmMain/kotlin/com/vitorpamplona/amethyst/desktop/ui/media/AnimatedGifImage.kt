@@ -51,13 +51,6 @@ private const val MIN_FRAME_DURATION_MS = 20
 
 private val gifHttpClient get() = DesktopHttpClient.currentClient()
 
-fun isAnimatedGifUrl(url: String): Boolean {
-    val lower = url.lowercase()
-    return lower.endsWith(".gif") ||
-        lower.contains(".gif?") ||
-        lower.contains(".gif#")
-}
-
 private class GifFrames(
     val frames: List<ImageBitmap>,
     val durations: List<Int>,

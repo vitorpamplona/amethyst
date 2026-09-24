@@ -70,8 +70,8 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_deny_always
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_hide_event
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_not_now
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_show_event
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**

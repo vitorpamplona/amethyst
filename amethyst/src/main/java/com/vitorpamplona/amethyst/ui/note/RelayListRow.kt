@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand_relay_list
 import com.vitorpamplona.amethyst.commons.resources.relay_info
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.relayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

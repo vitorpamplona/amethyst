@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssem
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
-import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
