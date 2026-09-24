@@ -244,7 +244,7 @@ private fun OfferRecipientRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(baseUserHex = pubKey, accountViewModel) { user ->
+    LoadUser(baseUserHex = pubKey) { user ->
         if (user != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

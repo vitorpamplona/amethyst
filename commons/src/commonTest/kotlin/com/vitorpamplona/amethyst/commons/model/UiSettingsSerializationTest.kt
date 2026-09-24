@@ -18,36 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts.multiline
+package com.vitorpamplona.amethyst.commons.model
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.ui.components.toasts.ToastMsg
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@Immutable
-class MultiErrorToastMsg(
-    val titleResId: StringResource,
-) : ToastMsg() {
-    val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
+/**
+ * Settings saved by older versions are read back with `JsonMapper.fromJson<UiSettings>` (the
+ * encrypted-preferences fallback in `UiSharedPreferences`). That needs the kotlinx serializer the
+ * serialization plugin generates, which a module without the plugin silently does not produce.
+ */
+class UiSettingsSerializationTest {
+    @Test
+    fun uiSettingsRoundTripsThroughJson() {
+        val settings =
+            UiSettings(
+                theme = ThemeType.DARK,
+                featureSet = FeatureSetType.PERFORMANCE,
+                automaticallyShowProfilePictures = ConnectivityType.WIFI_ONLY,
+                fontSize = FontSizeType.LARGE,
+                composeSignature = "sig",
+            )
 
-    fun add(
-        message: String,
-        user: User?,
-    ) {
-        add(UserBasedErrorMessage(message, user))
+        val json = JsonMapper.toJson(settings)
+
+        assertEquals(settings, JsonMapper.fromJson<UiSettings>(json))
     }
 
-    fun add(newError: UserBasedErrorMessage) {
-        errors.update {
-            it + newError
-        }
+    @Test
+    fun anEmptyObjectDecodesToTheDefaults() {
+        assertEquals(UiSettings(), JsonMapper.fromJson<UiSettings>("{}"))
     }
 }
-
-class UserBasedErrorMessage(
-    val error: String,
-    val user: User?,
-)

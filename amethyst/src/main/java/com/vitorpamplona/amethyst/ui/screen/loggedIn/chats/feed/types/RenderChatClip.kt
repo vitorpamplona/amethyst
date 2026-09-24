@@ -72,7 +72,7 @@ fun RenderChatClip(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserPicture(authorHex, Size20dp, Modifier, accountViewModel, nav)
                 Spacer(StdHorzSpacer)
-                LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { user ->
+                LoadUser(baseUserHex = authorHex) { user ->
                     if (user != null) {
                         UsernameDisplay(
                             baseUser = user,

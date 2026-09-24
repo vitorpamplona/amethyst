@@ -108,7 +108,7 @@ private fun SingleAlgoFeedBanner(
 
     val feedAddressValue = favFeed.address.toValue()
 
-    LoadNote(baseNoteHex = feedAddressValue, accountViewModel = accountViewModel) { feedNote ->
+    LoadNote(baseNoteHex = feedAddressValue) { feedNote ->
         val resolvedName by
             observeNoteAndMap(feedNote ?: return@LoadNote, accountViewModel) { note ->
                 (note.event as? AppDefinitionEvent)

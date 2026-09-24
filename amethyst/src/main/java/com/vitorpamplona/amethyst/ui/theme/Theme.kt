@@ -45,12 +45,14 @@ import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLa
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
-import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
+import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueDark
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueLight
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenDark
@@ -148,9 +150,9 @@ fun AmethystTheme(content: @Composable () -> Unit) {
     val accentColor by uiPrefs.accentColor.collectAsStateWithLifecycle()
     val fontFamily by uiPrefs.fontFamily.collectAsStateWithLifecycle()
     val fontSize by uiPrefs.fontSize.collectAsStateWithLifecycle()
-    val featureSet by uiPrefs.featureSet.collectAsStateWithLifecycle()
+    val displaySettings = collectDisplaySettings(Amethyst.instance.uiState)
 
-    AmethystTheme(theme, accentColor, fontFamily, fontSize, animationsEnabled = featureSet != FeatureSetType.PERFORMANCE, content = content)
+    AmethystTheme(theme, accentColor, fontFamily, fontSize, displaySettings, content)
 }
 
 @Composable
@@ -159,7 +161,7 @@ fun AmethystTheme(
     accentColor: AccentColorType = AccentColorType.PURPLE,
     fontFamily: FontFamilyType = FontFamilyType.SYSTEM,
     fontSize: FontSizeType = FontSizeType.NORMAL,
-    animationsEnabled: Boolean = true,
+    displaySettings: DisplaySettings = DisplaySettings(),
     content: @Composable () -> Unit,
 ) {
     // Deliberately no UiModeManager.nightMode write: changing the device night mode needs
@@ -196,8 +198,9 @@ fun AmethystTheme(
                     LocalDensity provides scaledDensity,
                     // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
                     LocalProfilePictureCache provides true,
+                    LocalDisplaySettings provides displaySettings,
                     // Performance mode turns decorative animations (crossfades) off app-wide.
-                    LocalAnimationsEnabled provides animationsEnabled,
+                    LocalAnimationsEnabled provides !displaySettings.performanceMode,
                     LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),
                     content = content,
                 )

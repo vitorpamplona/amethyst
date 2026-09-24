@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
@@ -210,12 +211,12 @@ fun RelayGroupChannelListScreen(
     // so the first frame doesn't reshuffle when the first emission arrives.
     // remember the seed so the per-relay cache scan + sort runs once (on first composition / relay
     // change), not on every recomposition — produceState evaluates its initialValue argument eagerly.
-    val initialChannels = remember(relay) { accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() } }
+    val initialChannels = remember(relay) { LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() } }
     val allChannels by produceState(initialValue = initialChannels, relay) {
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .collect {
-                value = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+                value = LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
             }
     }
 
@@ -973,8 +974,8 @@ private fun RelayGroupChannelRow(
             model = channel.profilePicture(),
             contentDescription = channel.toBestDisplayName(),
             modifier = Modifier.size(40.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = autoPlayGif,
         )
 

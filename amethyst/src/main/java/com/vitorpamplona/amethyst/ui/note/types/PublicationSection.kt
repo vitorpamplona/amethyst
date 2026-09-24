@@ -113,7 +113,7 @@ fun RenderPublicationSection(
         // A chapter arrived at from a search, a mention or a wikilink has nothing around it to say
         // what it is a chapter *of*. The index names itself, so show it above the title.
         noteEvent.publicationAddress()?.let { address ->
-            LoadAddressableNote(address, accountViewModel) { indexNote ->
+            LoadAddressableNote(address) { indexNote ->
                 indexNote?.let { PublicationCrumb(it, accountViewModel, nav) }
             }
         }
@@ -142,7 +142,7 @@ fun RenderPublicationSection(
         }
 
         noteEvent.publicationAddress()?.let { address ->
-            LoadAddressableNote(address, accountViewModel) { indexNote ->
+            LoadAddressableNote(address) { indexNote ->
                 indexNote?.let { PublicationPager(noteEvent, it, accountViewModel, nav) }
             }
         }
@@ -253,11 +253,11 @@ private fun PagerEnd(
     // The index's own title shows immediately; the neighbour is still observed, because observing
     // is what fetches it and it carries the better title.
     if (address != null) {
-        LoadAddressableNote(address, accountViewModel) { target ->
+        LoadAddressableNote(address) { target ->
             target?.let { PagerButton(ref, it, isBack, accountViewModel, nav, modifier) }
         }
     } else if (eventId != null) {
-        LoadNote(eventId, accountViewModel) { target ->
+        LoadNote(eventId) { target ->
             target?.let { PagerButton(ref, it, isBack, accountViewModel, nav, modifier) }
         }
     }

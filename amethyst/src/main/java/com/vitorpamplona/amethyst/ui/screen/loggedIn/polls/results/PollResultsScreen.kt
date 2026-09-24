@@ -141,7 +141,7 @@ fun PollResultsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = noteId, accountViewModel) { note ->
+    LoadNote(baseNoteHex = noteId) { note ->
         if (note == null) {
             PollResultsScaffold(nav) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

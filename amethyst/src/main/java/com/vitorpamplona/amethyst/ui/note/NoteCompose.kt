@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.elements.StaleRelayHint
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -922,7 +923,7 @@ private fun RenderApprovalIfNeeded(
                 baseNote.event?.communityAddress()
             }
         communityAddress?.let {
-            LoadAddressableNote(it, accountViewModel) { community ->
+            LoadAddressableNote(it) { community ->
                 if (community != null) {
                     val showApproveButton by observeCommunityApprovalNeedStatus(baseNote, community, accountViewModel)
                     if (showApproveButton == true) {
@@ -2427,7 +2428,7 @@ fun RenderAuthorImages(
     if (noteEvent is ChannelMessageEvent) {
         val baseChannelHex = noteEvent.channelId()
         if (baseChannelHex != null) {
-            LoadPublicChatChannel(baseChannelHex, accountViewModel) { channel ->
+            LoadPublicChatChannel(baseChannelHex) { channel ->
                 ChannelNotePicture(
                     channel,
                     accountViewModel,
@@ -2449,8 +2450,8 @@ private fun ChannelNotePicture(
         model = model,
         contentDescription = stringRes(Res.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()

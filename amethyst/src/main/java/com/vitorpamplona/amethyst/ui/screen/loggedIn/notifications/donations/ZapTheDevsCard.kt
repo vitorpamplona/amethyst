@@ -118,7 +118,6 @@ fun ZapTheDevsCardPreview() {
 
     LoadNote(
         baseNoteHex = "0465b20da0adf45dd612024d124e1ed384f7ecd2cd7358e77998828e7bf35fa2",
-        accountViewModel,
     ) { releaseNote ->
         if (releaseNote != null) {
             ThemeComparisonColumn {

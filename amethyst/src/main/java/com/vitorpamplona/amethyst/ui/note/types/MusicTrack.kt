@@ -517,7 +517,7 @@ private fun RenderMusicTrackPreview() {
     remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let {
                 RenderMusicTrack(
                     note = it,
@@ -549,7 +549,7 @@ private fun RenderMusicTrackExplicitPreview() {
     remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let {
                 RenderMusicTrack(
                     note = it,
@@ -571,7 +571,7 @@ private fun MusicTrackCoverPreview() {
     remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let { MusicTrackCover(image = null, note = it, accountViewModel = mockAccountViewModel()) }
         }
     }

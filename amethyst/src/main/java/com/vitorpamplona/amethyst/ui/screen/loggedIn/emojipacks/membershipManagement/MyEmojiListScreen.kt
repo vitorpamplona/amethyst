@@ -80,7 +80,6 @@ fun MyEmojiListScreen(
 ) {
     LoadAddressableNote(
         address = accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
-        accountViewModel = accountViewModel,
     ) { selectionNote ->
         selectionNote?.let {
             MyEmojiListView(
@@ -162,7 +161,6 @@ private fun MyEmojiListFeed(
         ) { address ->
             LoadAddressableNote(
                 address = address,
-                accountViewModel = accountViewModel,
             ) { packNote ->
                 packNote?.let {
                     SelectedEmojiPackCard(

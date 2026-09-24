@@ -152,7 +152,7 @@ fun SendPaymentScreen(
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.send_payment_title), nav) },
     ) { pad ->
-        LoadUser(baseUserHex = userHex, accountViewModel) { user ->
+        LoadUser(baseUserHex = userHex) { user ->
             if (user != null) {
                 UserFinderFilterAssemblerSubscription(user, accountViewModel)
                 SendPaymentLoaded(

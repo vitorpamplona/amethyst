@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_relay_not_nip29
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
@@ -74,8 +75,8 @@ fun RelayGroupServerRow(
         RenderRelayIcon(
             displayUrl = host,
             iconUrl = info?.value?.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             pingInMs = 0,
             iconModifier = LargeRelayIconModifier,
         )

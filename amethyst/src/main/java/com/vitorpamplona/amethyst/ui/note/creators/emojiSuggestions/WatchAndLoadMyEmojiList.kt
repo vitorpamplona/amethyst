@@ -34,7 +34,6 @@ import kotlinx.collections.immutable.toImmutableList
 fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
     LoadAddressableNote(
         EmojiPackSelectionEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
-        accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
@@ -42,7 +41,7 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
             }
 
             collections?.forEach { address ->
-                LoadAddressableNote(address, accountViewModel) { note ->
+                LoadAddressableNote(address) { note ->
                     if (note != null) {
                         EventFinderFilterAssemblerSubscription(note, accountViewModel)
                     }

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -115,7 +116,7 @@ fun GeohashChatScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadGeohashChannel(geohash, accountViewModel) { channel ->
+    LoadGeohashChannel(geohash) { channel ->
         GeohashChatRoom(channel, teleported, accountViewModel, nav)
     }
 }
@@ -317,8 +318,8 @@ private fun GeohashIdentityAvatar(
                 model = picture,
                 contentDescription = "Posting as yourself — tap to go anonymous, long-press for a nickname",
                 modifier = avatarModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif = false,
             )
         } else {

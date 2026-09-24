@@ -312,11 +312,10 @@ private fun EmojiListToggleRow(
         remember(pack, accountViewModel) {
             Address(EmojiPackEvent.KIND, accountViewModel.account.signer.pubKey, pack.identifier)
         }
-    LoadAddressableNote(packAddress, accountViewModel) {
+    LoadAddressableNote(packAddress) {
         it?.let { packNote ->
             LoadAddressableNote(
                 accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
-                accountViewModel,
             ) { selectionNote ->
                 selectionNote?.let { usersEmojiList ->
                     val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {

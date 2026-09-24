@@ -315,8 +315,8 @@ fun AcceptBadgeControls(
     val amAwardee = remember(award, myPubkey) { award.awardeeIds().contains(myPubkey) }
     if (!amAwardee) return
 
-    val newNote = accountViewModel.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
-    val oldNote = accountViewModel.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
+    val newNote = LocalCache.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
+    val oldNote = LocalCache.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
 
     val newState by newNote
         .flow()

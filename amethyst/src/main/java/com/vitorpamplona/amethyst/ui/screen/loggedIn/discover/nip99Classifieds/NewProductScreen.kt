@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.description
@@ -111,10 +112,10 @@ fun NewProductScreen(
 
     LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.reloadRelaySet()
-        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        draftId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        quoteId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {

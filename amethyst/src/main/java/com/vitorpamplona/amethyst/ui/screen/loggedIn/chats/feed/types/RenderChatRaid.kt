@@ -84,7 +84,7 @@ fun RenderChatRaid(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UserPicture(from.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
                     Spacer(StdHorzSpacer)
-                    LoadUser(baseUserHex = from.pubKeyHex, accountViewModel = accountViewModel) { user ->
+                    LoadUser(baseUserHex = from.pubKeyHex) { user ->
                         if (user != null) {
                             UsernameDisplay(
                                 baseUser = user,
@@ -104,7 +104,7 @@ fun RenderChatRaid(
 
                     UserPicture(to.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
                     Spacer(StdHorzSpacer)
-                    LoadUser(baseUserHex = to.pubKeyHex, accountViewModel = accountViewModel) { user ->
+                    LoadUser(baseUserHex = to.pubKeyHex) { user ->
                         if (user != null) {
                             UsernameDisplay(
                                 baseUser = user,

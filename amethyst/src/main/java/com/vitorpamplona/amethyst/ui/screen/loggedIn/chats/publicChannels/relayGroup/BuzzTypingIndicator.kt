@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_typing_many
 import com.vitorpamplona.amethyst.commons.resources.buzz_typing_one
@@ -184,7 +185,7 @@ private fun rememberTypistName(
     hex: HexKey,
     accountViewModel: AccountViewModel,
 ): String {
-    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val user = remember(hex) { LocalCache.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
     val info by observeUserInfo(user, accountViewModel)
     return info?.info?.bestName() ?: remember(user) { user.pubkeyDisplayHex() }
 }

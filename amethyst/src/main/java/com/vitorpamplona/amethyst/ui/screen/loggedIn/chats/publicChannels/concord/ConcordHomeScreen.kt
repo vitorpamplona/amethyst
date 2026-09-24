@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarP
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -313,8 +314,8 @@ private fun CommunityHeader(
             model = iconModel,
             contentDescription = name,
             modifier = Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onOpen),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = autoPlayGif,
         )
         // The identity block — icon *and* name/subtitle — opens the community; the rest of the row and

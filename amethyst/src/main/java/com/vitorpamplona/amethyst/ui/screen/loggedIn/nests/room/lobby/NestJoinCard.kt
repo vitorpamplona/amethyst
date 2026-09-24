@@ -86,7 +86,7 @@ fun NestJoinCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(baseChannel.address, accountViewModel) { addressableNote ->
+    LoadAddressableNote(baseChannel.address) { addressableNote ->
         addressableNote ?: return@LoadAddressableNote
         val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
         NestJoinCardContent(event, accountViewModel, nav)

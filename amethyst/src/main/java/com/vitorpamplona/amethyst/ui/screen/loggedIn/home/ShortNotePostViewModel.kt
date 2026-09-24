@@ -1506,7 +1506,7 @@ open class ShortNotePostViewModel :
                     val tags = prepareETagsAsReplyTo(replyingTo, forkingFrom)
                     // fixes wrong tags from previous clients
                     tags.forEach {
-                        val note = accountViewModel.getNoteIfExists(it.eventId)
+                        val note = LocalCache.getNoteIfExists(it.eventId)
                         val ourAuthor = note?.author?.pubkeyHex
                         val ourHint = note?.relayHintUrl()
                         if (it.author == null || it.author?.isBlank() == true) {

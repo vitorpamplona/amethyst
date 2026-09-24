@@ -96,7 +96,7 @@ fun DmReportWarningCard(
 ) {
     val counterpartHex = room.users.singleOrNull() ?: return
 
-    LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { user ->
+    LoadUser(baseUserHex = counterpartHex) { user ->
         if (user != null) {
             val flow = remember(user) { accountViewModel.createUserReportWarningFlow(user) }
             val state by flow.collectAsStateWithLifecycle()

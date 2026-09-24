@@ -212,7 +212,7 @@ fun TorrentHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = torrentHex, accountViewModel = accountViewModel) {
+    LoadNote(baseNoteHex = torrentHex) {
         if (it != null) {
             ShortTorrentHeader(it, modifier, accountViewModel, nav)
         }

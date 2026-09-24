@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
@@ -49,8 +50,8 @@ fun ShowRelaySuggestionList(
             suggestions.forEachIndexed { index, relayInfo ->
                 BasicRelaySetupInfoClickableRow(
                     item = relayInfo,
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
                     onClick = { onSelect(relayInfo.relay) },
                     onDelete = null,
                     nip11CachedRetriever = nip11CachedRetriever,

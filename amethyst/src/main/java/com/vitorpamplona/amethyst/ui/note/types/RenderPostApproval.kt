@@ -58,7 +58,7 @@ fun RenderPostApproval(
 
     Column(Modifier.fillMaxWidth()) {
         noteEvent.communityAddresses().forEach { tag ->
-            LoadAddressableNote(tag, accountViewModel) { baseNote ->
+            LoadAddressableNote(tag) { baseNote ->
                 baseNote?.let {
                     RenderCommunity(
                         baseNote = it,

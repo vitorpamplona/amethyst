@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline_banner
@@ -72,11 +73,11 @@ fun rememberDvmHeartbeatFresh(
 
     var heartbeatNote by
         remember(heartbeatAddressTag) {
-            mutableStateOf(accountViewModel.getNoteIfExists(heartbeatAddressTag))
+            mutableStateOf(LocalCache.getNoteIfExists(heartbeatAddressTag))
         }
     LaunchedEffect(heartbeatAddressTag) {
         if (heartbeatNote == null) {
-            heartbeatNote = accountViewModel.checkGetOrCreateNote(heartbeatAddressTag)
+            heartbeatNote = LocalCache.checkGetOrCreateNote(heartbeatAddressTag)
         }
     }
 

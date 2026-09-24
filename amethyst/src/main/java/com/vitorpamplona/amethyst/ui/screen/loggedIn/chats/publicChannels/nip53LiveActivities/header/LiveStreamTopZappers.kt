@@ -48,6 +48,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
@@ -92,11 +93,11 @@ fun LiveStreamTopZappers(
     val goalId = channel.info?.goalEventId()
     if (goalId != null) {
         var goalNoteHolder by remember(goalId) {
-            mutableStateOf(accountViewModel.getNoteIfExists(goalId))
+            mutableStateOf(LocalCache.getNoteIfExists(goalId))
         }
         LaunchedEffect(goalId) {
             if (goalNoteHolder == null) {
-                goalNoteHolder = accountViewModel.checkGetOrCreateNote(goalId)
+                goalNoteHolder = LocalCache.checkGetOrCreateNote(goalId)
             }
             topZappersVm.setGoalNote(goalNoteHolder)
         }

@@ -59,7 +59,7 @@ fun ArticleBookmarkListManagementScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address = articleAddress, accountViewModel = accountViewModel) {
+    LoadAddressableNote(address = articleAddress) {
         it?.let {
             ListManagementView(
                 modifier = Modifier.fillMaxSize().recalculateWindowInsets(),

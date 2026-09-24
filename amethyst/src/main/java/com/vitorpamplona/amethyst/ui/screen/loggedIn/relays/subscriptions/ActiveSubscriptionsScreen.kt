@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -475,7 +476,7 @@ private fun EntityBlock(
                     model = resolved.picture,
                     contentDescription = label,
                     modifier = Modifier.size(24.dp).clip(CircleShape),
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
                     loadRobohash = false,
                 )
                 Spacer(Modifier.width(8.dp))
@@ -522,7 +523,7 @@ private fun RelayLine(
             contentDescription = relay.displayUrl(),
             colorFilter = RelayIconFilter,
             modifier = Modifier.size(20.dp).clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
             loadRobohash = false,
         )
         Spacer(Modifier.width(8.dp))

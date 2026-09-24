@@ -82,6 +82,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
@@ -217,11 +218,11 @@ fun ShortNotePostScreen(
     }
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
-        val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
-        val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
-        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+        val baseReplyTo = baseReplyToId?.let { LocalCache.getNoteIfExists(it) }
+        val quote = quoteId?.let { LocalCache.getNoteIfExists(it) }
+        val fork = forkId?.let { LocalCache.getNoteIfExists(it) }
+        val version = versionId?.let { LocalCache.getNoteIfExists(it) }
+        val draft = draftId?.let { LocalCache.getNoteIfExists(it) }
         postViewModel.load(baseReplyTo, quote, fork, version, draft)
         message?.ifBlank { null }?.let {
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)

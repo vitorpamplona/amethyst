@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
@@ -149,13 +150,13 @@ fun ReplyCommentPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        replyId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
-        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        draftId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        quoteId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {

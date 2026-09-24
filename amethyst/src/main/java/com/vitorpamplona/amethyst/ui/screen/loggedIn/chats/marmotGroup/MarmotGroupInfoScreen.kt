@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
@@ -760,7 +761,7 @@ fun MemberRow(
             nav = nav,
         )
         Column(modifier = Modifier.weight(1f)) {
-            LoadUser(baseUserHex = member.pubkey, accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = member.pubkey) { user ->
                 val displayName = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, member.pubkey.take(16))
                 val youSuffix = stringRes(Res.string.marmot_member_suffix_you)
                 val adminSuffix = stringRes(Res.string.marmot_member_suffix_admin)
@@ -875,7 +876,7 @@ private fun ConfirmRemoveMemberDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.marmot_remove_member)) },
         text = {
-            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = memberPubkey) { user ->
                 val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
                 Text(stringRes(Res.string.marmot_remove_member_confirm, name))
             }
@@ -904,7 +905,7 @@ private fun ConfirmGrantAdminDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.marmot_grant_admin_title)) },
         text = {
-            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = memberPubkey) { user ->
                 val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
                 Text(stringRes(Res.string.marmot_grant_admin_confirm, name))
             }
@@ -933,7 +934,7 @@ private fun ConfirmRevokeAdminDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.marmot_revoke_admin_title)) },
         text = {
-            LoadUser(baseUserHex = memberPubkey, accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = memberPubkey) { user ->
                 val name = user?.toBestDisplayName() ?: stringRes(Res.string.marmot_user_fallback_name, memberPubkey.take(16))
                 Text(stringRes(Res.string.marmot_revoke_admin_confirm, name))
             }
@@ -1025,9 +1026,9 @@ fun GroupRelayTile(
         RenderRelayIcon(
             displayUrl = relayInfo.id ?: fallbackUrl,
             iconUrl = relayInfo.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
             pingInMs = 0,
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             iconModifier = MediumRelayIconModifier,
         )
 

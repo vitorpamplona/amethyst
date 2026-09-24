@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.earliestOtsVerifiedTime
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -91,14 +92,13 @@ fun LoadDecryptedContentOrNull(
 @Composable
 fun LoadAddressableNote(
     address: Address,
-    accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     val note by produceState(
-        accountViewModel.getAddressableNoteIfExists(address),
+        LocalCache.getAddressableNoteIfExists(address),
         address,
     ) {
-        val newNote = accountViewModel.getOrCreateAddressableNote(address)
+        val newNote = LocalCache.getOrCreateAddressableNote(address)
         if (newNote != value) {
             value = newNote
         }
@@ -149,11 +149,10 @@ fun LoadOts(
 @Composable
 fun LoadPublicChatChannel(
     id: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (PublicChatChannel) -> Unit,
 ) {
-    val channel by produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
-        value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
+    val channel by produceStateIfNotNull(LocalCache.getPublicChatChannelIfExists(id), id) {
+        value = LocalCache.getOrCreatePublicChatChannel(id)
     }
 
     channel?.let { content(it) }
@@ -162,12 +161,11 @@ fun LoadPublicChatChannel(
 @Composable
 fun LoadEphemeralChatChannel(
     id: RoomId,
-    accountViewModel: AccountViewModel,
     content: @Composable (EphemeralChatChannel) -> Unit,
 ) {
     val channel =
-        produceStateIfNotNull(accountViewModel.getEphemeralChatChannelIfExists(id), id) {
-            value = accountViewModel.checkGetOrCreateEphemeralChatChannel(id)
+        produceStateIfNotNull(LocalCache.getEphemeralChatChannelIfExists(id), id) {
+            value = LocalCache.getOrCreateEphemeralChannel(id)
         }
 
     channel.value?.let { content(it) }
@@ -176,12 +174,11 @@ fun LoadEphemeralChatChannel(
 @Composable
 fun LoadLiveActivityChannel(
     id: Address,
-    accountViewModel: AccountViewModel,
     content: @Composable (LiveActivitiesChannel) -> Unit,
 ) {
     val channel =
-        produceStateIfNotNull(accountViewModel.getLiveActivityChannelIfExists(id), id) {
-            value = accountViewModel.checkGetOrCreateLiveActivityChannel(id)
+        produceStateIfNotNull(LocalCache.getLiveActivityChannelIfExists(id), id) {
+            value = LocalCache.getOrCreateLiveChannel(id)
         }
 
     channel.value?.let { content(it) }

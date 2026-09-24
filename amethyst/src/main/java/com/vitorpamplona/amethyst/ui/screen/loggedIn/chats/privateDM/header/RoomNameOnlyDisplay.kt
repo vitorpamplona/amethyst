@@ -81,14 +81,14 @@ fun DisplayUserSetAsSubject(
     if (userList.size == 1) {
         // Regular Design
         Row {
-            LoadUser(baseUserHex = userList[0], accountViewModel) {
+            LoadUser(baseUserHex = userList[0]) {
                 it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
             }
         }
     } else {
         Row {
             userList.take(4).forEachIndexed { index, value ->
-                LoadUser(baseUserHex = value, accountViewModel) {
+                LoadUser(baseUserHex = value) {
                     it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight, accountViewModel = accountViewModel) }
                 }
 

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
@@ -134,8 +135,8 @@ class NewHighlightPostViewModel :
         if (accountViewModel != null) {
             originalNote =
                 when {
-                    !sourceAddress.isNullOrBlank() -> Address.parse(sourceAddress)?.let { accountViewModel.getOrCreateAddressableNote(it) }
-                    !sourceEventId.isNullOrBlank() -> accountViewModel.getOrCreateNote(sourceEventId)
+                    !sourceAddress.isNullOrBlank() -> Address.parse(sourceAddress)?.let { LocalCache.getOrCreateAddressableNote(it) }
+                    !sourceEventId.isNullOrBlank() -> LocalCache.getOrCreateNote(sourceEventId)
                     else -> null
                 }
         }

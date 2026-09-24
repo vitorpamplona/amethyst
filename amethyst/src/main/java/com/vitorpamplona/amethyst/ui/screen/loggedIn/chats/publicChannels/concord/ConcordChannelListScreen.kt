@@ -589,7 +589,7 @@ private fun rememberConcordDisplayName(
     hex: HexKey,
     accountViewModel: AccountViewModel,
 ): String {
-    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val user = remember(hex) { LocalCache.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
     val name by observeUserName(user, accountViewModel)
     return name
 }

@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -308,23 +309,23 @@ private fun DisplayQuoteAuthor(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var userBase by remember { mutableStateOf(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
+    var userBase by remember { mutableStateOf(authorHex?.let { LocalCache.getUserIfExists(it) }) }
 
     if (userBase == null && authorHex != null) {
         LaunchedEffect(authorHex) {
-            userBase = accountViewModel.checkGetOrCreateUser(authorHex)
+            userBase = LocalCache.checkGetOrCreateUser(authorHex)
         }
     }
 
     var addressable by remember {
-        mutableStateOf(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it) })
+        mutableStateOf(postAddress?.let { LocalCache.getAddressableNoteIfExists(it) })
     }
 
     if (addressable == null && postAddress != null) {
         LaunchedEffect(key1 = postAddress) {
             val newNote =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(postAddress)
+                    LocalCache.getOrCreateAddressableNote(postAddress)
                 }
             if (addressable != newNote) {
                 addressable = newNote
@@ -333,14 +334,14 @@ private fun DisplayQuoteAuthor(
     }
 
     var version by remember {
-        mutableStateOf(postVersion?.let { accountViewModel.getNoteIfExists(it.eventId) })
+        mutableStateOf(postVersion?.let { LocalCache.getNoteIfExists(it.eventId) })
     }
 
     if (version == null && postVersion != null) {
         LaunchedEffect(key1 = postVersion) {
             val newNote =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateNote(postVersion.eventId)
+                    LocalCache.getOrCreateNote(postVersion.eventId)
                 }
             if (version != newNote) {
                 version = newNote

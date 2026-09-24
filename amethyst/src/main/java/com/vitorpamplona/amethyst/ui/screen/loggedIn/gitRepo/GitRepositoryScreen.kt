@@ -122,7 +122,7 @@ fun GitRepositoryScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let {
             GitRepositoryHome(
                 note = it,
@@ -139,7 +139,7 @@ fun GitRepositoryCodeScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let { GitRepositoryCode(it, accountViewModel, nav) }
     }
 }
@@ -150,7 +150,7 @@ fun GitRepositoryIssuesScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let { GitRepositoryIssues(it, accountViewModel, nav) }
     }
 }
@@ -161,7 +161,7 @@ fun GitRepositoryPullsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let { GitRepositoryPulls(it, accountViewModel, nav) }
     }
 }

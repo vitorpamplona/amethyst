@@ -18,13 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.settings
+package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.amethyst.commons.model.AccentColorType
-import com.vitorpamplona.amethyst.commons.model.FontSizeType
-import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
-import com.vitorpamplona.amethyst.commons.model.ThemeType
-import com.vitorpamplona.amethyst.commons.model.WarningType
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accent_color_blue
 import com.vitorpamplona.amethyst.commons.resources.accent_color_green
@@ -32,10 +27,17 @@ import com.vitorpamplona.amethyst.commons.resources.accent_color_orange
 import com.vitorpamplona.amethyst.commons.resources.accent_color_pink
 import com.vitorpamplona.amethyst.commons.resources.accent_color_purple
 import com.vitorpamplona.amethyst.commons.resources.accent_color_red
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
+import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only
 import com.vitorpamplona.amethyst.commons.resources.content_warning_hide_all_sensitive_content_option
 import com.vitorpamplona.amethyst.commons.resources.content_warning_see_warnings_option
 import com.vitorpamplona.amethyst.commons.resources.content_warning_show_all_sensitive_content_option
 import com.vitorpamplona.amethyst.commons.resources.dark
+import com.vitorpamplona.amethyst.commons.resources.font_family_monospace
+import com.vitorpamplona.amethyst.commons.resources.font_family_sans_serif
+import com.vitorpamplona.amethyst.commons.resources.font_family_serif
+import com.vitorpamplona.amethyst.commons.resources.font_family_system
 import com.vitorpamplona.amethyst.commons.resources.font_size_huge
 import com.vitorpamplona.amethyst.commons.resources.font_size_large
 import com.vitorpamplona.amethyst.commons.resources.font_size_normal
@@ -44,29 +46,14 @@ import com.vitorpamplona.amethyst.commons.resources.gallery_type_classic
 import com.vitorpamplona.amethyst.commons.resources.gallery_type_modern
 import com.vitorpamplona.amethyst.commons.resources.light
 import com.vitorpamplona.amethyst.commons.resources.system
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_complete
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performance
+import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified
 import org.jetbrains.compose.resources.StringResource
 
-/**
- * The display label for each UI-settings enum.
- *
- * These used to be a constructor argument on the enums themselves, which pinned
- * `UiSettings` to `commonsUI` — a [StringResource] comes from the generated `Res`
- * class, and `commons` cannot see it. The settings are plain data that the CLI and
- * any headless front end may read, so the data moved to `commons/model` and the
- * labels stayed here, following the same extension-property shape the Tor settings
- * already use (`ui.tor.resourceId`).
- *
- * Each `when` is exhaustive over its enum, so a new constant is a compile error
- * here rather than a missing label at runtime — the same guarantee the constructor
- * argument gave.
- *
- * Only the enums something actually labels are here. `ConnectivityType`,
- * `FeatureSetType` and `FontFamilyType` carried a `resourceId` that nothing read —
- * their pickers are segmented rows and use the narrower `shortLabelRes` helpers in
- * `AppSettingsScreen` instead — and `BooleanType`'s was misspelled `reourceId`,
- * which is how it went unnoticed. They are dropped rather than carried over; the
- * strings they pointed at are still used by those short labels.
- */
+// Display labels for the settings enums. The enums live in headless commons; their labels are
+// Compose resources, so they are attached here, in the UI module.
+
 val ThemeType.resourceId: StringResource
     get() =
         when (this) {
@@ -86,6 +73,15 @@ val AccentColorType.resourceId: StringResource
             AccentColorType.PINK -> Res.string.accent_color_pink
         }
 
+val FontFamilyType.resourceId: StringResource
+    get() =
+        when (this) {
+            FontFamilyType.SYSTEM -> Res.string.font_family_system
+            FontFamilyType.SANS_SERIF -> Res.string.font_family_sans_serif
+            FontFamilyType.SERIF -> Res.string.font_family_serif
+            FontFamilyType.MONOSPACE -> Res.string.font_family_monospace
+        }
+
 val FontSizeType.resourceId: StringResource
     get() =
         when (this) {
@@ -93,6 +89,22 @@ val FontSizeType.resourceId: StringResource
             FontSizeType.NORMAL -> Res.string.font_size_normal
             FontSizeType.LARGE -> Res.string.font_size_large
             FontSizeType.HUGE -> Res.string.font_size_huge
+        }
+
+val ConnectivityType.resourceId: StringResource
+    get() =
+        when (this) {
+            ConnectivityType.ALWAYS -> Res.string.connectivity_type_always
+            ConnectivityType.WIFI_ONLY -> Res.string.connectivity_type_unmetered_wifi_only
+            ConnectivityType.NEVER -> Res.string.connectivity_type_never
+        }
+
+val FeatureSetType.resourceId: StringResource
+    get() =
+        when (this) {
+            FeatureSetType.COMPLETE -> Res.string.ui_feature_set_type_complete
+            FeatureSetType.SIMPLIFIED -> Res.string.ui_feature_set_type_simplified
+            FeatureSetType.PERFORMANCE -> Res.string.ui_feature_set_type_performance
         }
 
 val ProfileGalleryType.resourceId: StringResource
