@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.ChangesFlowFilter
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 
 class ChannelFeedFilter(
     val channel: Channel,
