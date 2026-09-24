@@ -5245,4 +5245,35 @@
         <item quantity="one">%1$d új üzenet</item>
         <item quantity="other">%1$d új üzenet</item>
     </plurals>
+    <string name="sno_object_title">3D-objektum</string>
+    <string name="sno_object_details">%1$d csúcs · %2$d lap</string>
+    <string name="sno_object_unreadable">Ezt a 3D-objektumot nem sikerült beolvasni (%1$s szabály)</string>
+    <string name="sno_avatar_title">Cyberspace-avatar</string>
+    <string name="sno_avatar_unpaid">Ez az avatar nem fizetett a méretéért, ezért nem jelenik meg</string>
+    <string name="sno_light_on">Megvilágítva; koppintson az objektum síkban való megjelenítéséhez</string>
+    <string name="sno_light_off">Sík; koppintson az objektum megvilágításához</string>
+    <string name="sno_object_scale">1 egység = %1$s</string>
+    <string name="sno_shard_dataspace">Elrejtve az adattérben · %1$s</string>
+    <string name="sno_shard_ideaspace">Elrejtve az ötlettérben · %1$s</string>
+    <string name="sno_avatar_default">Alapértelmezett avatar</string>
+    <string name="sno_avatar_default_details">Nincs közzétett forma, ezért mindenki ezt látja</string>
+    <string name="cyberspace_bag_title">Egy helyen elrejtve</string>
+    <string name="cyberspace_bag_box">Elrejtve egy %1$s régióból álló dobozban</string>
+    <string name="cyberspace_bag_destination">Egy régióban elrejtve, amelyet a nyom pontosan megnevez</string>
+    <string name="cyberspace_bag_no_hint">Nincs nyom, így ez a kibertér bármely pontján lehet</string>
+    <string name="cyberspace_bag_out_of_reach">Elérhetetlen: a nyom 2^%1$d régiót nevez meg keresésre</string>
+    <string name="cyberspace_bag_search">Keresés erre</string>
+    <string name="cyberspace_bag_cancel">Leállítás</string>
+    <string name="cyberspace_bag_measuring">A keresés árazása ezen az eszközön…</string>
+    <string name="cyberspace_bag_progress">%2$s régióból %1$s átkutatva</string>
+    <string name="cyberspace_bag_too_slow_minutes">Elérhetetlen: körülbelül %1$d perc keresés ezen az eszközön</string>
+    <string name="cyberspace_bag_too_slow_hours">Elérhetetlen: körülbelül %1$d óra keresés ezen az eszközön</string>
+    <string name="cyberspace_bag_not_found">Nincs abban a dobozban, amelyet a nyom megnevezett</string>
+    <string name="cyberspace_bag_damaged">A régió megvan, de a tartalmát nem sikerült beolvasni</string>
+    <string name="cyberspace_bag_dropped">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lett vetve</string>
+    <string name="cyberspace_bag_dropped_many">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lettek vetve</string>
+    <string name="cyberspace_bag_empty">Kinyitva, és nem volt benne semmi</string>
+    <string name="cyberspace_bag_unsigned">Aláírás nélküli, így ez a szerző csak állítás</string>
+    <string name="cyberspace_bag_unknown_kind">Egy %1$d típusú elem, amelyet ez a kliens nem jelenít meg</string>
+    <string name="cyberspace_bag_opaque">%1$d bájt valamiből, amit ez a kliens nem olvas</string>
 </resources>
