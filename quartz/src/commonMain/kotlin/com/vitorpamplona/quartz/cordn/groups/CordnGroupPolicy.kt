@@ -113,6 +113,17 @@ object CordnGroupPolicy : MlsGroupPolicy {
     val PAYLOAD_EXPORTER = MlsExporterLabel("cordn", "group-payload".encodeToByteArray(), 32)
 
     /**
+     * `MLS-Exporter("cordn", "encrypted-media", 32)`.
+     *
+     * `spec/applications/encrypted-media.md` §3.1: the media key is derived
+     * from the epoch's exporter secret and is never transmitted. A separate
+     * context from [PAYLOAD_EXPORTER] because the two layers are independent —
+     * the spec is explicit that they "use distinct exporter contexts and do not
+     * interact".
+     */
+    val MEDIA_EXPORTER = MlsExporterLabel("cordn", "encrypted-media".encodeToByteArray(), 32)
+
+    /**
      * An explicit `required_capabilities` naming `0xC04D`, for a group that
      * wants every member to be able to read its metadata.
      *

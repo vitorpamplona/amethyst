@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.appEncryptedMedia
 
+import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -35,30 +37,31 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  *
  * | | Marmot MIP-04 v2 | cordn |
  * | --- | --- | --- |
- * | file key | `HKDF-Expand(exporter, context)`, per file | random, per file |
+ * | file key | `HKDF-Expand(exporter, context)`, per file | `MLS-Exporter("cordn", "encrypted-media", 32)`, per epoch |
  * | AAD | `"mip04-v2"‖0‖hash‖0‖mime‖0‖filename` | `mime‖0‖filename‖0‖hash` |
  *
  * Feeding one's blob to the other produces an authentication failure, which is
  * the correct outcome and the reason this is a separate file rather than a
  * flag on [com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption].
  *
- * ## Why the key is random rather than derived from the epoch
+ * ## The key is the epoch exporter, not a per-file random
  *
- * It was the exporter output at first, which is where MIP-04 starts from, and
- * that is wrong for cordn specifically. MIP-04's exporter reaches back through
- * Marmot's retained epoch secrets; cordn retains none, so `exporterSecret`
- * only ever answers for the epoch the group is on **right now**. Every
- * attachment would have become permanently unopenable at the next Commit —
- * for the sender too, silently, until somebody scrolled back far enough to
- * find a broken image.
+ * This file used to mint a random key per file and ship it in the `imeta` tag,
+ * so that an attachment outlived the epoch it was sent in. It was a reasonable
+ * trade to want and the wrong one to make unilaterally: it is not what
+ * `spec/applications/encrypted-media.md` §3.1 specifies, the key it put on the
+ * wire is one §4 says is "never transmitted", and it omitted the required
+ * `v cordn-em-v1`. Measured against the live cordn.net client, every Amethyst
+ * attachment arrived as an empty bubble.
  *
- * Carrying a per-file key costs nothing because [CordnMediaTag] rides inside
- * the MLS envelope, so the key is already exactly as confidential and exactly
- * as durable as the message that names it. It also removes the sharp edge the
- * old design had: one key per epoch meant the nonce was the only thing
- * separating two files' keystreams, so a repeated nonce was a keystream reuse
- * break across every file in the epoch. Now a nonce is only ever used once,
- * under a key used once.
+ * The durability cost is real and is the spec's intent: the key "rotates
+ * automatically with each MLS epoch advance, inheriting the forward-secrecy
+ * and post-compromise-security properties of the group". Since
+ * `exporterSecret` answers only for the epoch the group is on now, media from
+ * an earlier epoch cannot currently be re-opened. Keeping old media readable
+ * is a matter of caching the derived key per epoch locally, which changes
+ * nothing on the wire — unlike the previous approach, which changed the wire
+ * and broke every other client.
  */
 object CordnMediaEncryption {
     const val KEY_LENGTH = 32
@@ -67,23 +70,23 @@ object CordnMediaEncryption {
     private val NULL = byteArrayOf(0x00)
 
     /**
-     * A fresh 32-byte key for one file.
+     * The group's media key for its current epoch.
      *
-     * Random, NOT derived from the group's epoch exporter, and the difference
-     * is the whole durability story for attachments. `exporterSecret` reads
-     * the **current** epoch's schedule and cordn retains no past epochs, so a
-     * key derived that way stops existing the moment anyone commits — every
-     * photo and voice note sent before the next join or leave would become
-     * permanently unopenable, for everyone including the sender, with no error
-     * until someone scrolled back.
+     * `spec/applications/encrypted-media.md` §3.1 makes this a derivation, not
+     * a choice: `MLS-Exporter("cordn", "encrypted-media", 32)`. The key
+     * therefore rotates with every epoch and is never transmitted, which is
+     * what lets a cordn client that has only the group state open the blob.
      *
-     * A per-file key costs nothing to carry because the descriptor that holds
-     * it ([CordnMediaTag]) rides **inside** the MLS envelope: it is already as
-     * confidential as the message, and already as durable. Forward secrecy is
-     * unchanged — a new member still cannot read history they were not sent,
-     * because they cannot read the messages carrying these keys either.
+     * Losing older media at an epoch advance is the intended consequence, not
+     * a defect to design around: the spec says the key "rotates automatically
+     * with each MLS epoch advance, inheriting the forward-secrecy and
+     * post-compromise-security properties of the group". An earlier version of
+     * this file used a fresh random key per file and shipped it in the `imeta`
+     * tag to avoid that loss. It bought re-readable history at the price of
+     * both the forward secrecy and interoperability: cordn.net could not open
+     * a single Amethyst attachment, and rendered each as an empty bubble.
      */
-    fun newFileKey(): ByteArray = RandomInstance.bytes(KEY_LENGTH)
+    fun mediaKey(group: MlsGroup): ByteArray = CordnGroupPolicy.MEDIA_EXPORTER.let { group.exporterSecret(it.label, it.context, it.length) }
 
     /**
      * Encrypts [plaintext] for a group, binding it to its type and name.

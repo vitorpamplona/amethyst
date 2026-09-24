@@ -37,9 +37,12 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  * altered file from a re-encoded one, and it is useless to the blob host,
  * which only ever holds the ciphertext.
  *
- * Marmot's `Mip04IMetaTag` carries a `v` version field and a rule about
- * rejecting `mip04-v1`. There is no cordn equivalent, and inventing one would
- * put a field on the wire that no other cordn client writes or reads.
+ * cordn has a `v` field too, and it is required:
+ * `spec/applications/encrypted-media.md` §4 fixes it at `cordn-em-v1` and says
+ * a client "MUST reject tags whose `v` field is absent or names an unknown
+ * version". An earlier version of this file asserted the opposite — that there
+ * was no cordn equivalent of Marmot's — and omitted it. cordn.net duly
+ * rejected every Amethyst attachment and drew an empty bubble.
  */
 object CordnMediaTag {
     const val TAG_NAME = "imeta"
@@ -51,22 +54,21 @@ object CordnMediaTag {
     const val NONCE = "n"
 
     /**
-     * The file's decryption key, hex.
+     * The encryption version. Required, and only ever [VERSION_V1].
      *
-     * Safe here and nowhere else: an `imeta` tag is a tag on the cordn
-     * envelope, which is sealed inside the MLS application message, so this
-     * field never leaves the group. It is on the tag rather than derived from
-     * the group so an attachment outlives the epoch it was sent in — see
-     * [CordnMediaEncryption].
+     * No key field accompanies it: §3.1 derives the key from the group's
+     * epoch exporter and §4 states it is "never transmitted, never stored in
+     * `imeta`". See [CordnMediaEncryption.mediaKey].
      */
-    const val KEY = "k"
+    const val VERSION = "v"
+
+    const val VERSION_V1 = "cordn-em-v1"
     const val DIMENSIONS = "dim"
     const val BLURHASH = "blurhash"
 
     /** Builds the `imeta` tag for an uploaded [media] at [url]. */
     fun build(
         media: CordnEncryptedMedia,
-        fileKey: ByteArray,
         url: String,
         dimensions: String? = null,
         blurhash: String? = null,
@@ -78,7 +80,7 @@ object CordnMediaTag {
             add("$FILENAME ${media.filename}")
             add("$HASH ${media.plaintextHash.toHexKey()}")
             add("$NONCE ${media.nonce.toHexKey()}")
-            add("$KEY ${fileKey.toHexKey()}")
+            add("$VERSION $VERSION_V1")
             dimensions?.let { add("$DIMENSIONS $it") }
             blurhash?.let { add("$BLURHASH $it") }
         }.toTypedArray()
@@ -109,7 +111,9 @@ object CordnMediaTag {
             val filename = fields[FILENAME] ?: return@mapNotNull null
             val hash = fields[HASH]?.takeIf { it.length == HASH_HEX_LENGTH } ?: return@mapNotNull null
             val nonce = fields[NONCE]?.takeIf { it.length == NONCE_HEX_LENGTH } ?: return@mapNotNull null
-            val key = fields[KEY]?.takeIf { it.length == KEY_HEX_LENGTH } ?: return@mapNotNull null
+            // §4: an absent or unknown version is a rejection, not something to
+            // guess at — the bytes under it are a format we have not agreed on.
+            if (fields[VERSION] != VERSION_V1) return@mapNotNull null
 
             CordnMediaAttachment(
                 url = url,
@@ -117,14 +121,12 @@ object CordnMediaTag {
                 filename = filename,
                 plaintextHash = hash,
                 nonce = nonce,
-                fileKey = key,
                 dimensions = fields[DIMENSIONS],
                 blurhash = fields[BLURHASH],
             )
         }
 
     private const val HASH_HEX_LENGTH = 64
-    private const val KEY_HEX_LENGTH = 64
     private const val NONCE_HEX_LENGTH = 24
 }
 
@@ -135,14 +137,11 @@ data class CordnMediaAttachment(
     val filename: String,
     val plaintextHash: String,
     val nonce: String,
-    /** Hex; see [CordnMediaTag.KEY] for why it is carried rather than derived. */
-    val fileKey: String,
     val dimensions: String? = null,
     val blurhash: String? = null,
 ) {
     val hashBytes: ByteArray get() = plaintextHash.hexToByteArray()
     val nonceBytes: ByteArray get() = nonce.hexToByteArray()
-    val fileKeyBytes: ByteArray get() = fileKey.hexToByteArray()
 
     val isImage: Boolean get() = mimeType.startsWith("image/")
     val isAudio: Boolean get() = mimeType.startsWith("audio/")

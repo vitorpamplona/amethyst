@@ -825,7 +825,7 @@ private suspend fun sendAttachment(
             // change — the one failure here that is entirely actionable.
             val tag =
                 CordnMediaService(accountViewModel.account)
-                    .upload(bytes, mime, name, context, state.selectedServer.baseUrl)
+                    .upload(group, bytes, mime, name, context, state.selectedServer.baseUrl)
                     ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
 
             // Into the room as well, for the same reason every other send is: an
@@ -913,7 +913,7 @@ internal fun CordnAttachment(
                             if (group == null) {
                                 error = failed
                             } else {
-                                bytes = CordnMediaService(accountViewModel.account).download(attachment)
+                                bytes = CordnMediaService(accountViewModel.account).download(group, attachment)
                             }
                         } catch (e: Exception) {
                             error = e.message ?: failed
@@ -1026,14 +1026,21 @@ private suspend fun sendVoiceNote(
     recording: RecordingResult,
     caption: String,
 ) {
-    val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey) ?: return
-    val group = session.manager.group(room.gid) ?: return
+    // Reported rather than returned, for the reason sendAttachment is: a voice
+    // note that goes nowhere and says nothing is the same bug twice.
+    val session =
+        accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+    val group =
+        session.manager.group(room.gid)
+            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
 
     try {
         val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
         val tag =
             CordnMediaService(accountViewModel.account)
-                .upload(bytes, recording.mimeType, recording.file.name, context) ?: return
+                .upload(group, bytes, recording.mimeType, recording.file.name, context)
+                ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
         // Into the room as well, for the same reason every other send is: an
         // attachment of your own echoes back as an Echo and would otherwise be
         // invisible to the person who sent it.

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -78,6 +79,7 @@ class CordnMediaService(
      *   saying so beats a failure deeper in.
      */
     suspend fun upload(
+        group: MlsGroup,
         bytes: ByteArray,
         mimeType: String,
         filename: String,
@@ -89,12 +91,12 @@ class CordnMediaService(
         withContext(Dispatchers.IO) {
             val server = serverBaseUrl.ifBlank { return@withContext null }
 
-            // A fresh key per file, carried in the descriptor. Deriving it from
-            // the group would tie the attachment to the epoch it was sent in
-            // and lose it at the next Commit — see CordnMediaEncryption.
-            val fileKey = CordnMediaEncryption.newFileKey()
+            // Derived from the group's epoch exporter, never sent: that is what
+            // spec/applications/encrypted-media.md §3.1 requires, and what lets
+            // any cordn client open the blob from group state alone.
+            val fileKey = CordnMediaEncryption.mediaKey(group)
             val sealed = CordnMediaEncryption.encrypt(bytes, fileKey, mimeType, filename)
-            CordnMediaTag.build(sealed, fileKey, put(sealed, server, context))
+            CordnMediaTag.build(sealed, put(sealed, server, context))
         }
 
     /**
@@ -138,7 +140,10 @@ class CordnMediaService(
      * the AEAD tag plus the plaintext hash are the only reasons to believe
      * what came back is what was sent.
      */
-    suspend fun download(attachment: CordnMediaAttachment): ByteArray =
+    suspend fun download(
+        group: MlsGroup,
+        attachment: CordnMediaAttachment,
+    ): ByteArray =
         withContext(Dispatchers.IO) {
             val request =
                 Request
@@ -160,7 +165,7 @@ class CordnMediaService(
 
             CordnMediaEncryption.decrypt(
                 ciphertext = body,
-                fileKey = attachment.fileKeyBytes,
+                fileKey = CordnMediaEncryption.mediaKey(group),
                 nonce = attachment.nonceBytes,
                 plaintextHash = attachment.hashBytes,
                 mimeType = attachment.mimeType,
