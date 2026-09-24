@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer

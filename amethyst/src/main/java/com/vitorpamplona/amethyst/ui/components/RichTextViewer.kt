@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
@@ -102,9 +103,12 @@ import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.richtext.HashtagIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
@@ -116,7 +120,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
@@ -977,7 +980,7 @@ private fun DisplayUserFromTag(
     val nickname by observeUserNickname(baseUser, accountViewModel)
     val petName = nickname?.petName
 
-    CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag") {
         Row {
             CreateClickableTextWithEmoji(
                 clickablePart = remember(meta, petName) { petName ?: it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },

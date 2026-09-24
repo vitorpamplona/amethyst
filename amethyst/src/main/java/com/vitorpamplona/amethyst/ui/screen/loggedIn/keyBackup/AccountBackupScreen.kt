@@ -102,6 +102,8 @@ import com.vitorpamplona.amethyst.commons.resources.secret_key_copied_to_clipboa
 import com.vitorpamplona.amethyst.commons.resources.show_encrypted_private_key_qr_code
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.show_private_key_qr_code
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -113,8 +115,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.components.util.getText
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.note.rememberAuthPromptLabels
 import com.vitorpamplona.amethyst.ui.painterRes

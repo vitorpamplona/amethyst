@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip17
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
@@ -131,7 +131,6 @@ private fun CrossFadeState(
     CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
-        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {

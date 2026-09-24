@@ -35,10 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.and
 import com.vitorpamplona.amethyst.commons.resources.replying_to
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink

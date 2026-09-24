@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.commons.resources.topics
 import com.vitorpamplona.amethyst.commons.resources.used_by
 import com.vitorpamplona.amethyst.commons.resources.version
 import com.vitorpamplona.amethyst.commons.resources.yes
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -172,7 +173,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -857,7 +857,7 @@ private fun DisplayOwnerInformation(
     nav: INav,
 ) {
     LoadUser(baseUserHex = userHex, accountViewModel) { loadedUser ->
-        CrossfadeIfEnabled(loadedUser, accountViewModel = accountViewModel) {
+        CrossfadeIfEnabled(loadedUser) {
             if (it != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     UserCompose(

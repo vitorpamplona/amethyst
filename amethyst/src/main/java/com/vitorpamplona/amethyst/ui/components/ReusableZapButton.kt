@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.no_zap_amount_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.thank_you
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
@@ -254,7 +254,6 @@ fun ReusableZapButton(
                     CrossfadeIfEnabled(
                         targetState = wasZappedByLoggedInUser.value,
                         label = "ZapIcon",
-                        accountViewModel = accountViewModel,
                     ) {
                         if (it) {
                             ZappedIcon(config.iconSizeModifier)
@@ -286,7 +285,6 @@ fun ReusableZapButton(
                     CrossfadeIfEnabled(
                         targetState = wasZappedByLoggedInUser.value,
                         label = "ZapIcon",
-                        accountViewModel = accountViewModel,
                     ) {
                         if (it) {
                             ZappedIcon(config.iconSizeModifier)

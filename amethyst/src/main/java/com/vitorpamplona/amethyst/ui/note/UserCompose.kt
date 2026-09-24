@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
 import com.vitorpamplona.amethyst.commons.profile.ui.ListButton
 import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton

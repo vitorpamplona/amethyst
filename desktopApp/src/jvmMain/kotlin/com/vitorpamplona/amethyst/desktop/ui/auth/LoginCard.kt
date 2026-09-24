@@ -60,9 +60,9 @@ import com.vitorpamplona.amethyst.commons.resources.login_button
 import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
-import com.vitorpamplona.amethyst.desktop.setText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

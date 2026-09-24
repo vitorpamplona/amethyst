@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
+import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo

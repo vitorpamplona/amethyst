@@ -68,10 +68,10 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
 

@@ -152,7 +152,9 @@ import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
 import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
@@ -167,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon
 import com.vitorpamplona.amethyst.commons.ui.note.VoiceReplyIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -222,13 +225,10 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
-import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -603,7 +603,6 @@ private fun RenderShowIndividualReactionsButton(
         CrossfadeIfEnabled(
             targetState = wantsToSeeReactions.value,
             label = "RenderShowIndividualReactionsButton",
-            accountViewModel = accountViewModel,
         ) {
             if (it) {
                 ExpandLessIcon(modifier = Size22Modifier, Res.string.close_all_reactions_to_this_post)
@@ -1112,7 +1111,7 @@ fun LikeReaction(
         onLongClick = { nav.nav(Route.UpdateReactionType) },
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
-            CrossfadeIfEnabled(targetState = reactionType, contentAlignment = Center, label = "LikeIcon", accountViewModel = accountViewModel) {
+            CrossfadeIfEnabled(targetState = reactionType, contentAlignment = Center, label = "LikeIcon") {
                 if (reactionType != null) {
                     RenderReactionType(reactionType, heartSizeModifier, iconFontSize)
                 } else {
@@ -1447,7 +1446,7 @@ fun ZapReaction(
                 accountViewModel,
                 zapStartingTime,
             ) { zapIconState ->
-                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon") {
                     if (it.wasZappedByLoggedInUser) {
                         ZappedIcon(iconSizeModifier)
                     } else {
@@ -1460,7 +1459,7 @@ fun ZapReaction(
                 baseNote,
                 accountViewModel,
             ) { zapIconState ->
-                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon", accountViewModel = accountViewModel) {
+                CrossfadeIfEnabled(targetState = zapIconState, label = "ZapIcon") {
                     if (it.wasZappedByLoggedInUser) {
                         ZappedIcon(iconSizeModifier)
                     } else if (it.hasPendingPaymentRequest) {

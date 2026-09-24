@@ -90,11 +90,11 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_remove
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_signed_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_topbar
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_warning
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions

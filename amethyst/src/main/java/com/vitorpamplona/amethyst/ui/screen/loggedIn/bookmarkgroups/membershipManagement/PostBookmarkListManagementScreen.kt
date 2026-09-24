@@ -42,12 +42,12 @@ import com.vitorpamplona.amethyst.commons.nip51Lists.ui.BookmarkGroupManagementI
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.post_bookmark_management_title
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark

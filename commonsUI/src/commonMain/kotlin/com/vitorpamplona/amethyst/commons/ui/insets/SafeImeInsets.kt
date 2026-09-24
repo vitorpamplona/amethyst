@@ -18,31 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.commons.ui.insets
 
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+/**
+ * The IME inset to lay out against, in place of `WindowInsets.ime`.
+ *
+ * On Android this corrects a Compose insets listener that can freeze the animated IME inset for the
+ * rest of the activity's life (see the Android actual's `SafeImeInsets`). Desktop and iOS have no
+ * such defect and return `WindowInsets.ime` as is.
+ */
 @Composable
-fun <T> CrossfadeIfEnabled(
-    targetState: T,
-    modifier: Modifier = Modifier,
-    contentAlignment: Alignment = Alignment.TopStart,
-    animationSpec: FiniteAnimationSpec<Float> = tween(),
-    label: String = "Crossfade",
-    accountViewModel: AccountViewModel,
-    content: @Composable (T) -> Unit,
-) = CrossfadeIfEnabled(
-    targetState = targetState,
-    enabled = !accountViewModel.settings.isPerformanceMode(),
-    modifier = modifier,
-    contentAlignment = contentAlignment,
-    animationSpec = animationSpec,
-    label = label,
-    content = content,
-)
+expect fun rememberSafeImeInsets(): WindowInsets
+
+/**
+ * Drop-in replacement for `Modifier.imePadding()` that survives a stranded IME inset.
+ *
+ * Prefer this everywhere; `imePadding()` reads the raw animated inset and, on Android, will hold a
+ * keyboard-sized gap open for the rest of the activity's life once Compose's insets listener wedges.
+ * Consumption semantics are identical — this is `windowInsetsPadding` over the same inset.
+ */
+@Composable
+fun Modifier.imePaddingSafe(): Modifier = windowInsetsPadding(rememberSafeImeInsets())

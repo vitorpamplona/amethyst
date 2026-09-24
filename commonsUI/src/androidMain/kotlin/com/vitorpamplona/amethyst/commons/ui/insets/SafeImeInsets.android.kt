@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.insets
+package com.vitorpamplona.amethyst.commons.ui.insets
 
 import android.view.View
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -34,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
@@ -207,7 +205,7 @@ internal suspend fun watchForStrandedIme(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun rememberSafeImeInsets(): SafeImeInsets {
+actual fun rememberSafeImeInsets(): WindowInsets {
     val view = LocalView.current
     val density = LocalDensity.current
     val animated = WindowInsets.ime
@@ -221,13 +219,3 @@ fun rememberSafeImeInsets(): SafeImeInsets {
 
     return insets
 }
-
-/**
- * Drop-in replacement for `Modifier.imePadding()` that survives a stranded IME inset.
- *
- * Prefer this everywhere in the app; `imePadding()` reads the raw animated inset and will hold a
- * keyboard-sized gap open for the rest of the activity's life once Compose's insets listener wedges.
- * Consumption semantics are identical — this is `windowInsetsPadding` over the same inset.
- */
-@Composable
-fun Modifier.imePaddingSafe(): Modifier = windowInsetsPadding(rememberSafeImeInsets())

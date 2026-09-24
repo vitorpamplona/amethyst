@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts
 
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

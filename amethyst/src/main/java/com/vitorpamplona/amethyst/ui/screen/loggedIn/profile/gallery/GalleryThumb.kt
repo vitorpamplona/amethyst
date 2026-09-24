@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHlsMimeType
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -261,7 +261,7 @@ fun UrlImageView(
     val imageModelUrl = artworkUri ?: content.url
     val canLoadAsImage = !isVideo || artworkUri != null || !isHlsMedia(content.url, content.mimeType)
 
-    CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center) {
         if (it && canLoadAsImage) {
             SubcomposeAsyncImage(
                 model = imageModelUrl,

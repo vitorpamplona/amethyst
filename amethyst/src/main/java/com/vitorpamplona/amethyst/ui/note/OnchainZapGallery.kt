@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapEntry
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.OnchainZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.PendingClockBadge

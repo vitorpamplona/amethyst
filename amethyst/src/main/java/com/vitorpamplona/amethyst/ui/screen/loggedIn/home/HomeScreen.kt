@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -94,14 +96,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
@@ -631,7 +631,6 @@ fun CrossfadeCheckIfVideoIsOnline(
     CrossfadeIfEnabled(
         targetState = online,
         label = "CheckIfUrlIsOnline",
-        accountViewModel = accountViewModel,
     ) {
         if (it) {
             whenOnline()

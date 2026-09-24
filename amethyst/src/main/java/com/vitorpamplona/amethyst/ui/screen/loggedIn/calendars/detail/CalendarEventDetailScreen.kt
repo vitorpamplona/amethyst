@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_share_nostr_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.route_calendar_event_detail
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -96,7 +97,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

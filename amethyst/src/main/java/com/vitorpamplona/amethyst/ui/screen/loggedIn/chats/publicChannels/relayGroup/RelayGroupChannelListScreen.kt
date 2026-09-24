@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.resources.Res

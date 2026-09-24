@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
+import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache

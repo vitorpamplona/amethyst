@@ -62,6 +62,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.createBitmap
 import coil3.disk.DiskCache
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.components.ImmersiveSystemBarsEffect
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.components.ViewerBackButton
 import com.vitorpamplona.amethyst.ui.components.ViewerControlsRow
 import com.vitorpamplona.amethyst.ui.components.ViewerSaveToGalleryButton
 import com.vitorpamplona.amethyst.ui.components.ViewerShareButton
-import com.vitorpamplona.amethyst.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.ui.components.rememberViewerControlsVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
