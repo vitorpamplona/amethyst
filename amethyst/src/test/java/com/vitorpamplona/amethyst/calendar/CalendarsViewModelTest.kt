@@ -22,13 +22,19 @@ package com.vitorpamplona.amethyst.calendar
 
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -58,13 +64,24 @@ class CalendarsViewModelTest {
         store = ViewModelStore()
     }
 
+    private val scopes = mutableListOf<Job>()
+
     @After
     fun tearDown() {
         store.clear()
+        // Clearing only requests cancellation: a producer the model runs on Dispatchers.Default
+        // (its flowOn) can still be finishing, and it hands its completion back to the Main
+        // collector. Waiting for the scopes keeps that inside setMain, instead of throwing onto a
+        // background thread after resetMain and failing whichever runTest starts next.
+        runBlocking { withTimeout(SCOPE_CLOSE_MS) { scopes.joinAll() } }
+        scopes.clear()
         Dispatchers.resetMain()
     }
 
-    private fun newModel(): CalendarsViewModel = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
+    private fun newModel(): CalendarsViewModel =
+        ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java].also {
+            scopes += it.viewModelScope.coroutineContext.job
+        }
 
     @Test
     fun aFreshScreenOpensOnToday() {
@@ -147,5 +164,9 @@ class CalendarsViewModelTest {
         val states = listOf(model.feedListState, model.monthListState, model.weekListState, model.dayListState)
 
         assertEquals("the lenses must not share one scroll offset", 4, states.distinct().size)
+    }
+
+    companion object {
+        private const val SCOPE_CLOSE_MS = 5_000L
     }
 }
