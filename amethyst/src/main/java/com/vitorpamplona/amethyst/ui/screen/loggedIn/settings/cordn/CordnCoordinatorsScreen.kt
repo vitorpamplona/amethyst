@@ -36,7 +36,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -60,6 +59,9 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_discover
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_manual
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_yours
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -68,6 +70,7 @@ import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -136,25 +139,39 @@ fun CordnCoordinatorsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            coordinators.forEach { config ->
-                CoordinatorCard(config, runtime)
+            // Three sections rather than one column split by rules: what you
+            // already use, what is on offer, and the manual escape hatch. The
+            // dividers said "something else follows" without saying what.
+            SettingsSection(Res.string.cordn_coordinators_section_yours) {
+                SettingsFormBlock {
+                    coordinators.forEach { config ->
+                        CoordinatorCard(config, runtime)
+                    }
+
+                    if (coordinators.isEmpty()) {
+                        Text(
+                            text = stringRes(R.string.cordn_coordinators_none),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
-            if (coordinators.isEmpty()) {
-                Text(
-                    text = stringRes(R.string.cordn_coordinators_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            SettingsSection(Res.string.cordn_coordinators_section_discover) {
+                SettingsFormBlock {
+                    DiscoverCoordinators(runtime, accountViewModel, coordinators.map { it.pubKey }.toSet())
+                }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
-            DiscoverCoordinators(runtime, accountViewModel, coordinators.map { it.pubKey }.toSet())
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
-            AddCoordinator(runtime)
+            // Last, and it reads as the fallback it is now that discovery is
+            // above it: pasting a 64-character key is what you do when nobody
+            // announced the one you were told to use.
+            SettingsSection(Res.string.cordn_coordinators_section_manual) {
+                SettingsFormBlock {
+                    AddCoordinator(runtime)
+                }
+            }
         }
     }
 }
@@ -308,7 +325,6 @@ private fun DiscoverCoordinators(
     var error by remember { mutableStateOf<String?>(null) }
     val failed = stringRes(R.string.cordn_coordinators_discover_failed)
 
-    Text(stringRes(R.string.cordn_coordinators_discover), style = MaterialTheme.typography.titleSmall)
     Text(
         text = stringRes(R.string.cordn_coordinators_discover_explainer),
         style = MaterialTheme.typography.bodySmall,
@@ -445,8 +461,6 @@ private fun AddCoordinator(runtime: CordnRuntime) {
                 CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL, labelInput.trim().ifEmpty { null })
             }
         }
-
-    Text(stringRes(R.string.cordn_coordinators_add), style = MaterialTheme.typography.titleSmall)
 
     OutlinedTextField(
         value = pubKeyInput,

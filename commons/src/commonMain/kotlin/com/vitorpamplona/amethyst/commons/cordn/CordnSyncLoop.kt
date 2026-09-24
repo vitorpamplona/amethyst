@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -153,9 +154,23 @@ class CordnSyncLoop(
         job = scope.launch { run() }
     }
 
-    /** Stops the loop. Safe to call when it is not running. */
-    fun stop() {
-        job?.cancel()
+    /**
+     * Stops the loop and waits for it to actually be stopped. Safe to call
+     * when it is not running.
+     *
+     * `cancel()` alone returns while the loop's `finally` blocks are still
+     * running, and one of those persists the group state a subscription
+     * ingested. `CordnRuntime.importArchive` stops the loops, deletes the
+     * account's directory and restores from the archive — so a persist that
+     * landed a moment late wrote a group back onto disk after the delete, and
+     * the restore then read it in again. That is the merge importArchive
+     * exists to prevent.
+     *
+     * Nothing was noticed while the persist silently failed on cancellation;
+     * making it survive cancellation is what made the missing join matter.
+     */
+    suspend fun stop() {
+        job?.cancelAndJoin()
         job = null
         _state.value = State.Stopped
     }

@@ -367,7 +367,6 @@
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
     <string name="cordn_chat_yesterday">Yesterday</string>
     <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
-    <string name="cordn_coordinators_discover">Coordinators announcing themselves</string>
     <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
     <string name="cordn_coordinators_discover_action">Look for coordinators</string>
     <string name="cordn_coordinators_discover_add">Add</string>
@@ -402,7 +401,6 @@
     <string name="cordn_coordinators_explainer">A coordinator orders one group\'s messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>
     <string name="cordn_coordinators_none">No coordinators yet.</string>
     <string name="cordn_coordinators_unnamed">Unnamed coordinator</string>
-    <string name="cordn_coordinators_add">Add a coordinator</string>
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
     <string name="cordn_coordinators_label">A name for it (yours, optional)</string>

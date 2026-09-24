@@ -5401,6 +5401,16 @@
     <string name="cordn_hub_explainer">Groups delivered by a coordinator you choose, instead of by relays.</string>
     <string name="cordn_hub_link">Inspect a group link</string>
     <string name="cordn_hub_link_desc">See what a cordn1… link points at before you act on it</string>
+    <string name="cordn_migrate_section_send">Move off this phone</string>
+    <string name="cordn_migrate_section_receive">Take over from another phone</string>
+    <string name="cordn_keypackages_section">Published key packages</string>
+    <string name="cordn_link_section_input">The link</string>
+    <string name="cordn_coordinators_section_yours">Coordinators you use</string>
+    <string name="cordn_coordinators_section_discover">Announcing themselves</string>
+    <string name="cordn_coordinators_section_manual">Add one by hand</string>
+    <string name="cordn_backup_section_passphrase">Passphrase</string>
+    <string name="cordn_backup_section_export">Make a backup</string>
+    <string name="cordn_backup_section_restore">Restore from a backup</string>
     <string name="cordn_hub_section_service">The coordinator</string>
     <string name="cordn_hub_section_device">This device</string>
     <string name="cordn_hub_coordinators">Coordinators</string>
