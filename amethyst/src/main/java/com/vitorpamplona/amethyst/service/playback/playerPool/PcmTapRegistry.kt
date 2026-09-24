@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.normalizeToPeakInPlace
 import com.vitorpamplona.amethyst.commons.audio.toLogBins
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.nio.ByteBuffer
@@ -112,6 +113,11 @@ class SpectrumAudioBufferSink(
 object PcmTapRegistry {
     private const val MAX_TRACKED_FLOWS = 64
 
+    // Frames buffered per media flow beyond the 1-frame replay. One decoder buffer is typically a
+    // handful of 1024-sample hops; 63 leaves room for an unusually large one without letting a
+    // stalled UI bank more than ~1.5 s of stale spectrum.
+    private const val SPECTRUM_BUFFER_FRAMES = 63
+
     private val lock = Any()
 
     // access-order LinkedHashMap → eldest (least-recently-used) entries iterate first for eviction.
@@ -167,7 +173,17 @@ object PcmTapRegistry {
                         if (!fedByLiveSink && !stillCollected) iter.remove()
                     }
                 }
-                MutableSharedFlow(replay = 1, extraBufferCapacity = 1)
+                // The audio thread emits every fft frame of a decoder buffer synchronously, with no
+                // suspension point, while the UI collector sits on the main dispatcher and cannot
+                // interleave. A 2-slot buffer therefore capped the visualizer at two frames per
+                // decoder buffer however much audio it carried — the update rate tracked the decoder
+                // buffer rate (~5 Hz), not the ~43 Hz the fft produces. Hold a whole burst instead,
+                // and drop the STALEST frame rather than the newest when the UI does fall behind.
+                MutableSharedFlow(
+                    replay = 1,
+                    extraBufferCapacity = SPECTRUM_BUFFER_FRAMES,
+                    onBufferOverflow = BufferOverflow.DROP_OLDEST,
+                )
             }
         }
 }
