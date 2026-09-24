@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_scan
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_scan_this
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_sign_in_first
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_title
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.AndroidCordnBlobStore
@@ -115,9 +116,11 @@ fun CordnMigrateScreen(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_migrate_title), nav) },
     ) { padding ->
         if (runtime == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -129,8 +132,8 @@ fun CordnMigrateScreen(
                     .padding(padding)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (handedOff) {
                 HandedOff(runtime)
@@ -283,7 +286,9 @@ private fun SendSide(
         enabled = !busy && code == null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(stringRes(if (busy) Res.string.cordn_migrate_exporting else Res.string.cordn_migrate_export))
+        // The label already says "Exporting"; the spinner says it is still
+        // going, which a static word cannot.
+        BusyLabel(busy, stringRes(if (busy) Res.string.cordn_migrate_exporting else Res.string.cordn_migrate_export))
     }
 }
 
@@ -367,6 +372,6 @@ private fun ReceiveSide(
         enabled = !busy && typed.isNotBlank(),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(stringRes(if (busy) Res.string.cordn_migrate_importing else Res.string.cordn_migrate_import))
+        BusyLabel(busy, stringRes(if (busy) Res.string.cordn_migrate_importing else Res.string.cordn_migrate_import))
     }
 }

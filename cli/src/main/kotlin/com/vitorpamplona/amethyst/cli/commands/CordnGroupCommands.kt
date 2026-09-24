@@ -545,9 +545,12 @@ internal object CordnGroupCommands {
                     // The envelope id is the message's identity (spec/02.md §7)
                     // — the cursor a fetch reports is not, so a script that
                     // needs to refer to this message later must use this.
-                    "id" to envelope.id,
-                    "kind" to envelope.kind,
-                    "created_at" to envelope.createdAt,
+                    "id" to envelope.envelope.id,
+                    "kind" to envelope.envelope.kind,
+                    "created_at" to envelope.envelope.createdAt,
+                    // The coordinator's cursor for this post, so a script can
+                    // see where in the stream its own message landed.
+                    "cursor" to envelope.cursor,
                     "epoch" to scope.manager.group(gid)?.epoch,
                 ),
             )

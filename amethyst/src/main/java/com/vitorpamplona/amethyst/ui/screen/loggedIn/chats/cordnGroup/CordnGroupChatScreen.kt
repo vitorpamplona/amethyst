@@ -41,7 +41,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,12 +87,15 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -107,6 +110,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * One cordn room.
@@ -188,14 +195,22 @@ private fun CordnGroupChat(
     // One place for every outbound action, so none of them can go quiet again.
     // Returns false when it failed, which is what lets the composer put the
     // draft back rather than eat it.
-    suspend fun trySend(block: suspend (CordnGroupManager) -> Unit): Boolean {
+    suspend fun trySend(block: suspend (CordnGroupManager) -> CordnDeliveredMessage?): Boolean {
         val manager = manager()
         if (manager == null) {
             sendError = noSession
             return false
         }
         return try {
-            block(manager)
+            // Shown the moment the coordinator takes it, rather than when the
+            // echo comes back — which, for your own traffic, it never does as
+            // a message: the sync loop recognises it by cursor and reports it
+            // as Delivery.Echo, whose branch adds nothing to the room. So a
+            // sent message used to leave no trace in the room that sent it.
+            //
+            // add() is keyed on the envelope id and idempotent, so a later
+            // re-sync that does hand the message back cannot double it.
+            block(manager)?.let { room.add(it) }
             sendError = null
             true
         } catch (e: Exception) {
@@ -240,15 +255,43 @@ private fun CordnGroupChat(
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
             // away exactly like everything else.
-            PinnedRibbon(annotations, room, scope, ::manager)
+            PinnedRibbon(annotations, scope) { message ->
+                trySend {
+                    it.post(
+                        gid = room.gid,
+                        pinTo = message.target(),
+                        pinOp = CordnMessageReferences.PinOp.REMOVE,
+                    )
+                }
+            }
 
             LazyColumn(
                 state = listState,
+                // Anchored at the bottom like every other chat: a room opens on
+                // its newest message, and an arrival while you sit at the
+                // bottom keeps you there instead of pushing the conversation up
+                // out of view. `messages` is oldest-first, so the rows are
+                // reversed to match.
+                reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                items(messages, key = { it.envelope.id }) { message ->
+                // Reversed once, into a val: `asReversed()` is a view, and
+                // indexing it per item to find the neighbour is how a list
+                // like this quietly becomes quadratic.
+                val rows = messages.asReversed()
+
+                itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
+                    // The row BELOW this one on screen, which in a reversed
+                    // list is the next index — i.e. the older message.
+                    val older = rows.getOrNull(index + 1)
+
                     CordnMessageRow(
                         message = message,
+                        // Grouped when the same person keeps talking inside a
+                        // few minutes: the avatar and name are repeated once
+                        // per burst instead of once per line, which is most of
+                        // what makes a wall of messages readable.
+                        showAuthor = !message.follows(older),
                         room = room,
                         annotations = annotations,
                         me = me,
@@ -264,6 +307,12 @@ private fun CordnGroupChat(
                             scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
                         },
                     )
+
+                    // Drawn under the first message of each day, which in a
+                    // reversed list means comparing against the older row.
+                    if (!message.sameDayAs(older)) {
+                        DaySeparator(message.envelope.createdAt)
+                    }
                 }
             }
 
@@ -380,17 +429,23 @@ private fun CordnGroupChat(
             },
             onDelete = {
                 acting = null
-                scope.launch { manager()?.post(room.gid, deleteTo = message.target()) }
+                // Through trySend like the rest: a deletion is an annotation,
+                // and an annotation of your own comes back as an Echo too, so
+                // deleting your own message used to look like nothing had
+                // happened until someone else's traffic refreshed the fold.
+                scope.launch { trySend { it.post(room.gid, deleteTo = message.target()) } }
             },
             onTogglePin = {
                 val pinned = annotations.isPinned(message.envelope.id)
                 acting = null
                 scope.launch {
-                    manager()?.post(
-                        gid = room.gid,
-                        pinTo = message.target(),
-                        pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
-                    )
+                    trySend {
+                        it.post(
+                            gid = room.gid,
+                            pinTo = message.target(),
+                            pinOp = if (pinned) CordnMessageReferences.PinOp.REMOVE else CordnMessageReferences.PinOp.ADD,
+                        )
+                    }
                 }
             },
         )
@@ -411,9 +466,11 @@ private fun CordnDeliveredMessage.target() =
 @Composable
 private fun PinnedRibbon(
     annotations: CordnAnnotationIndex,
-    room: CordnGroupChatroom,
     scope: CoroutineScope,
-    manager: () -> CordnGroupManager?,
+    // Hoisted rather than handed a manager: unpinning has to go through the
+    // caller's trySend so it reports a failure and lands in the room, and a
+    // ribbon that posted for itself could do neither.
+    onUnpin: suspend (CordnDeliveredMessage) -> Unit,
 ) {
     val pinned = annotations.pinnedIds().mapNotNull { annotations.byId[it] }
     if (pinned.isEmpty()) return
@@ -439,11 +496,7 @@ private fun PinnedRibbon(
                 )
                 TextButton(onClick = {
                     scope.launch {
-                        manager()?.post(
-                            gid = room.gid,
-                            pinTo = message.target(),
-                            pinOp = CordnMessageReferences.PinOp.REMOVE,
-                        )
+                        onUnpin(message)
                     }
                 }) {
                     Text(stringRes(R.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
@@ -534,6 +587,71 @@ private fun CordnChatTopBar(
     )
 }
 
+/** How long a burst from one sender stays one burst. */
+private const val GROUPING_WINDOW_SECONDS = 5 * 60
+
+/**
+ * Whether this message continues [older]'s burst — same sender, close in time.
+ *
+ * Time as well as sender, because a reply hours later to your own last message
+ * is a new thought, and hiding the name on it reads as though the conversation
+ * never paused.
+ */
+private fun CordnDeliveredMessage.follows(older: CordnDeliveredMessage?): Boolean {
+    if (older == null) return false
+    if (older.envelope.pubKey != envelope.pubKey) return false
+    if (!sameDayAs(older)) return false
+    return envelope.createdAt - older.envelope.createdAt <= GROUPING_WINDOW_SECONDS
+}
+
+/** Whether both fall on the same local calendar day. A null [older] is a new day. */
+private fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
+    if (older == null) return false
+    return localDayOf(envelope.createdAt) == localDayOf(older.envelope.createdAt)
+}
+
+private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
+
+/**
+ * The day a run of messages belongs to.
+ *
+ * Without one, a conversation is an undivided column and "yesterday evening"
+ * and "this morning" sit flush against each other.
+ */
+@Composable
+private fun DaySeparator(createdAt: Long) {
+    val day = remember(createdAt) { localDayOf(createdAt) }
+    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
+
+    val label =
+        when (day) {
+            today -> stringRes(Res.string.today)
+            today.minusDays(1) -> stringRes(R.string.cordn_chat_yesterday)
+            // Year included only when it is not this one: printing 2026 on
+            // every divider all year is noise.
+            else ->
+                day.format(
+                    DateTimeFormatter.ofPattern(
+                        if (day.year == today.year) "d MMM" else "d MMM yyyy",
+                    ),
+                )
+        }
+
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider(Modifier.weight(1f))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(Modifier.weight(1f))
+    }
+}
+
 @Composable
 private fun CordnMessageRow(
     message: CordnDeliveredMessage,
@@ -544,6 +662,7 @@ private fun CordnMessageRow(
     nav: INav,
     text: String?,
     isEdited: Boolean,
+    showAuthor: Boolean,
     onClick: () -> Unit,
     onReact: (String) -> Unit,
 ) {
@@ -560,12 +679,33 @@ private fun CordnMessageRow(
             .background(if (mentionsMe) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .padding(vertical = 6.dp, horizontal = if (mentionsMe) 6.dp else 0.dp),
     ) {
-        Text(
-            text = message.envelope.pubKey.take(8),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // Name and face, not eight hex characters. The room used to attribute
+        // every message to a prefix of the sender's key while the inbox row
+        // that leads into it, and mentions inside the text below, both
+        // resolved properly — so the one place a sender is named most often
+        // was the one place that did not name them.
+        //
+        // observeUserNameByHex falls back to exactly that hex prefix until the
+        // profile arrives, so nothing regresses while it loads.
+        if (showAuthor) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                UserPicture(
+                    userHex = message.envelope.pubKey,
+                    size = 24.dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Text(
+                    text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
         val thread = CordnMessageReferences.thread(message.envelope.tags)
         val parent = thread?.let { annotations.byId[it.parentId] }
@@ -740,7 +880,10 @@ private suspend fun sendAttachment(
     val bytes = withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
 
     val tag = CordnMediaService(accountViewModel.account).upload(bytes, mime, name, context) ?: return
-    session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+    // Into the room as well, for the same reason every other send is: an
+    // attachment of your own echoes back as an Echo and would otherwise be
+    // invisible to the person who sent it.
+    room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
 }
 
 /**
@@ -907,7 +1050,10 @@ private suspend fun sendVoiceNote(
         val tag =
             CordnMediaService(accountViewModel.account)
                 .upload(bytes, recording.mimeType, recording.file.name, context) ?: return
-        session.manager.send(room.gid, content = "", tags = arrayOf(tag))
+        // Into the room as well, for the same reason every other send is: an
+        // attachment of your own echoes back as an Echo and would otherwise be
+        // invisible to the person who sent it.
+        room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }
     }

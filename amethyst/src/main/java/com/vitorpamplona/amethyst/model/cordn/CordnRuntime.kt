@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.CordnBackup
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
@@ -578,6 +579,16 @@ class CordnRuntime(
         withContext(Dispatchers.IO) {
             CordnMigrationStores.read(filesDir, accountSigner.pubKey, cipher, coordinatorStore.load())
         }
+
+    /**
+     * Coordinators announcing themselves on [relays], newest first.
+     *
+     * Touches no coordinator: it reads the CEP-6 announcements they already
+     * published, so nothing discovered here learns this account exists. That
+     * is the whole reason discovery can be offered before the user has
+     * committed to anything — see [CordnCoordinatorDiscovery].
+     */
+    suspend fun discover(relays: Set<NormalizedRelayUrl>): CordnCoordinatorDiscovery.Result = CordnCoordinatorDiscovery(client).discover(relays)
 
     /**
      * Publishes a handoff and stands this device down.

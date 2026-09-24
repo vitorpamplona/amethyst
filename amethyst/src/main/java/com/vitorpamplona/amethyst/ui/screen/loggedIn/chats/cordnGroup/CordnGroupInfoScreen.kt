@@ -63,8 +63,11 @@ import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
@@ -104,13 +107,17 @@ fun CordnGroupInfoScreen(
         },
     ) { padding ->
         if (room == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            // The app's own empty state, centred and titled, rather than a
+            // sentence stranded in the top-left corner.
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
-        CordnGroupInfo(room, coordinatorPubKey, accountViewModel, Modifier.padding(padding))
+        CordnGroupInfo(room, coordinatorPubKey, accountViewModel, nav, Modifier.padding(padding))
     }
 }
 
@@ -119,6 +126,7 @@ private fun CordnGroupInfo(
     room: CordnGroupChatroom,
     coordinatorPubKey: HexKey,
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val name by room.name.collectAsStateWithLifecycle()
@@ -147,6 +155,31 @@ private fun CordnGroupInfo(
         InfoRow(stringRes(R.string.cordn_info_gid), room.gid)
         InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
         InfoRow(stringRes(R.string.cordn_info_members), members.size.toString())
+
+        // The roster itself, not only its size. "4 members" in a group whose
+        // whole point is knowing exactly who can read you is the one number
+        // that is no use on its own.
+        members.forEach { member ->
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                UserPicture(userHex = member, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+                Text(
+                    text = observeUserNameByHex(member, accountViewModel),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (member in admins) {
+                    Text(
+                        text = stringRes(R.string.cordn_info_admin_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
         InfoRow(
             label = stringRes(R.string.cordn_info_admins),
             // An empty admin set is not "none configured" — spec/01.md makes it
@@ -166,7 +199,7 @@ private fun CordnGroupInfo(
 
         HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
-        JoinRequests(room, coordinatorPubKey, accountViewModel)
+        JoinRequests(room, coordinatorPubKey, accountViewModel, nav)
 
         HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
@@ -227,6 +260,7 @@ private fun JoinRequests(
     room: CordnGroupChatroom,
     coordinatorPubKey: HexKey,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val runtime = accountViewModel.account.cordnRuntime ?: return
     val scope = rememberCoroutineScope()
@@ -276,7 +310,14 @@ private fun JoinRequests(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(request.pubKey.take(16), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                UserPicture(userHex = request.pubKey, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+                Text(
+                    // Admitting someone to an encrypted group off sixteen hex
+                    // characters is not a decision anyone can actually make.
+                    text = observeUserNameByHex(request.pubKey, accountViewModel),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
                 Button(onClick = {
                     scope.launch {
                         try {

@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_title
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnKeyPackageRow
@@ -102,9 +103,11 @@ fun CordnKeyPackagesScreen(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_keypackages_title), nav) },
     ) { padding ->
         if (runtime == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -116,8 +119,8 @@ fun CordnKeyPackagesScreen(
                     .padding(padding)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
                 text = stringRes(R.string.cordn_keypackages_explainer),

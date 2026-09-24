@@ -23,15 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -52,12 +56,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
+import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
@@ -100,9 +109,13 @@ fun CordnCoordinatorsScreen(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_coordinators_title), nav) },
     ) { padding ->
         if (runtime == null) {
-            Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                Text(stringRes(R.string.cordn_group_unavailable))
-            }
+            // The app's own empty state, centred and titled, rather than a
+            // sentence stranded in the top-left corner.
+            EmptyState(
+                title = stringRes(R.string.cordn_group_unavailable),
+                description = stringRes(R.string.cordn_group_unavailable_detail),
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
 
@@ -114,8 +127,8 @@ fun CordnCoordinatorsScreen(
                     .padding(padding)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
                 text = stringRes(R.string.cordn_coordinators_explainer),
@@ -134,6 +147,10 @@ fun CordnCoordinatorsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+            DiscoverCoordinators(runtime, accountViewModel, coordinators.map { it.pubKey }.toSet())
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
@@ -263,6 +280,149 @@ private fun HealthLine(state: CoordinatorHealth.State) {
         style = MaterialTheme.typography.bodySmall,
         color = if (state.isDown) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/**
+ * Coordinators that announced themselves, offered instead of a hex field.
+ *
+ * Adding one used to mean pasting a 64-character public key and a list of
+ * relay URLs, which is not something anyone can do without being told the
+ * answer out of band. Coordinators publish CEP-6 announcements; reading them
+ * is a relay query that touches no coordinator, so nothing here tells anyone
+ * that this account exists.
+ *
+ * Deliberately not automatic on entry. The query is cheap but it is still the
+ * user's relays being asked a question on their behalf, and a screen that
+ * reaches out the moment it opens is the kind of thing this feature is
+ * supposed to be careful about.
+ */
+@Composable
+private fun DiscoverCoordinators(
+    runtime: CordnRuntime,
+    accountViewModel: AccountViewModel,
+    known: Set<String>,
+) {
+    val scope = rememberCoroutineScope()
+    var result by remember { mutableStateOf<CordnCoordinatorDiscovery.Result?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val failed = stringRes(R.string.cordn_coordinators_discover_failed)
+
+    Text(stringRes(R.string.cordn_coordinators_discover), style = MaterialTheme.typography.titleSmall)
+    Text(
+        text = stringRes(R.string.cordn_coordinators_discover_explainer),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    OutlinedButton(
+        onClick = {
+            busy = true
+            error = null
+            scope.launch {
+                try {
+                    result = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
+                } catch (e: Exception) {
+                    error = e.message ?: failed
+                } finally {
+                    busy = false
+                }
+            }
+        },
+        enabled = !busy,
+    ) {
+        if (busy) {
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(stringRes(R.string.cordn_coordinators_discover_action))
+    }
+
+    error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+
+    // The app's own crossfade, so performance mode still turns it off.
+    CrossfadeIfEnabled(
+        targetState = result,
+        label = "cordn-discovery",
+        accountViewModel = accountViewModel,
+    ) { found ->
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (found == null) return@Column
+
+            // Already-added ones are dropped rather than shown disabled: this
+            // list is "what you could add", and a row that does nothing is
+            // just something else to read.
+            val offers = found.coordinators.filter { it.pubKey !in known }
+
+            if (offers.isEmpty()) {
+                Text(
+                    text =
+                        if (found.unreachable.isEmpty()) {
+                            stringRes(R.string.cordn_coordinators_discover_none)
+                        } else {
+                            // "Nobody is announcing" and "we were not told" are
+                            // different answers and only one of them is final.
+                            stringRes(R.string.cordn_coordinators_discover_unheard, found.unreachable.size)
+                        },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            offers.forEach { offer -> DiscoveredCard(offer, runtime) }
+        }
+    }
+}
+
+@Composable
+private fun DiscoveredCard(
+    offer: DiscoveredCoordinator,
+    runtime: CordnRuntime,
+) {
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                // Its own word for itself, and said so: a coordinator cannot
+                // prove a name, which is why this never becomes the label.
+                text = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            offer.surface.about?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                text = offer.relays.joinToString { it.url },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                // Staleness matters more here than anywhere: the last live
+                // survey found most announcements were months-dead demos.
+                text = stringRes(R.string.cordn_coordinators_discover_seen, timeAgoNoDot(offer.announcedAt).trim()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = {
+                    busy = true
+                    scope.launch {
+                        try {
+                            runtime.session(offer.toConfig())
+                        } finally {
+                            busy = false
+                        }
+                    }
+                },
+                enabled = !busy,
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Text(stringRes(R.string.cordn_coordinators_discover_add))
+            }
+        }
+    }
 }
 
 @Composable
