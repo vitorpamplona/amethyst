@@ -338,7 +338,16 @@ jobs:
   test-and-build-android:
     needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # 90, not 60. On main this job's Gradle step takes ~46 minutes, which used
+    # 76% of a 60-minute budget — fine for an incremental run, but PR runs set
+    # `cache-read-only` (below), so they restore main's Gradle cache and never
+    # save. A PR that touches `quartz` or `commons` invalidates most of what
+    # that cache holds for everything downstream, and the job then rebuilds it
+    # from cold: measured 2-3x the main-branch time across every job in the
+    # workflow, which puts this one past the cap and gets it killed mid-step
+    # with no test report. Raising the cap costs nothing on runs that finish
+    # early — `timeout-minutes` bounds a job, it does not reserve the time.
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
