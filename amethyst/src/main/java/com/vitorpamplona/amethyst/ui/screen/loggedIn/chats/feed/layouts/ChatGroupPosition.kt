@@ -88,7 +88,7 @@ fun chatBubbleShapeFor(
     }
 
 /** Messages more than this far apart never group, even from the same author. */
-private const val GROUP_WINDOW_SECONDS = 10 * 60L
+internal const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
 
 /**
  * Event kinds that don't render as regular bubbles (zaps, raids, clips) or that
@@ -120,7 +120,7 @@ private fun groupsWith(
     val olderAuthor = older.author?.pubkeyHex ?: return false
     if (newerAuthor != olderAuthor) return false
 
-    if (abs(newerEvent.createdAt - olderEvent.createdAt) > GROUP_WINDOW_SECONDS) return false
+    if (abs(newerEvent.createdAt - olderEvent.createdAt) > CHAT_GROUP_WINDOW_SECONDS) return false
 
     // A subject header renders as a divisor above the newer message.
     if (newerEvent.subject() != null) return false
