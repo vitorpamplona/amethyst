@@ -68,8 +68,8 @@ object CordnMigrationStores {
                         gid = gid,
                         clientStateBase64 = state.toBase64(),
                         cursor = groupStore.loadCursor(gid)?.fetchCursor ?: 0L,
-                        roomStateBase64 = groupStore.loadRoomState(gid)?.let { CordnRoomStateCodec.encode(it).toBase64() },
-                        echoStateBase64 = groupStore.loadEchoState(gid)?.let { EchoStateCodec.encode(it).toBase64() },
+                        roomStateBase64 = CordnRoomStateCodec.encode(groupStore.loadRoomState(gid)).toBase64(),
+                        echoStateBase64 = EchoStateCodec.encode(groupStore.loadEchoState(gid)).toBase64(),
                         joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
                         messages = carriedMessages(groupStore, gid),
                     )
