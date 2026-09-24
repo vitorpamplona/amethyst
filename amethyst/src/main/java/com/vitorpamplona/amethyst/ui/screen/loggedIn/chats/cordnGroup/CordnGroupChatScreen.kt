@@ -23,13 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
-import android.media.MediaPlayer
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,7 +35,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,9 +43,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -63,14 +57,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
@@ -83,7 +76,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -91,6 +87,7 @@ import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.pluralStringRes
@@ -100,17 +97,20 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadS
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaCipher
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaEncryption
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * One cordn room.
@@ -870,14 +870,22 @@ private fun resolveDisplayName(
         ?: "file"
 
 /**
- * One attachment, fetched and decrypted on demand.
+ * One attachment, drawn by the pipeline every other chat's media goes through.
  *
- * Never automatically. A cordn attachment lives on a blob host that is not the
- * coordinator and not a relay, and fetching one tells that host a specific
- * person opened a specific message at a specific time. Auto-loading would make
- * that happen for every message that scrolls past, which is exactly the leak
- * an end-to-end encrypted group is supposed to avoid — so the first tap is the
- * user's.
+ * Registering a [CordnMediaCipher] against the blob URL lets
+ * `EncryptedBlobInterceptor` decrypt the download in flight, so the bytes reach
+ * [ZoomableContentView] already in the clear and cordn gets the app's real
+ * image, video and voice-note rendering — zoom, the pager, the content-warning
+ * gate, thumbhash backdrops — instead of its own.
+ *
+ * It used to fetch and decrypt by hand and then draw a bare `Image`, an
+ * OutlinedButton reading "Open <filename>", and its own audio player, on the
+ * argument that a blob fetch tells the host that a particular person opened a
+ * particular message and so should wait for a tap. The concern is real; a
+ * cordn-only tap gate was the wrong place to answer it. Auto-loading media is
+ * an app-wide setting that the shared renderer already honours, and every other
+ * encrypted chat — Marmot included — routes through it, so the one chat that
+ * opted out was also the one whose media did not look like the app.
  */
 @Composable
 internal fun CordnAttachment(
@@ -885,80 +893,71 @@ internal fun CordnAttachment(
     room: CordnGroupChatroom,
     accountViewModel: AccountViewModel,
 ) {
-    val scope = rememberCoroutineScope()
-    var bytes by remember(attachment.url) { mutableStateOf<ByteArray?>(null) }
-    var loading by remember(attachment.url) { mutableStateOf(false) }
-    var error by remember(attachment.url) { mutableStateOf<String?>(null) }
-    val failed = stringRes(R.string.cordn_media_download_failed)
+    // Derived, not carried: spec/applications/encrypted-media.md §3.1. Null
+    // means this device cannot open the group at all, which is the one case
+    // there is nothing to draw for.
+    val mediaKey =
+        remember(room.gid, attachment.url) {
+            accountViewModel.account.cordnRuntime
+                ?.sessionOrNull(room.coordinatorPubKey)
+                ?.manager
+                ?.group(room.gid)
+                ?.let { CordnMediaEncryption.mediaKey(it) }
+        }
 
-    val image = remember(bytes) { bytes?.takeIf { attachment.isImage }?.toImageBitmapOrNull() }
+    if (mediaKey == null) {
+        Text(
+            text = stringRes(R.string.cordn_media_download_failed),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        return
+    }
 
-    Column(Modifier.padding(top = 6.dp)) {
-        if (image != null) {
-            Image(
-                bitmap = image,
-                contentDescription = attachment.filename,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        loading = true
-                        error = null
-                        try {
-                            val session = accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
-                            val group = session?.manager?.group(room.gid)
-                            if (group == null) {
-                                error = failed
-                            } else {
-                                bytes = CordnMediaService(accountViewModel.account).download(group, attachment)
-                            }
-                        } catch (e: Exception) {
-                            error = e.message ?: failed
-                        } finally {
-                            loading = false
-                        }
-                    }
-                },
-                enabled = !loading,
-            ) {
-                Icon(MaterialSymbols.AttachFile, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(
-                    text = stringRes(R.string.cordn_media_open, attachment.filename),
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(start = 6.dp),
+    val cipher = remember(attachment, mediaKey) { CordnMediaCipher(mediaKey, attachment) }
+    Amethyst.instance.keyCache.add(attachment.url, cipher, attachment.mimeType)
+
+    val content =
+        remember(attachment, mediaKey) {
+            val dim = attachment.dimensions?.let { DimensionTag.parse(it) }
+            if (attachment.isImage) {
+                EncryptedMediaUrlImage(
+                    url = attachment.url,
+                    description = attachment.filename,
+                    hash = attachment.plaintextHash,
+                    blurhash = attachment.blurhash,
+                    dim = dim,
+                    mimeType = attachment.mimeType,
+                    encryptionAlgo = CordnMediaTag.VERSION_V1,
+                    encryptionKey = mediaKey,
+                    encryptionNonce = attachment.nonceBytes,
+                )
+            } else {
+                // Audio lands here too, which is what makes a voice note play
+                // in the bubble rather than read as a file to open.
+                EncryptedMediaUrlVideo(
+                    url = attachment.url,
+                    description = attachment.filename,
+                    hash = attachment.plaintextHash,
+                    blurhash = attachment.blurhash,
+                    dim = dim,
+                    mimeType = attachment.mimeType,
+                    encryptionAlgo = CordnMediaTag.VERSION_V1,
+                    encryptionKey = mediaKey,
+                    encryptionNonce = attachment.nonceBytes,
                 )
             }
         }
 
-        val audio = bytes
-        if (audio != null && attachment.isAudio) {
-            VoiceNotePlayer(audio, attachment.filename)
-        } else if (bytes != null && image == null) {
-            // Nothing to render for an arbitrary file, and claiming success
-            // with nothing on screen reads as a broken message.
-            Text(
-                text = stringRes(R.string.cordn_media_opened, attachment.filename),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        error?.let {
-            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-        }
+    Box(Modifier.padding(top = 6.dp)) {
+        ZoomableContentView(
+            content = content,
+            roundedCorner = true,
+            contentScale = ContentScale.FillWidth,
+            accountViewModel = accountViewModel,
+        )
     }
 }
-
-/** Decoded bytes as a bitmap, or null when they are not an image this device reads. */
-private fun ByteArray.toImageBitmapOrNull(): ImageBitmap? =
-    try {
-        BitmapFactory.decodeByteArray(this, 0, size)?.asImageBitmap()
-    } catch (e: Exception) {
-        null
-    }
 
 /**
  * Hold to record, release to send.
@@ -1003,7 +1002,9 @@ internal fun VoiceNoteButton(
         Icon(
             symbol = if (recording) MaterialSymbols.Stop else MaterialSymbols.Mic,
             contentDescription = stringRes(if (recording) R.string.cordn_voice_stop else R.string.cordn_voice_record),
-            tint = if (recording) MaterialTheme.colorScheme.error else LocalContentColor.current,
+            // Matches the attach icon beside it; red only while recording,
+            // which is the one state worth pulling the eye.
+            tint = if (recording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.placeholderText,
         )
     }
 }
@@ -1047,64 +1048,5 @@ private suspend fun sendVoiceNote(
         room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }
-    }
-}
-
-/**
- * Plays decrypted audio from memory, via a cache file the player can open.
- *
- * `MediaPlayer` cannot take a byte array, so the plaintext has to touch disk.
- * It goes to a file this composable owns and deletes on dispose, rather than
- * anywhere durable: the whole point of the codec above is that the only
- * lasting copy of this audio is the ciphertext on the blob host.
- */
-@Composable
-private fun VoiceNotePlayer(
-    bytes: ByteArray,
-    filename: String,
-) {
-    val context = LocalContext.current
-    var playing by remember { mutableStateOf(false) }
-
-    val scratch =
-        remember(bytes) {
-            File(context.cacheDir, "cordn-voice")
-                .apply { mkdirs() }
-                .let { File(it, "${bytes.contentHashCode()}-$filename") }
-                .also { it.writeBytes(bytes) }
-        }
-
-    val player =
-        remember(scratch) {
-            MediaPlayer().apply {
-                setDataSource(scratch.absolutePath)
-                prepare()
-                setOnCompletionListener { playing = false }
-            }
-        }
-
-    DisposableEffect(player) {
-        onDispose {
-            player.release()
-            scratch.delete()
-        }
-    }
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = {
-            if (playing) {
-                player.pause()
-                playing = false
-            } else {
-                player.start()
-                playing = true
-            }
-        }) {
-            Icon(
-                symbol = if (playing) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
-                contentDescription = stringRes(R.string.cordn_voice_play),
-            )
-        }
-        Text(filename, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

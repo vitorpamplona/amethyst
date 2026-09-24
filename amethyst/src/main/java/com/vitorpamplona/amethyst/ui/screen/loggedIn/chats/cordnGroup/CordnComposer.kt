@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -40,8 +41,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -208,9 +211,22 @@ internal fun CordnComposer(
                 )
             },
             leadingIcon = {
-                Row {
+                // Same frame every other chat composer uses for its leading
+                // icons (`MarmotGalleryLeadingIcon`): 4.dp either side and the
+                // placeholder tint. Without it these two sat further from the
+                // edge and further apart than the rest of the app's composers,
+                // because a bare IconButton keeps its full 48.dp touch target
+                // and nothing was pulling the row back in.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 4.dp, end = 4.dp),
+                ) {
                     IconButton(onClick = { picker.launch("*/*") }, enabled = !attaching) {
-                        Icon(MaterialSymbols.AttachFile, contentDescription = stringRes(R.string.cordn_media_attach))
+                        Icon(
+                            MaterialSymbols.AttachFile,
+                            contentDescription = stringRes(R.string.cordn_media_attach),
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
                     }
                     VoiceNoteButton(enabled = !attaching, onRecorded = onVoiceNote)
                 }

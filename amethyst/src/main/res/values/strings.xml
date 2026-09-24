@@ -317,8 +317,6 @@
     <string name="cordn_action_unpin">Unpin</string>
     <string name="cordn_action_editing">Editing your message</string>
     <string name="cordn_media_attach">Attach a file</string>
-    <string name="cordn_media_open">Open %1$s</string>
-    <string name="cordn_media_opened">%1$s decrypted. Nothing to show for this file type yet.</string>
     <string name="cordn_media_upload_failed">Could not send that file.</string>
     <string name="cordn_send_failed">That did not send.</string>
     <string name="cordn_send_no_session">This group\'s coordinator is not open, so nothing can be sent yet.</string>
