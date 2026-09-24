@@ -5401,6 +5401,8 @@
     <string name="cordn_hub_explainer">Groups delivered by a coordinator you choose, instead of by relays.</string>
     <string name="cordn_hub_link">Inspect a group link</string>
     <string name="cordn_hub_link_desc">See what a cordn1… link points at before you act on it</string>
+    <string name="cordn_hub_section_service">The coordinator</string>
+    <string name="cordn_hub_section_device">This device</string>
     <string name="cordn_hub_coordinators">Coordinators</string>
     <string name="cordn_hub_coordinators_desc">The servers that carry your groups</string>
     <string name="cordn_hub_keypackages">Key packages</string>

@@ -20,21 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_backup
@@ -48,10 +49,18 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_hub_link
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_link_desc
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_migrate
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_migrate_desc
+import com.vitorpamplona.amethyst.commons.resources.cordn_hub_section_device
+import com.vitorpamplona.amethyst.commons.resources.cordn_hub_section_service
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_title
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsControlRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
@@ -64,6 +73,10 @@ import org.jetbrains.compose.resources.StringResource
  * by count and among the least used, pushing everything else down. Grouping
  * them costs one tap and keeps every page searchable under a name a user
  * would actually look for.
+ *
+ * Built from [SettingsSection] and [SettingsItem] like every other settings
+ * page. The first version hand-rolled its own cards, which made the one screen
+ * reached FROM the settings list the one screen that did not look like it.
  */
 @Composable
 fun CordnHubScreen(
@@ -77,40 +90,82 @@ fun CordnHubScreen(
             modifier =
                 Modifier
                     .padding(padding)
-                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
                 text = stringRes(Res.string.cordn_hub_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
             )
 
-            HubEntry(Res.string.cordn_hub_coordinators, Res.string.cordn_hub_coordinators_desc) { nav.nav(Route.CordnCoordinators) }
-            HubEntry(Res.string.cordn_hub_keypackages, Res.string.cordn_hub_keypackages_desc) { nav.nav(Route.CordnKeyPackages) }
-            HubEntry(Res.string.cordn_hub_link, Res.string.cordn_hub_link_desc) { nav.nav(Route.CordnLink) }
-            HubEntry(Res.string.cordn_hub_backup, Res.string.cordn_hub_backup_desc) { nav.nav(Route.CordnBackup) }
-            HubEntry(Res.string.cordn_hub_migrate, Res.string.cordn_hub_migrate_desc) { nav.nav(Route.CordnMigrate) }
+            // Split by what the page is about rather than listed flat: the
+            // first three are about a coordinator, the last two about this
+            // device's own state.
+            SettingsSection(Res.string.cordn_hub_section_service) {
+                HubEntry(MaterialSymbols.Dns, Res.string.cordn_hub_coordinators, Res.string.cordn_hub_coordinators_desc) {
+                    nav.nav(Route.CordnCoordinators)
+                }
+                SettingsDivider()
+                HubEntry(MaterialSymbols.Key, Res.string.cordn_hub_keypackages, Res.string.cordn_hub_keypackages_desc) {
+                    nav.nav(Route.CordnKeyPackages)
+                }
+                SettingsDivider()
+                HubEntry(MaterialSymbols.Link, Res.string.cordn_hub_link, Res.string.cordn_hub_link_desc) {
+                    nav.nav(Route.CordnLink)
+                }
+            }
+
+            SettingsSection(Res.string.cordn_hub_section_device) {
+                HubEntry(MaterialSymbols.Save, Res.string.cordn_hub_backup, Res.string.cordn_hub_backup_desc) {
+                    nav.nav(Route.CordnBackup)
+                }
+                SettingsDivider()
+                HubEntry(MaterialSymbols.SwapHoriz, Res.string.cordn_hub_migrate, Res.string.cordn_hub_migrate_desc) {
+                    nav.nav(Route.CordnMigrate)
+                }
+            }
         }
     }
 }
 
+/**
+ * A navigation row that keeps its description.
+ *
+ * [SettingsItem] is the plain navigation row and has no room for one. Every
+ * page behind this hub is obscure enough that its title alone does not say
+ * what it does, so the row with a description — and a chevron supplied as the
+ * trailing slot, since [SettingsControlRow] is built for inline controls —
+ * is the honest fit.
+ */
 @Composable
 private fun HubEntry(
+    icon: MaterialSymbol,
     title: StringResource,
     description: StringResource,
     onClick: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringRes(title), style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = stringRes(description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    SettingsControlRow(
+        icon = icon,
+        title = stringRes(title),
+        description = stringRes(description),
+        onClick = onClick,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Preview
+@Composable
+fun CordnHubScreenPreview() {
+    ThemeComparisonColumn {
+        CordnHubScreen(mockAccountViewModel(), EmptyNav())
     }
 }
