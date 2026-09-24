@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.GroupMessage
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -31,13 +34,19 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -600,6 +609,94 @@ class CordnGroupManagerTest {
             assertTrue(aliceManager.exposure(gid).joinedFromShareLink)
             assertTrue(aliceManager.group(gid)!!.memberCount == 1)
         }
+
+    @Test
+    fun `a cancelled subscription still saves what it ingested`() =
+        runTest {
+            // The case the `finally` exists for, and the one it could not
+            // serve: persistAll suspends, and a suspend call inside a
+            // cancelled coroutine throws before writing anything. Cancelling
+            // is also the normal way this ends — CordnSyncLoop cancels the
+            // subscription whenever the group set changes.
+            val aliceCoordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, aliceCoordinator)
+            val (bundle, stored) = bobsPublication()
+            aliceCoordinator.keyPackages[stored.keyPackageRef] = stored
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Cancelled"))
+            aliceManager.invite(gid, bob, stored.keyPackageRef)
+            aliceManager.send(gid, "a message bob has not seen")
+
+            // Bob joins with an empty store, so any cursor in it afterwards
+            // can only have come from the subscription.
+            val bobStore = SuspendingStore()
+            val bobManager =
+                CordnGroupManager(
+                    accountPubKey = bob,
+                    config = config,
+                    coordinator = HangingCoordinator(bobsCoordinatorOver(aliceCoordinator)),
+                    store = bobStore,
+                    clock = { 1_757_000_000L },
+                )
+            bobManager.pendingWelcomes({ bundle }).pending.forEach { bobManager.accept(it) }
+            val before = bobStore.loadCursor(gid)
+
+            // Delivers, then hangs — so the cancellation lands while the
+            // subscription is open, which is the whole point. A fake that
+            // returns normally leaves the `finally` running in a live
+            // coroutine and proves nothing.
+            val job = launch { bobManager.subscribe(timeoutMs = 60_000) { } }
+            advanceUntilIdle()
+            job.cancelAndJoin()
+
+            assertNotEquals(
+                before,
+                bobStore.loadCursor(gid),
+                "a cursor the subscription advanced must reach the store even when cancelled",
+            )
+        }
+
+    /**
+     * A store whose writes actually suspend, like the file-backed one.
+     *
+     * [InMemoryCordnGroupStore]'s methods are `suspend` but never reach a
+     * suspension point, and cancellation is only observed at one — so against
+     * it a cancelled `finally` writes happily and proves nothing. The real
+     * store goes through `Dispatchers.IO`, where the same code throws before
+     * it writes. One `yield()` is the difference.
+     */
+    private class SuspendingStore(
+        private val inner: CordnGroupStore = InMemoryCordnGroupStore(),
+    ) : CordnGroupStore by inner {
+        override suspend fun saveCursor(
+            gid: String,
+            cursor: GroupCursor,
+        ) {
+            yield()
+            inner.saveCursor(gid, cursor)
+        }
+
+        override suspend fun saveGroup(
+            gid: String,
+            state: ByteArray,
+        ) {
+            yield()
+            inner.saveGroup(gid, state)
+        }
+    }
+
+    /** Delivers whatever it is wrapping, then never returns. */
+    private class HangingCoordinator(
+        private val inner: FakeCoordinator,
+    ) : ICoordinator by inner {
+        override suspend fun subscribeMessages(
+            cursors: Map<String, Long?>,
+            timeoutMs: Long,
+            onMessage: (GroupMessage) -> Unit,
+        ) {
+            inner.subscribeMessages(cursors, timeoutMs, onMessage)
+            awaitCancellation()
+        }
+    }
 
     /** Bob's own view of the coordinator, carrying whatever Alice's has stored. */
     private fun bobsCoordinatorOver(alices: FakeCoordinator): FakeCoordinator {

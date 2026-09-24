@@ -46,9 +46,11 @@ import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -612,7 +614,13 @@ class CordnGroupManager(
         } finally {
             // finally, not after: a subscription normally ends by timing out or
             // being cancelled, and those are the cases with progress to keep.
-            persistAll()
+            //
+            // NonCancellable because the cancelled case is the one this exists
+            // for and the one it could not serve: persistAll suspends, and a
+            // suspend call in a cancelled coroutine throws before it writes
+            // anything. Without this the `finally` looked like it saved on
+            // cancellation and silently did not.
+            withContext(NonCancellable) { persistAll() }
         }
     }
 
