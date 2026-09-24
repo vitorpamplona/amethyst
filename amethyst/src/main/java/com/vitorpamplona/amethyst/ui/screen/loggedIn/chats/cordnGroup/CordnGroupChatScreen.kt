@@ -41,7 +41,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -109,6 +110,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * One cordn room.
@@ -270,9 +275,23 @@ private fun CordnGroupChat(
                 reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                items(messages.asReversed(), key = { it.envelope.id }) { message ->
+                // Reversed once, into a val: `asReversed()` is a view, and
+                // indexing it per item to find the neighbour is how a list
+                // like this quietly becomes quadratic.
+                val rows = messages.asReversed()
+
+                itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
+                    // The row BELOW this one on screen, which in a reversed
+                    // list is the next index — i.e. the older message.
+                    val older = rows.getOrNull(index + 1)
+
                     CordnMessageRow(
                         message = message,
+                        // Grouped when the same person keeps talking inside a
+                        // few minutes: the avatar and name are repeated once
+                        // per burst instead of once per line, which is most of
+                        // what makes a wall of messages readable.
+                        showAuthor = !message.follows(older),
                         room = room,
                         annotations = annotations,
                         me = me,
@@ -288,6 +307,12 @@ private fun CordnGroupChat(
                             scope.launch { trySend { it.post(room.gid, emoji, reactionTo = message.target()) } }
                         },
                     )
+
+                    // Drawn under the first message of each day, which in a
+                    // reversed list means comparing against the older row.
+                    if (!message.sameDayAs(older)) {
+                        DaySeparator(message.envelope.createdAt)
+                    }
                 }
             }
 
@@ -562,6 +587,71 @@ private fun CordnChatTopBar(
     )
 }
 
+/** How long a burst from one sender stays one burst. */
+private const val GROUPING_WINDOW_SECONDS = 5 * 60
+
+/**
+ * Whether this message continues [older]'s burst — same sender, close in time.
+ *
+ * Time as well as sender, because a reply hours later to your own last message
+ * is a new thought, and hiding the name on it reads as though the conversation
+ * never paused.
+ */
+private fun CordnDeliveredMessage.follows(older: CordnDeliveredMessage?): Boolean {
+    if (older == null) return false
+    if (older.envelope.pubKey != envelope.pubKey) return false
+    if (!sameDayAs(older)) return false
+    return envelope.createdAt - older.envelope.createdAt <= GROUPING_WINDOW_SECONDS
+}
+
+/** Whether both fall on the same local calendar day. A null [older] is a new day. */
+private fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
+    if (older == null) return false
+    return localDayOf(envelope.createdAt) == localDayOf(older.envelope.createdAt)
+}
+
+private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
+
+/**
+ * The day a run of messages belongs to.
+ *
+ * Without one, a conversation is an undivided column and "yesterday evening"
+ * and "this morning" sit flush against each other.
+ */
+@Composable
+private fun DaySeparator(createdAt: Long) {
+    val day = remember(createdAt) { localDayOf(createdAt) }
+    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
+
+    val label =
+        when (day) {
+            today -> stringRes(Res.string.today)
+            today.minusDays(1) -> stringRes(R.string.cordn_chat_yesterday)
+            // Year included only when it is not this one: printing 2026 on
+            // every divider all year is noise.
+            else ->
+                day.format(
+                    DateTimeFormatter.ofPattern(
+                        if (day.year == today.year) "d MMM" else "d MMM yyyy",
+                    ),
+                )
+        }
+
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider(Modifier.weight(1f))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(Modifier.weight(1f))
+    }
+}
+
 @Composable
 private fun CordnMessageRow(
     message: CordnDeliveredMessage,
@@ -572,6 +662,7 @@ private fun CordnMessageRow(
     nav: INav,
     text: String?,
     isEdited: Boolean,
+    showAuthor: Boolean,
     onClick: () -> Unit,
     onReact: (String) -> Unit,
 ) {
@@ -596,22 +687,24 @@ private fun CordnMessageRow(
         //
         // observeUserNameByHex falls back to exactly that hex prefix until the
         // profile arrives, so nothing regresses while it loads.
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            UserPicture(
-                userHex = message.envelope.pubKey,
-                size = 24.dp,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-            Text(
-                text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (showAuthor) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                UserPicture(
+                    userHex = message.envelope.pubKey,
+                    size = 24.dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Text(
+                    text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         val thread = CordnMessageReferences.thread(message.envelope.tags)
