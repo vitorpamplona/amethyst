@@ -237,6 +237,9 @@ private fun CordnGroupChat(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            // One clock for every divider in the room, so they cannot disagree.
+            val today = rememberToday()
+
             // Pinned messages sit above the conversation rather than inside it.
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
@@ -330,7 +333,7 @@ private fun CordnGroupChat(
                     // Drawn under the first message of each day, which in a
                     // reversed list means comparing against the older row.
                     if (!message.sameDayAs(older)) {
-                        DaySeparator(message.envelope.createdAt)
+                        DaySeparator(message.envelope.createdAt, today)
                     }
                 }
             }

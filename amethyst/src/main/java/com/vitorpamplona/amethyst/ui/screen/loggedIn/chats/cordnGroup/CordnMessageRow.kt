@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,9 +85,12 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.delay
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
@@ -532,9 +536,11 @@ private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(ep
  * morning" sit flush against each other.
  */
 @Composable
-internal fun DaySeparator(createdAt: Long) {
+internal fun DaySeparator(
+    createdAt: Long,
+    today: LocalDate,
+) {
     val day = remember(createdAt) { localDayOf(createdAt) }
-    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
     val label =
         when (day) {
@@ -563,4 +569,34 @@ internal fun DaySeparator(createdAt: Long) {
         )
         HorizontalDivider(Modifier.weight(1f))
     }
+}
+
+/** Upper bound on how long a stale "Today" can survive a clock correction. */
+private const val TODAY_POLL_MS = 60_000L
+
+/**
+ * Today, as a value that stops being today when it stops being today.
+ *
+ * [DaySeparator] used to hold `remember { LocalDate.now() }` of its own. That is a
+ * snapshot of the wall clock with nothing to invalidate it, and each separator keeps a
+ * separate one, so they can disagree: a separator composed before midnight goes on
+ * saying "Today" while the one for the new day says it too. Seen on the tablet — one
+ * room, two "Today" dividers.
+ *
+ * Polling rather than a single sleep to the next midnight, because a device clock does
+ * not only advance: it is corrected, and the tablet this was found on jumped nine hours
+ * in one step. Re-assigning an equal [LocalDate] is not a change, so a quiet minute
+ * costs no recomposition.
+ */
+@Composable
+internal fun rememberToday(): LocalDate {
+    val zone = remember { ZoneId.systemDefault() }
+    return produceState(LocalDate.now(zone), zone) {
+        while (true) {
+            val now = ZonedDateTime.now(zone)
+            val untilMidnight = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay(zone)).toMillis()
+            delay(untilMidnight.coerceIn(1_000L, TODAY_POLL_MS))
+            value = LocalDate.now(zone)
+        }
+    }.value
 }
