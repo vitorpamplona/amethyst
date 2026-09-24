@@ -325,6 +325,8 @@
     <string name="cordn_send_failed">That did not send.</string>
     <string name="cordn_send_no_session">This group\'s coordinator is not open, so nothing can be sent yet.</string>
     <string name="cordn_media_download_failed">Could not open that file.</string>
+    <string name="cordn_media_no_server">No media server is set for this account, so there is nowhere to put the file. Pick one in Settings.</string>
+    <string name="cordn_media_unreadable">That file could not be read.</string>
     <string name="cordn_voice_record">Record a voice note</string>
     <string name="cordn_voice_stop">Stop and send</string>
     <string name="cordn_voice_play">Play voice note</string>
