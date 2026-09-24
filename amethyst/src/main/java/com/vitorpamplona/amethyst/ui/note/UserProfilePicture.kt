@@ -370,7 +370,6 @@ fun BaseUserPicture(
                 userName = userName,
                 size = size,
                 modifier = innerModifier,
-                accountViewModel = accountViewModel,
             )
         }
 
@@ -405,7 +404,6 @@ fun BaseUserPicture(
                     userName = null,
                     size = size,
                     modifier = innerModifier,
-                    accountViewModel = accountViewModel,
                 )
             }
         }
@@ -433,7 +431,6 @@ fun ObserveAndDrawInnerUserPicture(
         userName = userProfile?.info?.bestName(),
         size = size,
         modifier = innerModifier,
-        accountViewModel = accountViewModel,
     )
 }
 
@@ -455,7 +452,6 @@ fun ScoreTag55Preview() {
                     userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
-                    accountViewModel = accountViewModel,
                 )
                 FollowingIcon(Modifier.size(size.div(3.5f)))
                 ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
@@ -468,7 +464,6 @@ fun ScoreTag55Preview() {
                     userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
-                    accountViewModel = accountViewModel,
                 )
                 FollowingIcon(Modifier.size(size.div(3.5f)))
                 ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
@@ -481,7 +476,6 @@ fun ScoreTag55Preview() {
                     userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
-                    accountViewModel = accountViewModel,
                 )
                 FollowingIcon(Modifier.size(size.div(3.5f)))
                 ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
@@ -494,7 +488,6 @@ fun ScoreTag55Preview() {
                     userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
-                    accountViewModel = accountViewModel,
                 )
                 FollowingIcon(Modifier.size(size.div(3.5f)))
                 ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
@@ -507,7 +500,6 @@ fun ScoreTag55Preview() {
                     userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
-                    accountViewModel = accountViewModel,
                 )
                 FollowingIcon(Modifier.size(size.div(3.5f)))
                 ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
@@ -534,7 +526,6 @@ fun InnerUserPicture(
     userName: String?,
     size: Dp,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
 ) {
     UserAvatar(
         userHex = userHex,
@@ -547,12 +538,6 @@ fun InnerUserPicture(
             } else {
                 stringRes(id = Res.string.profile_image)
             },
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-        autoPlayGif =
-            accountViewModel.settings.autoPlayVideosFlow
-                .collectAsStateWithLifecycle()
-                .value,
     )
 }
 

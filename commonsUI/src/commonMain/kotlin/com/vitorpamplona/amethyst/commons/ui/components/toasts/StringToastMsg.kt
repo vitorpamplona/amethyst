@@ -18,14 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
-import org.jetbrains.compose.resources.StringResource
 
 @Immutable
-class ResourceToastMsg(
-    val titleResId: StringResource,
-    val resourceId: StringResource,
-    val params: Array<out String>? = null,
+class StringToastMsg(
+    val title: String,
+    val msg: String,
+) : ToastMsg()
+
+class ActionableStringToastMsg(
+    val title: String,
+    val msg: String,
+    val action: () -> Unit,
 ) : ToastMsg()

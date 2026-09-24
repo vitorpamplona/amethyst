@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -33,8 +34,8 @@ fun LoadRelayGroupChannel(
     content: @Composable (RelayGroupChannel) -> Unit,
 ) {
     val channel =
-        produceStateIfNotNull(accountViewModel.getRelayGroupChannelIfExists(id), id) {
-            value = accountViewModel.checkGetOrCreateRelayGroupChannel(id)
+        produceStateIfNotNull(LocalCache.getRelayGroupChannelIfExists(id), id) {
+            value = LocalCache.getOrCreateRelayGroupChannel(id)
         }
 
     channel.value?.let { content(it) }

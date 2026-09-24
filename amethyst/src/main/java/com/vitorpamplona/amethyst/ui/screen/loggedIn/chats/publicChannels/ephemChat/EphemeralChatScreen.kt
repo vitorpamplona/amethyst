@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -44,8 +45,8 @@ fun EphemeralChatScreen(
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
     val channelId = remember(id, relay) { RoomId(id, relay) }
-    val draft = remember(draftId) { draftId?.let { accountViewModel.getNoteIfExists(it) } }
-    val replyTo = remember(replyToId) { replyToId?.let { accountViewModel.checkGetOrCreateNote(it) } }
+    val draft = remember(draftId) { draftId?.let { LocalCache.getNoteIfExists(it) } }
+    val replyTo = remember(replyToId) { replyToId?.let { LocalCache.checkGetOrCreateNote(it) } }
 
     DisappearingScaffold(
         isInvertedLayout = true,

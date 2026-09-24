@@ -883,11 +883,11 @@ fun LoadNote(
     content: @Composable (Note?) -> Unit,
 ) {
     var note by
-        remember(baseNoteHex) { mutableStateOf(accountViewModel.getNoteIfExists(baseNoteHex)) }
+        remember(baseNoteHex) { mutableStateOf(LocalCache.getNoteIfExists(baseNoteHex)) }
 
     if (note == null) {
         LaunchedEffect(key1 = baseNoteHex) {
-            note = accountViewModel.checkGetOrCreateNote(baseNoteHex)
+            note = LocalCache.checkGetOrCreateNote(baseNoteHex)
         }
     }
 

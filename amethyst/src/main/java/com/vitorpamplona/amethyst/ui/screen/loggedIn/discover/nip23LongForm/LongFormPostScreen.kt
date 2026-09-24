@@ -81,6 +81,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_a_tag
@@ -156,8 +157,8 @@ fun LongFormPostScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
-        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
+        val draft = draftId?.let { LocalCache.getNoteIfExists(it) }
+        val version = versionId?.let { LocalCache.getNoteIfExists(it) }
         postViewModel.load(draft, version)
         if (draftId == null && versionId == null) {
             postViewModel.applySignature()

@@ -515,9 +515,9 @@ internal fun observedUserInfo(
     pubKey: HexKey,
     accountViewModel: AccountViewModel,
 ): UserMetadata? {
-    var user by remember(pubKey) { mutableStateOf(accountViewModel.getUserIfExists(pubKey)) }
+    var user by remember(pubKey) { mutableStateOf(LocalCache.getUserIfExists(pubKey)) }
     if (user == null) {
-        LaunchedEffect(pubKey) { user = accountViewModel.checkGetOrCreateUser(pubKey) }
+        LaunchedEffect(pubKey) { user = LocalCache.checkGetOrCreateUser(pubKey) }
     }
     val loaded = user ?: return null
     val info by observeUserInfo(loaded, accountViewModel)

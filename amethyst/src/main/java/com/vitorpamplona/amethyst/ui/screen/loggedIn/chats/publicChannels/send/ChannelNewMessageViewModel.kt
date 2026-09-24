@@ -375,7 +375,7 @@ open class ChannelNewMessageViewModel :
             (draftEvent as? ChannelMessageEvent)
                 ?: (draftEvent as? LiveActivitiesChatMessageEvent)
         threadedDraft?.reply()?.eventId?.let { replyId ->
-            replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
+            replyTo.value = LocalCache.checkGetOrCreateNote(replyId)
         }
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)

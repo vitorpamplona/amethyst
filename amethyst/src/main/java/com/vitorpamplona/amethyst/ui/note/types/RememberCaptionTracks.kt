@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.model.nip71Video.captionTracks
 import com.vitorpamplona.amethyst.commons.model.nip71Video.mergeCaptionTracks
@@ -60,7 +61,7 @@ fun rememberCaptionTracks(
     val resolved =
         refs.pending.map { pending ->
             key(pending.address.toValue()) {
-                val note = remember(pending.address) { accountViewModel.getOrCreateAddressableNote(pending.address) }
+                val note = remember(pending.address) { LocalCache.getOrCreateAddressableNote(pending.address) }
                 val trackEvent by observeNoteEvent<TextTrackEvent>(note, accountViewModel)
                 trackEvent?.toCaptionTrack(pending.tag)
             }

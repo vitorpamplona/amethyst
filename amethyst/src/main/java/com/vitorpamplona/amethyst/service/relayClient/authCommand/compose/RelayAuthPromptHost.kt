@@ -602,9 +602,9 @@ private fun rememberCounterpartyName(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
 ): String {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    var user by remember(pubkey) { mutableStateOf(LocalCache.getUserIfExists(pubkey)) }
     if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+        LaunchedEffect(pubkey) { user = LocalCache.checkGetOrCreateUser(pubkey) }
     }
     val loaded = user ?: return stringRes(Res.string.relay_auth_someone_unloaded)
     val metadata by observeUserInfo(loaded, accountViewModel)
@@ -649,11 +649,11 @@ private fun rememberVenueLabel(
                 ?: when {
                     venueId.length == 64 ->
                         if (kind == AuthPurposeKind.POST_VENUE) {
-                            accountViewModel.checkGetOrCreatePublicChatChannel(venueId)
+                            LocalCache.getOrCreatePublicChatChannel(venueId)
                         } else {
                             LocalCache.getPublicChatChannelIfExists(venueId)
                         }
-                    venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.checkGetOrCreateLiveActivityChannel(it) }
+                    venueId.startsWith("30311:") -> Address.parse(venueId)?.let { LocalCache.getOrCreateLiveChannel(it) }
                     else -> null
                 }
         }
@@ -702,9 +702,9 @@ private fun rememberDisplayName(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
 ): String {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    var user by remember(pubkey) { mutableStateOf(LocalCache.getUserIfExists(pubkey)) }
     if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+        LaunchedEffect(pubkey) { user = LocalCache.checkGetOrCreateUser(pubkey) }
     }
     val loaded = user ?: return stringRes(Res.string.relay_auth_someone_unloaded)
     // Reading the observed metadata registers a snapshot read, so the name updates when it arrives.

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accept_the_suggestion
@@ -88,7 +89,7 @@ fun RenderTextModificationEvent(
     val isAuthorTheLoggedUser =
         remember {
             val authorOfTheOriginalNote =
-                noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it.eventId)?.author?.pubkeyHex ?: it.author }
+                noteEvent.editedNote()?.let { LocalCache.getNoteIfExists(it.eventId)?.author?.pubkeyHex ?: it.author }
 
             mutableStateOf(accountViewModel.isLoggedUser(authorOfTheOriginalNote))
         }

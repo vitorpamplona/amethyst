@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.NewPostScreenInner
@@ -44,7 +45,7 @@ fun PollPostScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+        val draft = draftId?.let { LocalCache.getNoteIfExists(it) }
         postViewModel.load(null, null, null, null, draft)
         message?.ifBlank { null }?.let {
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)

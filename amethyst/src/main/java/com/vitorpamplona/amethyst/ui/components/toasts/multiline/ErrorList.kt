@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user_name
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes

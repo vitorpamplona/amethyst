@@ -82,12 +82,12 @@ import com.vitorpamplona.amethyst.commons.resources.nest_promote_speaker
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_template_null
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent

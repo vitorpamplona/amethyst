@@ -721,7 +721,7 @@ open class CommentPostViewModel :
                         if (replyingToEvent is CommunityDefinitionEvent) {
                             replyingToEvent.moderatorKeys().mapNotNull {
                                 if (it != replyingToEvent.pubKey) {
-                                    accountViewModel.checkGetOrCreateUser(it)?.toPTag()
+                                    LocalCache.checkGetOrCreateUser(it)?.toPTag()
                                 } else {
                                     null
                                 }

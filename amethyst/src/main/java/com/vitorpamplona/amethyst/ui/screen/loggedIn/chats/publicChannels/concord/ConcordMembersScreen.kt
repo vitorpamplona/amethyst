@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -250,7 +251,7 @@ private fun ConcordMemberRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val user = remember(entry.pubkey) { accountViewModel.checkGetOrCreateUser(entry.pubkey) }
+    val user = remember(entry.pubkey) { LocalCache.checkGetOrCreateUser(entry.pubkey) }
     val isOwnerTarget = entry.membership == ConcordMembership.OWNER
     val isBanned = entry.membership == ConcordMembership.BANNED
     val isAdmin = entry.membership == ConcordMembership.ADMIN

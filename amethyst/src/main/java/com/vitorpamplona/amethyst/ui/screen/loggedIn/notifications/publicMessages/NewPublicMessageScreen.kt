@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to
@@ -128,10 +129,10 @@ fun NewPublicMessageScreen(
             to?.let {
                 postViewModel.load(it)
             }
-            replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+            replyId?.let { LocalCache.getNoteIfExists(it) }?.let {
                 postViewModel.reply(it)
             }
-            draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+            draftId?.let { LocalCache.getNoteIfExists(it) }?.let {
                 postViewModel.editFromDraft(it)
             }
         }

@@ -210,12 +210,12 @@ fun RelayGroupChannelListScreen(
     // so the first frame doesn't reshuffle when the first emission arrives.
     // remember the seed so the per-relay cache scan + sort runs once (on first composition / relay
     // change), not on every recomposition — produceState evaluates its initialValue argument eagerly.
-    val initialChannels = remember(relay) { accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() } }
+    val initialChannels = remember(relay) { LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() } }
     val allChannels by produceState(initialValue = initialChannels, relay) {
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .collect {
-                value = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+                value = LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
             }
     }
 

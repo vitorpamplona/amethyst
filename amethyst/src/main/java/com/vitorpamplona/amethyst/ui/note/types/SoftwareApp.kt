@@ -603,9 +603,9 @@ private fun LoadAssetNote(
     accountViewModel: AccountViewModel,
     content: @Composable (Note?) -> Unit,
 ) {
-    val note by produceState<Note?>(initialValue = accountViewModel.getNoteIfExists(eventId), eventId) {
+    val note by produceState<Note?>(initialValue = LocalCache.getNoteIfExists(eventId), eventId) {
         if (value == null) {
-            value = accountViewModel.checkGetOrCreateNote(eventId)
+            value = LocalCache.checkGetOrCreateNote(eventId)
         }
     }
     content(note)

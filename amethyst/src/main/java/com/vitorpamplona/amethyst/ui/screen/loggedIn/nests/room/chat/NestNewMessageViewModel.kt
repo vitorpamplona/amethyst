@@ -293,7 +293,7 @@ open class NestNewMessageViewModel :
         if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
+                replyTo.value = LocalCache.checkGetOrCreateNote(replyId)
             }
         }
 

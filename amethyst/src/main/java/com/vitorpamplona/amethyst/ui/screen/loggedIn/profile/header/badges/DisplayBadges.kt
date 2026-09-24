@@ -107,8 +107,8 @@ fun DisplayBadges(
     val oldDesign = AcceptedBadgeSetEvent.createAddress(baseUser.pubkeyHex)
     val newDesign = ProfileBadgesEvent.createAddress(baseUser.pubkeyHex)
 
-    val oldNote = accountViewModel.getOrCreateAddressableNote(oldDesign)
-    val newNote = accountViewModel.getOrCreateAddressableNote(newDesign)
+    val oldNote = LocalCache.getOrCreateAddressableNote(oldDesign)
+    val newNote = LocalCache.getOrCreateAddressableNote(newDesign)
 
     WatchAndRenderBadgeList(baseUser, oldNote, newNote, accountViewModel, nav)
 }

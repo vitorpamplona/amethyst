@@ -1125,11 +1125,11 @@ fun LoadUser(
     content: @Composable (User?) -> Unit,
 ) {
     var user by
-        remember(baseUserHex) { mutableStateOf(accountViewModel.getUserIfExists(baseUserHex)) }
+        remember(baseUserHex) { mutableStateOf(LocalCache.getUserIfExists(baseUserHex)) }
 
     if (user == null) {
         LaunchedEffect(key1 = baseUserHex) {
-            user = accountViewModel.checkGetOrCreateUser(baseUserHex)
+            user = LocalCache.checkGetOrCreateUser(baseUserHex)
         }
     }
 

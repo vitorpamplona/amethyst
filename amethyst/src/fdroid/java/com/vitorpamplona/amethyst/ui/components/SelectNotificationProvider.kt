@@ -56,6 +56,7 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.commons.resources.push_server_explainer
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.quartz.utils.Log

@@ -152,7 +152,7 @@ private fun ParentSelectorCard(
     // yet), warm its single 39000, and observe it so the name/picture fill in as they arrive.
     val liveParent: RelayGroupChannel? =
         parentId?.let { id ->
-            val channel = remember(id, relay) { accountViewModel.checkGetOrCreateRelayGroupChannel(GroupId(id, relay)) }
+            val channel = remember(id, relay) { LocalCache.getOrCreateRelayGroupChannel(GroupId(id, relay)) }
             RelayGroupCardWarmupSubscription(channel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel)
             val state by channel
                 .flow()
@@ -473,7 +473,7 @@ private fun pickCandidates(
     relayInfo: Nip11RelayInformation,
     forbidden: Set<String>,
 ): List<RelayGroupChannel> =
-    accountViewModel
+    LocalCache
         .getRelayGroupChannelsOnRelay(relay)
         .asSequence()
         .filter { it.groupId.id !in forbidden }
@@ -492,11 +492,11 @@ private fun descendantIdsOf(
 ): Set<String> {
     val result = mutableSetOf<String>()
     val queue = ArrayDeque<String>()
-    accountViewModel.getRelayGroupChannelIfExists(GroupId(rootId, relay))?.childGroupIds()?.let { queue.addAll(it) }
+    LocalCache.getRelayGroupChannelIfExists(GroupId(rootId, relay))?.childGroupIds()?.let { queue.addAll(it) }
     while (queue.isNotEmpty()) {
         val id = queue.removeFirst()
         if (!result.add(id)) continue
-        accountViewModel.getRelayGroupChannelIfExists(GroupId(id, relay))?.childGroupIds()?.let { queue.addAll(it) }
+        LocalCache.getRelayGroupChannelIfExists(GroupId(id, relay))?.childGroupIds()?.let { queue.addAll(it) }
     }
     return result
 }

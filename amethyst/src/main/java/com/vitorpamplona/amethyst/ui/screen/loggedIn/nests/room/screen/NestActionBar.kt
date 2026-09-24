@@ -90,13 +90,13 @@ import com.vitorpamplona.amethyst.commons.resources.nest_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nest_talk
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.zap_description
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent

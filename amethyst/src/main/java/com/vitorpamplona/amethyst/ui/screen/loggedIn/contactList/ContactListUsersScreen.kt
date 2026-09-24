@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.contact_list_screen_title
 import com.vitorpamplona.amethyst.commons.resources.contact_list_screen_title_with_count
@@ -78,7 +79,7 @@ fun ContactListUsersScreen(
                 event
                     ?.verifiedFollowKeySet()
                     ?.filter { !accountViewModel.account.isHidden(it) }
-                    ?.mapNotNull { accountViewModel.checkGetOrCreateUser(it) }
+                    ?.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                     ?.sortedByDescending { accountViewModel.account.isKnown(it.pubkeyHex) }
                     ?.toPersistentList()
                     ?: persistentListOf()

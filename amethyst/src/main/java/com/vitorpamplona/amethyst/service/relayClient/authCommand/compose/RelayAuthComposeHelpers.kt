@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_my_inbox
@@ -53,9 +54,9 @@ internal fun LoadRelayAuthUser(
     accountViewModel: AccountViewModel,
     content: @Composable (User?) -> Unit,
 ) {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    var user by remember(pubkey) { mutableStateOf(LocalCache.getUserIfExists(pubkey)) }
     if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+        LaunchedEffect(pubkey) { user = LocalCache.checkGetOrCreateUser(pubkey) }
     }
     content(user)
 }

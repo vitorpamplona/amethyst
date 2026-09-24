@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -38,8 +39,8 @@ fun LoadGeohashChannel(
     content: @Composable (GeohashChatChannel) -> Unit,
 ) {
     val channel =
-        produceStateIfNotNull(accountViewModel.getGeohashChannelIfExists(geohash), geohash) {
-            value = accountViewModel.checkGetOrCreateGeohashChannel(geohash)
+        produceStateIfNotNull(LocalCache.getGeohashChannelIfExists(geohash), geohash) {
+            value = LocalCache.getOrCreateGeohashChannel(geohash)
         }
 
     channel.value?.let { content(it) }

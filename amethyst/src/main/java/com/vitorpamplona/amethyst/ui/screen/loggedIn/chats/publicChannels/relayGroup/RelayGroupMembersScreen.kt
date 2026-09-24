@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzAgentActivityState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
@@ -352,7 +353,7 @@ private fun RelayGroupMemberRow(
     // Create-or-get (never a one-shot null): UsernameDisplay observes the user's
     // metadata flow, so the name fills in when the kind:0 arrives instead of being
     // stuck on truncated hex forever.
-    val user = remember(entry.pubkey) { accountViewModel.checkGetOrCreateUser(entry.pubkey) }
+    val user = remember(entry.pubkey) { LocalCache.checkGetOrCreateUser(entry.pubkey) }
     var menuOpen by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
 

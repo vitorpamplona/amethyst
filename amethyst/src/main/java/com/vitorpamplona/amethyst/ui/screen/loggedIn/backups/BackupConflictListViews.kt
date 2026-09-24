@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
@@ -492,7 +493,7 @@ private fun LazyListScope.favoriteFeedItems(
     val saved = (conflict.saved as? FavoriteAlgoFeedsListEvent)?.publicFavoriteAlgoFeeds().orEmpty()
     spaceGrid("feed-", fates(saved, diff.feeds) { it.address }, { it.address.toValue() }) { bookmark, fate, modifier ->
         AddressableSpaceTile(bookmark.address, fate, accountViewModel, modifier) {
-            nav.nav { accountViewModel.getAddressableNoteIfExists(bookmark.address)?.let { routeFor(it, accountViewModel.account) } }
+            nav.nav { LocalCache.getAddressableNoteIfExists(bookmark.address)?.let { routeFor(it, accountViewModel.account) } }
         }
     }
     privateItemsCard(diff.privateItems)
