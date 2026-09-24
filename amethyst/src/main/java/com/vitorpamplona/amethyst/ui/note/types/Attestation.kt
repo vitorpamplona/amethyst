@@ -221,7 +221,7 @@ fun RenderAttestation(
 
         if (quotesLeft > 0) {
             if (aboutAddress != null) {
-                LoadAddressableNote(aboutAddress, accountViewModel) {
+                LoadAddressableNote(aboutAddress) {
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         NoteCompose(
@@ -238,7 +238,7 @@ fun RenderAttestation(
                     }
                 }
             } else if (aboutEvent != null) {
-                LoadNote(aboutEvent, accountViewModel) {
+                LoadNote(aboutEvent) {
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         NoteCompose(
@@ -345,7 +345,7 @@ fun RenderAttestationRequest(
     if (quotesLeft > 0) {
         when {
             aboutAddress != null -> {
-                LoadAddressableNote(aboutAddress, accountViewModel) {
+                LoadAddressableNote(aboutAddress) {
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
@@ -369,7 +369,7 @@ fun RenderAttestationRequest(
             }
 
             aboutEvent != null -> {
-                LoadNote(aboutEvent, accountViewModel) {
+                LoadNote(aboutEvent) {
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
@@ -393,7 +393,7 @@ fun RenderAttestationRequest(
             }
 
             aboutPubkey != null -> {
-                LoadUser(aboutPubkey, accountViewModel) {
+                LoadUser(aboutPubkey) {
                     if (it != null) {
                         Spacer(modifier = DoubleVertSpacer)
                         Text(
@@ -458,7 +458,7 @@ fun RenderAttestorRecommendation(
             )
         }
 
-        LoadUser(aboutPubKey, accountViewModel) {
+        LoadUser(aboutPubKey) {
             if (it != null) {
                 Spacer(modifier = DoubleVertSpacer)
                 UserCompose(it, accountViewModel = accountViewModel, nav = nav)

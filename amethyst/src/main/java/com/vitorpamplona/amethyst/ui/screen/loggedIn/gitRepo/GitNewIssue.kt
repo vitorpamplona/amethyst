@@ -68,7 +68,7 @@ fun GitNewIssueScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let { GitNewIssueForm(it, accountViewModel, nav) }
     }
 }

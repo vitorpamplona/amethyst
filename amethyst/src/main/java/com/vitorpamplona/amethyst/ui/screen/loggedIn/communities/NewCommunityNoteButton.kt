@@ -44,7 +44,7 @@ fun NewCommunityNoteButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(baseNoteHex = communityIdHex, accountViewModel) {
+    LoadNote(baseNoteHex = communityIdHex) {
         it?.let { NewCommunityNoteButton(it, accountViewModel, nav) }
     }
 }

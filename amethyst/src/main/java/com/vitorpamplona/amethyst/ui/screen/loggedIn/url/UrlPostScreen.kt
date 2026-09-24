@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
@@ -59,13 +60,13 @@ fun UrlPostScreen(
                 postViewModel.newPostFor(UrlId(normalizedUrl))
             }
         }
-        replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        replyId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
-        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        draftId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
+        quoteId?.let { LocalCache.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {

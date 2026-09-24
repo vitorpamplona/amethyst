@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error
@@ -115,7 +116,7 @@ class VoiceReplyViewModel : ViewModel() {
         duration: Int,
         amplitudesJson: String,
     ) {
-        replyToNote = accountViewModel.getNoteIfExists(replyToNoteId)
+        replyToNote = LocalCache.getNoteIfExists(replyToNoteId)
 
         val amplitudes =
             try {

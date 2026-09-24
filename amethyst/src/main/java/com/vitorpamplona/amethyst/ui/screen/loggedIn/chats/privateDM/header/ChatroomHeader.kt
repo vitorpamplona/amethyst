@@ -49,7 +49,7 @@ fun ChatroomHeader(
     onClick: () -> Unit,
 ) {
     if (room.users.size == 1) {
-        LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
+        LoadUser(baseUserHex = room.users.first()) { baseUser ->
             if (baseUser != null) {
                 UserChatroomHeader(
                     baseUser = baseUser,

@@ -103,7 +103,7 @@ private fun RenderVideoCredit(
 ) {
     when (val target = credit.target) {
         is CreditTarget.Person ->
-            LoadUser(target.pubKey, accountViewModel) { user ->
+            LoadUser(target.pubKey) { user ->
                 // Until the profile arrives there is no name to print, and a hex key in the
                 // credits reads as noise rather than as a person.
                 user?.let {

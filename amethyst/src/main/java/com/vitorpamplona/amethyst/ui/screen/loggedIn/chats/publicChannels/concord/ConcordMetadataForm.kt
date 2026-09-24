@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -193,8 +194,8 @@ private fun ConcordIconHero(
                 model = iconModel,
                 contentDescription = displayName.ifBlank { stringRes(Res.string.concord_create_title) },
                 modifier = Modifier.size(104.dp).clip(CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif = autoPlayGif,
             )
             if (uploading) CircularProgressIndicator(modifier = Modifier.size(36.dp))
@@ -345,8 +346,8 @@ private fun ConcordRelayRow(
         RenderRelayIcon(
             displayUrl = relayInfo.id ?: relay.displayUrl(),
             iconUrl = relayInfo.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             pingInMs = 0,
             iconModifier = MediumRelayIconModifier,
         )

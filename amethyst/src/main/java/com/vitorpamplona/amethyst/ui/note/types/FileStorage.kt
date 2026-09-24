@@ -50,7 +50,7 @@ fun FileStorageHeaderDisplay(
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
     val dataEventId = eventHeader.dataEventId() ?: return
 
-    LoadNote(baseNoteHex = dataEventId, accountViewModel) { contentNote ->
+    LoadNote(baseNoteHex = dataEventId) { contentNote ->
         if (contentNote != null) {
             ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, contentScale, accountViewModel)
         }

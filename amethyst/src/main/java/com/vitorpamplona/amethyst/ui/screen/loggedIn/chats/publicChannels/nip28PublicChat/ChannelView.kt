@@ -53,7 +53,7 @@ fun PublicChatChannelView(
 ) {
     if (channelId == null) return
 
-    LoadPublicChatChannel(channelId, accountViewModel) {
+    LoadPublicChatChannel(channelId) {
         PrepareChannelViewModels(
             baseChannel = it,
             draft = draft,

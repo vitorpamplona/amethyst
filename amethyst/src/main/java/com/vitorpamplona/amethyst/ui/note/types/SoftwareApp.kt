@@ -587,7 +587,7 @@ private fun BundledAssetsList(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         assetIds.forEach { id ->
             key(id) {
-                LoadAssetNote(id, accountViewModel) { assetNote ->
+                LoadAssetNote(id) { assetNote ->
                     if (assetNote != null) {
                         SoftwareAssetRow(assetNote, accountViewModel)
                     }
@@ -600,12 +600,11 @@ private fun BundledAssetsList(
 @Composable
 private fun LoadAssetNote(
     eventId: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (Note?) -> Unit,
 ) {
-    val note by produceState<Note?>(initialValue = accountViewModel.getNoteIfExists(eventId), eventId) {
+    val note by produceState<Note?>(initialValue = LocalCache.getNoteIfExists(eventId), eventId) {
         if (value == null) {
-            value = accountViewModel.checkGetOrCreateNote(eventId)
+            value = LocalCache.checkGetOrCreateNote(eventId)
         }
     }
     content(note)

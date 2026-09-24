@@ -18,18 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastMsg
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
-class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
+class MultiErrorToastMsg(
+    val titleResId: StringResource,
+) : ToastMsg() {
+    val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
 
-class ActionableStringToastMsg(
-    val title: String,
-    val msg: String,
-    val action: () -> Unit,
-) : ToastMsg()
+    fun add(
+        message: String,
+        user: User?,
+    ) {
+        add(UserBasedErrorMessage(message, user))
+    }
+
+    fun add(newError: UserBasedErrorMessage) {
+        errors.update {
+            it + newError
+        }
+    }
+}
+
+class UserBasedErrorMessage(
+    val error: String,
+    val user: User?,
+)

@@ -1272,7 +1272,7 @@ private fun RenderApprovalIfNeeded(
                 baseNote.event?.communityAddress()
             }
         communityAddress?.let {
-            LoadAddressableNote(it, accountViewModel) { community ->
+            LoadAddressableNote(it) { community ->
                 if (community != null) {
                     val showApproveButton by observeCommunityApprovalNeedStatus(baseNote, community, accountViewModel)
                     if (showApproveButton == true) {
@@ -1574,7 +1574,7 @@ private fun RenderWikiHeaderForThreadPreview() {
 
     val nav = EmptyNav()
 
-    LoadNote(baseNoteHex = "277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1", accountViewModel = accountViewModel) { baseNote ->
+    LoadNote(baseNoteHex = "277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1") { baseNote ->
         ThemeComparisonColumn {
             val bg = MaterialTheme.colorScheme.background
             val backgroundColor =

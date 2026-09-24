@@ -85,7 +85,7 @@ fun RenderAppRecommendation(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             recommendations.forEach { recommendation ->
-                LoadAddressableNote(recommendation.address, accountViewModel) { appNote ->
+                LoadAddressableNote(recommendation.address) { appNote ->
                     appNote?.let {
                         if (it.event == null) {
                             EventFinderFilterAssemblerSubscription(it, accountViewModel)

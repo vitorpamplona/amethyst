@@ -169,7 +169,7 @@ fun RenderGeocacheFoundLog(
 
     // Loaded even for an unverified log: the cache's name is what tells a reader in a feed what
     // was actually found, and "Found it!" on its own says nothing.
-    LoadAddressableNote(address, accountViewModel) { cacheNote ->
+    LoadAddressableNote(address) { cacheNote ->
         if (cacheNote == null) {
             GeocacheFoundLogCard(noteEvent, showImages, if (hasProof) FoundLogProof.UNKNOWN else FoundLogProof.NONE)
         } else {

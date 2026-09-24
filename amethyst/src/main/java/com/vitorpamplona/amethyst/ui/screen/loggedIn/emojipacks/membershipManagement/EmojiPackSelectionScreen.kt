@@ -72,7 +72,7 @@ fun EmojiPackSelectionScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address = packAddress, accountViewModel = accountViewModel) { note ->
+    LoadAddressableNote(address = packAddress) { note ->
         note?.let {
             EmojiPackSelectionView(
                 modifier = Modifier.fillMaxSize().recalculateWindowInsets(),
@@ -122,7 +122,6 @@ private fun EmojiPackSelectionBody(
         item {
             LoadAddressableNote(
                 address = accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
-                accountViewModel = accountViewModel,
             ) { selectionNote ->
                 selectionNote?.let {
                     val hasAddedThis by observeNoteAndMap(it, accountViewModel) { currentNote ->

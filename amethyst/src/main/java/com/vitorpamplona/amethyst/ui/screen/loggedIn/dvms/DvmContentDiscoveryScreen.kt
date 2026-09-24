@@ -111,7 +111,7 @@ fun DvmContentDiscoveryScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
+        LoadNote(baseNoteHex = appDefinitionEventId) { note ->
             note?.let { baseNote ->
                 WatchNoteEvent(
                     baseNote,
@@ -462,7 +462,7 @@ fun DvmPaymentActions(
             }
         }
     } else if (amount != null) {
-        LoadNote(baseNoteHex = latestStatus.id, accountViewModel = accountViewModel) { stateNote ->
+        LoadNote(baseNoteHex = latestStatus.id) { stateNote ->
             stateNote?.let {
                 ZapDVMButton(
                     baseNote = it,

@@ -240,7 +240,7 @@ fun RenderLiveActivityThumb(
         Spacer(modifier = DoubleVertSpacer)
 
         baseNote.address()?.let {
-            LoadLiveActivityChannel(it, accountViewModel) {
+            LoadLiveActivityChannel(it) {
                 LiveActivitiesChannelHeader(
                     baseChannel = it,
                     showVideo = false,

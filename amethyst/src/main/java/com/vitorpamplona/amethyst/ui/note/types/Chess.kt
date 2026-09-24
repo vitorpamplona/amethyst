@@ -91,7 +91,7 @@ fun RenderChessGame(
         ChessGameViewer(
             pgnContent = event.pgn(),
             playerContent = { playerHex ->
-                LoadUser(playerHex, accountViewModel) { user ->
+                LoadUser(playerHex) { user ->
                     if (user != null) {
                         UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
                     } else {
@@ -196,7 +196,7 @@ fun RenderLiveChessChallenge(
                                 fontWeight = FontWeight.Bold,
                             )
                             event.opponentPubkey()?.let { opponentHex ->
-                                LoadUser(opponentHex, accountViewModel) { user ->
+                                LoadUser(opponentHex) { user ->
                                     if (user != null) {
                                         UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
                                     }
@@ -313,7 +313,7 @@ fun RenderLiveChessGameEnd(
                         )
 
                         event.opponentPubkey()?.let { opponentHex ->
-                            LoadUser(opponentHex, accountViewModel) { user ->
+                            LoadUser(opponentHex) { user ->
                                 if (user != null) {
                                     UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
                                 }
@@ -340,7 +340,7 @@ fun RenderLiveChessGameEnd(
                 ChessGameViewer(
                     pgnContent = pgn,
                     playerContent = { playerHex ->
-                        LoadUser(playerHex, accountViewModel) { user ->
+                        LoadUser(playerHex) { user ->
                             if (user != null) {
                                 UserChip(user = user, accountViewModel = accountViewModel, nav = nav)
                             } else {

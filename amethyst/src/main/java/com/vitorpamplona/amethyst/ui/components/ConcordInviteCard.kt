@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
@@ -139,8 +140,8 @@ fun ConcordInvitePreviewRow(
                     .size(52.dp)
                     .clip(CircleShape)
                     .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif = autoPlayGif,
         )
         Column(Modifier.weight(1f)) {

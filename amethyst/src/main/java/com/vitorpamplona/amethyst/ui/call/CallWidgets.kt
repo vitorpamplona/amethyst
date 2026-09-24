@@ -193,7 +193,7 @@ fun PeerAvatarCell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            LoadUser(baseUserHex = peerPubKey, accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = peerPubKey) { user ->
                 if (user != null) {
                     ClickableUserPicture(
                         baseUser = user,
@@ -235,7 +235,7 @@ fun GroupCallPictures(
         0 -> {}
 
         1 -> {
-            LoadUser(baseUserHex = userList[0], accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = userList[0]) { user ->
                 if (user != null) {
                     ClickableUserPicture(
                         baseUser = user,
@@ -350,7 +350,7 @@ fun GroupCallNames(
         0 -> {}
 
         1 -> {
-            LoadUser(baseUserHex = userList[0], accountViewModel = accountViewModel) { user ->
+            LoadUser(baseUserHex = userList[0]) { user ->
                 if (user != null) {
                     UsernameDisplay(
                         baseUser = user,
@@ -378,7 +378,7 @@ fun GroupCallNames(
                             color = textColor,
                         )
                     }
-                    LoadUser(baseUserHex = userList[i], accountViewModel = accountViewModel) { user ->
+                    LoadUser(baseUserHex = userList[i]) { user ->
                         if (user != null) {
                             UsernameDisplay(
                                 baseUser = user,

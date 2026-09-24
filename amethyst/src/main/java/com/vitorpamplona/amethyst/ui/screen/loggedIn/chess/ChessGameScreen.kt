@@ -60,6 +60,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
@@ -306,7 +307,7 @@ fun ChessGameScreen(
                 // Resolve opponent display name and avatar
                 val opponentUser =
                     remember(gameState.opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(gameState.opponentPubkey)
+                        LocalCache.checkGetOrCreateUser(gameState.opponentPubkey)
                     }
                 val opponentDisplayName =
                     remember(gameState.opponentPubkey) {
@@ -320,7 +321,7 @@ fun ChessGameScreen(
                 // Resolve player display name and avatar
                 val playerUser =
                     remember(gameState.playerPubkey) {
-                        accountViewModel.checkGetOrCreateUser(gameState.playerPubkey)
+                        LocalCache.checkGetOrCreateUser(gameState.playerPubkey)
                     }
                 val playerDisplayName =
                     remember(gameState.playerPubkey) {

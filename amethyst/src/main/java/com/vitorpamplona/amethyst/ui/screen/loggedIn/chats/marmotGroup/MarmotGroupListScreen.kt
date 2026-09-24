@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatUnreadBadge
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -329,7 +330,7 @@ fun MarmotGroupListItem(
         previewEvent
             ?.pubKey
             ?.takeIf { it != myPubKey }
-            ?.let { accountViewModel.getUserIfExists(it) }
+            ?.let { LocalCache.getUserIfExists(it) }
     val senderName =
         if (senderUser != null) {
             observeUserInfo(senderUser, accountViewModel).value?.info?.bestName()

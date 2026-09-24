@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -101,7 +102,7 @@ fun LoadOrCreateNote(
     content: @Composable (Note?) -> Unit,
 ) {
     var note by
-        remember(event.id) { mutableStateOf(accountViewModel.getNoteIfExists(event.id)) }
+        remember(event.id) { mutableStateOf(LocalCache.getNoteIfExists(event.id)) }
 
     if (note == null) {
         LaunchedEffect(key1 = event.id) {
@@ -146,7 +147,7 @@ fun DisplayEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(hex, accountViewModel) {
+    LoadNote(hex) {
         if (it != null) {
             DisplayNoteLink(it, hex, additionalChars, accountViewModel, nav)
         } else {
@@ -224,11 +225,11 @@ private fun DisplayAddress(
         return
     }
 
-    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.aTag())) }
+    var noteBase by remember(nip19) { mutableStateOf(LocalCache.getNoteIfExists(nip19.aTag())) }
 
     if (noteBase == null) {
         LaunchedEffect(key1 = nip19) {
-            noteBase = accountViewModel.getOrCreateAddressableNote(nip19.address())
+            noteBase = LocalCache.getOrCreateAddressableNote(nip19.address())
         }
     }
 
@@ -271,13 +272,13 @@ fun DisplayUser(
     var userBase by
         remember(userHex) {
             mutableStateOf(
-                accountViewModel.getUserIfExists(userHex),
+                LocalCache.getUserIfExists(userHex),
             )
         }
 
     if (userBase == null) {
         LaunchedEffect(key1 = userHex) {
-            userBase = accountViewModel.checkGetOrCreateUser(userHex)
+            userBase = LocalCache.checkGetOrCreateUser(userHex)
         }
     }
 

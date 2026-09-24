@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_disbanding
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_leaving
@@ -121,7 +122,7 @@ fun MarmotGroupChatView(
     // landed in LocalCache. checkGetOrCreateNote is a no-op for unknown ids.
     if (replyToInnerNote != null) {
         LaunchedEffect(replyToInnerNote) {
-            val parent = accountViewModel.checkGetOrCreateNote(replyToInnerNote)
+            val parent = LocalCache.checkGetOrCreateNote(replyToInnerNote)
             if (parent != null) {
                 newMessageModel.reply(parent)
             }

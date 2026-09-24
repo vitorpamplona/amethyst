@@ -95,7 +95,7 @@ fun FollowPackFeedScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) {
+    LoadAddressableNote(address) {
         it?.let {
             PrepareViewModelsFollowPackScreen(
                 note = it,

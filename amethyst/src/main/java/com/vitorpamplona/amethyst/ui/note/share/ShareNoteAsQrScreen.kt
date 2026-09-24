@@ -94,7 +94,7 @@ fun ShareNoteAsQrScreen(
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.share_as_qr), nav) },
     ) { pad ->
-        LoadNote(id, accountViewModel) { note ->
+        LoadNote(id) { note ->
             if (note != null) {
                 ShareNoteAsQrScreenContent(note, accountViewModel, nav, pad)
             }

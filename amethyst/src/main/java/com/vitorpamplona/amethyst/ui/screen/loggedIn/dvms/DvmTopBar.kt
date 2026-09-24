@@ -49,7 +49,7 @@ fun DvmTopBar(
 ) {
     MyExtensibleTopAppBar(
         title = {
-            LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
+            LoadNote(baseNoteHex = appDefinitionId) { appDefinitionNote ->
                 if (appDefinitionNote != null) {
                     val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
@@ -93,7 +93,7 @@ fun DvmTopBar(
             // The route passes the event's hex id, so LoadNote returns a plain Note,
             // not the AddressableNote the toggle needs. Derive the AddressableNote
             // from the loaded AppDefinitionEvent's address() once the event exists.
-            LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
+            LoadNote(baseNoteHex = appDefinitionId) { appDefinitionNote ->
                 if (appDefinitionNote != null) {
                     val addressableNote by
                         observeNoteAndMap(appDefinitionNote, accountViewModel) { note ->

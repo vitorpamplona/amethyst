@@ -94,7 +94,7 @@ fun ChannelMetadataScreen(
     if (channelId == null) {
         ChannelMetadataScreen(null as PublicChatChannel?, accountViewModel, nav)
     } else {
-        LoadPublicChatChannel(channelId, accountViewModel) {
+        LoadPublicChatChannel(channelId) {
             ChannelMetadataScreen(it, accountViewModel, nav)
         }
     }

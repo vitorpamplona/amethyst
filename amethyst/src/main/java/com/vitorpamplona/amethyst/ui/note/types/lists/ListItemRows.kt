@@ -58,7 +58,7 @@ fun UserMemberRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(pubKey, accountViewModel) { user ->
+    LoadUser(pubKey) { user ->
         user?.let {
             Column(modifier = Modifier.fillMaxWidth()) {
                 UserCompose(it, accountViewModel = accountViewModel, nav = nav)
@@ -88,7 +88,7 @@ fun BookmarkMemberRow(
         is AddressBookmark -> AddressMemberRow(item.address, quotesLeft, backgroundColor, accountViewModel, nav)
 
         is EventBookmark ->
-            LoadNote(item.eventId, accountViewModel) { note ->
+            LoadNote(item.eventId) { note ->
                 note?.let {
                     NoteCompose(
                         baseNote = it,
@@ -114,7 +114,7 @@ fun AddressMemberRow(
 ) {
     if (quotesLeft <= 0) return
 
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let {
             NoteCompose(
                 baseNote = it,

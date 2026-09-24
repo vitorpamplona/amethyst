@@ -126,7 +126,7 @@ fun GeocacheOwnerRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadUser(listing.pubKey, accountViewModel) { user ->
+    LoadUser(listing.pubKey) { user ->
         if (user != null) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ClickableUserPicture(user, Size25dp, accountViewModel)
@@ -142,7 +142,7 @@ fun GeocacheWinnerStrip(
     winner: String,
     accountViewModel: AccountViewModel,
 ) {
-    LoadUser(winner, accountViewModel) { user ->
+    LoadUser(winner) { user ->
         // LoadUser resolves the User object, not its metadata, so reading the display name off it
         // left the winner as a hex stub whenever their kind 0 arrived after this composed.
         // observeUserName asks the relays for the profile and recomposes when it lands. The name
@@ -227,7 +227,7 @@ fun GeocacheLogRow(
             ).padding(vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LoadUser(author, accountViewModel) { user ->
+            LoadUser(author) { user ->
                 if (user != null) {
                     ClickableUserPicture(user, Size25dp, accountViewModel)
                     UsernameDisplay(user, accountViewModel = accountViewModel)

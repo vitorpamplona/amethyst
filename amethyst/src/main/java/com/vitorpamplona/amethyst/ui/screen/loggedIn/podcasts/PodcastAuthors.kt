@@ -91,10 +91,10 @@ private fun PodcastAuthorRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var user by remember(author.pubKey) { mutableStateOf(accountViewModel.getUserIfExists(author.pubKey)) }
+    var user by remember(author.pubKey) { mutableStateOf(LocalCache.getUserIfExists(author.pubKey)) }
     if (user == null) {
         LaunchedEffect(author.pubKey) {
-            user = accountViewModel.checkGetOrCreateUser(author.pubKey)
+            user = LocalCache.checkGetOrCreateUser(author.pubKey)
         }
     }
 

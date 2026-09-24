@@ -95,7 +95,7 @@ private fun MutedThreadRow(
 ) {
     if (quotesLeft <= 0) return
 
-    LoadNote(eventId, accountViewModel) { note ->
+    LoadNote(eventId) { note ->
         note?.let {
             NoteCompose(
                 baseNote = it,

@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_open
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
@@ -86,7 +87,7 @@ fun RelayGroupCard(
 
     val groupId = remember(invite) { invite.toGroupId() }
 
-    LoadRelayGroupChannel(groupId, accountViewModel) { channel ->
+    LoadRelayGroupChannel(groupId) { channel ->
         RelayGroupCardContent(channel, invite.code, accountViewModel, nav)
     }
 }
@@ -148,8 +149,8 @@ private fun RelayGroupCardContent(
                             .size(52.dp)
                             .clip(CircleShape)
                             .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
                     autoPlayGif = autoPlayGif,
                 )
 

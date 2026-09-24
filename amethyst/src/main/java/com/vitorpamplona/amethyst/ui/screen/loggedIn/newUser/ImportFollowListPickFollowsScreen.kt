@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accounts_found
@@ -85,7 +86,7 @@ fun ImportFollowListPickFollowsScreen(
 ) {
     val contactListNote =
         remember(userHex) {
-            accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(userHex))
+            LocalCache.getOrCreateAddressableNote(ContactListEvent.createAddress(userHex))
         }
 
     Scaffold(
@@ -137,7 +138,7 @@ fun DisplayFollowList(
             ?.unverifiedFollowKeySet()
             ?.toSet()
             ?.mapNotNull {
-                accountViewModel.checkGetOrCreateUser(it)
+                LocalCache.checkGetOrCreateUser(it)
             }?.toPersistentList()
     }
 

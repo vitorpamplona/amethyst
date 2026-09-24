@@ -38,7 +38,6 @@ fun ShowDonationCard(
         if (!donated) {
             LoadNote(
                 BuildConfig.RELEASE_NOTES_ID,
-                accountViewModel,
             ) { loadedNoteId ->
                 if (loadedNoteId != null) {
                     ZapTheDevsCard(

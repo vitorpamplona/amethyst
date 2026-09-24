@@ -57,7 +57,7 @@ fun PublicChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadPublicChatChannel(channelHex, accountViewModel) {
+    LoadPublicChatChannel(channelHex) {
         PublicChatChannelHeader(
             it,
             sendToChannel,

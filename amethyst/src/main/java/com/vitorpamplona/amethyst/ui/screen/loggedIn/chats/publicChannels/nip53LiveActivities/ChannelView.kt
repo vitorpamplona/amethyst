@@ -56,7 +56,7 @@ fun LiveActivityChannelView(
 ) {
     if (channelId == null) return
 
-    LoadLiveActivityChannel(channelId, accountViewModel) {
+    LoadLiveActivityChannel(channelId) {
         PrepareChannelViewModels(
             baseChannel = it,
             draft = draft,

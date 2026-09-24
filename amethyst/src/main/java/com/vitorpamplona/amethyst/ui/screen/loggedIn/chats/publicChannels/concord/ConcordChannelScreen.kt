@@ -392,7 +392,7 @@ private fun rememberTypistName(
     hex: String,
     accountViewModel: AccountViewModel,
 ): String {
-    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val user = remember(hex) { LocalCache.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
     val info by observeUserInfo(user, accountViewModel)
     return info?.info?.bestName() ?: remember(user) { user.pubkeyDisplayHex() }
 }

@@ -63,7 +63,7 @@ fun LiveStreamGoalHeader(
 ) {
     val goalId = channel.info?.goalEventId() ?: return
 
-    LoadNote(baseNoteHex = goalId, accountViewModel = accountViewModel) { goalNote ->
+    LoadNote(baseNoteHex = goalId) { goalNote ->
         if (goalNote != null) {
             GoalHeaderContent(goalNote, accountViewModel, nav)
         }

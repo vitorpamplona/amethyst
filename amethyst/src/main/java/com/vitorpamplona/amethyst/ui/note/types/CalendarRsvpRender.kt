@@ -73,7 +73,7 @@ private fun LoadAppointmentBehind(
 ) {
     val address = remember(event) { event.calendarEventAddress() } ?: return
 
-    LoadAddressableNote(address, accountViewModel) { appointment ->
+    LoadAddressableNote(address) { appointment ->
         if (appointment != null) {
             EventFinderFilterAssemblerSubscription(appointment, accountViewModel)
         }
