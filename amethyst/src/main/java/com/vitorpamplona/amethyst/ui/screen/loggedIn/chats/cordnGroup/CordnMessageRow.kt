@@ -21,15 +21,21 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -39,10 +45,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -120,8 +129,11 @@ internal fun CordnMessageRow(
     groupPosition: ChatGroupPosition,
     text: String?,
     isEdited: Boolean,
+    shouldHighlight: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onHighlightFinished: () -> Unit,
+    onScrollToMessage: (HexKey) -> Unit,
     onReply: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -155,6 +167,8 @@ internal fun CordnMessageRow(
             drawAuthorInfo = groupPosition.isFirstOfGroup && !isMine,
             groupPosition = groupPosition,
             transparentBubble = jumboCount > 0,
+            shouldHighlight = shouldHighlight,
+            onHighlightFinished = onHighlightFinished,
             // A plain tap is a no-op, exactly as in every other Amethyst chat.
             onClick = { false },
             onDoubleTap =
@@ -188,7 +202,7 @@ internal fun CordnMessageRow(
                 if (reactions.isEmpty()) {
                     null
                 } else {
-                    { CordnReactionChips(reactions, me, onReact) }
+                    { CordnReactionChips(reactions, me, accountViewModel, nav, onReact) }
                 },
             // Mirrors chatFooterHasMeta: the footer earns its row on the last message
             // of a burst (for the time) or on any message carrying a marker of its own.
@@ -215,6 +229,7 @@ internal fun CordnMessageRow(
                 jumboCount = jumboCount,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onScrollToMessage = onScrollToMessage,
             )
         }
     }
@@ -235,16 +250,16 @@ private fun CordnBubbleContents(
     jumboCount: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onScrollToMessage: (HexKey) -> Unit,
 ) {
     val thread = remember(message.envelope.id) { CordnMessageReferences.thread(message.envelope.tags) }
     val parent = thread?.let { annotations.byId[it.parentId] }
     if (parent != null) {
-        Text(
-            text = stringRes(R.string.cordn_action_in_reply_to, annotations.contentOf(parent.envelope.id).orEmpty().take(60)),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        CordnQuotedMessage(
+            parent = parent,
+            annotations = annotations,
+            accountViewModel = accountViewModel,
+            onClick = { onScrollToMessage(parent.envelope.id) },
         )
     }
 
@@ -323,6 +338,8 @@ private fun CordnAuthorLine(
 private fun CordnReactionChips(
     reactions: Map<String, Set<HexKey>>,
     me: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     onReact: (String) -> Unit,
 ) {
     val chips =
@@ -332,17 +349,184 @@ private fun CordnReactionChips(
                 .sortedByDescending { it.count }
         }
 
+    var showWho by remember { mutableStateOf(false) }
+
+    if (showWho) {
+        CordnReactionDetailSheet(
+            reactions = reactions,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onDismiss = { showWho = false },
+        )
+    }
+
     ChatChipFlowRow {
         chips.forEach { chip ->
             ReactionChipView(
                 chip = chip,
                 onClick = { onReact(chip.type) },
-                // The DM strip opens "who reacted" on a long press. cordn has no such
-                // sheet yet, and a long press that re-sent the reaction would be worse
-                // than one that does nothing.
-                onLongClick = {},
+                // Long press opens who reacted, as the DM strip does.
+                onLongClick = { showWho = true },
             )
         }
+    }
+}
+
+/**
+ * Who reacted, and with what.
+ *
+ * The fold keys reactions by emoji to a *set* of senders, so this is the whole truth
+ * the room holds about them — there is no separate receipt to open, and no count that
+ * could disagree with the list under it.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CordnReactionDetailSheet(
+    reactions: Map<String, Set<HexKey>>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDismiss: () -> Unit,
+) {
+    // Most-reacted first, matching the order of the chips that opened this.
+    val groups = remember(reactions) { reactions.entries.sortedByDescending { it.value.size } }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+            Text(
+                text = stringRes(R.string.cordn_reactions_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+
+            groups.forEach { (emoji, who) ->
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(text = emoji, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = who.size.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                who.forEach { pubKey ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 36.dp, end = 20.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        UserPicture(
+                            userHex = pubKey,
+                            size = Size20dp,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                        Text(
+                            text = observeUserNameByHex(pubKey, accountViewModel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The message a reply is answering, drawn above it.
+ *
+ * A one-line "Replying to: <first 60 characters>" told you a reply existed without ever
+ * saying who it answered, which in a group is most of what you need. This names the
+ * author in their own colour and is tappable, so a reply is a way back to what it
+ * answers rather than a dead label.
+ */
+@Composable
+internal fun CordnQuotedMessage(
+    parent: CordnDeliveredMessage,
+    annotations: CordnAnnotationIndex,
+    accountViewModel: AccountViewModel,
+    onClick: (() -> Unit)? = null,
+) {
+    val isLightTheme = MaterialTheme.colorScheme.isLight
+    val authorColor =
+        remember(parent.envelope.pubKey, isLightTheme) {
+            authorNameColorFor(parent.envelope.pubKey, isLightTheme)
+        }
+
+    val body =
+        if (annotations.isDeleted(parent.envelope.id)) {
+            stringRes(R.string.cordn_message_deleted)
+        } else {
+            annotations.contentOf(parent.envelope.id).orEmpty()
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(QuoteShape)
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = QUOTE_TINT_ALPHA))
+                .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // The accent bar reads as "this is quoted" at a glance, and takes the author's
+        // own colour so a run of replies to different people stays distinguishable.
+        Box(Modifier.width(3.dp).fillMaxHeight().background(authorColor))
+
+        Column(Modifier.padding(top = 6.dp, bottom = 6.dp, end = 8.dp)) {
+            Text(
+                text = observeUserNameByHex(parent.envelope.pubKey, accountViewModel),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = authorColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private val QuoteShape = RoundedCornerShape(6.dp)
+
+/** How strongly a quoted message is lifted off the bubble it sits in. */
+private const val QUOTE_TINT_ALPHA = 0.06f
+
+/**
+ * The line where the messages you have already read end.
+ *
+ * Drawn from a cursor snapshotted when the room opened: `markRead()` runs on open, so a
+ * divider read from the live cursor would vanish the moment it became useful.
+ */
+@Composable
+internal fun UnreadDivider() {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = stringRes(R.string.cordn_chat_unread_divider),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
     }
 }
 

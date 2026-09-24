@@ -315,9 +315,7 @@
     <string name="cordn_action_delete">Delete</string>
     <string name="cordn_action_pin">Pin</string>
     <string name="cordn_action_unpin">Unpin</string>
-    <string name="cordn_action_replying">Replying to: %1$s</string>
     <string name="cordn_action_editing">Editing your message</string>
-    <string name="cordn_action_in_reply_to">Replying to: %1$s</string>
     <string name="cordn_media_attach">Attach a file</string>
     <string name="cordn_media_open">Open %1$s</string>
     <string name="cordn_media_opened">%1$s decrypted. Nothing to show for this file type yet.</string>
@@ -368,6 +366,11 @@
     <string name="cordn_invitations_decline">Decline</string>
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
     <string name="cordn_chat_yesterday">Yesterday</string>
+    <string name="cordn_chat_unread_divider">New messages</string>
+    <string name="cordn_reactions_title">Reactions</string>
+    <string name="cordn_attachment_title">Send file</string>
+    <string name="cordn_attachment_caption_hint">Add a caption</string>
+    <string name="cordn_attachment_uploading">Uploading\u2026</string>
     <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
     <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
     <string name="cordn_coordinators_discover_action">Look for coordinators</string>
@@ -420,6 +423,10 @@
     <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
     <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
     <string name="cordn_keypackages_explainer">Others can only add you to a cordn group by taking a key package you published to that coordinator. cordn has no other place to keep one, so with none published nobody can invite you — and nothing tells them why.</string>
+    <plurals name="cordn_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
     <plurals name="cordn_keypackages_summary">
         <item quantity="one">%1$d single-use package available.</item>
         <item quantity="other">%1$d single-use packages available.</item>

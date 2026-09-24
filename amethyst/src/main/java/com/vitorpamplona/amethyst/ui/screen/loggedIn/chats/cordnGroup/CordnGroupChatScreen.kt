@@ -31,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -87,6 +88,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
@@ -150,6 +153,7 @@ private fun CordnGroupChat(
     val messages by room.messages.collectAsStateWithLifecycle()
     val annotations by room.annotations.collectAsStateWithLifecycle()
     val name by room.name.collectAsStateWithLifecycle()
+    val members by room.members.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -159,6 +163,7 @@ private fun CordnGroupChat(
     var replyingTo by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var editing by remember { mutableStateOf<CordnDeliveredMessage?>(null) }
     var attaching by remember { mutableStateOf(false) }
+    var pendingAttachment by remember { mutableStateOf<Uri?>(null) }
     var attachError by remember { mutableStateOf<String?>(null) }
 
     // Why sending says anything at all when it fails: `manager()` is null-safe
@@ -223,10 +228,21 @@ private fun CordnGroupChat(
         }
     }
 
+    // Where the divider goes, taken once per visit. markRead() below moves the live
+    // cursor to the newest message, so reading it per frame would erase the line at
+    // exactly the moment it starts being useful. Restored state first, because the
+    // cursor this reads is the one that was persisted.
+    var unreadFrom by remember(room.gid) { mutableStateOf<Long?>(null) }
+
     LaunchedEffect(room) {
         runtime?.restoreRoomState(room.coordinatorPubKey, room.gid)
+        unreadFrom = room.lastReadCursor.value.takeIf { room.unreadCount.value > 0 }
         room.markRead()
     }
+
+    // Tapping a reply's quote jumps to the message it answers and flashes it; the
+    // bubble clears this itself once the flash is done.
+    var highlighted by remember(room.gid) { mutableStateOf<HexKey?>(null) }
 
     // The same scaffold every other chat screen uses. A bare Scaffold gave this room
     // neither of the two things it provides: the bars' scroll behaviour, and the IME
@@ -236,6 +252,8 @@ private fun CordnGroupChat(
         topBar = {
             CordnChatTopBar(
                 title = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
+                members = members,
+                accountViewModel = accountViewModel,
                 onBack = { nav.popBack() },
                 onInfo = { nav.nav(Route.CordnGroupInfo(room.coordinatorPubKey, room.gid)) },
             )
@@ -246,6 +264,32 @@ private fun CordnGroupChat(
         Column(Modifier.fillMaxSize().padding(padding)) {
             // One clock for every divider in the room, so they cannot disagree.
             val today = rememberToday()
+
+            // Reversed once, into a val: `asReversed()` is a view, and indexing it
+            // per item to find the neighbour is how a list like this quietly becomes
+            // quadratic. Hoisted out of the LazyColumn because the jump below needs to
+            // find a message's row by id.
+            val rows = remember(messages) { messages.asReversed() }
+
+            // The oldest message this visit had not seen. Own traffic is excluded for
+            // the same reason unreadCount excludes it: a message of yours coming back
+            // as an echo is not news, and a divider above it would say it was.
+            val firstUnreadId =
+                remember(rows, unreadFrom, me) {
+                    unreadFrom?.let { readUpTo ->
+                        rows.lastOrNull { it.cursor > readUpTo && it.envelope.pubKey != me }?.envelope?.id
+                    }
+                }
+
+            val jumpTo: (HexKey) -> Unit = { id ->
+                val index = rows.indexOfFirst { it.envelope.id == id }
+                // Not found means the quoted message is older than what is loaded.
+                // Flashing nothing is better than scrolling somewhere arbitrary.
+                if (index >= 0) {
+                    highlighted = id
+                    scope.launch { listState.animateScrollToItem(index) }
+                }
+            }
 
             // Pinned messages sit above the conversation rather than inside it.
             // A pin is a claim about a message's importance, not a message, and
@@ -271,11 +315,6 @@ private fun CordnGroupChat(
                 reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                // Reversed once, into a val: `asReversed()` is a view, and
-                // indexing it per item to find the neighbour is how a list
-                // like this quietly becomes quadratic.
-                val rows = messages.asReversed()
-
                 itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
                     // `rows` runs newest-first and the list is reverse-laid-out,
                     // so the next index is the older message and renders above.
@@ -301,8 +340,11 @@ private fun CordnGroupChat(
                         // a deleted message would defeat the deletion.
                         text = if (annotations.isDeleted(message.envelope.id)) null else annotations.contentOf(message.envelope.id),
                         isEdited = annotations.isEdited(message.envelope.id),
+                        shouldHighlight = highlighted == message.envelope.id,
                         accountViewModel = accountViewModel,
                         nav = nav,
+                        onHighlightFinished = { highlighted = null },
+                        onScrollToMessage = jumpTo,
                         onReply = {
                             replyingTo = message
                             editing = null
@@ -337,6 +379,13 @@ private fun CordnGroupChat(
                         },
                     )
 
+                    // Both are emitted after the row, which in a reversed list puts
+                    // them above it — so the later one draws higher. The unread line
+                    // belongs against the message, the date above the whole day.
+                    if (message.envelope.id == firstUnreadId) {
+                        UnreadDivider()
+                    }
+
                     // Drawn under the first message of each day, which in a
                     // reversed list means comparing against the older row.
                     if (!message.sameDayAs(older)) {
@@ -356,12 +405,54 @@ private fun CordnGroupChat(
                 )
             }
 
+            pendingAttachment?.let { pending ->
+                CordnAttachmentDialog(
+                    uri = pending,
+                    sending = attaching,
+                    onDismiss = { pendingAttachment = null },
+                    onSend = { resolved, caption ->
+                        scope.launch {
+                            attaching = true
+                            attachError = null
+                            try {
+                                sendAttachment(context, accountViewModel, room, resolved, caption)
+                                // Only on success: a failed send leaves the dialog up
+                                // with what you picked still in it, so retrying is one
+                                // tap rather than the picker again.
+                                pendingAttachment = null
+                            } catch (e: Exception) {
+                                // A failed attachment left no trace anywhere; the
+                                // banner tells the person, this tells whoever has
+                                // to work out why.
+                                Log.w("CordnGroupChat", "attachment failed in ${room.gid}: ${e.message}", e)
+                                attachError = e.message ?: uploadFailed
+                            } finally {
+                                attaching = false
+                            }
+                        }
+                    },
+                )
+            }
+
             val replyPreview = replyingTo
             if (replyPreview != null) {
-                ComposerBanner(
-                    label = stringRes(R.string.cordn_action_replying, annotations.contentOf(replyPreview.envelope.id).orEmpty().take(60)),
-                    onCancel = { replyingTo = null },
-                )
+                // The same quote block the bubbles use, so what you are answering looks
+                // the same while you write it as it does once it is sent.
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        CordnQuotedMessage(
+                            parent = replyPreview,
+                            annotations = annotations,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                    IconButton(onClick = { replyingTo = null }) {
+                        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+                    }
+                }
             }
             if (editing != null) {
                 ComposerBanner(
@@ -376,23 +467,11 @@ private fun CordnGroupChat(
             CordnComposer(
                 room = room,
                 accountViewModel = accountViewModel,
-                onAttach = { uri ->
-                    scope.launch {
-                        attaching = true
-                        attachError = null
-                        try {
-                            sendAttachment(context, accountViewModel, room, uri)
-                        } catch (e: Exception) {
-                            // A failed attachment left no trace anywhere; the
-                            // banner tells the person, this tells whoever has
-                            // to work out why.
-                            Log.w("CordnGroupChat", "attachment failed in ${room.gid}: ${e.message}", e)
-                            attachError = e.message ?: uploadFailed
-                        } finally {
-                            attaching = false
-                        }
-                    }
-                },
+                // Picking a file no longer sends it. A cordn attachment is encrypted,
+                // uploaded and announced to the room in one irreversible action, so it
+                // gets the same confirm-first treatment as anything else that cannot be
+                // taken back.
+                onAttach = { uri -> pendingAttachment = uri },
                 onVoiceNote = { recording ->
                     scope.launch {
                         attaching = true
@@ -518,11 +597,38 @@ private fun ComposerBanner(
 @Composable
 private fun CordnChatTopBar(
     title: String,
+    members: List<HexKey>,
+    accountViewModel: AccountViewModel,
     onBack: () -> Unit,
     onInfo: () -> Unit,
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = {
+            // The whole title is the way in to group info, as it is in every other
+            // group chat — the faces say who is in the room before you open it.
+            Row(
+                modifier = Modifier.clickable(onClick = onInfo),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (members.isNotEmpty()) {
+                    NonClickableUserPictures(
+                        userHexList = members,
+                        size = 36.dp,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+                Column {
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (members.isNotEmpty()) {
+                        Text(
+                            text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, members.size, members.size),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
@@ -600,7 +706,8 @@ private suspend fun sendAttachment(
     context: Context,
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
-    uri: Uri,
+    picked: PickedAttachment,
+    caption: String,
 ) {
     // Every step here used to `?: return`, which reads as "nothing to do" and
     // behaves as "the attach button does nothing at all": the picker closed,
@@ -614,11 +721,12 @@ private suspend fun sendAttachment(
         session.manager.group(room.gid)
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
 
-    val resolver = context.contentResolver
-    val mime = resolver.getType(uri) ?: CordnBlobUpload.OPAQUE
-    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
+    // Name and type come from the dialog, which resolved them through OpenableColumns
+    // — `uri.lastPathSegment` is a document id on a content:// URI, not a filename.
+    val mime = picked.mimeType.ifBlank { CordnBlobUpload.OPAQUE }
+    val name = picked.displayName
     val bytes =
-        withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { it.readBytes() } }
+        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(picked.uri)?.use { it.readBytes() } }
             ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
 
     // Null means the account has no Blossom server, which is a setting the
@@ -630,7 +738,10 @@ private suspend fun sendAttachment(
     // Into the room as well, for the same reason every other send is: an
     // attachment of your own echoes back as an Echo and would otherwise be
     // invisible to the person who sent it.
-    room.add(session.manager.send(room.gid, content = "", tags = arrayOf(tag)))
+    //
+    // The caption is the message's own content, so an attachment with something
+    // written about it is one message rather than two.
+    room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
 }
 
 /**
