@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
+import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueDark
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueLight
 import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenDark
@@ -189,6 +190,8 @@ fun AmethystTheme(
             ProvideAppIcons {
                 CompositionLocalProvider(
                     LocalDensity provides scaledDensity,
+                    // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
+                    LocalProfilePictureCache provides true,
                     LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),
                     content = content,
                 )

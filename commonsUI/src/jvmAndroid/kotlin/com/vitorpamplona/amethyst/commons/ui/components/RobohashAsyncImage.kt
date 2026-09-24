@@ -18,15 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import android.graphics.drawable.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,9 +36,8 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import coil3.network.NetworkHeaders
@@ -48,12 +45,23 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
-import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
-import com.vitorpamplona.amethyst.commons.ui.components.forwardingPainter
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.onBackgroundColorFilter
+import coil3.Image as CoilImage
+
+/**
+ * Plays or pauses an animated avatar (GIF/AVIF) once Coil has decoded it. Android drives the
+ * decoded `Animatable` drawable; desktop decodes only the first frame, so there [autoPlay] has
+ * no effect.
+ */
+@Composable
+internal expect fun AnimatedImageAutoPlay(
+    image: CoilImage?,
+    autoPlay: Boolean,
+)
 
 @Composable
 fun RobohashAsyncImage(
@@ -93,6 +101,7 @@ fun RobohashFallbackAsyncImage(
     loadRobohash: Boolean,
     autoPlayGif: Boolean = true,
 ) {
+    val useThumbnailCache = LocalProfilePictureCache.current
     if (model != null && loadProfilePicture && isAnimatedMediaUrl(model)) {
         GifProfilePicture(
             userHex = robot,
@@ -115,14 +124,14 @@ fun RobohashFallbackAsyncImage(
                 )
             }
 
-        val resources = LocalContext.current.resources
         SubcomposeAsyncImage(
-            // The thumbnail-cache fetcher behind ProfilePictureUrl delegates to Coil's http-only
+            // ProfilePictureUrl only loads where the host registered its thumbnail-cache fetcher
+            // (see LocalProfilePictureCache). That fetcher delegates to Coil's http-only
             // NetworkFetcher, so a LOCAL model (e.g. a decrypted Concord community icon cached at
             // file://) would fail there. Route only remote http(s) pictures through the thumbnail
             // cache; hand local/content URIs to Coil's native fetchers, which load them directly.
             model =
-                if (model.startsWith("http://", ignoreCase = true) || model.startsWith("https://", ignoreCase = true)) {
+                if (useThumbnailCache && (model.startsWith("http://", ignoreCase = true) || model.startsWith("https://", ignoreCase = true))) {
                     ProfilePictureUrl(model)
                 } else {
                     model
@@ -136,14 +145,7 @@ fun RobohashFallbackAsyncImage(
             filterQuality = filterQuality,
         ) {
             val state by painter.state.collectAsState()
-            val successState = state as? AsyncImagePainter.State.Success
-            val drawable = successState?.result?.image?.asDrawable(resources)
-
-            LaunchedEffect(drawable, autoPlayGif) {
-                if (drawable is Animatable) {
-                    if (autoPlayGif) drawable.start() else drawable.stop()
-                }
-            }
+            AnimatedImageAutoPlay((state as? AsyncImagePainter.State.Success)?.result?.image, autoPlayGif)
 
             when (state) {
                 is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
@@ -194,7 +196,6 @@ fun GifProfilePicture(
     loadRobohash: Boolean,
     autoPlay: Boolean,
 ) {
-    val resources = LocalContext.current.resources
     val fallbackPainter =
         if (loadRobohash) {
             rememberVectorPainter(image = CachedRobohash.get(userHex, MaterialTheme.colorScheme.isLight))
@@ -205,20 +206,27 @@ fun GifProfilePicture(
             )
         }
 
-    val context = LocalContext.current
+    val context = LocalPlatformContext.current
+    val markForLocalBlossom = LocalProfilePictureCache.current
     // Animated avatars skip ProfilePictureFetcher (its thumbnail cache would flatten them), so
-    // they carry the profile-picture marker themselves for the local Blossom cache bridge.
-    val model =
-        remember(userPicture) {
-            ImageRequest
-                .Builder(context)
-                .data(userPicture)
-                .httpHeaders(
-                    NetworkHeaders
-                        .Builder()
-                        .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
-                        .build(),
-                ).build()
+    // they carry the profile-picture marker themselves for the local Blossom cache bridge. Only
+    // hosts that install that bridge (LocalProfilePictureCache) strip the marker before the
+    // request leaves; anywhere else it would reach the image server, so it is not added.
+    val model: Any =
+        remember(userPicture, markForLocalBlossom) {
+            if (markForLocalBlossom) {
+                ImageRequest
+                    .Builder(context)
+                    .data(userPicture)
+                    .httpHeaders(
+                        NetworkHeaders
+                            .Builder()
+                            .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
+                            .build(),
+                    ).build()
+            } else {
+                userPicture
+            }
         }
 
     Box(modifier = modifier) {
@@ -229,14 +237,7 @@ fun GifProfilePicture(
             modifier = Modifier.fillMaxSize(),
         ) {
             val state by painter.state.collectAsState()
-            val successState = state as? AsyncImagePainter.State.Success
-            val drawable = successState?.result?.image?.asDrawable(resources)
-
-            LaunchedEffect(drawable, autoPlay) {
-                if (drawable is Animatable) {
-                    if (autoPlay) drawable.start() else drawable.stop()
-                }
-            }
+            AnimatedImageAutoPlay((state as? AsyncImagePainter.State.Success)?.result?.image, autoPlay)
 
             when (state) {
                 is AsyncImagePainter.State.Success -> {

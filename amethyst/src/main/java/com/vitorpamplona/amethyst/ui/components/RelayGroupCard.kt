@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_onl
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
 import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_open
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes

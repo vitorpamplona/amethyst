@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats
+package com.vitorpamplona.amethyst.commons.model.chats
 
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * A kind-9 chat message is a thread reply only when its `e` tag carries a NIP-10 marker.

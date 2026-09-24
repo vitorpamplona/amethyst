@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.calendar
 
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -33,13 +34,16 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -137,14 +141,20 @@ class CalendarsViewModelFlowTest {
     ) = runBlocking {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val store = ViewModelStore()
+        var modelScope: Job? = null
         try {
             val feed = FeedContentState(CalendarAppointmentsFeedFilter(seeEverythingAccount()), scope, LocalCache)
             val model = ViewModelProvider(store, ViewModelProvider.NewInstanceFactory())[CalendarsViewModel::class.java]
+            modelScope = model.viewModelScope.coroutineContext.job
             model.init(pubKey, feed)
             block(model)
         } finally {
             store.clear()
             scope.cancel()
+            // Clearing only requests cancellation. The flowOn producers on Dispatchers.Default can
+            // still be finishing and hand their completion back to the Main collectors; wait for
+            // them here, while setMain is still in force, not after tearDown's resetMain.
+            withTimeout(AWAIT_MS) { modelScope?.join() }
         }
     }
 

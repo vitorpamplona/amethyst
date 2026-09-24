@@ -37,6 +37,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

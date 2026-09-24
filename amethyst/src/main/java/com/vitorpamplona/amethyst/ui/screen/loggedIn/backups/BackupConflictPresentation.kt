@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
@@ -242,8 +242,8 @@ private fun arrow(
  */
 @Composable
 fun rememberPresentation(diff: EventDiff): DiffPresentation {
-    val context = LocalContext.current
-    return remember(diff, context) { presentationOf(diff) { context.getString(it) } }
+    val resources = LocalResources.current
+    return remember(diff, resources) { presentationOf(diff) { resources.getString(it) } }
 }
 
 /** Turns each event's own diff into typed, labelled groups. [str] resolves the labels. */
