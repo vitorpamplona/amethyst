@@ -411,9 +411,18 @@ private fun CordnGroupInfo(
             // everybody would build commits the rest of the group drops on
             // receipt.
             if (canAdminister) {
+                // Asked only once the field is in use. `kp_list` is unpaginated,
+                // so opening this screen must not download the coordinator's
+                // whole table on behalf of somebody who never types.
+                val searching = memberSearch.length > 2
+                val reachable by
+                    produceState<Set<HexKey>?>(null, runtime, coordinatorPubKey, searching) {
+                        if (searching) value = runtime?.identitiesWithKeyPackages(coordinatorPubKey)
+                    }
                 CordnAddMember(
                     userSuggestions = userSuggestions,
                     search = memberSearch,
+                    reachable = reachable,
                     onSearchChange = {
                         memberSearch = it
                         adminError = null
@@ -537,16 +546,28 @@ private fun CordnGroupInfo(
  * ## The search finding somebody is not a promise
  *
  * cordn can only add a member by spending a KeyPackage they published **to
- * this coordinator** (`spec/00.md`), and nothing on this device can know
- * whether they did until the coordinator is asked. So the note says so before
- * the attempt, and `CordnGroupManager.invite` says which of the two went wrong
- * after it -- "the coordinator holds no KeyPackage for ..." is a different
- * problem from a name that matched nobody, and they are worth telling apart.
+ * this coordinator** (`spec/00.md`). [reachable] is who the coordinator says
+ * did, so the common disappointment is visible before the tap rather than
+ * after it, and `CordnGroupManager.invite` still says which of the two went
+ * wrong when one does -- "the coordinator holds no KeyPackage for ..." is a
+ * different problem from a name that matched nobody.
+ *
+ * ## Why the badge marks the yes and says nothing about the no
+ *
+ * [reachable] has three states, not two: a set, an empty set, and null for a
+ * lookup that never came back (`CordnRuntime.identitiesWithKeyPackages`). Only
+ * membership in it is something we were told; absence covers both "has not
+ * published here" and "we could not ask". Marking the yes therefore asserts
+ * exactly what we verified, and an unmarked row asserts nothing -- where a
+ * "cannot be added" marker would turn an unreachable coordinator into a claim
+ * about a person. Unmarked rows stay fully tappable for the same reason: the
+ * listing can be up to a minute stale, and the coordinator gets the last word.
  */
 @Composable
 private fun CordnAddMember(
     userSuggestions: UserSuggestionState,
     search: String,
+    reachable: Set<HexKey>?,
     onSearchChange: (String) -> Unit,
     busy: Boolean,
     accountViewModel: AccountViewModel,
@@ -587,12 +608,22 @@ private fun CordnAddMember(
                     )
                 },
                 trailingContent = { user ->
-                    IconButton(onClick = { onInvite(user) }) {
-                        Icon(
-                            symbol = MaterialSymbols.PersonAdd,
-                            contentDescription = stringRes(R.string.cordn_info_add_member),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (reachable?.contains(user.pubkeyHex) == true) {
+                            Icon(
+                                symbol = MaterialSymbols.Key,
+                                contentDescription = stringRes(R.string.cordn_info_has_key_package),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        IconButton(onClick = { onInvite(user) }) {
+                            Icon(
+                                symbol = MaterialSymbols.PersonAdd,
+                                contentDescription = stringRes(R.string.cordn_info_add_member),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 },
             )

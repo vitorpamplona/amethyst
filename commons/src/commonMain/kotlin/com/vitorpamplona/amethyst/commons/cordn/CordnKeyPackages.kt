@@ -29,9 +29,13 @@ import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundleCodec
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -122,6 +126,89 @@ class CordnKeyPackages(
         val at: Long,
     )
 
+    private val snapshotLock = Mutex()
+    private var snapshot: Snapshot? = null
+
+    /**
+     * What `kp_list` reported, the last time we asked.
+     *
+     * `kp_list` takes no arguments and returns every KeyPackage the coordinator
+     * holds for **every** identity (`spec/00.md` leaves retrieval scoping to the
+     * coordinator; the reference implementation answers with the whole table).
+     * So one call answers a question about anybody, and asking it once per
+     * person would be the same download repeated.
+     *
+     * [identities] keeps only pubkeys, not the entries. Another account's
+     * `kp_ref` is useless to us -- a Welcome is addressed to a ref we obtained
+     * by *taking* the package, never to one we read out of a listing -- and on
+     * a busy coordinator those refs are the bulk of the response. Dropping them
+     * bounds what we retain even though nothing bounds what arrives.
+     */
+    class Snapshot(
+        /** Every identity the coordinator holds at least one KeyPackage for. */
+        val identities: Set<HexKey>,
+        /** The full entries for this account, which are the ones we act on. */
+        val mine: List<AvailableKeyPackage>,
+        /** When this was fetched, for [snapshot]'s age check. */
+        val at: Long,
+    )
+
+    /**
+     * Refetches unconditionally and replaces the snapshot.
+     *
+     * Every decision about whether to *publish* reads through here rather than
+     * through [snapshot]. Minting against a stale listing is the one place
+     * staleness does damage: the coordinator keeps a single last-resort package
+     * per identity, so publishing a second silently evicts the first and
+     * strands every invite that referenced it.
+     */
+    suspend fun refresh(): Snapshot = snapshotLock.withLock { fetchLocked() }
+
+    /**
+     * The snapshot, refetched if it is older than [maxAgeSeconds].
+     *
+     * For reads that only *describe* what the coordinator holds. A minute of
+     * staleness costs at most a missing badge for somebody who published within
+     * it, and the act itself still fails loudly at the coordinator if the
+     * listing was wrong -- whereas every refresh is another full-table
+     * download, so asking less often is the cheap side of the trade.
+     */
+    suspend fun snapshot(maxAgeSeconds: Long = SNAPSHOT_TTL_SECONDS): Snapshot =
+        snapshotLock.withLock {
+            snapshot?.takeIf { TimeUtils.now() - it.at < maxAgeSeconds } ?: fetchLocked()
+        }
+
+    /**
+     * Which identities the coordinator can deliver a Welcome to, or null.
+     *
+     * Null means **we do not know** -- the coordinator is unreachable, throttled
+     * us, or answered with more than the transport admits. It does not mean
+     * nobody has published. Callers must keep those apart: rendering a failed
+     * lookup as "this person cannot be added" states something about a person
+     * on the strength of a network error.
+     */
+    suspend fun identitiesWithKeyPackages(): Set<HexKey>? =
+        try {
+            snapshot().identities
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+
+    /** Must hold [snapshotLock]. */
+    private suspend fun fetchLocked(): Snapshot {
+        val all = coordinator.listKeyPackages()
+        return Snapshot(
+            identities = all.mapTo(mutableSetOf()) { it.pubKey },
+            mine = all.filter { it.pubKey == accountPubKey },
+            at = TimeUtils.now(),
+        ).also { snapshot = it }
+    }
+
+    /** Forgets the snapshot after we changed what the coordinator holds. */
+    private suspend fun invalidate() = snapshotLock.withLock { snapshot = null }
+
     /** Reloads which refs we hold private halves for. Call at startup. */
     suspend fun restore() {
         _published.value = store.list().toSet()
@@ -150,7 +237,7 @@ class CordnKeyPackages(
      * is actually available the moment anyone invites us — and it is what is
      * available that decides whether the next invitation can happen.
      */
-    suspend fun listPublished(): List<AvailableKeyPackage> = coordinator.listKeyPackages().filter { it.pubKey == accountPubKey }
+    suspend fun listPublished(): List<AvailableKeyPackage> = refresh().mine
 
     /**
      * Generates a KeyPackage, keeps its private half, and publishes it.
@@ -184,6 +271,7 @@ class CordnKeyPackages(
                 throw e
             }
 
+        invalidate()
         return Published(result.keyPackageRef, result.lastResort || lastResort, result.at)
     }
 
@@ -219,6 +307,7 @@ class CordnKeyPackages(
         val removed = coordinator.removeKeyPackages(keyPackageRefs)
         removed.forEach { store.delete(it) }
         _published.value = _published.value - removed.toSet()
+        invalidate()
         return removed
     }
 
@@ -233,7 +322,7 @@ class CordnKeyPackages(
      */
     suspend fun topUp(minimum: Int = DEFAULT_POOL): List<String> {
         require(minimum >= 0) { "a KeyPackage pool cannot be negative" }
-        val theirs = coordinator.listKeyPackages().filter { it.pubKey == accountPubKey && !it.lastResort }
+        val theirs = refresh().mine.filter { !it.lastResort }
         val missing = minimum - theirs.size
         if (missing <= 0) return emptyList()
         return List(missing) { publishNew().keyPackageRef }
@@ -248,7 +337,7 @@ class CordnKeyPackages(
      * not the norm.
      */
     suspend fun ensureLastResort(): String? {
-        val existing = coordinator.listKeyPackages().filter { it.pubKey == accountPubKey && it.lastResort }
+        val existing = refresh().mine.filter { it.lastResort }
         // Only one, and only one we can still open: a last-resort package whose
         // private half this device never had is useless to it.
         val usable = existing.firstOrNull { store.load(it.keyPackageRef) != null }
@@ -292,5 +381,16 @@ class CordnKeyPackages(
          * last-resort package is the safety net.
          */
         const val DEFAULT_POOL = 5
+
+        /**
+         * How long a [Snapshot] may be reused by [snapshot].
+         *
+         * Bounded by what a refresh costs rather than by how fast the answer
+         * changes: `kp_list` is unpaginated, so each one downloads the
+         * coordinator's whole table. A minute is long enough that opening a
+         * screen repeatedly costs one call and short enough that somebody who
+         * has just published becomes visible while you are still looking.
+         */
+        const val SNAPSHOT_TTL_SECONDS = 60L
     }
 }

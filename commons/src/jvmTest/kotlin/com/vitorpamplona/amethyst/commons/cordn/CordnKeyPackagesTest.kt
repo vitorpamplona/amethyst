@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundleCodec
@@ -335,4 +337,62 @@ class CordnKeyPackagesTest : CordnTransportHarness() {
 
             assertTrue(driving { alice.keyPackages.listPublished() }.all { it.pubKey == alice.pubKey })
         }
+
+    @Test
+    fun `the identity set spans everybody, where listPublished is scoped to us`() =
+        runTest {
+            // The two read one `kp_list` response and keep different halves of
+            // it. Scoping the identity set the way listPublished is scoped
+            // would answer "can I add Bob" with our own packages, which is
+            // always no.
+            val alice = Account()
+            val bob = Account()
+            driving { alice.keyPackages.publishNew() }
+            driving { bob.keyPackages.publishNew() }
+
+            val reachable = assertNotNull(driving { alice.keyPackages.identitiesWithKeyPackages() })
+            assertTrue(alice.pubKey in reachable, "ourselves")
+            assertTrue(bob.pubKey in reachable, "somebody else")
+        }
+
+    @Test
+    fun `publishing shows up straight away rather than at the end of the snapshot's life`() =
+        runTest {
+            // The snapshot is reused for a minute, so our own publish has to
+            // drop it. Otherwise the account that just published a package is
+            // told for the next minute that it has none.
+            val alice = Account()
+            assertTrue(driving { alice.keyPackages.identitiesWithKeyPackages() }?.contains(alice.pubKey) == false)
+
+            driving { alice.keyPackages.publishNew() }
+
+            assertTrue(driving { alice.keyPackages.identitiesWithKeyPackages() }?.contains(alice.pubKey) == true)
+        }
+
+    @Test
+    fun `a coordinator that cannot answer is unknown, not nobody`() =
+        runTest {
+            // The distinction the whole return type exists for. An empty set
+            // says the coordinator holds nothing for anyone; null says we never
+            // found out. A caller that folds them together renders a network
+            // failure as a claim that somebody cannot be added.
+            val alice = Account()
+            driving { alice.keyPackages.publishNew() }
+
+            val blind =
+                CordnKeyPackages(
+                    accountPubKey = alice.pubKey,
+                    coordinator = UnreachableList(alice.coordinatorClient),
+                    store = InMemoryCordnKeyPackageStore(),
+                )
+
+            assertNull(driving { blind.identitiesWithKeyPackages() })
+        }
+
+    /** A coordinator whose `kp_list` is the one call that fails. */
+    private class UnreachableList(
+        delegate: ICoordinator,
+    ) : ICoordinator by delegate {
+        override suspend fun listKeyPackages(): List<AvailableKeyPackage> = throw IllegalStateException("kp_list unreachable")
+    }
 }

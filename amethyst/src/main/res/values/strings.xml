@@ -414,6 +414,7 @@
     <string name="cordn_coordinators_stale_note">These have not announced in over a month. Creating a group on one that has gone away will fail.</string>
     <string name="cordn_info_add_member">Add someone</string>
     <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
+    <string name="cordn_info_has_key_package">Can be added on this coordinator</string>
     <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
     <string name="cordn_exposure_open">What this coordinator can see</string>
     <string name="cordn_exposure_close">Got it</string>
