@@ -335,6 +335,62 @@ jobs:
           name: Quartz iOS Test Reports
           path: quartz/build/reports
 
+  # Android Lint, split out of test-and-build-android.
+  #
+  # That job died with "the runner has received a shutdown signal" (SIGTERM,
+  # exit 143) seven times across this workflow's history — the OOM killer taking
+  # the runner agent on a 16GB box. Two attempts to fix it by tuning numbers
+  # have now been spent: capping both daemons to 4g traded the runner OOM for an
+  # R8/lintAnalyze "Java heap space", and --max-workers=3 survives a warm cache
+  # but still dies on a cold one.
+  #
+  # This is the structural fix rather than a third number. lintAnalyze is the
+  # single heaviest step in that job — measured at 13 of its 35 minutes on one
+  # cold run — and it holds a large analysis graph while the Kotlin daemon, a
+  # forked test JVM and R8 are all still resident. Giving the two lint tasks
+  # their own runner removes that peak from the critical job instead of trying
+  # to squeeze everything under one ceiling, and the two now run concurrently.
+  #
+  # The cost is honest: both jobs restore the same read-only Gradle cache and so
+  # repeat some module compilation. That buys back more than it spends here,
+  # because the duplicated work is parallel while the memory pressure was not.
+  lint-android:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Same daemon cap as the sibling job: lintAnalyze draws on the Gradle
+      # daemon's heap, which is why the earlier 4g experiment broke it. Only the
+      # Kotlin daemon is trimmed.
+      - name: Lint Android (gradle)
+        run: |
+          ./gradlew \
+            -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            --max-workers=3 \
+            :amethyst:lintFdroidBenchmark \
+            :amethyst:lintPlayBenchmark
+
+      - name: Upload Android Lint Reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Android Lint Reports
+          path: amethyst/build/reports/lint-results-*.html
+
   test-and-build-android:
     needs: lint
     runs-on: ubuntu-latest
@@ -363,12 +419,15 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Lint + focused unit tests + benchmark assembly in one Gradle invocation.
-      # Previously: one invocation for lint, one for `test` (which compiled all
-      # six amethyst variants × all flavors), one for `assembleBenchmark`
-      # (re-walking the same task graph). Combining them keeps the daemon hot
-      # across phases and lets task-level dedup (e.g. compileKotlin) only
-      # happen once.
+      # Focused unit tests + benchmark assembly in one Gradle invocation.
+      # Previously: one invocation for `test` (which compiled all six amethyst
+      # variants × all flavors) and one for `assembleBenchmark` (re-walking the
+      # same task graph). Combining them keeps the daemon hot across phases and
+      # lets task-level dedup (e.g. compileKotlin) only happen once.
+      #
+      # Lint used to run here too and now has its own job (lint-android above) —
+      # see the note there for why. What remains is still the heaviest job in
+      # the workflow, so the memory notes below continue to apply.
       #
       # `-PdisableAbiSplits=true` produces a single non-split APK per
       # (flavor, buildType) instead of 5 (4 ABIs + universal). The CI only
@@ -421,8 +480,6 @@ jobs:
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             --max-workers=3 \
-            :amethyst:lintFdroidBenchmark \
-            :amethyst:lintPlayBenchmark \
             :quartz:jvmTest \
             :commons:jvmTest \
             :commonsUI:jvmTest \
@@ -432,13 +489,6 @@ jobs:
             :amethyst:testPlayDebugUnitTest \
             :amethyst:assembleBenchmark \
             -PdisableAbiSplits=true
-
-      - name: Upload Android Lint Reports
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: Android Lint Reports
-          path: amethyst/build/reports/lint-results-*.html
 
       # Publishes the JUnit XML produced by the unit-test tasks above as inline
       # annotations plus a job summary. Replaces asadmansr/android-test-report-action,
