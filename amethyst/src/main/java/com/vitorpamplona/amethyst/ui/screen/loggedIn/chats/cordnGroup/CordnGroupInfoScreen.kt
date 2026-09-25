@@ -162,18 +162,6 @@ private fun CordnGroupInfo(
     val admins by room.adminPubkeys.collectAsStateWithLifecycle()
     val epoch by room.epoch.collectAsStateWithLifecycle()
 
-    // The user's own name for this coordinator, if they gave it one. Read from
-    // the stored config, never from the coordinator: serverInfo() is a live MCP
-    // call over kind 25910, and a screen that fired one on open would tell the
-    // coordinator every time someone glanced at a group (spec/00.md §8).
-    val coordinatorLabel =
-        accountViewModel.account.cordnRuntime
-            ?.coordinators
-            ?.collectAsStateWithLifecycle()
-            ?.value
-            ?.firstOrNull { it.pubKey == coordinatorPubKey }
-            ?.label
-
     val me = accountViewModel.account.signer.pubKey
     // The same rule the policy enforces, asked here so the screen offers only
     // what would actually go through: empty is egalitarian and everyone
@@ -183,6 +171,26 @@ private fun CordnGroupInfo(
     val scope = rememberCoroutineScope()
     val runtime = accountViewModel.account.cordnRuntime
     val manager = runtime?.sessionOrNull(coordinatorPubKey)?.manager
+
+    // What to call this coordinator, cheapest source first. The label and the
+    // announced name are both already in hand -- neither costs a call to the
+    // coordinator, which matters because serverInfo() is a live MCP request over
+    // kind 25910 and a screen that fired one on open would tell the coordinator
+    // every time somebody glanced at a group (spec/00.md §8).
+    val announcedNames =
+        runtime
+            ?.announcedNames
+            ?.collectAsStateWithLifecycle()
+            ?.value
+            .orEmpty()
+
+    val coordinatorLabel =
+        runtime
+            ?.coordinators
+            ?.collectAsStateWithLifecycle()
+            ?.value
+            ?.firstOrNull { it.pubKey == coordinatorPubKey }
+            ?.label
     var adminError by remember(room.gid) { mutableStateOf<String?>(null) }
     var busy by remember(room.gid) { mutableStateOf(false) }
     var renaming by remember(room.gid) { mutableStateOf(false) }
@@ -449,6 +457,7 @@ private fun CordnGroupInfo(
             CoordinatorIdentityRow(
                 pubKey = coordinatorPubKey,
                 label = coordinatorLabel,
+                announced = announcedNames[coordinatorPubKey],
                 accountViewModel = accountViewModel,
                 nav = nav,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

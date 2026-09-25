@@ -42,30 +42,39 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * the app can name one the same way it names anybody else, and showing 64 hex
  * characters instead was throwing that away.
  *
- * ## Why the local label wins over the profile
+ * ## The order, and why
  *
- * `CoordinatorConfig.label` is documented as "what the user calls it. Never a
- * claim -- a coordinator cannot prove a name." A kind 0 is the coordinator's
- * own word for itself, exactly like the CEP-6 announcement's name, and two
- * servers may happily publish the same one. So a label the user set is the
- * only name here that means anything, and it takes precedence; the profile is
- * what to fall back on, and the key's first characters are the last resort.
+ * 1. `CoordinatorConfig.label` -- documented as "what the user calls it. Never
+ *    a claim -- a coordinator cannot prove a name." The only name here that
+ *    means anything, so it wins.
+ * 2. The CEP-6 announcement's name, when one was heard. Before the profile
+ *    because a coordinator added from discovery was *picked* by this name, and
+ *    having the settings screen rename it afterwards would be its own small
+ *    confusion.
+ * 3. The kind 0's display name (CEP-23).
+ * 4. The key's first characters.
  *
- * The profile is observed either way, so the avatar still loads for a
- * coordinator the user has named.
+ * Both 2 and 3 are the coordinator's own word for itself, and two servers may
+ * publish the same one, which is why neither outranks a label.
+ *
+ * The profile is observed whatever the outcome, so the avatar still loads for a
+ * coordinator that is named by 1 or 2.
  */
 @Composable
 fun coordinatorDisplayName(
     pubKey: HexKey,
     label: String?,
+    announced: String?,
     accountViewModel: AccountViewModel,
 ): String {
     // Unconditional: this is what subscribes for the kind 0 (observeUserName
     // registers a UserFinder subscription), and it must not come and go with
-    // whether a label happens to be set.
+    // whether a label or an announcement happens to be present.
     val fromProfile = observeUserNameByHex(pubKey, accountViewModel)
 
-    return label?.takeIf { it.isNotBlank() } ?: fromProfile
+    return label?.takeIf { it.isNotBlank() }
+        ?: announced?.takeIf { it.isNotBlank() }
+        ?: fromProfile
 }
 
 /**
@@ -79,6 +88,7 @@ fun coordinatorDisplayName(
 fun CoordinatorIdentityRow(
     pubKey: HexKey,
     label: String?,
+    announced: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -91,6 +101,6 @@ fun CoordinatorIdentityRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         UserPicture(userHex = pubKey, size = size, accountViewModel = accountViewModel, nav = nav)
-        name(coordinatorDisplayName(pubKey, label, accountViewModel))
+        name(coordinatorDisplayName(pubKey, label, announced, accountViewModel))
     }
 }

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnHandedOffException
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedJoinRequestRef
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedWelcomeRef
@@ -278,8 +279,8 @@ class CordnRuntimeTest {
                 )
                 req.values.flatten().forEach {
                     assertEquals(
-                        "expected only the profile and relay-list kinds (CEP-23, CEP-17)",
-                        listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
+                        "expected the profile, the relay list and the announcement (CEP-23, CEP-17, CEP-6)",
+                        listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND, CvmKinds.SERVER_ANNOUNCEMENT),
                         it.kinds,
                     )
                 }
