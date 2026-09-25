@@ -26,9 +26,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -45,11 +47,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -61,14 +65,23 @@ import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.model.cordn.CordnCoverage
+import com.vitorpamplona.amethyst.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
@@ -139,8 +152,21 @@ fun CordnCreateGroupScreen(
         val known by runtime.coordinators.collectAsStateWithLifecycle()
         val scope = rememberCoroutineScope()
 
+        val me = accountViewModel.account.signer.pubKey
+
         var selected by remember { mutableStateOf<String?>(null) }
-        var adminOnlyMe by remember { mutableStateOf(false) }
+
+        // Who the group is FOR, named before the coordinator is chosen: the
+        // roster is what turns "which coordinator do I trust" into "which one
+        // can reach these people", which is a question with an answer.
+        var roster by remember { mutableStateOf<List<HexKey>>(emptyList()) }
+        var coAdmins by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
+        var egalitarian by remember { mutableStateOf(false) }
+        var coordinatorOpen by remember { mutableStateOf(false) }
+        var userPicked by remember { mutableStateOf(false) }
+        var creation by remember { mutableStateOf<CordnGroupCreation?>(null) }
+        var memberSearch by remember { mutableStateOf("") }
+        val userSuggestions = remember { UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder()) }
         var pubKeyInput by remember { mutableStateOf("") }
         var relaysInput by remember { mutableStateOf("") }
         var name by remember { mutableStateOf("") }
@@ -181,6 +207,31 @@ fun CordnCreateGroupScreen(
 
         val config = remember(selected, pubKeyInput, relaysInput, choices) { resolve(choices, selected, pubKeyInput, relaysInput) }
 
+        // Asked only of coordinators this account already has a session with.
+        // Probing a discovery offer would mean opening one, and opening one is
+        // what commits to it -- so an offer stays uncovered until it is picked.
+        val coverage by
+            produceState<Map<HexKey, CordnCoverage>>(emptyMap(), runtime, known, roster) {
+                value =
+                    if (roster.isEmpty()) {
+                        emptyMap()
+                    } else {
+                        val target = roster.toSet()
+                        known.associate { it.pubKey to runtime.coverage(it.pubKey, target) }
+                    }
+            }
+
+        // The best-covering coordinator is offered, not imposed: the moment the
+        // user picks one themselves it stops moving under them, even if the
+        // roster later changes and a different one would now reach more people.
+        LaunchedEffect(coverage, userPicked) {
+            if (userPicked || coverage.isEmpty()) return@LaunchedEffect
+            val best = coverage.values.filter { it.answered }.maxByOrNull { it.reachable.size }
+            if (best != null && best.reachable.isNotEmpty()) selected = best.coordinatorPubKey
+        }
+
+        val chosenCoverage = selected?.let { coverage[it] }
+
         Column(
             modifier =
                 Modifier
@@ -196,178 +247,7 @@ fun CordnCreateGroupScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Text(
-                text = stringRes(R.string.cordn_create_coordinator),
-                style = MaterialTheme.typography.titleSmall,
-            )
-
-            known.forEach { coordinator ->
-                CoordinatorChoice(
-                    label = coordinatorDisplayName(coordinator.pubKey, coordinator.label, accountViewModel),
-                    pubKey = coordinator.pubKey,
-                    selected = selected == coordinator.pubKey,
-                    onSelect = { selected = coordinator.pubKey },
-                    relays = relayLabel(coordinator.relays),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            // Split on staleness rather than listing everything flat. A run
-            // against a public relay returns a long tail of coordinators that
-            // last announced months ago, and creating a group on one that has
-            // gone away fails at the first call -- so the live ones come first
-            // and the rest sit behind a count.
-            val cutoff = TimeUtils.now() - TimeUtils.ONE_MONTH
-            val live = offers.filter { it.announcedAt >= cutoff }
-            val stale = offers.filter { it.announcedAt < cutoff }
-            val names = offers.map { resolvedName(it, accountViewModel) }
-
-            // Bounded rather than lazy. The obvious fix for a long list is a
-            // LazyColumn, and it is the wrong one here: this screen is a form,
-            // and a lazy list disposes what scrolls off it -- which for the
-            // text fields below would throw away focus and IME state mid-typing.
-            // Capping the rows keeps composition bounded without putting a form
-            // inside a recycler.
-            val shownLive = if (showAllLive) live else live.take(LIVE_PREVIEW)
-
-            shownLive.forEach { offer ->
-                CoordinatorChoice(
-                    // Its own word for itself, and only that: nothing here has
-                    // verified the name a coordinator announces.
-                    label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
-                    pubKey = offer.pubKey,
-                    selected = selected == offer.pubKey,
-                    onSelect = { selected = offer.pubKey },
-                    detail = announcedLabel(offer.announcedAt),
-                    relays = relayLabel(offer.relays),
-                    about = offer.surface.about?.takeIf { it.isNotBlank() },
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            if (live.size > LIVE_PREVIEW) {
-                TextButton(onClick = { showAllLive = !showAllLive }) {
-                    Text(
-                        if (showAllLive) {
-                            stringRes(R.string.cordn_coordinators_show_fewer)
-                        } else {
-                            stringRes(R.string.cordn_coordinators_show_all, live.size)
-                        },
-                    )
-                }
-            }
-
-            if (stale.isNotEmpty()) {
-                TextButton(onClick = { showStale = !showStale }) {
-                    Text(
-                        if (showStale) {
-                            stringRes(R.string.cordn_coordinators_hide_older)
-                        } else {
-                            stringRes(R.string.cordn_coordinators_show_older, stale.size)
-                        },
-                    )
-                }
-            }
-
-            if (showStale && stale.isNotEmpty()) {
-                Text(
-                    text = stringRes(R.string.cordn_coordinators_stale_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                stale.forEach { offer ->
-                    CoordinatorChoice(
-                        label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
-                        pubKey = offer.pubKey,
-                        selected = selected == offer.pubKey,
-                        onSelect = { selected = offer.pubKey },
-                        detail = announcedLabel(offer.announcedAt),
-                        relays = relayLabel(offer.relays),
-                        about = offer.surface.about?.takeIf { it.isNotBlank() },
-                        dimmed = true,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
-
-            CoordinatorChoice(
-                label = stringRes(R.string.cordn_create_coordinator_new),
-                pubKey = null,
-                selected = selected == null,
-                onSelect = { selected = null },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-
-            // Asks relays, never a coordinator: an announcement is an ordinary
-            // event, so looking costs nothing with any of them and tells none
-            // of them anything.
-            OutlinedButton(
-                onClick = {
-                    discovering = true
-                    error = null
-                    scope.launch {
-                        try {
-                            discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
-                        } catch (e: Exception) {
-                            error = e.message ?: discoverFailed
-                        } finally {
-                            discovering = false
-                        }
-                    }
-                },
-                enabled = !discovering && !busy,
-            ) {
-                Text(stringRes(R.string.cordn_create_coordinator_discover))
-            }
-
-            discovered?.takeIf { offers.isEmpty() }?.let { result ->
-                Text(
-                    text =
-                        if (result.unreachable.isEmpty()) {
-                            stringRes(R.string.cordn_coordinators_discover_none)
-                        } else {
-                            // "Nobody is announcing" and "we were not told" are
-                            // different answers and only one of them is final.
-                            // Reporting the first for the second sends someone
-                            // off to paste a pubkey by hand over a timeout.
-                            stringRes(R.string.cordn_coordinators_discover_unheard, result.unreachable.size)
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            if (selected == null) {
-                OutlinedTextField(
-                    value = pubKeyInput,
-                    onValueChange = {
-                        pubKeyInput = it
-                        error = null
-                    },
-                    label = { Text(stringRes(R.string.cordn_create_coordinator_pubkey)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = relaysInput,
-                    onValueChange = {
-                        relaysInput = it
-                        error = null
-                    },
-                    label = { Text(stringRes(R.string.cordn_create_coordinator_relays)) },
-                    // A coordinator has no address beyond its pubkey (§8.5), so
-                    // the relays are how it is reached and more than one is
-                    // ordinary. One per line rather than comma-separated,
-                    // because a relay URL can contain a comma and a newline
-                    // cannot be mistyped into one.
-                    singleLine = false,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            StepHeading(1, stringRes(R.string.cordn_create_step_name))
 
             OutlinedTextField(
                 value = name,
@@ -384,35 +264,264 @@ fun CordnCreateGroupScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            StepHeading(2, stringRes(R.string.cordn_create_step_people))
+
+            CordnRoster(
+                roster = roster,
+                coAdmins = coAdmins,
+                egalitarian = egalitarian,
+                coverage = coverage,
+                userSuggestions = userSuggestions,
+                search = memberSearch,
+                onSearchChange = {
+                    memberSearch = it
+                    if (it.length > 2) userSuggestions.processCurrentWord(it) else userSuggestions.reset()
+                },
+                onAdd = { user ->
+                    memberSearch = ""
+                    userSuggestions.reset()
+                    if (user.pubkeyHex != me && user.pubkeyHex !in roster) roster = roster + user.pubkeyHex
+                },
+                onRemove = { pubKey ->
+                    roster = roster - pubKey
+                    coAdmins = coAdmins - pubKey
+                },
+                onToggleAdmin = { pubKey ->
+                    coAdmins = if (pubKey in coAdmins) coAdmins - pubKey else coAdmins + pubKey
+                },
+                busy = busy,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            StepHeading(3, stringRes(R.string.cordn_create_step_where))
+
+            // Collapsed to the one coordinator that will be used, because with a
+            // roster in hand there is usually nothing left to decide. The whole
+            // list is still one tap away for the times there is.
+            CoordinatorSummary(
+                config = config,
+                coverage = chosenCoverage,
+                rosterSize = roster.size,
+                expanded = coordinatorOpen,
+                onToggle = { coordinatorOpen = !coordinatorOpen },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            if (coordinatorOpen) {
+                known.forEach { coordinator ->
+                    CoordinatorChoice(
+                        label = coordinatorDisplayName(coordinator.pubKey, coordinator.label, accountViewModel),
+                        pubKey = coordinator.pubKey,
+                        selected = selected == coordinator.pubKey,
+                        onSelect = {
+                            selected = coordinator.pubKey
+                            userPicked = true
+                        },
+                        relays = relayLabel(coordinator.relays),
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                // Split on staleness rather than listing everything flat. A run
+                // against a public relay returns a long tail of coordinators that
+                // last announced months ago, and creating a group on one that has
+                // gone away fails at the first call -- so the live ones come first
+                // and the rest sit behind a count.
+                val cutoff = TimeUtils.now() - TimeUtils.ONE_MONTH
+                val live = offers.filter { it.announcedAt >= cutoff }
+                val stale = offers.filter { it.announcedAt < cutoff }
+                val names = offers.map { resolvedName(it, accountViewModel) }
+
+                // Bounded rather than lazy. The obvious fix for a long list is a
+                // LazyColumn, and it is the wrong one here: this screen is a form,
+                // and a lazy list disposes what scrolls off it -- which for the
+                // text fields below would throw away focus and IME state mid-typing.
+                // Capping the rows keeps composition bounded without putting a form
+                // inside a recycler.
+                val shownLive = if (showAllLive) live else live.take(LIVE_PREVIEW)
+
+                shownLive.forEach { offer ->
+                    CoordinatorChoice(
+                        // Its own word for itself, and only that: nothing here has
+                        // verified the name a coordinator announces.
+                        label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
+                        pubKey = offer.pubKey,
+                        selected = selected == offer.pubKey,
+                        onSelect = {
+                            selected = offer.pubKey
+                            userPicked = true
+                        },
+                        detail = announcedLabel(offer.announcedAt),
+                        relays = relayLabel(offer.relays),
+                        about = offer.surface.about?.takeIf { it.isNotBlank() },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                if (live.size > LIVE_PREVIEW) {
+                    TextButton(onClick = { showAllLive = !showAllLive }) {
+                        Text(
+                            if (showAllLive) {
+                                stringRes(R.string.cordn_coordinators_show_fewer)
+                            } else {
+                                stringRes(R.string.cordn_coordinators_show_all, live.size)
+                            },
+                        )
+                    }
+                }
+
+                if (stale.isNotEmpty()) {
+                    TextButton(onClick = { showStale = !showStale }) {
+                        Text(
+                            if (showStale) {
+                                stringRes(R.string.cordn_coordinators_hide_older)
+                            } else {
+                                stringRes(R.string.cordn_coordinators_show_older, stale.size)
+                            },
+                        )
+                    }
+                }
+
+                if (showStale && stale.isNotEmpty()) {
+                    Text(
+                        text = stringRes(R.string.cordn_coordinators_stale_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    stale.forEach { offer ->
+                        CoordinatorChoice(
+                            label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
+                            pubKey = offer.pubKey,
+                            selected = selected == offer.pubKey,
+                            onSelect = {
+                                selected = offer.pubKey
+                                userPicked = true
+                            },
+                            detail = announcedLabel(offer.announcedAt),
+                            relays = relayLabel(offer.relays),
+                            about = offer.surface.about?.takeIf { it.isNotBlank() },
+                            dimmed = true,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+
+                CoordinatorChoice(
+                    label = stringRes(R.string.cordn_create_coordinator_new),
+                    pubKey = null,
+                    selected = selected == null,
+                    onSelect = {
+                        selected = null
+                        userPicked = true
+                    },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
+                // Asks relays, never a coordinator: an announcement is an ordinary
+                // event, so looking costs nothing with any of them and tells none
+                // of them anything.
+                OutlinedButton(
+                    onClick = {
+                        discovering = true
+                        error = null
+                        scope.launch {
+                            try {
+                                discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
+                            } catch (e: Exception) {
+                                error = e.message ?: discoverFailed
+                            } finally {
+                                discovering = false
+                            }
+                        }
+                    },
+                    enabled = !discovering && !busy,
+                ) {
+                    Text(stringRes(R.string.cordn_create_coordinator_discover))
+                }
+
+                discovered?.takeIf { offers.isEmpty() }?.let { result ->
+                    Text(
+                        text =
+                            if (result.unreachable.isEmpty()) {
+                                stringRes(R.string.cordn_coordinators_discover_none)
+                            } else {
+                                // "Nobody is announcing" and "we were not told" are
+                                // different answers and only one of them is final.
+                                // Reporting the first for the second sends someone
+                                // off to paste a pubkey by hand over a timeout.
+                                stringRes(R.string.cordn_coordinators_discover_unheard, result.unreachable.size)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                if (selected == null) {
+                    OutlinedTextField(
+                        value = pubKeyInput,
+                        onValueChange = {
+                            pubKeyInput = it
+                            error = null
+                        },
+                        label = { Text(stringRes(R.string.cordn_create_coordinator_pubkey)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = relaysInput,
+                        onValueChange = {
+                            relaysInput = it
+                            error = null
+                        },
+                        label = { Text(stringRes(R.string.cordn_create_coordinator_relays)) },
+                        // A coordinator has no address beyond its pubkey (§8.5), so
+                        // the relays are how it is reached and more than one is
+                        // ordinary. One per line rather than comma-separated,
+                        // because a relay URL can contain a comma and a newline
+                        // cannot be mistyped into one.
+                        singleLine = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            StepHeading(4, stringRes(R.string.cordn_create_step_admins))
+
             // spec/01.md §5.3: leaving the admin list empty is not "set it up
-            // later", it is choosing egalitarian permanently — so it is offered
+            // later", it is choosing egalitarian permanently -- so it is offered
             // as a decision here rather than described as one.
             //
-            // The web client picks admins out of the members being added. This
-            // screen adds nobody — a cordn group starts with its creator and
-            // invites follow — so at this moment the only admin there could be
-            // is you, and the choice collapses to one switch. The same rule the
-            // web client states holds either way: choosing any admin at all
-            // must include yourself, or the group is born unadministrable.
+            // With a roster in hand the choice is the real one the web client
+            // makes: which of the people being added can add and remove others.
+            // Choosing anybody at all must include yourself, or the group is
+            // born unadministrable, so "you" is never one of the toggles.
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringRes(R.string.cordn_create_admin_only_me), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringRes(R.string.cordn_create_egalitarian), style = MaterialTheme.typography.bodyMedium)
                     Text(
                         text =
-                            if (adminOnlyMe) {
+                            if (egalitarian) {
+                                stringRes(R.string.cordn_create_egalitarian_note)
+                            } else if (coAdmins.isEmpty()) {
                                 stringRes(R.string.cordn_create_admin_only_me_on)
                             } else {
-                                stringRes(R.string.cordn_create_egalitarian_note)
+                                pluralStringRes(LocalContext.current, R.plurals.cordn_create_admin_count, coAdmins.size + 1, coAdmins.size + 1)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(checked = adminOnlyMe, onCheckedChange = { adminOnlyMe = it })
+                Switch(checked = egalitarian, onCheckedChange = { egalitarian = it })
             }
 
             config?.let {
@@ -445,17 +554,33 @@ fun CordnCreateGroupScreen(
                     error = null
                     scope.launch {
                         try {
-                            val gid =
-                                runtime.createGroup(
+                            // Only the people this coordinator can reach are
+                            // attempted. An invitation is a Welcome left against
+                            // a KeyPackage the invitee published *here*, so
+                            // asking for one it does not hold is a call that can
+                            // only fail -- and the roster keeps them either way,
+                            // for the link the outcome offers.
+                            val reachable = chosenCoverage?.reachable
+                            val invitees = roster.filter { reachable == null || it in reachable }
+                            val result =
+                                runtime.createGroupAndInvite(
                                     config = target,
                                     metadata =
                                         CordnGroupMetadata(
                                             name = name.trim(),
                                             description = description.trim(),
-                                            adminPubkeys = if (adminOnlyMe) listOf(accountViewModel.account.signer.pubKey) else emptyList(),
+                                            adminPubkeys = if (egalitarian) emptyList() else listOf(me) + coAdmins.toList(),
                                         ),
+                                    invitees = invitees,
                                 )
-                            nav.nav(Route.CordnGroupChat(target.pubKey, gid))
+                            // Straight through when there is nothing to report:
+                            // a dialog that only ever says "all five went out"
+                            // is one nobody reads the sixth time.
+                            if (result.failed.isEmpty() && invitees.size == roster.size) {
+                                nav.nav(Route.CordnGroupChat(target.pubKey, result.gid))
+                            } else {
+                                creation = result
+                            }
                         } catch (e: Exception) {
                             error = e.message ?: failureFallback
                         } finally {
@@ -466,8 +591,25 @@ fun CordnCreateGroupScreen(
                 enabled = !busy && config != null && name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.cordn_create_action))
+                Text(
+                    if (roster.isEmpty()) {
+                        stringRes(R.string.cordn_create_action)
+                    } else {
+                        pluralStringRes(LocalContext.current, R.plurals.cordn_create_action_invite, roster.size, roster.size)
+                    },
+                )
             }
+        }
+
+        creation?.let { done ->
+            CordnCreationOutcome(
+                creation = done,
+                roster = roster,
+                coordinatorPubKey = config?.pubKey,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onDismiss = { creation = null },
+            )
         }
     }
 }
@@ -626,4 +768,321 @@ private fun resolve(
     if (relays.isEmpty()) return null
 
     return CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
+}
+
+/** A numbered step label, so the form reads as an order rather than a pile. */
+@Composable
+private fun StepHeading(
+    step: Int,
+    title: String,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = step.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(text = title, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/**
+ * Who the group is for, named before the coordinator is chosen.
+ *
+ * The order is the point. cordn can only add somebody by spending a KeyPackage
+ * they published to the coordinator being used, so a roster turns an
+ * unanswerable question ("which coordinator do I trust?") into a countable one
+ * ("which one can reach these five?"). Everything below this section is ranked
+ * on what is entered here.
+ *
+ * Reachability is per person and across every coordinator this account already
+ * uses, not the one currently selected: somebody reachable nowhere cannot be
+ * helped by changing the choice below, and the caption says which case it is.
+ */
+@Composable
+private fun CordnRoster(
+    roster: List<HexKey>,
+    coAdmins: Set<HexKey>,
+    egalitarian: Boolean,
+    coverage: Map<HexKey, CordnCoverage>,
+    userSuggestions: UserSuggestionState,
+    search: String,
+    onSearchChange: (String) -> Unit,
+    onAdd: (User) -> Unit,
+    onRemove: (HexKey) -> Unit,
+    onToggleAdmin: (HexKey) -> Unit,
+    busy: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = search,
+            onValueChange = onSearchChange,
+            label = { Text(stringRes(R.string.cordn_create_add_member)) },
+            placeholder = { Text(stringRes(R.string.cordn_info_add_member_placeholder)) },
+            singleLine = true,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Text(
+            text = stringRes(R.string.cordn_create_people_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        if (!busy && search.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = onAdd,
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
+                onEmpty = {
+                    Text(
+                        text = stringRes(R.string.cordn_info_add_member_none),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                },
+                trailingContent = { user ->
+                    IconButton(onClick = { onAdd(user) }) {
+                        Icon(
+                            symbol = MaterialSymbols.PersonAdd,
+                            contentDescription = stringRes(R.string.cordn_create_add_member),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+            )
+        }
+
+        roster.forEach { member ->
+            // Counted across every coordinator that answered. An unanswered one
+            // contributes nothing rather than a zero, so an unreachable
+            // coordinator never reads as "this person has no key anywhere".
+            val answered = coverage.values.count { it.answered }
+            val reaching = coverage.values.count { it.answered && member in it.reachable }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                UserPicture(userHex = member, size = 32.dp, accountViewModel = accountViewModel, nav = nav)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = observeUserNameByHex(member, accountViewModel),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text =
+                            when {
+                                answered == 0 -> stringRes(R.string.cordn_create_reach_unknown)
+                                reaching > 0 ->
+                                    pluralStringRes(LocalContext.current, R.plurals.cordn_create_reach_count, reaching, reaching)
+                                else -> stringRes(R.string.cordn_create_reach_none)
+                            },
+                        style = MaterialTheme.typography.labelSmall,
+                        color =
+                            if (answered > 0 && reaching == 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                    )
+                }
+
+                // Hidden in egalitarian mode: there the admin list is empty by
+                // definition, so a per-person toggle would offer a choice that
+                // cannot be recorded.
+                if (!egalitarian) {
+                    val isAdmin = member in coAdmins
+                    TextButton(onClick = { onToggleAdmin(member) }, enabled = !busy) {
+                        Text(
+                            text = stringRes(R.string.cordn_create_admin),
+                            style = MaterialTheme.typography.labelMedium,
+                            color =
+                                if (isAdmin) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+                }
+
+                IconButton(onClick = { onRemove(member) }, enabled = !busy) {
+                    Icon(
+                        symbol = MaterialSymbols.PersonRemove,
+                        contentDescription = stringRes(R.string.cordn_info_remove_member),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The coordinator that will be used, and why, in one row.
+ *
+ * Collapsed by default because with a roster entered there is usually nothing
+ * left to decide -- one coordinator reaches everybody and the rest do not. The
+ * full list is one tap away for when that is not true.
+ */
+@Composable
+private fun CoordinatorSummary(
+    config: CoordinatorConfig?,
+    coverage: CordnCoverage?,
+    rosterSize: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (config == null) {
+            Text(
+                text = stringRes(R.string.cordn_create_no_coordinator),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            CoordinatorIdentityRow(
+                pubKey = config.pubKey,
+                label = config.label,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                size = 32.dp,
+                modifier = Modifier.weight(1f),
+            ) { name ->
+                Column(Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.bodyMedium)
+                    if (rosterSize > 0) {
+                        // Says which of the three it is: reaches everybody,
+                        // leaves somebody out, or was never asked. The third is
+                        // not the second.
+                        val reached = coverage?.reachable?.size
+                        Text(
+                            text =
+                                when {
+                                    coverage == null || !coverage.answered -> stringRes(R.string.cordn_create_coverage_unknown)
+                                    reached == rosterSize -> stringRes(R.string.cordn_create_coverage_all, rosterSize)
+                                    else -> stringRes(R.string.cordn_create_coverage_partial, reached ?: 0, rosterSize)
+                                },
+                            style = MaterialTheme.typography.labelSmall,
+                            color =
+                                if (coverage != null && coverage.answered && reached != rosterSize) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+                }
+            }
+        }
+
+        TextButton(onClick = onToggle) {
+            Text(
+                if (expanded) {
+                    stringRes(R.string.cordn_create_coordinator_hide)
+                } else {
+                    stringRes(R.string.cordn_create_coordinator_change)
+                },
+            )
+        }
+    }
+}
+
+/**
+ * What happened after Create, when it was not simply "everything".
+ *
+ * Shown instead of a thrown error because the group exists either way: a
+ * failed invitation is one row, not a failed creation. Every unfinished person
+ * gets the action that would actually work for them -- a retry where the
+ * coordinator refused, a link where it holds no KeyPackage at all and no retry
+ * ever could.
+ */
+@Composable
+private fun CordnCreationOutcome(
+    creation: CordnGroupCreation,
+    roster: List<HexKey>,
+    coordinatorPubKey: HexKey?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDismiss: () -> Unit,
+) {
+    val open: () -> Unit = {
+        onDismiss()
+        coordinatorPubKey?.let { nav.nav(Route.CordnGroupChat(it, creation.gid)) }
+        Unit
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cordn_create_outcome_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = stringRes(R.string.cordn_create_outcome_explainer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                val attempted = creation.outcomes.associateBy { it.pubKey }
+                roster.forEach { member ->
+                    val outcome = attempted[member]
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        UserPicture(userHex = member, size = 26.dp, accountViewModel = accountViewModel, nav = nav)
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = observeUserNameByHex(member, accountViewModel),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                text =
+                                    when {
+                                        outcome == null -> stringRes(R.string.cordn_create_outcome_skipped)
+                                        outcome.sent -> stringRes(R.string.cordn_create_outcome_waiting)
+                                        else -> outcome.failure?.message ?: stringRes(R.string.cordn_create_outcome_failed)
+                                    },
+                                style = MaterialTheme.typography.labelSmall,
+                                color =
+                                    if (outcome?.sent == true) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                            )
+                        }
+                        // Nobody was told anything, so the only thing that can
+                        // reach somebody with no KeyPackage here is a link they
+                        // open themselves -- which needs the group to exist,
+                        // and now it does.
+                        if (outcome == null) {
+                            TextButton(onClick = open) { Text(stringRes(R.string.cordn_create_outcome_link)) }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = open) { Text(stringRes(R.string.cordn_create_outcome_open)) } },
+    )
 }

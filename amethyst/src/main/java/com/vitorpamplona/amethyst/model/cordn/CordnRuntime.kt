@@ -72,6 +72,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -357,6 +358,71 @@ class CordnRuntime(
         session.manager.createGroup(gid, metadata)
         refresh(session, gid)
         return gid
+    }
+
+    /**
+     * Which of [roster] this coordinator could deliver a Welcome to.
+     *
+     * The question the create-group screen is really asking. An invitation is a
+     * Welcome left on the coordinator addressed to a KeyPackage the invitee
+     * published *there* -- so a coordinator that holds no KeyPackage for
+     * somebody cannot be told to invite them at all, and picking it means
+     * leaving them out. One `kp_list` answers for the whole roster at once,
+     * which is why this takes a set rather than a pubkey.
+     *
+     * Only answers for a coordinator this account already has a session with.
+     * Opening one is what commits to a coordinator, and a screen that is still
+     * only *looking* must not do that on the user's behalf -- so a discovery
+     * offer reports [CordnCoverage.answered] false rather than being probed.
+     */
+    suspend fun coverage(
+        coordinatorPubKey: HexKey,
+        roster: Set<HexKey>,
+    ): CordnCoverage {
+        val identities =
+            identitiesWithKeyPackages(coordinatorPubKey)
+                ?: return CordnCoverage(coordinatorPubKey, emptySet(), roster, answered = false)
+        val reachable = roster.filterTo(mutableSetOf()) { it in identities }
+        return CordnCoverage(coordinatorPubKey, reachable, roster - reachable, answered = true)
+    }
+
+    /**
+     * Creates the group, then invites [invitees] into it one at a time.
+     *
+     * Not one operation, and the result says so. `createGroup` and each
+     * `invite` are separate calls to the coordinator, so the group can exist
+     * with only some of the roster invited -- and nothing that happens to an
+     * invitation can undo the group. The caller gets a row per invitee instead
+     * of one thrown exception, because "three of five went out" is the state
+     * the user has to be shown, not an error to report.
+     *
+     * Sequential on purpose. Each Add is a commit that advances the group's
+     * epoch, so two in flight at once would build on the same epoch and the
+     * coordinator would reject the loser.
+     */
+    suspend fun createGroupAndInvite(
+        config: CoordinatorConfig,
+        metadata: CordnGroupMetadata,
+        invitees: List<HexKey>,
+    ): CordnGroupCreation {
+        val gid = createGroup(config, metadata)
+        val session = requireSession(config.pubKey)
+
+        val outcomes =
+            invitees.map { target ->
+                try {
+                    session.manager.invite(gid, target)
+                    CordnInviteOutcome(target, failure = null)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "could not invite ${target.take(8)}\u2026 to $gid: ${e.message}", e)
+                    CordnInviteOutcome(target, failure = e)
+                }
+            }
+
+        refresh(session, gid)
+        return CordnGroupCreation(gid, outcomes)
     }
 
     fun sessionOrNull(coordinatorPubKey: HexKey): CordnSession? = registry.sessionOrNull(coordinatorPubKey)
@@ -994,3 +1060,34 @@ data class CordnKeyPackageRow(
     /** Whether this device holds the private half and could open its Welcome. */
     val openableHere: Boolean,
 )
+
+/**
+ * What one coordinator could do with a roster.
+ *
+ * [answered] apart from [unreachable] deliberately: an empty [reachable] on an
+ * unanswered coordinator means nobody asked it, not that it holds nothing. A
+ * caller that folds the two together turns a missing session or a failed call
+ * into a claim about the people in the roster.
+ */
+data class CordnCoverage(
+    val coordinatorPubKey: HexKey,
+    val reachable: Set<HexKey>,
+    val unreachable: Set<HexKey>,
+    val answered: Boolean,
+)
+
+/** One invitation attempt. [failure] null means the coordinator took the Welcome. */
+data class CordnInviteOutcome(
+    val pubKey: HexKey,
+    val failure: Throwable?,
+) {
+    val sent: Boolean get() = failure == null
+}
+
+/** A group that now exists, and how its invitations went. */
+data class CordnGroupCreation(
+    val gid: String,
+    val outcomes: List<CordnInviteOutcome>,
+) {
+    val failed: List<CordnInviteOutcome> get() = outcomes.filterNot { it.sent }
+}

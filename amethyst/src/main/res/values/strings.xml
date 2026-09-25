@@ -367,6 +367,29 @@
     <string name="cordn_info_technical">Technical details</string>
     <string name="cordn_create_title">New Cordn group</string>
     <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
+    <string name="cordn_create_step_name">Name it</string>
+    <string name="cordn_create_step_people">Who is in it</string>
+    <string name="cordn_create_step_where">Where it lives</string>
+    <string name="cordn_create_step_admins">Who can add and remove</string>
+    <string name="cordn_create_add_member">Add someone</string>
+    <string name="cordn_create_people_note">Naming people now is what tells us which coordinator can reach them. Each one gets a Welcome left on that coordinator, which they pick up next time they open their app.</string>
+    <string name="cordn_create_reach_unknown">Not checked yet</string>
+    <string name="cordn_create_reach_none">No key on any coordinator you use</string>
+    <string name="cordn_create_egalitarian">Everyone can add and remove</string>
+    <string name="cordn_create_admin">Admin</string>
+    <string name="cordn_create_no_coordinator">No coordinator chosen</string>
+    <string name="cordn_create_coordinator_change">Change</string>
+    <string name="cordn_create_coordinator_hide">Done</string>
+    <string name="cordn_create_coverage_unknown">Not checked &#8212; picking it will ask</string>
+    <string name="cordn_create_coverage_all">Reaches all %1$d of your people</string>
+    <string name="cordn_create_coverage_partial">Reaches %1$d of %2$d &#8212; the rest would be left out</string>
+    <string name="cordn_create_outcome_title">The group exists</string>
+    <string name="cordn_create_outcome_explainer">Each invitation is a Welcome left on the coordinator, so they can fail one at a time. Nobody has been notified: they see it next time they open their app.</string>
+    <string name="cordn_create_outcome_waiting">Waiting for them</string>
+    <string name="cordn_create_outcome_failed">The coordinator refused the invitation</string>
+    <string name="cordn_create_outcome_skipped">No key here, so no Welcome could be left</string>
+    <string name="cordn_create_outcome_link">Send a link</string>
+    <string name="cordn_create_outcome_open">Open the chat</string>
     <string name="cordn_create_coordinator">Coordinator</string>
     <string name="cordn_create_coordinator_discover">Find coordinators</string>
     <string name="cordn_create_coordinator_new">Another coordinator</string>
@@ -470,6 +493,18 @@
     <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
     <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
     <string name="cordn_keypackages_explainer">Others can only add you to a cordn group by taking a key package you published to that coordinator. cordn has no other place to keep one, so with none published nobody can invite you — and nothing tells them why.</string>
+    <plurals name="cordn_create_reach_count">
+        <item quantity="one">Reachable on %1$d coordinator</item>
+        <item quantity="other">Reachable on %1$d coordinators</item>
+    </plurals>
+    <plurals name="cordn_create_admin_count">
+        <item quantity="one">%1$d person can add and remove</item>
+        <item quantity="other">%1$d people can add and remove</item>
+    </plurals>
+    <plurals name="cordn_create_action_invite">
+        <item quantity="one">Create and invite %1$d person</item>
+        <item quantity="other">Create and invite %1$d people</item>
+    </plurals>
     <plurals name="cordn_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
