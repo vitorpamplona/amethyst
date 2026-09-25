@@ -142,6 +142,7 @@ pins this). The accessories already wait for the first challenge to resolve, so
 | `countMerged(relays, filter, ...)` | `NostrClientCountExt` | Merged count across relays. |
 | `sql(relay, query, params, named, pageSize)` | `NostrClientSqlExt` | Read-only SQL (the Nostr SQL profile) on one relay: sends `SQL`, pulls every page with `FETCH`, returns all rows. Throws `SqlQueryException` with the relay's `CLOSED` reason. NIP-42-gated like REQ. |
 | `sqlStream(relay, query, ..., onColumns, onRow)` | `NostrClientSqlExt` | Same, handing rows over a page at a time; `SQL-CLOSE`s on cancellation. |
+| `sqlQuery(relay, filter)` / `sqlCount(relay, filter)` / `sqlIdsAndTimes(relay, filter)` | `NostrClientSqlExt` | A NIP-01 filter answered over SQL (`FilterSql`): the relay's raw store with REQ/COUNT semantics but no result cap, ranking or live tail. For a relay's own back-office processes (mirrors, monitors) reading their store through the relay. |
 
 ## Negentropy (NIP-77)
 

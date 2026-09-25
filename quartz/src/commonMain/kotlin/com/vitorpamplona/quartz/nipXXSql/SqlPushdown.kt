@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
@@ -150,36 +151,54 @@ object SqlPushdown {
             val compiled = SqlCompiler.compile(parsed, sources, params, named)
             val newestFirstLimit = if (specs.size == 1) NativeShape.newestFirstLimit(parsed, params, named) else null
 
-            specs.forEachIndexed { i, spec ->
-                val table = "s$i"
+            specs.forEachIndexed { i, _ ->
                 conn.execSQL(
-                    "CREATE TABLE $table (row_id INTEGER PRIMARY KEY, id TEXT UNIQUE, pubkey TEXT, created_at INTEGER, " +
+                    "CREATE TABLE s$i (row_id INTEGER PRIMARY KEY, id TEXT UNIQUE, pubkey TEXT, created_at INTEGER, " +
                         "kind INTEGER, tags TEXT, content TEXT, sig TEXT)",
                 )
-                if (spec.matchesNothing) return@forEachIndexed
-                if (!backend.acceptsScan(spec)) {
-                    throw SqlException.unsupported(
-                        "this relay needs a condition on kind, pubkey, id or a single-letter tag for every table in the query",
-                    )
+            }
+
+            // Every reference the store accepts on its own conditions first; then the ones it
+            // refuses, each narrowed by a join key another loaded reference pins down.
+            val loaded = BooleanArray(specs.size)
+            specs.forEachIndexed { i, spec ->
+                if (spec.matchesNothing) {
+                    loaded[i] = true
+                } else if (backend.acceptsScan(spec)) {
+                    val limited = newestFirstLimit != null && spec.exact && spec.table == SqlProfile.EVENTS
+                    load(conn, i) { sink -> if (limited) loadNewest(backend, spec.withLimit(newestFirstLimit), sink) else backend.events(spec, sink) }
+                    loaded[i] = true
                 }
-                conn.prepare("INSERT OR IGNORE INTO $table (id, pubkey, created_at, kind, tags, content, sig) VALUES (?, ?, ?, ?, ?, ?, ?)").use { insert ->
-                    val load = { e: Event ->
-                        insert.bindText(1, e.id)
-                        insert.bindText(2, e.pubKey)
-                        insert.bindLong(3, e.createdAt)
-                        insert.bindLong(4, e.kind.toLong())
-                        insert.bindText(5, OptimizedJsonMapper.toJson(e.tags))
-                        insert.bindText(6, e.content)
-                        insert.bindText(7, e.sig)
-                        insert.step()
-                        insert.reset()
-                    }
-                    if (newestFirstLimit != null && spec.exact && spec.table == SqlProfile.EVENTS) {
-                        loadNewest(backend, spec.withLimit(newestFirstLimit), load)
-                    } else {
-                        backend.events(spec, load)
+            }
+            val index = specs.withIndex().associate { (i, spec) -> spec.ref to i }
+            var progress = true
+            while (progress) {
+                progress = false
+                for (i in specs.indices) {
+                    if (loaded[i]) continue
+                    for (link in specs[i].links) {
+                        val j = index[link.target] ?: continue
+                        if (!loaded[j]) continue
+                        val values = joinKeys(conn, j, specs[j], link.targetColumn) ?: continue
+                        val narrowed = specs[i].narrowedTo(link.column, values) ?: continue
+                        if (!narrowed.matchesNothing) {
+                            if (!backend.acceptsScan(narrowed)) continue
+                            val keys = if (link.column == "pubkey") narrowed.authors!! else narrowed.ids!!
+                            load(conn, i) { sink ->
+                                for (chunk in keys.chunked(JOIN_KEY_CHUNK)) backend.events(specs[i].narrowedTo(link.column, chunk.toSet())!!, sink)
+                            }
+                        }
+                        loaded[i] = true
+                        progress = true
+                        break
                     }
                 }
+            }
+            if (!loaded.all { it }) {
+                throw SqlException.unsupported(
+                    "this relay needs a condition on kind, pubkey, id or a single-letter tag for every table in the query, " +
+                        "or a join to one that has it",
+                )
             }
             val cursor = SqlCursor(conn, compiled)
             return object : SqlRows {
@@ -197,6 +216,52 @@ object SqlPushdown {
             conn.close()
             throw e
         }
+    }
+
+    /** Inserts what [fetch] hands over into scratch table `s[i]`. */
+    private suspend fun load(
+        conn: SQLiteConnection,
+        i: Int,
+        fetch: suspend ((Event) -> Unit) -> Unit,
+    ) {
+        conn.prepare("INSERT OR IGNORE INTO s$i (id, pubkey, created_at, kind, tags, content, sig) VALUES (?, ?, ?, ?, ?, ?, ?)").use { insert ->
+            fetch { e: Event ->
+                insert.bindText(1, e.id)
+                insert.bindText(2, e.pubKey)
+                insert.bindLong(3, e.createdAt)
+                insert.bindLong(4, e.kind.toLong())
+                insert.bindText(5, OptimizedJsonMapper.toJson(e.tags))
+                insert.bindText(6, e.content)
+                insert.bindText(7, e.sig)
+                insert.step()
+                insert.reset()
+            }
+        }
+    }
+
+    /**
+     * The distinct text values of [column] over loaded reference `s[j]`, as its
+     * profile table shows them (for `tags`, only rows of the spec's tag name), or
+     * null for a column the profile doesn't have. A superset of the values any
+     * joined row can carry, since `s[j]` holds a superset of that reference's rows.
+     */
+    private fun joinKeys(
+        conn: SQLiteConnection,
+        j: Int,
+        spec: ScanSpec,
+        column: String,
+    ): Set<String>? {
+        val isTags = spec.table == SqlProfile.TAGS
+        if (column !in (if (isTags) SqlProfile.TAGS_COLUMNS else SqlProfile.EVENTS_COLUMNS)) return null
+        val source = if (isTags) EventStoreTableSources.tagsSql("s$j") else EventStoreTableSources.eventsSql("s$j")
+        val col = SqlCompiler.quoteIdent(column)
+        val byName = if (isTags && spec.tagName != null) " AND x.`name` = ?" else ""
+        val out = HashSet<String>()
+        conn.prepare("SELECT DISTINCT x.$col FROM ($source) AS x WHERE typeof(x.$col) = 'text'$byName").use { stmt ->
+            if (byName.isNotEmpty()) stmt.bindText(1, spec.tagName!!)
+            while (stmt.step()) out.add(stmt.getText(0))
+        }
+        return out
     }
 
     /**
@@ -238,6 +303,9 @@ object SqlPushdown {
     }
 
     private const val PAGE = 500
+
+    /** Join keys per store call when a reference is fetched by another's keys. */
+    private const val JOIN_KEY_CHUNK = 500
 }
 
 /**

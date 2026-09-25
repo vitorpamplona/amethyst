@@ -183,11 +183,13 @@ class SqlDifferentialFuzzTest {
      */
     @Test
     fun pushdownMatchesSqlite() {
-        val backends = listOf("scans" to FilterStoreBackend(store), "native" to KotlinAggregateBackend(store))
+        val selective = SelectiveBackend(store)
+        val backends = listOf("scans" to FilterStoreBackend(store), "native" to KotlinAggregateBackend(store), "selective" to selective)
         for ((label, backend) in backends) {
             val gen = QueryGen(Random(43))
             var compared = 0
             var native = 0
+            var refused = 0
             repeat(2000) { n ->
                 val sql = gen.query()
                 val expected = runOn(oracleConn, sql, emptyList())
@@ -195,6 +197,11 @@ class SqlDifferentialFuzzTest {
                     try {
                         runPushdown(sql, backend)
                     } catch (e: SqlException) {
+                        // A store may refuse a scan; it may never answer wrong.
+                        if (backend === selective && e.prefix == SqlException.UNSUPPORTED) {
+                            refused++
+                            return@repeat
+                        }
                         if (!expected.error) fail("[$label] pushdown rejected a query SQLite runs, #$n: ${e.message}\n$sql")
                         return@repeat
                     }
@@ -204,8 +211,31 @@ class SqlDifferentialFuzzTest {
                 compared++
             }
             if (backend is KotlinAggregateBackend) native = backend.answered
+            if (backend === selective) {
+                println("selective: compared=$compared refused=$refused joinNarrowed=${selective.narrowed}")
+                assertTrue(compared > 500, "[$label] only $compared compared")
+                assertTrue(selective.narrowed > 10, "join keys narrowed only ${selective.narrowed} scans")
+                continue
+            }
             assertTrue(compared > 1500, "[$label] only $compared compared")
             if (label == "native") assertTrue(native > 100, "only $native queries were answered natively")
+        }
+    }
+
+    /** Refuses unselective scans, as an index-only store does; counts scans that only a join key made selective. */
+    private class SelectiveBackend(
+        store: EventStore,
+    ) : FilterStoreBackend(store) {
+        var narrowed = 0
+
+        override fun acceptsScan(spec: ScanSpec) = spec.isSelective
+
+        override suspend fun events(
+            spec: ScanSpec,
+            onEvent: (Event) -> Unit,
+        ) {
+            if (!spec.exact && spec.ids != null) narrowed++
+            super.events(spec, onEvent)
         }
     }
 

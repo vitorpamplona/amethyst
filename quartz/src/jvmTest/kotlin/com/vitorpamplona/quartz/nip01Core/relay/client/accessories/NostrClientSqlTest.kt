@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,6 +77,41 @@ class NostrClientSqlTest {
                 ) { seen.add(it[0]) }
                 assertEquals(listOf("content"), columns)
                 assertEquals(7, seen.size)
+            }
+        }
+
+    /**
+     * A client-wide reconnect sweep (`reconnect(onlyIfChanged = false)`, debounced 200ms) drops
+     * every socket. A slow signer keeps the query waiting on AUTH across it, so its cursor dies
+     * with the first socket every time and the query must start over on the second.
+     */
+    @Test
+    fun survivesTheSocketDroppingBeforeTheFirstRow() =
+        runBlocking {
+            AuthGatedRelayHarness(signDelayMs = 1_000).use { h ->
+                h.preload(3)
+                val sweep =
+                    launch {
+                        delay(100)
+                        h.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+                    }
+                val result = h.client.sql(AuthGatedRelayHarness.URL, "SELECT count(*) FROM events", idleTimeoutMs = 10_000)
+                sweep.join()
+                assertEquals(listOf(listOf(3L)), result.rows)
+            }
+        }
+
+    @Test
+    fun filtersReadOverSql() =
+        runBlocking {
+            AuthGatedRelayHarness().use { h ->
+                h.preload(12)
+                val filter = Filter(kinds = listOf(1), limit = 5)
+                val events = h.client.sqlQuery(AuthGatedRelayHarness.URL, filter)
+                assertEquals((0 until 5).map { "gated-$it" }, events.map { it.content })
+                assertTrue(events.all { it.verify() })
+                assertEquals(12L, h.client.sqlCount(AuthGatedRelayHarness.URL, filter))
+                assertEquals(events.map { it.id }, h.client.sqlIdsAndTimes(AuthGatedRelayHarness.URL, filter).map { it.id })
             }
         }
 

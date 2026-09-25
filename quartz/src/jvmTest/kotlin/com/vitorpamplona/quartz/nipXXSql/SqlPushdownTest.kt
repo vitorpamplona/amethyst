@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.runBlocking
@@ -163,6 +164,36 @@ class SqlPushdownTest {
         // A selective reference in the same query is fine; a broad one is not.
         assertFailsWith<SqlException> { rows("SELECT 1 FROM events a, tags b WHERE a.kind = 1", backend) }
         assertEquals(sqlite("SELECT content FROM events WHERE kind = 7"), rows("SELECT content FROM events WHERE kind = 7", backend))
+    }
+
+    @Test
+    fun aReferenceTheStoreRefusesIsFetchedByTheJoinKey() {
+        // `d` has only a tag name, which no index answers; the join pins it to `l`'s events.
+        val q = "SELECT d.value FROM tags l JOIN tags d ON d.event_id = l.event_id AND d.name = 'e' WHERE l.kind = 7 AND l.name = 'p'"
+        val backend = Recording(refuseBroad = true)
+        assertEquals(sqlite(q), rows(q, backend))
+        assertEquals(1, sqlite(q).size)
+        val (first, second) = backend.scans
+        assertEquals(setOf(7), first.kinds)
+        assertEquals(setOf(runBlocking { store.query<Event>(Filter(kinds = listOf(7))) }.single().id), second.ids)
+    }
+
+    @Test
+    fun joinKeysCanBeTagValues() {
+        // The reactions' `e` values are the ids to fetch the notes by; the notes carry no condition of their own.
+        val q = "SELECT count(*) FROM tags t JOIN events n ON n.id = t.value WHERE t.kind = 7 AND t.name = 'e'"
+        val backend = Recording(refuseBroad = true)
+        assertEquals(sqlite(q), rows(q, backend))
+        assertEquals(setOf("x".repeat(64)), backend.scans[1].ids)
+    }
+
+    @Test
+    fun aLeftJoinsPreservedSideIsNotNarrowedByItsOnClause() {
+        // `e` keeps every row whatever `t` holds, so it must be fetched on its own conditions or refused.
+        val backend = Recording(refuseBroad = true)
+        assertFailsWith<SqlException> { rows("SELECT e.id FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.kind = 7", backend) }
+        val q = "SELECT e.content, t.name FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 ORDER BY e.content, t.idx"
+        assertEquals(sqlite(q), rows(q, Recording(refuseBroad = true)))
     }
 
     @Test

@@ -320,16 +320,51 @@ class SqlCompiler private constructor(
         if (refs.isEmpty()) return emptyMap()
         val whereConjuncts = conjuncts(s.where)
         val result = HashMap<TableRef, ScanSpec>()
+        val byAlias = refs.associateBy { (it.alias ?: it.name).lowercase() }
         for (ref in refs) {
-            result[ref] =
+            val alias = (ref.alias ?: ref.name).lowercase()
+            val preds = whereConjuncts + onConjunctsFor(ref, from)
+            val spec =
                 analyzer.analyze(
                     table = ref.name.lowercase(),
-                    alias = (ref.alias ?: ref.name).lowercase(),
+                    alias = alias,
                     single = from === ref,
-                    preds = whereConjuncts + onConjunctsFor(ref, from),
+                    preds = preds,
                 )
+            spec.ref = ref
+            spec.links = links(alias, preds, byAlias)
+            result[ref] = spec
         }
         return result
+    }
+
+    /**
+     * `alias.col = other.col` conjuncts among [preds], both sides qualified,
+     * the other side another base reference of the same FROM. Unqualified
+     * columns in a join are ambiguous and are skipped.
+     */
+    private fun links(
+        alias: String,
+        preds: List<Expr>,
+        byAlias: Map<String, TableRef>,
+    ): List<ScanLink> {
+        val out = ArrayList<ScanLink>()
+        for (p in preds) {
+            if (p !is Binary || p.op != "=") continue
+            val l = p.left as? ColumnRef ?: continue
+            val r = p.right as? ColumnRef ?: continue
+            val lt = l.table?.lowercase() ?: continue
+            val rt = r.table?.lowercase() ?: continue
+            val (own, other, otherAlias) =
+                when {
+                    lt == alias && rt != alias -> Triple(l, r, rt)
+                    rt == alias && lt != alias -> Triple(r, l, lt)
+                    else -> continue
+                }
+            val target = byAlias[otherAlias] ?: continue
+            out.add(ScanLink(own.column.lowercase(), target, other.column.lowercase()))
+        }
+        return out
     }
 
     private fun collectBaseRefs(

@@ -94,10 +94,44 @@ class ScanSpec(
         until: Long?,
     ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact)
 
+    /** The query reference this spec was read from; identity only. */
+    internal var ref: Any? = null
+
+    /** Equalities tying this reference to another in the same FROM, for [SqlPushdown]'s join-key propagation. */
+    internal var links: List<ScanLink> = emptyList()
+
+    /**
+     * This spec further restricted to rows whose [column] is one of [values],
+     * or null when [column] isn't one a store can look up by (`id`/`event_id`,
+     * `pubkey`).
+     */
+    internal fun narrowedTo(
+        column: String,
+        values: Set<String>,
+    ): ScanSpec? =
+        when {
+            column == (if (table == SqlProfile.TAGS) "event_id" else "id") ->
+                ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
+            column == "pubkey" ->
+                ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
+            else -> null
+        }
+
     override fun toString() =
         "ScanSpec($table ids=$ids authors=$authors kinds=$kinds since=$since until=$until " +
             "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty limit=$limit exact=$exact)"
 }
+
+/**
+ * `column = target.targetColumn` holds for every row of the reference that
+ * can reach the query's output, [target] being another base reference of
+ * the same FROM (identity, see [ScanSpec.ref]).
+ */
+internal class ScanLink(
+    val column: String,
+    val target: Any,
+    val targetColumn: String,
+)
 
 /**
  * Reads the conditions on one table reference out of the predicates that

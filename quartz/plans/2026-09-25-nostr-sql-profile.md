@@ -103,16 +103,42 @@ uses `query` and `count`):
    timestamp. Stores may break `created_at` ties any way.
 4. **Stores may refuse.** `SqlStoreBackend.acceptsScan` lets a big store
    refuse references with no selective condition (`ScanSpec.isSelective`: an
-   id, author, kind or single-letter tag), which fails the query `unsupported:`.
+   id, author, kind or single-letter tag).
+5. **Join keys rescue refused references.** The compiler also records, per
+   reference, the `ref.col = other.col` conjuncts from the same set (`ScanLink`).
+   Accepted references load first; a refused one tied by `id`/`event_id` or
+   `pubkey` to a loaded reference is fetched by the distinct values that
+   reference holds (`tags` narrowed to the spec's tag name), 500 keys per store
+   call. So `tags d ON d.event_id = l.event_id AND d.name = 'd'` reads only
+   `l`'s events, and `JOIN events n ON n.id = t.value` only the referenced
+   notes. Only when no link applies does the query fail `unsupported:`.
 
 `NostrServer` serves SQL for every store: file-backed SQLite through its
 dedicated read-only connections (`SqlQueryService`), everything else through
 `StoreSqlEngine` (the pushdown executor). Clients use
 `INostrClient.sql` / `sqlStream` (`relay/client/accessories/NostrClientSqlExt.kt`).
 
+`FilterSql` spells a NIP-01 filter in the profile (`ids`, `count`, `hydrate`
+plus `Collector` to rebuild events losslessly from `tags`), and
+`sqlQuery` / `sqlCount` / `sqlIdsAndTimes` run it over the wire. It is for a
+relay's own back-office processes (a mirror, a monitor) reading the raw store
+through the relay: REQ semantics without the relay's result cap, ranking or live
+tail. Tag filters are driven off the `tags` table, so every reference stays
+selective for an index-only store.
+
+The client pins the relay (a never-matching keep-alive REQ, as NIP-77 does)
+while a query runs. A socket that drops before the first row reaches the caller
+(including `NostrClient`'s own reconnect sweep, and a drop under the NIP-42
+exchange, which reads as a refusal) re-sends the query under a new id, at most
+three times; after rows are out, a drop fails the query, since a re-send could
+repeat them.
+
 Verified by `SqlDifferentialFuzzTest.pushdownMatchesSqlite` (2,000 random
-queries per backend: the generic scan backend and a reference backend that
-answers aggregates natively from the plan; both must match SQLite exactly),
+queries per backend: the generic scan backend, a reference backend that
+answers aggregates natively from the plan, and one that refuses unselective
+scans, which may refuse but never answer differently; all must match SQLite
+exactly), `FilterSqlTest` (300 random filters, against `query`/`count`, both
+on SQLite and through the pushdown),
 `SqlPushdownTest` (what the store is asked for: specs per reference, the
 pushed LIMIT plus tie group, native plans, refusal, contradictions) and
 `NostrClientSqlTest` (client against an in-process NIP-42 relay).
