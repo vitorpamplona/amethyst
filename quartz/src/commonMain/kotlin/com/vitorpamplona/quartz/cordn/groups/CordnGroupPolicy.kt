@@ -30,9 +30,12 @@ import com.vitorpamplona.quartz.mls.group.MlsExporterLabel
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.group.MlsGroupPolicy
 import com.vitorpamplona.quartz.mls.group.PendingProposal
+import com.vitorpamplona.quartz.mls.messages.Proposal
 import com.vitorpamplona.quartz.mls.tree.Capabilities
 import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.mls.tree.Extension
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
  * cordn's profile, as an [MlsGroupPolicy].
@@ -49,20 +52,25 @@ import com.vitorpamplona.quartz.mls.tree.Extension
  * )
  * ```
  *
- * ## Why there is no authorization hook
+ * ## Admin authorization
  *
- * cordn has no equivalent of Marmot's MIP-03. `spec/01.md` §5.3 defines
- * admins as *presentation* metadata — who the application shows a settings
- * button to — and neither the spec nor the reference coordinator restricts who
- * may commit. Empty `admin_pubkeys` is egalitarian mode, a deliberate and
- * permanent choice, not a bootstrap window.
+ * `spec/01.md` §5.3 leaves the meaning of `admin_pubkeys` to the application
+ * and says only that an EMPTY list is egalitarian mode. The reference client
+ * fills that in, and because MLS has no server that can police membership,
+ * it does so on both sides of every commit: it refuses to build an add, a
+ * remove or a metadata change unless the local member is an admin, and it
+ * rejects an inbound commit carrying one of those from a member who is not.
  *
- * So [authorizeCommit] is left at the default. That is a real statement about
- * cordn, not an omission: **any member of a cordn group can commit anything
- * MLS itself permits, including removing other members.** A UI that presents a
- * cordn group's admin list as an access-control boundary would be lying. If
- * `spec/01.md` later gives admins enforcement teeth, that rule belongs here,
- * where an admin change can be checked against the post-commit extensions.
+ * [authorizeCommit] implements exactly that rule, and the engine calls it in
+ * both directions, so one check covers both. Matching it is not cosmetic —
+ * accepting a commit the rest of the group rejects forks the epoch, and MLS
+ * does not recover from a fork. Being *stricter* than the reference would fork
+ * it the other way, which is why the gate is the reference's three proposal
+ * types and nothing else: an Update, a SelfRemove or a PSK from any member
+ * stays allowed, so nobody can be trapped in a group they may not leave.
+ *
+ * Egalitarian mode is a permanent choice, not a bootstrap window: an empty
+ * list means every member administers, so the gate opens rather than closes.
  */
 object CordnGroupPolicy : MlsGroupPolicy {
     /**
@@ -169,15 +177,88 @@ object CordnGroupPolicy : MlsGroupPolicy {
         )
 
     /**
-     * Unused today; kept so the shape of a future rule is obvious.
+     * Refuses a commit that adds, removes or rewrites metadata on behalf of a
+     * member `admin_pubkeys` does not name. See the class KDoc for why this
+     * matches the reference client exactly rather than approximately.
      *
-     * If cordn ever gives `admin_pubkeys` enforcement teeth, the check belongs
-     * here — [group] carries the pre-commit extensions and [proposals] the
-     * replacement, which is exactly what deciding an admin change needs.
+     * [committerLeafIndex] is the committer, which is who the reference checks
+     * for a commit. A proposal one member sent by reference and an admin then
+     * committed is therefore allowed — on both implementations, the admin who
+     * committed it is the one answering for it.
      */
     override fun authorizeCommit(
         group: GroupView,
         proposals: List<PendingProposal>,
         committerLeafIndex: Int,
-    ) = Unit
+    ) {
+        if (proposals.isEmpty()) return
+
+        if (adminIdentitiesIn(group.extensions).isEmpty()) return
+        if (proposals.none { it.proposal.needsAdmin() }) return
+
+        check(isAdminLeaf(group, committerLeafIndex)) {
+            "cordn: only admin_pubkeys may add, remove or rewrite group metadata; leaf " +
+                "$committerLeafIndex is not an admin"
+        }
+    }
+
+    /**
+     * The admin set [extensions] names, or empty for egalitarian.
+     *
+     * A metadata extension too malformed to decode reads as egalitarian rather
+     * than taking the group down with it — the same call Marmot's policy makes
+     * about its own components. It is not a way in: installing metadata takes a
+     * GroupContextExtensions commit, which this gate already covers, so nobody
+     * outside the admin set can put a broken extension there in the first
+     * place. A group whose metadata was malformed from creation was never
+     * administrable by anyone.
+     */
+    fun adminIdentitiesIn(extensions: List<Extension>): Set<HexKey> =
+        runCatching { CordnGroupMetadata.fromExtensions(extensions)?.adminPubkeys }
+            .getOrNull()
+            .orEmpty()
+            .toSet()
+
+    /** True if the account [pubKey] may add, remove or rewrite metadata here. */
+    fun isAdmin(
+        group: GroupView,
+        pubKey: HexKey,
+    ): Boolean {
+        val admins = adminIdentitiesIn(group.extensions)
+        return admins.isEmpty() || pubKey in admins
+    }
+
+    /**
+     * True if the member at [leafIndex] may.
+     *
+     * The comparison happens in credential-bytes space, not account space, and
+     * deliberately: [GroupView.memberIdentityHex] hexes whatever the credential
+     * holds, and a cordn credential holds the account key as its 64 ASCII hex
+     * characters (see [CordnCredential]), so that accessor returns 128
+     * characters which are never a pubkey. Marmot stores raw bytes and can
+     * compare directly; comparing an account pubkey against this without
+     * converting would match nothing and reject every commit in a group that
+     * names admins. Mapping the admin list forwards rather than decoding the
+     * leaf backwards keeps untrusted bytes out of the decoder entirely.
+     */
+    fun isAdminLeaf(
+        group: GroupView,
+        leafIndex: Int,
+    ): Boolean {
+        val admins = adminIdentitiesIn(group.extensions)
+        if (admins.isEmpty()) return true
+
+        val credentialHex = group.memberIdentityHex(leafIndex) ?: return false
+        return credentialHex in admins.mapTo(mutableSetOf()) { it.encodeToByteArray().toHexKey() }
+    }
+
+    /** True if the local member may. */
+    fun isLocalAdmin(group: GroupView): Boolean = isAdminLeaf(group, group.myLeafIndex)
+
+    /**
+     * The three proposal types the reference client gates, and only those:
+     * `add`, `remove` and `group_context_extensions`, matching its
+     * `addMember` / `removeMember` / `updateGroupMetadata`.
+     */
+    private fun Proposal.needsAdmin(): Boolean = this is Proposal.Add || this is Proposal.Remove || this is Proposal.GroupContextExtensions
 }
