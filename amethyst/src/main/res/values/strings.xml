@@ -351,8 +351,8 @@
     <string name="cordn_info_gid">Group id</string>
     <string name="cordn_info_epoch">Epoch</string>
     <string name="cordn_info_members">Members</string>
-    <string name="cordn_info_admins">Admins</string>
-    <string name="cordn_info_admins_egalitarian">None — everyone is equal, permanently</string>
+    <string name="cordn_info_egalitarian">This group has no admins: everyone can add, remove and rename, permanently.</string>
+    <string name="cordn_info_technical">Technical details</string>
     <string name="cordn_create_title">New cordn group</string>
     <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
     <string name="cordn_create_coordinator">Coordinator</string>
@@ -412,7 +412,7 @@
     <string name="cordn_requests_failed">Could not read the requests.</string>
     <string name="cordn_link_scan">Scan</string>
     <string name="cordn_share_title">Share this group</string>
-    <string name="cordn_share_explainer">Anyone with this link can ask to join. A member still has to add them.</string>
+    <string name="cordn_share_explainer">Anyone with this link can ask to join. An admin still has to let them in.</string>
     <string name="cordn_share_copy">Copy link</string>
     <string name="cordn_share_copied">Copied</string>
     <string name="cordn_coordinators_explainer">A coordinator orders one group\'s messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>

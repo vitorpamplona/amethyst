@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -75,6 +78,8 @@ import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SectionCollapse
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SectionExpand
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
@@ -101,19 +106,8 @@ fun CordnGroupInfoScreen(
     val runtime = accountViewModel.account.cordnRuntime
     val room = remember(coordinatorPubKey, gid) { runtime?.groups?.get(coordinatorPubKey, gid) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
-                    }
-                },
-                title = { Text(stringRes(R.string.cordn_group_info)) },
-            )
-        },
-    ) { padding ->
-        if (room == null) {
+    if (room == null) {
+        Scaffold(topBar = { InfoTopBar(nav) }) { padding ->
             // The app's own empty state, centred and titled, rather than a
             // sentence stranded in the top-left corner.
             EmptyState(
@@ -121,11 +115,32 @@ fun CordnGroupInfoScreen(
                 description = stringRes(R.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
-            return@Scaffold
         }
-
-        CordnGroupInfo(room, coordinatorPubKey, accountViewModel, nav, Modifier.padding(padding))
+        return
     }
+
+    CordnGroupInfo(room, coordinatorPubKey, accountViewModel, nav)
+}
+
+/**
+ * The bar both states share, with a slot for the one action only a loaded
+ * group can offer.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InfoTopBar(
+    nav: INav,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = { nav.popBack() }) {
+                Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+            }
+        },
+        title = { Text(stringRes(R.string.cordn_group_info)) },
+        actions = actions,
+    )
 }
 
 @Composable
@@ -134,7 +149,6 @@ private fun CordnGroupInfo(
     coordinatorPubKey: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
-    modifier: Modifier = Modifier,
 ) {
     val name by room.name.collectAsStateWithLifecycle()
     val description by room.description.collectAsStateWithLifecycle()
@@ -185,179 +199,249 @@ private fun CordnGroupInfo(
         }
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-    ) {
-        Text(
-            text = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        description?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
-        }
-
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        InfoRow(stringRes(R.string.cordn_info_coordinator), coordinatorPubKey)
-        InfoRow(stringRes(R.string.cordn_info_gid), room.gid)
-        InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
-        InfoRow(stringRes(R.string.cordn_info_members), members.size.toString())
-
-        // The roster itself, not only its size. "4 members" in a group whose
-        // whole point is knowing exactly who can read you is the one number
-        // that is no use on its own.
-        members.forEach { member ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                UserPicture(userHex = member, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
-                Text(
-                    text = observeUserNameByHex(member, accountViewModel),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                if (member in admins) {
-                    Text(
-                        text = stringRes(R.string.cordn_info_admin_badge),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                // Never against yourself: cordn has no self-removal, and the
-                // manager refuses it, so offering the button would only be a
-                // way to be told no.
-                if (canAdminister && member != me) {
-                    IconButton(onClick = { removing = member }, enabled = !busy) {
+    Scaffold(
+        topBar = {
+            InfoTopBar(nav) {
+                // Where the sibling group-info screen keeps it. It was the only
+                // action on the page, so it was also the only reason the body
+                // held a button between the roster and the share block.
+                if (canAdminister) {
+                    IconButton(onClick = { renaming = true }, enabled = !busy) {
                         Icon(
-                            symbol = MaterialSymbols.PersonRemove,
-                            contentDescription = stringRes(R.string.cordn_info_remove_member),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.error,
+                            symbol = MaterialSymbols.Edit,
+                            contentDescription = stringRes(R.string.cordn_info_edit_details),
                         )
                     }
                 }
             }
-        }
-        InfoRow(
-            label = stringRes(R.string.cordn_info_admins),
-            // An empty admin set is not "none configured" — spec/01.md makes it
-            // permanently egalitarian, so saying "0" would read as a group
-            // waiting to be set up rather than one that decided.
-            value =
-                if (admins.isEmpty()) {
-                    stringRes(R.string.cordn_info_admins_egalitarian)
-                } else {
-                    admins.size.toString()
-                },
-        )
-
-        if (canAdminister) {
-            OutlinedButton(
-                onClick = { renaming = true },
-                enabled = !busy,
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Text(stringRes(R.string.cordn_info_edit_details))
-            }
-        }
-
-        adminError?.let {
+        },
+    ) { padding ->
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        ) {
             Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp),
+                text = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
             )
-        }
-
-        if (renaming) {
-            EditGroupDetailsDialog(
-                name = name.orEmpty(),
-                description = description.orEmpty(),
-                admins = admins,
-                onDismiss = { renaming = false },
-                onSave = { newName, newDescription ->
-                    renaming = false
-                    runAdmin {
-                        // The whole metadata travels together, admin list
-                        // included, because the extension is replaced whole.
-                        it.updateGroupMetadata(
-                            room.gid,
-                            CordnGroupMetadata(name = newName, description = newDescription, adminPubkeys = admins),
-                        )
-                    }
-                },
+            description?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            // A subtitle, not a labelled row above a list that is itself the count.
+            Text(
+                text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, members.size, members.size),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
             )
-        }
 
-        removing?.let { target ->
-            // A plain confirm rather than the shared quick-action dialog: that
-            // one offers "don't ask again", which for an irreversible removal
-            // would be a setting nobody should be nudged into.
-            AlertDialog(
-                onDismissRequest = { removing = null },
-                title = { Text(stringRes(R.string.cordn_info_remove_confirm_title)) },
-                text = {
-                    Text(
-                        stringRes(
-                            R.string.cordn_info_remove_confirm_body,
-                            observeUserNameByHex(target, accountViewModel),
-                        ),
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        removing = null
-                        runAdmin { it.removeMember(room.gid, target) }
-                    }) {
-                        Text(
-                            text = stringRes(R.string.cordn_info_remove_member),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { removing = null }) { Text(stringRes(Res.string.cancel)) }
-                },
-            )
-        }
-
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        ShareGroup(room, coordinatorPubKey, accountViewModel)
-
-        // Only where they could be accepted. The manager already asks the
-        // coordinator only for groups this account administers, so a non-admin
-        // would otherwise see an empty list that reads as "nobody has asked"
-        // rather than "these are not yours to answer".
-        if (canAdminister) {
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
-            JoinRequests(room, coordinatorPubKey, accountViewModel, nav)
-        }
+            Text(stringRes(R.string.cordn_info_members), style = MaterialTheme.typography.titleMedium)
 
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        // Computed, never asserted. Hardcoding these made the card look like a
-        // disclosure while reporting the same four values for every group --
-        // which is exactly the regression §7 risk 4 of the plan warns about.
-        val runtime = accountViewModel.account.cordnRuntime
-        val exposure by
-            produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
-                value =
-                    runtime
-                        ?.sessionOrNull(coordinatorPubKey)
-                        ?.runCatching { exposure(room.gid) }
-                        ?.getOrNull()
+            // Said once, and only when it is true. An empty admin set is not "none
+            // configured" -- spec/01.md makes it permanently egalitarian, so the
+            // roster's missing badges are a decision rather than a group waiting to
+            // be set up. With admins present the badges below say who they are, and
+            // a count of them adds nothing.
+            if (admins.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.cordn_info_egalitarian),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
+                )
             }
 
-        exposure?.let { CordnExposureCard(it) }
+            members.forEach { member ->
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    UserPicture(userHex = member, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+                    Text(
+                        text = observeUserNameByHex(member, accountViewModel),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (member in admins) {
+                        Text(
+                            text = stringRes(R.string.cordn_info_admin_badge),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    // Never against yourself: cordn has no self-removal, and the
+                    // manager refuses it, so offering the button would only be a
+                    // way to be told no.
+                    if (canAdminister && member != me) {
+                        IconButton(onClick = { removing = member }, enabled = !busy) {
+                            Icon(
+                                symbol = MaterialSymbols.PersonRemove,
+                                contentDescription = stringRes(R.string.cordn_info_remove_member),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+            adminError?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (renaming) {
+                EditGroupDetailsDialog(
+                    name = name.orEmpty(),
+                    description = description.orEmpty(),
+                    admins = admins,
+                    onDismiss = { renaming = false },
+                    onSave = { newName, newDescription ->
+                        renaming = false
+                        runAdmin {
+                            // The whole metadata travels together, admin list
+                            // included, because the extension is replaced whole.
+                            it.updateGroupMetadata(
+                                room.gid,
+                                CordnGroupMetadata(name = newName, description = newDescription, adminPubkeys = admins),
+                            )
+                        }
+                    },
+                )
+            }
+
+            removing?.let { target ->
+                // A plain confirm rather than the shared quick-action dialog: that
+                // one offers "don't ask again", which for an irreversible removal
+                // would be a setting nobody should be nudged into.
+                AlertDialog(
+                    onDismissRequest = { removing = null },
+                    title = { Text(stringRes(R.string.cordn_info_remove_confirm_title)) },
+                    text = {
+                        Text(
+                            stringRes(
+                                R.string.cordn_info_remove_confirm_body,
+                                observeUserNameByHex(target, accountViewModel),
+                            ),
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            removing = null
+                            runAdmin { it.removeMember(room.gid, target) }
+                        }) {
+                            Text(
+                                text = stringRes(R.string.cordn_info_remove_member),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { removing = null }) { Text(stringRes(Res.string.cancel)) }
+                    },
+                )
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 16.dp))
+
+            ShareGroup(room, coordinatorPubKey, accountViewModel)
+
+            // Only where they could be accepted. The manager already asks the
+            // coordinator only for groups this account administers, so a non-admin
+            // would otherwise see an empty list that reads as "nobody has asked"
+            // rather than "these are not yours to answer".
+            if (canAdminister) {
+                HorizontalDivider(Modifier.padding(vertical = 16.dp))
+
+                JoinRequests(room, coordinatorPubKey, accountViewModel, nav)
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 16.dp))
+
+            // Computed, never asserted. Hardcoding these made the card look like a
+            // disclosure while reporting the same four values for every group --
+            // which is exactly the regression §7 risk 4 of the plan warns about.
+            val runtime = accountViewModel.account.cordnRuntime
+            val exposure by
+                produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
+                    value =
+                        runtime
+                            ?.sessionOrNull(coordinatorPubKey)
+                            ?.runCatching { exposure(room.gid) }
+                            ?.getOrNull()
+                }
+
+            exposure?.let { CordnExposureCard(it) }
+
+            // The coordinator key, the group id and the epoch are what you need
+            // to file a bug or tell two devices apart, and nothing you need to
+            // read a message. They sit beside the exposure card, which is the
+            // page's other protocol-literate block, instead of above the people.
+            TechnicalDetails(coordinatorPubKey, room.gid, epoch)
+        }
+    }
+}
+
+/**
+ * The three values that only matter when something is wrong.
+ *
+ * Collapsed by default and selectable when open: the reason to look at a
+ * 64-character coordinator key is to copy it somewhere else, never to read it.
+ */
+@Composable
+private fun TechnicalDetails(
+    coordinatorPubKey: HexKey,
+    gid: String,
+    epoch: Long,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    HorizontalDivider(Modifier.padding(vertical = 16.dp))
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringRes(R.string.cordn_info_technical),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
+        SelectionContainer {
+            Column {
+                InfoRow(stringRes(R.string.cordn_info_coordinator), coordinatorPubKey)
+                InfoRow(stringRes(R.string.cordn_info_gid), gid)
+                InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
+            }
+        }
     }
 }
 
@@ -423,7 +507,7 @@ private fun JoinRequests(
         }
     }
 
-    Text(stringRes(R.string.cordn_requests_title), style = MaterialTheme.typography.titleSmall)
+    Text(stringRes(R.string.cordn_requests_title), style = MaterialTheme.typography.titleMedium)
     Text(
         text = stringRes(R.string.cordn_requests_admin_only),
         style = MaterialTheme.typography.bodySmall,
@@ -519,7 +603,7 @@ private fun ShareGroup(
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
 
-    Text(stringRes(R.string.cordn_share_title), style = MaterialTheme.typography.titleSmall)
+    Text(stringRes(R.string.cordn_share_title), style = MaterialTheme.typography.titleMedium)
     Text(
         text = stringRes(R.string.cordn_share_explainer),
         style = MaterialTheme.typography.bodySmall,
