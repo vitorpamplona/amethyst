@@ -66,7 +66,7 @@ fun interface CordnCoordinatorScopeFactory {
 
 /** One account's live connection to one coordinator. */
 class CordnSession(
-    val config: CoordinatorConfig,
+    config: CoordinatorConfig,
     val manager: CordnGroupManager,
     val keyPackages: CordnKeyPackages,
     val health: CoordinatorHealth,
@@ -74,7 +74,33 @@ class CordnSession(
     /** Seconds. Injected so tests are not at the mercy of the wall clock. */
     private val clock: () -> Long = { TimeUtils.now() },
 ) {
+    /**
+     * This coordinator's address and the user's name for it.
+     *
+     * Settable only through [relabel], and only for the name: everything else
+     * here is the address the transport was opened against, so changing it
+     * without reopening would leave the session pointing somewhere it is not
+     * connected.
+     */
+    var config: CoordinatorConfig = config
+        private set
+
     val coordinatorPubKey: HexKey get() = config.pubKey
+
+    /**
+     * A new name for the same coordinator, leaving the connection alone.
+     *
+     * A label is not part of a coordinator's address -- §8.5 makes the pubkey
+     * its identity -- and nothing under this class reads one;
+     * `CordnCoordinatorStore` is the only reader, when it writes the list to
+     * disk. So a rename must not take the reopen path [replaceConfig] uses for
+     * a corrected relay: that builds a new [CordnGroupManager], and anything
+     * still holding the old one (`CordnSyncLoop` captures it for the life of
+     * the loop) would be left polling a transport that has been closed.
+     */
+    internal fun relabel(newLabel: String?) {
+        config = config.copy(label = newLabel)
+    }
 
     /**
      * What this coordinator learns about [gid], answered from everything the
@@ -173,7 +199,20 @@ class CordnCoordinatorRegistry(
     suspend fun session(config: CoordinatorConfig): CordnSession =
         lock.withLock {
             sessions[config.pubKey]?.let { existing ->
-                if (existing.config != config) replaceConfig(existing, config) else existing
+                when {
+                    existing.config == config -> existing
+
+                    // Only the name changed. Reopening for that would cost the
+                    // connection and orphan whoever holds the current manager,
+                    // for a field the transport has never read.
+                    existing.config.copy(label = config.label) == config ->
+                        existing.also {
+                            it.relabel(config.label)
+                            publish()
+                        }
+
+                    else -> replaceConfig(existing, config)
+                }
             } ?: open(config).also { publish() }
         }
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
+import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
@@ -137,7 +140,26 @@ fun CordnCreateGroupScreen(
         val failureFallback = stringRes(R.string.cordn_create_failed)
         var busy by remember { mutableStateOf(false) }
 
-        val config = remember(selected, pubKeyInput, relaysInput, known) { resolve(known, selected, pubKeyInput, relaysInput) }
+        // Coordinators this account has never used, from their CEP-6
+        // announcements. Not added to the account by looking: picking one here
+        // is what commits to it, and `createGroup` opens the session.
+        var discovered by remember { mutableStateOf<List<DiscoveredCoordinator>>(emptyList()) }
+        var discovering by remember { mutableStateOf(false) }
+        var discoverChecked by remember { mutableStateOf(false) }
+        val discoverFailed = stringRes(R.string.cordn_coordinators_discover_failed)
+
+        // Offers this account already holds are not offers; they are the choices
+        // above, and listing them twice would let the same coordinator be picked
+        // from two places with different relays.
+        val offers =
+            remember(discovered, known) {
+                val knownKeys = known.mapTo(mutableSetOf()) { it.pubKey }
+                discovered.filter { it.pubKey !in knownKeys }
+            }
+
+        val choices = remember(known, offers) { known + offers.map { it.toConfig() } }
+
+        val config = remember(selected, pubKeyInput, relaysInput, choices) { resolve(choices, selected, pubKeyInput, relaysInput) }
 
         Column(
             modifier =
@@ -167,11 +189,56 @@ fun CordnCreateGroupScreen(
                 )
             }
 
+            offers.forEach { offer ->
+                CoordinatorChoice(
+                    // Its own word for itself, and only that: nothing here has
+                    // verified the name a coordinator announces.
+                    label = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
+                    selected = selected == offer.pubKey,
+                    onSelect = { selected = offer.pubKey },
+                    // Staleness decides whether this choice can work at all: a
+                    // coordinator that announced itself two years ago and went
+                    // away takes the group creation down with it.
+                    detail = stringRes(R.string.cordn_coordinators_discover_seen, timeAgoNoDot(offer.announcedAt).trim()),
+                )
+            }
+
             CoordinatorChoice(
                 label = stringRes(R.string.cordn_create_coordinator_new),
                 selected = selected == null,
                 onSelect = { selected = null },
             )
+
+            // Asks relays, never a coordinator: an announcement is an ordinary
+            // event, so looking costs nothing with any of them and tells none
+            // of them anything.
+            OutlinedButton(
+                onClick = {
+                    discovering = true
+                    error = null
+                    scope.launch {
+                        try {
+                            discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value).coordinators
+                            discoverChecked = true
+                        } catch (e: Exception) {
+                            error = e.message ?: discoverFailed
+                        } finally {
+                            discovering = false
+                        }
+                    }
+                },
+                enabled = !discovering && !busy,
+            ) {
+                Text(stringRes(R.string.cordn_create_coordinator_discover))
+            }
+
+            if (discoverChecked && offers.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.cordn_coordinators_discover_none),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (selected == null) {
                 OutlinedTextField(
@@ -309,13 +376,23 @@ private fun CoordinatorChoice(
     label: String,
     selected: Boolean,
     onSelect: () -> Unit,
+    detail: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = onSelect)
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Column {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            detail?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

@@ -299,6 +299,31 @@ class CordnRuntime(
     fun sessionOrNull(coordinatorPubKey: HexKey): CordnSession? = registry.sessionOrNull(coordinatorPubKey)
 
     /**
+     * Renames a coordinator, for this device only.
+     *
+     * The user's own word for it, which is the only name here that means
+     * anything: a coordinator cannot prove one, and both the names it can
+     * publish (a kind 0 under CEP-23, the CEP-6 announcement's surface) are its
+     * own claim. Until now a label could only be given while adding a
+     * coordinator by hand, so one added from discovery -- or restored on a new
+     * device -- could never be named at all.
+     *
+     * Goes through the registry rather than [session]: the loop is already
+     * running and must not be rebuilt, and renaming is local bookkeeping that
+     * advances no epoch, so it is allowed on a device that has handed its
+     * groups away. A label-only change no longer reopens the transport, so this
+     * costs one write to disk.
+     */
+    suspend fun relabel(
+        coordinatorPubKey: HexKey,
+        label: String?,
+    ) {
+        val existing = registry.sessionOrNull(coordinatorPubKey) ?: return
+        registry.session(existing.config.copy(label = label?.trim()?.ifEmpty { null }))
+        remember()
+    }
+
+    /**
      * Every invitation waiting for this account, opened but not answered.
      *
      * One round trip per open coordinator, made when someone asks to see their

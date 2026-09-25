@@ -62,6 +62,8 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -267,6 +269,56 @@ class CordnRuntimeTest {
                     )
                 }
             }
+        }
+
+    @Test
+    fun `renaming a coordinator keeps the connection it already had`() =
+        runBlocking {
+            // The registry reopens the transport for a config that differs,
+            // because the transport is bound to the relays -- and that builds a
+            // NEW manager while CordnSyncLoop goes on holding the old one, whose
+            // scope has just been closed. A label is not part of the address, so
+            // renaming must not take that path.
+            val runtime = runtime(runtimeScope())
+            val config = configFor(keyA)
+            runtime.session(config)
+
+            val before = runtime.sessionOrNull(keyA)?.manager
+            assertNotNull("no session to rename", before)
+
+            runtime.relabel(keyA, "  My coordinator  ")
+
+            assertSame(
+                "renaming reopened the transport, which orphans the running sync loop",
+                before,
+                runtime.sessionOrNull(keyA)?.manager,
+            )
+            assertEquals(
+                "the label is not trimmed to what the user meant",
+                "My coordinator",
+                runtime.coordinators.value
+                    .first { it.pubKey == keyA }
+                    .label,
+            )
+        }
+
+    @Test
+    fun `clearing a coordinator's name stores no name rather than an empty one`() =
+        runBlocking {
+            // An empty label would render as a blank line where a name goes, and
+            // the display chain could never fall through to the profile or the
+            // key behind it.
+            val runtime = runtime(runtimeScope())
+            runtime.session(configFor(keyA))
+            runtime.relabel(keyA, "named")
+
+            runtime.relabel(keyA, "   ")
+
+            assertNull(
+                runtime.coordinators.value
+                    .first { it.pubKey == keyA }
+                    .label,
+            )
         }
 
     @Test

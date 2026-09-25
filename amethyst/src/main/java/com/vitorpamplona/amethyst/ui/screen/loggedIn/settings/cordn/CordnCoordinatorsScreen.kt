@@ -36,6 +36,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_discover
@@ -188,6 +191,7 @@ private fun CoordinatorCard(
     var info by remember(config.pubKey) { mutableStateOf<CoordinatorServerInfo?>(null) }
     var infoChecked by remember(config.pubKey) { mutableStateOf(false) }
     var confirmingPurge by remember(config.pubKey) { mutableStateOf(false) }
+    var renaming by remember(config.pubKey) { mutableStateOf(false) }
 
     val health = runtime.health(config.pubKey)?.collectAsStateWithLifecycle()?.value
 
@@ -207,6 +211,28 @@ private fun CoordinatorCard(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
+                )
+                // The label was only ever settable while adding a coordinator by
+                // hand, so one that arrived from discovery, or came back with a
+                // restore, could not be named at all.
+                IconButton(onClick = { renaming = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.Edit,
+                        contentDescription = stringRes(R.string.cordn_coordinators_rename),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (renaming) {
+                RenameCoordinatorDialog(
+                    current = config.label,
+                    onDismiss = { renaming = false },
+                    onSave = {
+                        renaming = false
+                        scope.launch { runtime.relabel(config.pubKey, it) }
+                    },
                 )
             }
 
@@ -408,6 +434,51 @@ private fun DiscoverCoordinators(
             offers.forEach { offer -> DiscoveredCard(offer, runtime, accountViewModel, nav) }
         }
     }
+}
+
+/**
+ * Names a coordinator, or clears the name it was given.
+ *
+ * Empty saves as no label rather than an empty one, so the display falls back
+ * to the profile and then the key instead of rendering a blank line.
+ */
+@Composable
+private fun RenameCoordinatorDialog(
+    current: String?,
+    onDismiss: () -> Unit,
+    onSave: (String?) -> Unit,
+) {
+    var input by remember { mutableStateOf(current.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cordn_coordinators_rename)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    label = { Text(stringRes(R.string.cordn_coordinators_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    // The same caution the add form gives, for the same reason.
+                    text = stringRes(R.string.cordn_coordinators_label_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(input.trim().ifEmpty { null }) }) {
+                Text(stringRes(R.string.cordn_info_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
+        },
+    )
 }
 
 @Composable

@@ -357,6 +357,7 @@
     <string name="cordn_create_title">New cordn group</string>
     <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
     <string name="cordn_create_coordinator">Coordinator</string>
+    <string name="cordn_create_coordinator_discover">Find coordinators</string>
     <string name="cordn_create_coordinator_new">Another coordinator</string>
     <string name="cordn_create_coordinator_pubkey">Coordinator public key (hex or npub)</string>
     <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
@@ -421,6 +422,7 @@
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
     <string name="cordn_coordinators_label">A name for it (yours, optional)</string>
+    <string name="cordn_coordinators_rename">Rename</string>
     <string name="cordn_coordinators_label_note">This name is yours and stays on this device. A coordinator cannot prove a name, so it is never asked for one.</string>
     <string name="cordn_coordinators_identify">Ask who it is</string>
     <string name="cordn_coordinators_server">Says it is: %1$s</string>
