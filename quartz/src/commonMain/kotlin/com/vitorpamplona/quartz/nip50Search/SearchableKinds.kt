@@ -113,6 +113,8 @@ object SearchableKinds {
             9736, // Bolt12ZapEvent
             9737, // Bolt12ZapIntentEvent
             9802, // HighlightEvent
+            9998, // ListHeaderEvent
+            9999, // ListItemEvent
             10003, // BookmarkListEvent
             10100, // AgentProfileEvent
             10154, // PodcastMetadataEvent
@@ -194,6 +196,8 @@ object SearchableKinds {
             39092, // MediaStarterPackEvent
             39307, // TextTrackEvent
             39701, // WebBookmarkEvent
+            39998, // AddressableListHeaderEvent
+            39999, // AddressableListItemEvent
             40002, // StreamMessageV2Event
             40100, // CanvasEvent
             45001, // ForumPostEvent
