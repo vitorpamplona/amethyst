@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
-import com.vitorpamplona.amethyst.commons.tor.RelayClassification
-import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
-import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
-import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

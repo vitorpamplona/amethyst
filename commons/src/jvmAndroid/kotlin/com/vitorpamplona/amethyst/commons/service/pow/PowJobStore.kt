@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.pow
+package com.vitorpamplona.amethyst.commons.service.pow
 
-import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
-import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPersistence
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

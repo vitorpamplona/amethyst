@@ -74,6 +74,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
+import com.vitorpamplona.amethyst.commons.relays.nip11.isRelaySignedRelayGroup
+import com.vitorpamplona.amethyst.commons.relays.nip11.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_create_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_community_add_people
@@ -103,8 +105,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor

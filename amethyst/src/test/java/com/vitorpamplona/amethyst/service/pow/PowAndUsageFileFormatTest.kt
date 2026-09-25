@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+import com.vitorpamplona.amethyst.commons.service.pow.PowJobsFile
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
