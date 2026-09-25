@@ -5381,6 +5381,11 @@
          and the new-conversation picker. -->
     <string name="cordn_group_untitled">Group %1$s</string>
     <string name="cordn_group_no_messages_yet">No messages yet</string>
+    <string name="cordn_preview_deleted">Message deleted</string>
+    <string name="cordn_preview_voice_note">Voice note</string>
+    <string name="cordn_preview_photo">Photo</string>
+    <string name="cordn_preview_video">Video</string>
+    <string name="cordn_preview_file">File</string>
     <string name="cordn_group">cordn</string>
     <string name="new_conversation_cordn_title">cordn group</string>
     <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>

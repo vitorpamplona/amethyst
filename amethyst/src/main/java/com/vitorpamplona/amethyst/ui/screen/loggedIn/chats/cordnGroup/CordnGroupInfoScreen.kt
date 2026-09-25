@@ -610,11 +610,10 @@ private fun ShareGroup(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    SelectionContainer {
-        Text(ref, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-    }
-
-    QrCodeDrawer(ref, Modifier.size(220.dp))
+    // The bech32 itself is not shown. It is three lines of characters nobody
+    // reads, and both things a person actually does with it are already here:
+    // point a camera at the QR, or press Copy link.
+    QrCodeDrawer(ref, Modifier.padding(top = 8.dp).size(220.dp))
 
     OutlinedButton(
         onClick = {

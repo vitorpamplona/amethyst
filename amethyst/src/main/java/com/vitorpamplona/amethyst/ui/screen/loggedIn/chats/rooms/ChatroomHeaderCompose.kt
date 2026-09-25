@@ -82,6 +82,11 @@ import com.vitorpamplona.amethyst.commons.resources.concord_server_label
 import com.vitorpamplona.amethyst.commons.resources.cordn_group
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_deleted
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_file
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_photo
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_video
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_voice_note
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat
@@ -146,8 +151,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -546,6 +553,23 @@ private fun MarmotGroupRoomCompose(
 }
 
 /**
+ * What to call a message whose whole content is an attachment.
+ *
+ * The first attachment decides, which is what the eye does too: a row is one
+ * line and a message with a photo and a file in it is, to a reader skimming the
+ * inbox, a message with a photo in it.
+ */
+private fun attachmentLabelFor(tags: TagArray): StringResource {
+    val first = CordnMediaTag.parseAll(tags).firstOrNull() ?: return Res.string.cordn_preview_file
+    return when {
+        first.isAudio -> Res.string.cordn_preview_voice_note
+        first.isImage -> Res.string.cordn_preview_photo
+        first.mimeType.startsWith("video/") -> Res.string.cordn_preview_video
+        else -> Res.string.cordn_preview_file
+    }
+}
+
+/**
  * One cordn room in the Messages list.
  *
  * Takes the room rather than the Note, unlike every other row here. The Note is
@@ -573,7 +597,17 @@ private fun CordnGroupRoomCompose(
             // inbox while the room shows the edit is the kind of mismatch that
             // reads as a sync bug.
             val text = annotations.contentOf(message.envelope.id) ?: message.envelope.content
-            "$authorName: ${text.take(200)}"
+            // A voice note or a photo carries no text, so the row used to read
+            // "Someone: " and trail off — an attachment looked like an empty
+            // message. Name what was sent instead, the way the bubble does.
+            val preview =
+                text.takeIf { it.isNotBlank() }
+                    ?: if (annotations.isDeleted(message.envelope.id)) {
+                        stringRes(Res.string.cordn_preview_deleted)
+                    } else {
+                        stringRes(attachmentLabelFor(message.envelope.tags))
+                    }
+            "$authorName: ${preview.take(200)}"
         } ?: stringRes(Res.string.cordn_group_no_messages_yet)
 
     ChannelName(
