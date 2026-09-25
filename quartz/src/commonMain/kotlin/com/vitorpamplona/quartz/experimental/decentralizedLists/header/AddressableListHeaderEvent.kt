@@ -21,10 +21,20 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.header
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.AddressableDecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.description
 import com.vitorpamplona.quartz.experimental.decentralizedLists.forEachSearchableListField
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedItemKinds
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.conceptGraph
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.itemKinds
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.ConceptGraphTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFrom
+import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFromTargets
+import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
+import com.vitorpamplona.quartz.experimental.decentralizedLists.json
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
+import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -52,7 +62,7 @@ class AddressableListHeaderEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DecentralizedListEvent,
+    AddressableDecentralizedListEvent,
     SearchableEvent {
     override fun listPointer() = addressTag()
 
@@ -79,6 +89,26 @@ class AddressableListHeaderEvent(
     fun recommendedTags() = tags.recommendedTags()
 
     fun disallowedTags() = tags.disallowedTags()
+
+    fun itemKinds() = tags.itemKinds()
+
+    fun acceptedItemKinds() = tags.acceptedItemKinds()
+
+    fun inheritFrom() = tags.inheritFrom()
+
+    fun inheritFromTargets(type: InheritType) = tags.inheritFromTargets(type)
+
+    fun isDeliberatelyUnaffiliated() = tags.isDeliberatelyUnaffiliated()
+
+    fun json() = tags.json()
+
+    fun wordWrapper() = tags.wordWrapper()
+
+    /**
+     * The Concept Graph core node of this concept: the `concept-graph` tag if present, else
+     * computed from this header's pubkey and `d`, as the resolution contract requires.
+     */
+    fun conceptGraph() = tags.conceptGraph() ?: ConceptGraphTag.compute(pubKey, dTag())
 
     companion object {
         const val KIND = 39998

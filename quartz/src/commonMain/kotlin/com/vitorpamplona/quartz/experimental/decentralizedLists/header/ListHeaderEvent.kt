@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.description
 import com.vitorpamplona.quartz.experimental.decentralizedLists.forEachSearchableListField
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedItemKinds
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.itemKinds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -77,6 +79,10 @@ class ListHeaderEvent(
     fun recommendedTags() = tags.recommendedTags()
 
     fun disallowedTags() = tags.disallowedTags()
+
+    fun itemKinds() = tags.itemKinds()
+
+    fun acceptedItemKinds() = tags.acceptedItemKinds()
 
     companion object {
         const val KIND = 9998

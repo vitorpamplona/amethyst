@@ -21,9 +21,11 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.item
 
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.CommentsTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ElementOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.NameTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SlugTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SubsetOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.TitleTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -59,3 +61,9 @@ fun TagArray.itemStrings() = mapNotNull(HashtagTag::parse)
 
 /** Addressable events declared as items (`a`). Accepts both `kind:pubkey:d` and `naddr1…`. */
 fun TagArray.itemAddresses() = mapNotNull(ATag::parse)
+
+/** The sets/supersets this item claims to be an element of (`n`). */
+fun TagArray.elementOf() = mapNotNull(ElementOfTag::parse)
+
+/** The supersets this set claims to be a subset of (`s`). */
+fun TagArray.subsetOf() = mapNotNull(SubsetOfTag::parse)

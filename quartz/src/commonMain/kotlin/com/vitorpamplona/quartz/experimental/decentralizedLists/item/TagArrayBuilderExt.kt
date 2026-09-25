@@ -23,10 +23,12 @@ package com.vitorpamplona.quartz.experimental.decentralizedLists.item
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListItem
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.CommentsTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ElementOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.NameTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SlugTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SubsetOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.TitleTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -76,3 +78,9 @@ fun <T : DecentralizedListItem> TagArrayBuilder<T>.itemAddress(
     address: Address,
     relayHint: NormalizedRelayUrl? = null,
 ) = add(ATag.assemble(address, relayHint))
+
+// `n` and `s` are defined for kind 39999 only.
+
+fun TagArrayBuilder<AddressableListItemEvent>.elementOf(parent: Address) = addUniqueValueIfNew(ElementOfTag.assemble(parent))
+
+fun TagArrayBuilder<AddressableListItemEvent>.subsetOf(parent: Address) = addUniqueValueIfNew(SubsetOfTag.assemble(parent))

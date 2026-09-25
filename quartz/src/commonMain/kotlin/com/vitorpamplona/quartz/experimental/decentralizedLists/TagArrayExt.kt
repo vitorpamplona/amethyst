@@ -20,7 +20,29 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists
 
+import com.vitorpamplona.quartz.experimental.decentralizedLists.concepts.WordWrapper
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.DescriptionTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritFromTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.JsonTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.description() = firstNotNullOfOrNull(DescriptionTag::parse)
+
+/** Every `b` link, in tag order. Excludes the `b-tag-deferred` marker. */
+fun TagArray.inheritFrom() = mapNotNull(InheritFromTag::parse)
+
+/**
+ * The targets of `b` tags of exactly [type], in tag order. For [InheritType.INHERIT] the order
+ * is load-bearing: the first-listed parent wins a field both ancestors state.
+ */
+fun TagArray.inheritFromTargets(type: InheritType) = mapNotNull { InheritFromTag.parseTarget(it, type) }
+
+/** True when the event carries `["b", "b-tag-deferred"]`: deliberately affiliated with nothing. */
+fun TagArray.isDeliberatelyUnaffiliated() = any(InheritFromTag::isUnaffiliatedMarker)
+
+/** The raw `json` tag. */
+fun TagArray.json() = firstNotNullOfOrNull(JsonTag::parse)
+
+/** The `json` tag parsed as a JSON object, or null when absent or malformed. */
+fun TagArray.wordWrapper() = json()?.let(WordWrapper::parse)

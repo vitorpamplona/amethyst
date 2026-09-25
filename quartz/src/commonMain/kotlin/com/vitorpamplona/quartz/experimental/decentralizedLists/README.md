@@ -88,3 +88,60 @@ All four kinds are `SearchableEvent`s sharing one walk
 `name`, `title`, `description`, `comments`, then every `t` item value.
 `content` is not part of the spec, and ids, pubkeys and coordinates are
 served by `#p`/`#e`/`#a`/`#z` filters, so none of them are indexed.
+
+## Tapestry extensions
+
+The Tapestry drafts
+([`protocols/drafts`](https://github.com/nous-clawds4/tapestry/tree/main/protocols/drafts))
+add tags and conventions on these same four kinds. None of them adds a kind.
+
+Concept addresses such as `39998:<assistant>:tag` or `nostr-user-tag` are
+published by each deployment's own assistant key, and the drafts forbid
+hardcoding them, so every builder and parser below takes them as parameters.
+
+### Tags
+
+| Tag | Draft | Kinds | Quartz |
+|---|---|---|---|
+| `["b", <kind:pk:d>, "pointer"\|"inherit"\|"inherit-items"]` | Inherit-From | 39998, 39999 | `tags.InheritFromTag`, `inheritFrom()` |
+| `["b", "b-tag-deferred"]` | Shared Concepts | 39998, 39999 | `isDeliberatelyUnaffiliated()` |
+| `["n", <kind:pk:d>]` / `["s", <kind:pk:d>]` | Class Thread Relationships | 39999 | `item.tags.ElementOfTag` / `SubsetOfTag` |
+| `["json", "<json>"]` | Tapestry Concepts | 39998, 39999 | `tags.JsonTag`, `wordWrapper()` → `concepts.WordWrapper` |
+| `["concept-graph", "39999:<pk>:<d>-concept-graph"]` | Tapestry Concepts | 39998 | `conceptGraph()`, falls back to the computed address |
+| `["item-kind", <kind>, <description>?]` | Cross-NIP Compatibility | headers | `itemKinds()`, `acceptedItemKinds()` |
+
+An unknown or missing `b` type reads as `pointer`, and code that acts on
+deference must check for `inherit` / `inherit-items` explicitly.
+
+Events of other NIPs can list themselves by carrying `z` tags (Cross-NIP
+Compatibility "Method 3"); `Event.dListParents()` reads them on any kind.
+
+### Taggings (`taggings/`)
+
+All kind 39999 items, told apart by their `z` tags:
+
+- `TagElement`: a tag ("Podcaster"), `d` = slug, JSON in `content`, plus
+  optional `tag-for-nostr-pubkey` / `tag-for-nostr-event` hint `z`s.
+- `PubKeyTagging`: "Avi is a Podcaster", with the deterministic
+  `profile-tag-<slug>-<target8>-<asserter8>` `d`.
+- `TagPin`: a viewer's pin with a `curation-method` JSON tag. Unpin with a
+  NIP-09 deletion.
+- `TaggingHeader` + `EventTagging`: tagging events. The target sits in
+  `a`/`e`, so the tag is reached through a `z` to a per-tag header.
+- `polarity()`: no tag means apply, `≥ 0.5` applied, `≤ -0.5` disputed, and
+  anything in between is not counted in v1.
+
+### Assistant designation (`assistant/`)
+
+- Kind 10040 entries next to NIP-85's: the blanket
+  `["39998:dlist-header", <assistant>, <relay>]` and one
+  `["<kind>:<d>", <assistant>, <relay>]` per curated list. Read with
+  `dListAssistant()` / `dListCurations()`; write with the `replace…` /
+  `remove…` helpers, which keep every other tag verbatim. The first
+  occurrence wins on duplicates.
+- `CurationCopy`: the assistant's copy of an accepted item, with
+  `d` = `copy-<sha256(header + "\n" + original ref)>`, two `q` tags back to
+  the original, and only the tags the spec lists. `buildRemoval` is the
+  matching NIP-09 deletion.
+- `HeaderResolution`: which header governs a user's concept. Their own
+  header wins, then their assistant's, and recency never decides.

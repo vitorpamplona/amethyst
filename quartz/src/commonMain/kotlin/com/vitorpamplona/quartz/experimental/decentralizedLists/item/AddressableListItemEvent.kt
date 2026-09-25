@@ -21,22 +21,31 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.item
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.decentralizedLists.AddressableDecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListItem
 import com.vitorpamplona.quartz.experimental.decentralizedLists.description
 import com.vitorpamplona.quartz.experimental.decentralizedLists.forEachSearchableListField
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedItemKinds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.allowedTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.declaresList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.disallowedTags
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.itemKinds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.names
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.recommendedTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.requiredTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.slugs
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tagRules
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.titles
+import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFrom
+import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFromTargets
+import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.json
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
+import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -71,6 +80,7 @@ class AddressableListItemEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DecentralizedListItem,
+    AddressableDecentralizedListEvent,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
@@ -142,6 +152,24 @@ class AddressableListItemEvent(
 
     fun disallowedTags() = tags.disallowedTags()
 
+    fun itemKinds() = tags.itemKinds()
+
+    fun acceptedItemKinds() = tags.acceptedItemKinds()
+
+    fun inheritFrom() = tags.inheritFrom()
+
+    fun inheritFromTargets(type: InheritType) = tags.inheritFromTargets(type)
+
+    fun isDeliberatelyUnaffiliated() = tags.isDeliberatelyUnaffiliated()
+
+    fun json() = tags.json()
+
+    fun wordWrapper() = tags.wordWrapper()
+
+    fun elementOf() = tags.elementOf()
+
+    fun subsetOf() = tags.subsetOf()
+
     companion object {
         const val KIND = 39999
 
@@ -150,16 +178,18 @@ class AddressableListItemEvent(
             parent: DecentralizedListEvent,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
+            content: String = "",
             initializer: TagArrayBuilder<AddressableListItemEvent>.() -> Unit = {},
-        ) = build(ParentListTag.classify(parent.listPointer()), dTag, createdAt, initializer)
+        ) = build(ParentListTag.classify(parent.listPointer()), dTag, createdAt, content, initializer)
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
             parent: ParentList,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
+            content: String = "",
             initializer: TagArrayBuilder<AddressableListItemEvent>.() -> Unit = {},
-        ) = eventTemplate<AddressableListItemEvent>(KIND, "", createdAt) {
+        ) = eventTemplate<AddressableListItemEvent>(KIND, content, createdAt) {
             dTag(dTag)
             parentList(parent)
             initializer()

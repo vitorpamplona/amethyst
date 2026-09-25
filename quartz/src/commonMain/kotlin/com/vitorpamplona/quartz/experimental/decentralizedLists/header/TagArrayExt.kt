@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists.header
 
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.ConceptGraphTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.ItemKindTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.NamesTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.SlugsTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRuleTag
@@ -51,3 +53,14 @@ fun TagArray.disallowedTags() = tagRuleNames(TagRuleType.DISALLOWED)
  * (9999/39999) that does is using the spec's "nonstandard" method to declare a list.
  */
 fun TagArray.declaresList() = any(NamesTag::isTag)
+
+/** The `concept-graph` pointer when present. See [ConceptGraphTag.compute] for the fallback. */
+fun TagArray.conceptGraph() = firstNotNullOfOrNull(ConceptGraphTag::parse)
+
+/** The `item-kind` declarations, in tag order. */
+fun TagArray.itemKinds() = mapNotNull(ItemKindTag::parse)
+
+/** The kinds to query for this list's items: the declared `item-kind`s, else 9999 and 39999. */
+fun TagArray.acceptedItemKinds(): List<Int> = itemKinds().map { it.kind }.distinct().ifEmpty { STANDARD_ITEM_KINDS }
+
+val STANDARD_ITEM_KINDS = listOf(9999, 39999)

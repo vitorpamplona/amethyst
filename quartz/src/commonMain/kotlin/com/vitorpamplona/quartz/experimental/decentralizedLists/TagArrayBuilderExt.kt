@@ -21,6 +21,25 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists
 
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.DescriptionTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritFromTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.JsonTag
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
 fun <T : DecentralizedListEvent> TagArrayBuilder<T>.description(description: String) = addUnique(DescriptionTag.assemble(description))
+
+fun <T : AddressableDecentralizedListEvent> TagArrayBuilder<T>.inheritFrom(
+    target: Address,
+    type: InheritType,
+) = add(InheritFromTag.assemble(target, type))
+
+fun <T : AddressableDecentralizedListEvent> TagArrayBuilder<T>.inheritFrom(
+    target: String,
+    type: InheritType,
+) = add(InheritFromTag.assemble(target, type))
+
+/** Writes `["b", "b-tag-deferred"]`: considered a shared twin and chose none. */
+fun <T : AddressableDecentralizedListEvent> TagArrayBuilder<T>.deliberatelyUnaffiliated() = addUniqueValueIfNew(InheritFromTag.assembleUnaffiliated())
+
+fun <T : AddressableDecentralizedListEvent> TagArrayBuilder<T>.json(json: String) = addUnique(JsonTag.assemble(json))

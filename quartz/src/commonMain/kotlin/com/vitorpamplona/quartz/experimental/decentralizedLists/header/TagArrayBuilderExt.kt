@@ -20,13 +20,17 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists.header
 
+import com.vitorpamplona.quartz.experimental.decentralizedLists.AddressableDecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.ConceptGraphTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.ItemKindTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.NamesTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.SlugsTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRule
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRuleTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRuleType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TitlesTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
 // Typed on the whole family, not just the header kinds: the spec's nonstandard method
@@ -70,3 +74,17 @@ fun <T : DecentralizedListEvent> TagArrayBuilder<T>.disallowed(
     tagName: String,
     description: String? = null,
 ) = add(TagRuleTag.assemble(TagRuleType.DISALLOWED, tagName, description))
+
+fun <T : DecentralizedListEvent> TagArrayBuilder<T>.itemKind(
+    kind: Int,
+    description: String? = null,
+) = add(ItemKindTag.assemble(kind, description))
+
+/**
+ * The header's own Concept Graph pointer. Takes the signing pubkey and `d` because the value
+ * is derived from them; a template has no pubkey until it is signed.
+ */
+fun <T : AddressableDecentralizedListEvent> TagArrayBuilder<T>.conceptGraph(
+    pubKey: HexKey,
+    dTag: String,
+) = addUnique(ConceptGraphTag.assemble(pubKey, dTag))

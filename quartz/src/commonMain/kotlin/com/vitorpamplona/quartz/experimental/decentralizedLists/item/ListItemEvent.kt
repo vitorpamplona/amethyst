@@ -25,9 +25,11 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedLis
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListItem
 import com.vitorpamplona.quartz.experimental.decentralizedLists.description
 import com.vitorpamplona.quartz.experimental.decentralizedLists.forEachSearchableListField
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedItemKinds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.allowedTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.declaresList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.disallowedTags
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.itemKinds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.names
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.recommendedTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.requiredTags
@@ -144,20 +146,26 @@ class ListItemEvent(
 
     fun disallowedTags() = tags.disallowedTags()
 
+    fun itemKinds() = tags.itemKinds()
+
+    fun acceptedItemKinds() = tags.acceptedItemKinds()
+
     companion object {
         const val KIND = 9999
 
         fun build(
             parent: DecentralizedListEvent,
             createdAt: Long = TimeUtils.now(),
+            content: String = "",
             initializer: TagArrayBuilder<ListItemEvent>.() -> Unit = {},
-        ) = build(ParentListTag.classify(parent.listPointer()), createdAt, initializer)
+        ) = build(ParentListTag.classify(parent.listPointer()), createdAt, content, initializer)
 
         fun build(
             parent: ParentList,
             createdAt: Long = TimeUtils.now(),
+            content: String = "",
             initializer: TagArrayBuilder<ListItemEvent>.() -> Unit = {},
-        ) = eventTemplate<ListItemEvent>(KIND, "", createdAt) {
+        ) = eventTemplate<ListItemEvent>(KIND, content, createdAt) {
             parentList(parent)
             initializer()
         }

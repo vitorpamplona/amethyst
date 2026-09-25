@@ -20,32 +20,15 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists
 
-import com.vitorpamplona.quartz.nip01Core.core.IEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.parentListPointers
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.parentLists
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
- * Common face of the four Decentralized Lists kinds (9998, 39998, 9999, 39999).
- *
- * Any of them can be the parent of a list item: headers are the standard parents, and the
- * spec's "nonstandard" method declares a list with a 9999/39999 item whose own parent is a
- * list of lists. So every kind knows how children must point at it.
+ * The lists an event of any kind claims to be on. Cross-NIP Compatibility lets a foreign event
+ * (a NIP-72 community, say) list itself by carrying `z` tags — the creator's voice, "I claim to
+ * be on this list" — next to its own NIP's tags. Such lists declare the kind with `item-kind`.
  */
-interface DecentralizedListEvent : IEvent {
-    /**
-     * The value a child item writes in its `z` tag to point at this event: the event id for
-     * the regular kinds, the `kind:pubkey:d` coordinate for the addressable ones.
-     */
-    fun listPointer(): String
-}
+fun Event.dListParents() = tags.parentLists()
 
-/**
- * The item kinds (9999, 39999). Items point at their parent list with one or more `z` tags and
- * carry the item itself in `p` / `e` / `t` / `a` tags.
- */
-interface DecentralizedListItem : DecentralizedListEvent
-
-/**
- * The addressable kinds (39998, 39999): the only ones the Tapestry extensions — the `b`
- * inherit-from tag, the `json` payload — are defined on, since those point at and resolve
- * through `kind:pubkey:d` coordinates.
- */
-interface AddressableDecentralizedListEvent : DecentralizedListEvent
+fun Event.dListParentPointers() = tags.parentListPointers()
