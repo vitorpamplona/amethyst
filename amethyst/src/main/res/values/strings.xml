@@ -310,6 +310,8 @@
     <string name="cordn_message_deleted">Message deleted</string>
     <string name="cordn_message_edited">edited</string>
     <string name="cordn_action_go_to_message">Go to message</string>
+    <string name="cordn_delete_confirm_title">Withdraw message</string>
+    <string name="cordn_delete_confirm_body">Everyone in the group will see this message as withdrawn, and Amethyst will stop showing its text. The coordinator still holds the encrypted copy it was sent as, and anyone who already read it has already read it.</string>
     <string name="cordn_delivery_accepted">Accepted by the coordinator</string>
     <string name="cordn_message_details_title">Message details</string>
     <string name="cordn_message_details_sent_at">Sent</string>

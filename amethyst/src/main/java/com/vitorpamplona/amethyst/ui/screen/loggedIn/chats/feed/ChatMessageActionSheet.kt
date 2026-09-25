@@ -425,7 +425,7 @@ private fun RelayGroupPinTile(
  * zap, or a reply) and reveals everything else on demand.
  */
 @Composable
-private fun MoreActionsToggle(
+internal fun MoreActionsToggle(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {

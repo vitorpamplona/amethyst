@@ -720,8 +720,10 @@ private fun CordnChatTopBar(
             }
         },
         actions = {
+            // GroupAdd rather than Info, as in Marmot: the same screen, and the thing
+            // people come to it for is adding someone.
             IconButton(onClick = onInfo) {
-                Icon(MaterialSymbols.Info, contentDescription = stringRes(R.string.cordn_group_info))
+                Icon(MaterialSymbols.GroupAdd, contentDescription = stringRes(R.string.cordn_group_info))
             }
         },
     )

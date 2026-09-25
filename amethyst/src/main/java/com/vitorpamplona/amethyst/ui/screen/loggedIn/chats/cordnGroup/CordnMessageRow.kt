@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -75,12 +77,14 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.MoreActionsToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChipView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.SectionDivider
@@ -194,6 +198,7 @@ internal fun CordnMessageRow(
             onAuthorClick = { nav.nav(Route.Profile(message.envelope.pubKey)) },
             actionMenu = { onDismiss ->
                 CordnMessageActionSheet(
+                    body = text.orEmpty(),
                     isMine = isMine,
                     isPinned = isPinned,
                     isLive = isLive,
@@ -732,6 +737,7 @@ private fun CopyTextTile(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CordnMessageActionSheet(
+    body: String,
     isMine: Boolean,
     isPinned: Boolean,
     isLive: Boolean,
@@ -743,6 +749,31 @@ private fun CordnMessageActionSheet(
     onTogglePin: () -> Unit,
     onReact: (String) -> Unit,
 ) {
+    var showAllActions by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+
+    // Same gate the shared sheet uses, and the same setting, so someone who has
+    // already said "don't ask again" is not asked again here either.
+    val performDelete = {
+        onDelete()
+        onDismiss()
+    }
+
+    if (confirmingDelete) {
+        QuickActionAlertDialog(
+            title = stringRes(R.string.cordn_delete_confirm_title),
+            textContent = stringRes(R.string.cordn_delete_confirm_body),
+            buttonIcon = MaterialSymbols.Delete,
+            buttonText = stringRes(R.string.cordn_action_delete),
+            onClickDoOnce = performDelete,
+            onClickDontShowAgain = {
+                accountViewModel.account.settings.setHideDeleteRequestDialog()
+                performDelete()
+            },
+            onDismiss = { confirmingDelete = false },
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -801,12 +832,58 @@ private fun CordnMessageActionSheet(
                         onDismiss()
                     }
                     ActionTile(MaterialSymbols.Delete, stringRes(R.string.cordn_action_delete), isDestructive = true) {
-                        onDelete()
-                        onDismiss()
+                        // A withdrawal cannot be taken back and the coordinator keeps
+                        // the ciphertext either way, so it is worth one question —
+                        // unless the account has already opted out of being asked.
+                        if (accountViewModel.account.settings.hideDeleteRequestDialog) {
+                            performDelete()
+                        } else {
+                            confirmingDelete = true
+                        }
                     }
                 }
             }
+
+            // Stage two, exactly as the shared sheet splits it: the actions native to
+            // this chat sit up front, and the generic what-you-can-do-with-any-message
+            // inventory lives behind the toggle so the sheet opens compact.
+            SectionDivider()
+            MoreActionsToggle(expanded = showAllActions, onToggle = { showAllActions = !showAllActions })
+
+            if (showAllActions) {
+                SectionDivider()
+                TileRow {
+                    CopyTextTile(body, onDismiss)
+                    ShareTextTile(body, onDismiss)
+                }
+            }
         }
+    }
+}
+
+/**
+ * Hands the message text to the system share sheet.
+ *
+ * The shared sheet shares a note by its nostr address, which a cordn message does not
+ * have — it lives on a coordinator, not a relay, and there is no URI that would resolve
+ * for anyone else. So this shares the text itself, which is what the reader can
+ * actually pass on.
+ */
+@Composable
+private fun ShareTextTile(
+    text: String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    ActionTile(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
+        val send =
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+        context.startActivity(Intent.createChooser(send, null))
+        onDismiss()
     }
 }
 
