@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.marmot
+package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
@@ -29,10 +29,10 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Android implementation of [MlsGroupStateStore] using file-based encrypted storage.
+ * File-backed [MlsGroupStateStore], encrypted at rest.
  *
  * All MLS group state (containing private keys and epoch secrets) is encrypted
- * at rest using [SecretEncryption] (AES/GCM backed by Android KeyStore).
+ * at rest using [SecretEncryption] (AES-256-GCM, keyed by the platform's keystore).
  *
  * Storage layout:
  * ```
@@ -41,13 +41,13 @@ import java.io.FileOutputStream
  * <rootDir>/mls_groups/<nostrGroupId>/ratchet   — encrypted OwnSenderRatchet
  * ```
  */
-class AndroidMlsGroupStateStore(
+class EncryptedMlsGroupStateStore(
     private val rootDir: File,
     private val encryption: SecretEncryption = SecretEncryption(),
 ) : MlsGroupStateStore {
     init {
         Log.d(TAG) {
-            "Initialized AndroidMlsGroupStateStore: rootDir=${rootDir.absolutePath}, " +
+            "Initialized EncryptedMlsGroupStateStore: rootDir=${rootDir.absolutePath}, " +
                 "mls_groups exists=${File(rootDir, "mls_groups").exists()}"
         }
     }
@@ -61,7 +61,7 @@ class AndroidMlsGroupStateStore(
     }
 
     companion object {
-        private const val TAG = "AndroidMlsGroupStateStore"
+        private const val TAG = "EncryptedMlsGroupStateStore"
         private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
     }
 
@@ -274,7 +274,7 @@ class AndroidMlsGroupStateStore(
             // Fallback: if rename fails (e.g., cross-filesystem), copy and delete
             tempFile.copyTo(target, overwrite = true)
             if (!tempFile.delete()) {
-                Log.w("AndroidMlsGroupStateStore") { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
+                Log.w("EncryptedMlsGroupStateStore") { "Failed to delete temp file after copy fallback: ${tempFile.absolutePath}" }
             }
         }
     }

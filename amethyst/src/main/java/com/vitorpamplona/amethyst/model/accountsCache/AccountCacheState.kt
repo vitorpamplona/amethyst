@@ -26,6 +26,10 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46Clien
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
@@ -36,10 +40,6 @@ import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermission
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.marmot.AndroidKeyPackageBundleStore
-import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
-import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
-import com.vitorpamplona.amethyst.model.marmot.AndroidPublishObligationStore
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -250,13 +250,13 @@ class AccountCacheState(
         val mlsStore =
             try {
                 Log.d("AccountCacheState") {
-                    "Initializing AndroidMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${accountDir.absolutePath}"
+                    "Initializing EncryptedMlsGroupStateStore for ${signer.pubKey.take(8)}… at ${accountDir.absolutePath}"
                 }
-                AndroidMlsGroupStateStore(accountDir)
+                EncryptedMlsGroupStateStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
-                    "Failed to initialize AndroidMlsGroupStateStore, falling back to in-memory store (Marmot groups will NOT persist across restarts)",
+                    "Failed to initialize EncryptedMlsGroupStateStore, falling back to in-memory store (Marmot groups will NOT persist across restarts)",
                     e,
                 )
                 InMemoryMlsGroupStateStore()
@@ -267,11 +267,11 @@ class AccountCacheState(
 
         val marmotMessageStore =
             try {
-                AndroidMarmotMessageStore(accountDir)
+                EncryptedMarmotMessageStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
-                    "Failed to initialize AndroidMarmotMessageStore (Marmot messages will NOT persist across restarts)",
+                    "Failed to initialize EncryptedMarmotMessageStore (Marmot messages will NOT persist across restarts)",
                     e,
                 )
                 null
@@ -279,11 +279,11 @@ class AccountCacheState(
 
         val marmotKeyPackageStore =
             try {
-                AndroidKeyPackageBundleStore(accountDir)
+                EncryptedKeyPackageBundleStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
-                    "Failed to initialize AndroidKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)",
+                    "Failed to initialize EncryptedKeyPackageBundleStore (Marmot KeyPackages will NOT persist across restarts)",
                     e,
                 )
                 null
@@ -291,11 +291,11 @@ class AccountCacheState(
 
         val marmotPublishObligationStore =
             try {
-                AndroidPublishObligationStore(accountDir)
+                EncryptedPublishObligationStore(accountDir)
             } catch (e: Exception) {
                 Log.e(
                     "AccountCacheState",
-                    "Failed to initialize AndroidPublishObligationStore " +
+                    "Failed to initialize EncryptedPublishObligationStore " +
                         "(a Marmot commit interrupted mid-publish will NOT be retried after a restart)",
                     e,
                 )

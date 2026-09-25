@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.marmot
+package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Android implementation of [KeyPackageBundleStore] using file-based encrypted storage.
+ * File-backed [KeyPackageBundleStore], encrypted at rest.
  *
  * Storage layout:
  * ```
@@ -40,10 +40,10 @@ import java.io.File
  * The blob contains private key material — init keys, encryption keys,
  * signature keys — that the MLS engine needs to process Welcome events
  * received days or weeks after the corresponding KeyPackage was published.
- * It is encrypted at rest with [SecretEncryption] (AES/GCM via Android
- * KeyStore), the same primitive used by [AndroidMlsGroupStateStore].
+ * It is encrypted at rest with [SecretEncryption] (AES-256-GCM, keyed by the platform's
+ * keystore), the same primitive used by [EncryptedMlsGroupStateStore].
  */
-class AndroidKeyPackageBundleStore(
+class EncryptedKeyPackageBundleStore(
     private val rootDir: File,
     private val encryption: SecretEncryption = SecretEncryption(),
 ) : KeyPackageBundleStore {
@@ -51,7 +51,7 @@ class AndroidKeyPackageBundleStore(
 
     init {
         Log.d(TAG) {
-            "Initialized AndroidKeyPackageBundleStore: rootDir=${rootDir.absolutePath}"
+            "Initialized EncryptedKeyPackageBundleStore: rootDir=${rootDir.absolutePath}"
         }
     }
 
@@ -121,6 +121,6 @@ class AndroidKeyPackageBundleStore(
     }
 
     companion object {
-        private const val TAG = "AndroidKeyPackageBundleStore"
+        private const val TAG = "EncryptedKeyPackageBundleStore"
     }
 }

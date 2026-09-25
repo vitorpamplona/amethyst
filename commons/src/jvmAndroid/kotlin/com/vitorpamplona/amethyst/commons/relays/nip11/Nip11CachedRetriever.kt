@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip11RelayInfo
+package com.vitorpamplona.amethyst.commons.relays.nip11
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -33,7 +33,12 @@ class Nip11CachedRetriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
 ) {
     private val relayInformationEmptyCache = LruCache<NormalizedRelayUrl, Nip11RelayInformation>(1000)
-    private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(1000)
+
+    // Value type is non-null: androidx.collection.LruCache bounds V to Any, and every put here
+    // stores a concrete RetrieveResult. The old android.util.LruCache was a Java platform type, so
+    // the nullable argument compiled but never meant anything — get() returns null on a miss either
+    // way, which is what the readers below already branch on.
+    private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult>(1000)
     private val retriever = Nip11Retriever(okHttpClient)
 
     /**

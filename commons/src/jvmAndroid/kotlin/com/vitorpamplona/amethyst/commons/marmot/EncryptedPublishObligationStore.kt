@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.marmot
+package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Android implementation of [MarmotPublishObligationStore], encrypted at rest
+ * File-backed [MarmotPublishObligationStore], encrypted at rest
  * with [SecretEncryption] like the group-state and KeyPackage stores.
  *
  * ```
@@ -49,7 +49,7 @@ import java.io.File
  * concurrently and resolve out of order, so removing one record must not
  * rewrite another's.
  */
-class AndroidPublishObligationStore(
+class EncryptedPublishObligationStore(
     private val rootDir: File,
     private val encryption: SecretEncryption = SecretEncryption(),
 ) : MarmotPublishObligationStore {
@@ -184,6 +184,6 @@ class AndroidPublishObligationStore(
         }
 
     companion object {
-        private const val TAG = "AndroidPublishObligationStore"
+        private const val TAG = "EncryptedPublishObligationStore"
     }
 }

@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relays.nip11.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayDragState
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayEventCountRow
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture

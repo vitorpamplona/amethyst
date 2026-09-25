@@ -58,7 +58,7 @@ import java.io.RandomAccessFile
  *
  * **Not thread-safe.** Entries are cached in memory so an append never has to
  * read the log back, and that cache assumes one owner. Callers hold their own
- * lock around every method (see `AndroidMarmotMessageStore`), and one instance
+ * lock around every method (see `EncryptedMarmotMessageStore`), and one instance
  * must own any given file.
  *
  * @param encrypt must produce a self-describing blob — it carries its own IV /

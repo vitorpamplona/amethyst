@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.marmot
+package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedAppendLog
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
@@ -32,9 +32,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Android implementation of [MarmotMessageStore] using file-based encrypted storage.
+ * File-backed [MarmotMessageStore], encrypted at rest.
  *
- * Stored alongside the [AndroidMlsGroupStateStore] data:
+ * Stored alongside the [EncryptedMlsGroupStateStore] data:
  * ```
  * <rootDir>/mls_groups/<nostrGroupId>/messages    — encrypted message log
  * ```
@@ -44,7 +44,7 @@ import java.io.File
  * small encrypted segment instead of rewriting the conversation, which is what
  * keeps the cost of a send flat as the history grows.
  */
-class AndroidMarmotMessageStore(
+class EncryptedMarmotMessageStore(
     private val rootDir: File,
     private val encryption: SecretEncryption = SecretEncryption(),
 ) : MarmotMessageStore {
@@ -52,7 +52,7 @@ class AndroidMarmotMessageStore(
 
     init {
         Log.d(TAG) {
-            "Initialized AndroidMarmotMessageStore: rootDir=${rootDir.absolutePath}"
+            "Initialized EncryptedMarmotMessageStore: rootDir=${rootDir.absolutePath}"
         }
     }
 
@@ -353,7 +353,7 @@ class AndroidMarmotMessageStore(
     ) = log.rewrite(file, messages)
 
     companion object {
-        private const val TAG = "AndroidMarmotMessageStore"
+        private const val TAG = "EncryptedMarmotMessageStore"
         private val HEX_PATTERN = Regex("^[0-9a-fA-F]+$")
     }
 }
