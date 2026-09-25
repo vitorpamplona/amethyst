@@ -442,6 +442,52 @@ class CordnRuntime(
             ?.filter { it.gid == gid }
             .orEmpty()
 
+    /**
+     * The three admin commits, each followed by the refresh that makes them
+     * visible.
+     *
+     * The manager does the MLS and the posting; only [refresh] pushes the new
+     * member list, epoch and metadata into the [CordnGroupChatroom] the screens
+     * render. A caller that reached the manager directly -- which the group info
+     * screen did -- got a commit that worked and a roster that went on showing
+     * the group as it was before, until a message happened to arrive or the app
+     * was relaunched. Every other mutation here already pairs the two; these are
+     * the ones that were missing it.
+     */
+    suspend fun invite(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        targetPubKey: HexKey,
+    ) {
+        val session = requireSession(coordinatorPubKey)
+        session.manager.invite(gid, targetPubKey)
+        refresh(session, gid)
+    }
+
+    suspend fun removeMember(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        targetPubKey: HexKey,
+    ) {
+        val session = requireSession(coordinatorPubKey)
+        session.manager.removeMember(gid, targetPubKey)
+        refresh(session, gid)
+    }
+
+    suspend fun updateGroupMetadata(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        metadata: CordnGroupMetadata,
+    ) {
+        val session = requireSession(coordinatorPubKey)
+        session.manager.updateGroupMetadata(gid, metadata)
+        refresh(session, gid)
+    }
+
+    private fun requireSession(coordinatorPubKey: HexKey): CordnSession =
+        registry.sessionOrNull(coordinatorPubKey)
+            ?: throw IllegalStateException("no session for $coordinatorPubKey")
+
     /** Adds the account behind [request] to its group. */
     suspend fun acceptJoinRequest(
         coordinatorPubKey: HexKey,

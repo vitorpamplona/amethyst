@@ -393,6 +393,10 @@
     <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
     <string name="cordn_coordinators_discover_unheard">Nothing found, and %1$d of your relays did not answer.</string>
     <string name="cordn_coordinators_discover_seen">Last announced %1$s ago</string>
+    <string name="cordn_info_add_member">Add someone</string>
+    <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
+    <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
+    <string name="cordn_info_add_member_none">Nobody found by that name.</string>
     <string name="cordn_info_admin_badge">Admin</string>
     <string name="cordn_invitations_members_more">+%1$d more</string>
     <string name="cordn_invitations_via">Through %1$s</string>

@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -61,11 +62,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -73,7 +74,11 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
@@ -176,14 +181,25 @@ private fun CordnGroupInfo(
     val canAdminister = admins.isEmpty() || me in admins
 
     val scope = rememberCoroutineScope()
-    val manager =
-        accountViewModel.account.cordnRuntime
-            ?.sessionOrNull(coordinatorPubKey)
-            ?.manager
+    val runtime = accountViewModel.account.cordnRuntime
+    val manager = runtime?.sessionOrNull(coordinatorPubKey)?.manager
     var adminError by remember(room.gid) { mutableStateOf<String?>(null) }
     var busy by remember(room.gid) { mutableStateOf(false) }
     var renaming by remember(room.gid) { mutableStateOf(false) }
     var removing by remember(room.gid) { mutableStateOf<HexKey?>(null) }
+    var memberSearch by remember(room.gid) { mutableStateOf("") }
+
+    // The app's own people-finder, not a second one: the same state object the
+    // composers and the sibling group screen drive, so a name, an npub and a
+    // NIP-05 address all resolve here exactly as they do everywhere else.
+    val userSuggestions =
+        remember {
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        }
+
+    DisposableEffect(Unit) {
+        onDispose { userSuggestions.reset() }
+    }
     val failed = stringRes(R.string.cordn_admin_action_failed)
     val noSession = stringRes(R.string.cordn_send_no_session)
 
@@ -192,10 +208,17 @@ private fun CordnGroupInfo(
      *
      * A room whose coordinator has no open session cannot commit anything, and
      * saying so beats a button that does nothing.
+     *
+     * Hands over the **runtime**, not the manager. The manager commits and posts
+     * but does not touch the [CordnGroupChatroom] these rows are drawn from, so
+     * reaching it directly left every one of these actions invisible until
+     * something else refreshed the room: a member removed here stayed in the
+     * roster, and a rename stayed the old name. The runtime's own methods pair
+     * each commit with that refresh.
      */
-    fun runAdmin(block: suspend (CordnGroupManager) -> Unit) {
-        val target = manager
-        if (target == null) {
+    fun runAdmin(block: suspend (CordnRuntime) -> Unit) {
+        val target = runtime
+        if (target == null || manager == null) {
             adminError = noSession
             return
         }
@@ -310,6 +333,29 @@ private fun CordnGroupInfo(
                     }
                 }
             }
+            // Admins only: CordnGroupPolicy refuses an `add` from anyone else once
+            // a group names admins, in both directions, so offering this to
+            // everybody would build commits the rest of the group drops on
+            // receipt.
+            if (canAdminister) {
+                CordnAddMember(
+                    userSuggestions = userSuggestions,
+                    search = memberSearch,
+                    onSearchChange = {
+                        memberSearch = it
+                        adminError = null
+                        if (it.length > 2) userSuggestions.processCurrentWord(it) else userSuggestions.reset()
+                    },
+                    busy = busy,
+                    accountViewModel = accountViewModel,
+                    onInvite = { user ->
+                        memberSearch = ""
+                        userSuggestions.reset()
+                        runAdmin { it.invite(coordinatorPubKey, room.gid, user.pubkeyHex) }
+                    },
+                )
+            }
+
             adminError?.let {
                 Text(
                     text = it,
@@ -331,6 +377,7 @@ private fun CordnGroupInfo(
                             // The whole metadata travels together, admin list
                             // included, because the extension is replaced whole.
                             it.updateGroupMetadata(
+                                coordinatorPubKey,
                                 room.gid,
                                 CordnGroupMetadata(name = newName, description = newDescription, adminPubkeys = admins),
                             )
@@ -357,7 +404,7 @@ private fun CordnGroupInfo(
                     confirmButton = {
                         TextButton(onClick = {
                             removing = null
-                            runAdmin { it.removeMember(room.gid, target) }
+                            runAdmin { it.removeMember(coordinatorPubKey, room.gid, target) }
                         }) {
                             Text(
                                 text = stringRes(R.string.cordn_info_remove_member),
@@ -416,7 +463,6 @@ private fun CordnGroupInfo(
             // Computed, never asserted. Hardcoding these made the card look like a
             // disclosure while reporting the same four values for every group --
             // which is exactly the regression §7 risk 4 of the plan warns about.
-            val runtime = accountViewModel.account.cordnRuntime
             val exposure by
                 produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
                     value =
@@ -434,6 +480,80 @@ private fun CordnGroupInfo(
             // this says which bytes to compare against a share ref, a device
             // document or a log -- all of which speak hex.
             TechnicalDetails(coordinatorPubKey, room.gid, epoch)
+        }
+    }
+}
+
+/**
+ * Finding someone to add, the way the rest of the app finds people.
+ *
+ * [ShowUserSuggestionList] over [UserSuggestionState] -- the same pair the
+ * composers and the sibling group-info screen use -- rather than a field
+ * wanting 64 hex characters. A name, an npub and a NIP-05 address all work,
+ * because that state already resolves all three.
+ *
+ * ## The search finding somebody is not a promise
+ *
+ * cordn can only add a member by spending a KeyPackage they published **to
+ * this coordinator** (`spec/00.md`), and nothing on this device can know
+ * whether they did until the coordinator is asked. So the note says so before
+ * the attempt, and `CordnGroupManager.invite` says which of the two went wrong
+ * after it -- "the coordinator holds no KeyPackage for ..." is a different
+ * problem from a name that matched nobody, and they are worth telling apart.
+ */
+@Composable
+private fun CordnAddMember(
+    userSuggestions: UserSuggestionState,
+    search: String,
+    onSearchChange: (String) -> Unit,
+    busy: Boolean,
+    accountViewModel: AccountViewModel,
+    onInvite: (User) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        OutlinedTextField(
+            value = search,
+            onValueChange = onSearchChange,
+            label = { Text(stringRes(R.string.cordn_info_add_member)) },
+            placeholder = { Text(stringRes(R.string.cordn_info_add_member_placeholder)) },
+            singleLine = true,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Text(
+            text = stringRes(R.string.cordn_info_add_member_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+
+        // Three characters, as everywhere else this list appears: fewer matches
+        // most of the address book and is never what someone meant.
+        if (!busy && search.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = onInvite,
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
+                onEmpty = {
+                    Text(
+                        text = stringRes(R.string.cordn_info_add_member_none),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                },
+                trailingContent = { user ->
+                    IconButton(onClick = { onInvite(user) }) {
+                        Icon(
+                            symbol = MaterialSymbols.PersonAdd,
+                            contentDescription = stringRes(R.string.cordn_info_add_member),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+            )
         }
     }
 }
