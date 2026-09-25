@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnRoomState
 import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnSyncLoop
+import com.vitorpamplona.amethyst.commons.cordn.CordnSyncSource
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
@@ -61,6 +62,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
@@ -136,7 +138,25 @@ class CordnRuntime(
     /** Every cordn room this account is in, for the inbox and the screens. */
     val groups = CordnGroupList(accountSigner.pubKey)
 
-    private val loops = mutableMapOf<HexKey, CordnSyncLoop>()
+    /**
+     * A running sync loop, the manager it was built over, and its log watcher.
+     *
+     * The manager is the part that matters. [CordnCoordinatorRegistry] hands
+     * back a **new** session, with a new manager over a freshly opened
+     * transport, whenever a coordinator's relays are corrected -- the transport
+     * is bound to them, so it cannot be carried over. [CordnSyncLoop] captures
+     * its source for the life of the loop, so keeping the old loop across that
+     * swap left it polling a transport that had just been closed: the
+     * coordinator retried forever, its rooms never updated again, and the only
+     * way out was restarting the app.
+     */
+    private class SyncLoopHandle(
+        val loop: CordnSyncLoop,
+        val source: CordnSyncSource,
+        val watcher: Job,
+    )
+
+    private val loops = mutableMapOf<HexKey, SyncLoopHandle>()
     private val lock = Mutex()
 
     val coordinators = registry.coordinators
@@ -154,13 +174,23 @@ class CordnRuntime(
         handoff.requireNotHandedOff()
         val session = registry.session(config)
         lock.withLock {
-            if (loops[config.pubKey] == null) {
+            // Rebuilt, not only created: an existing loop whose source is not
+            // this session's manager is one the registry has already orphaned by
+            // reopening the transport under it. Stopped before the replacement
+            // starts, because two loops on one coordinator would file every
+            // delivery twice.
+            val current = loops[config.pubKey]
+            if (current == null || current.source !== session.manager) {
+                current?.let {
+                    it.watcher.cancel()
+                    it.loop.stop()
+                }
+
                 val loop =
                     CordnSyncLoop(
                         source = session.manager,
                         onDelivery = { file(config.pubKey, it) },
                     )
-                loops[config.pubKey] = loop
                 loop.start(scope)
 
                 // A coordinator is a Nostr identity, and CEP-23/CEP-17 say it
@@ -205,14 +235,17 @@ class CordnRuntime(
                 // the rooms are there, they are simply never updated again, and
                 // the whole sync path logged nothing at all. Only the failing
                 // state is worth a line, and only when it changes.
-                scope.launch {
-                    loop.state
-                        .filterIsInstance<CordnSyncLoop.State.Retrying>()
-                        .distinctUntilChanged()
-                        .collect {
-                            Log.w(TAG, "coordinator ${config.pubKey.take(8)}\u2026 not syncing (attempt ${it.attempt}, retry in ${it.inMs}ms): ${it.reason}")
-                        }
-                }
+                val watcher =
+                    scope.launch {
+                        loop.state
+                            .filterIsInstance<CordnSyncLoop.State.Retrying>()
+                            .distinctUntilChanged()
+                            .collect {
+                                Log.w(TAG, "coordinator ${config.pubKey.take(8)}\u2026 not syncing (attempt ${it.attempt}, retry in ${it.inMs}ms): ${it.reason}")
+                            }
+                    }
+
+                loops[config.pubKey] = SyncLoopHandle(loop, session.manager, watcher)
             }
         }
         // Whatever the store already held, so a relaunch shows its rooms
@@ -463,7 +496,10 @@ class CordnRuntime(
     /** Stops every loop and closes every transport. Call at logout. */
     suspend fun stop() {
         lock.withLock {
-            loops.values.forEach { it.stop() }
+            loops.values.forEach {
+                it.watcher.cancel()
+                it.loop.stop()
+            }
             loops.clear()
         }
         registry.close()
@@ -473,7 +509,10 @@ class CordnRuntime(
     /** Drops one coordinator, leaving its stored groups on disk. */
     suspend fun forget(coordinatorPubKey: HexKey) {
         lock.withLock {
-            loops.remove(coordinatorPubKey)?.stop()
+            loops.remove(coordinatorPubKey)?.let {
+                it.watcher.cancel()
+                it.loop.stop()
+            }
         }
         registry.forget(coordinatorPubKey)
         remember()

@@ -129,11 +129,26 @@ class CordnRuntimeTest {
             relays = listOf(RelayUrlNormalizer.normalizeOrNull("wss://relay.example.com")!!),
         )
 
+    /**
+     * Every connection opened, newest last.
+     *
+     * One per `connect`, so a coordinator whose relays were corrected appears
+     * twice -- which is the only way to tell whether the sync loop followed the
+     * reopen or stayed on the connection that was replaced. The stub behind
+     * them is shared per pubkey, so key packages and published state survive a
+     * reopen exactly as the real stores do.
+     */
+    private val connections = java.util.concurrent.CopyOnWriteArrayList<CountingCoordinator>()
+
     /** Hands each coordinator pubkey its own stub, with no transport in between. */
     private val links =
         CordnCoordinatorLinkFactory { _, config ->
+            val counting =
+                CountingCoordinator(if (config.pubKey == keyA) coordinatorA else coordinatorB)
+                    .also { connections += it }
+
             object : CordnCoordinatorLink {
-                override val coordinator = if (config.pubKey == keyA) coordinatorA else coordinatorB
+                override val coordinator = counting
 
                 override suspend fun close() = Unit
             }
@@ -268,6 +283,38 @@ class CordnRuntimeTest {
                         it.kinds,
                     )
                 }
+            }
+        }
+
+    @Test
+    fun `correcting a coordinator's relays moves the sync loop onto the new connection`() =
+        runBlocking {
+            // The registry cannot carry a transport across a relay change, so it
+            // opens a new one and builds a new manager over it. CordnSyncLoop
+            // captures its source for life, so a loop kept across that swap goes
+            // on polling the connection that was just closed -- the coordinator
+            // then retries forever and its rooms never update again, with a
+            // restart the only way out.
+            val runtime = runtime(runtimeScope())
+            // A group first: the loop has nothing to subscribe to until the
+            // coordinator holds one, so a bare session would never subscribe and
+            // the assertion below would pass for the wrong reason.
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "A"), gid = "moved-gid")
+
+            awaitUntil("the first connection to be subscribed") {
+                connections.firstOrNull()?.subscriptions?.let { it > 0 } == true
+            }
+
+            runtime.session(
+                configFor(keyA).copy(
+                    relays = listOf(RelayUrlNormalizer.normalizeOrNull("wss://moved.example.com")!!),
+                ),
+            )
+
+            assertEquals("the relay change did not open a second connection", 2, connections.size)
+
+            awaitUntil("the loop to follow the reopen onto the new connection") {
+                connections[1].subscriptions > 0
             }
         }
 
@@ -526,6 +573,29 @@ class CordnRuntimeTest {
             assertEquals(listOf(keyA), invitations.unreachable.map { it.coordinator.pubKey })
             assertFalse("an unreachable coordinator is not an empty inbox", invitations.isEmpty)
         }
+
+    /**
+     * One opened connection, counting what was asked of it.
+     *
+     * Only the subscribe matters: it is what `CordnSyncLoop` does forever, so a
+     * connection that is never subscribed is one no loop is pointing at.
+     */
+    private class CountingCoordinator(
+        private val delegate: ICoordinator,
+    ) : ICoordinator by delegate {
+        @Volatile
+        var subscriptions = 0
+            private set
+
+        override suspend fun subscribeMessages(
+            cursors: Map<String, Long?>,
+            timeoutMs: Long,
+            onMessage: (GroupMessage) -> Unit,
+        ) {
+            subscriptions++
+            delegate.subscribeMessages(cursors, timeoutMs, onMessage)
+        }
+    }
 
     /**
      * Just enough coordinator to let the runtime run.
