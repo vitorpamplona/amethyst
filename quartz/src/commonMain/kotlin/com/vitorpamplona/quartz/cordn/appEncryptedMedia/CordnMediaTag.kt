@@ -69,7 +69,13 @@ object CordnMediaTag {
     const val ALT = "alt"
 
     /**
-     * Amplitudes for the voice-note bars, space-separated floats in 0..1.
+     * Amplitudes for the voice-note bars, space-separated floats.
+     *
+     * On `MediaRecorder.maxAmplitude`'s own scale (0..32767), which is what the
+     * rest of the app already puts on the wire for kind-1222 voice notes — see
+     * `VoiceAnonymizer`, which multiplies back up by 32768 to match. The
+     * renderer normalises whatever range it is given, so the absolute scale
+     * only has to be consistent with the app's other waveforms, and is.
      *
      * NOT in `spec/applications/encrypted-media.md` §5, which lists no such
      * field. It is written as one more of the display hints the spec does
