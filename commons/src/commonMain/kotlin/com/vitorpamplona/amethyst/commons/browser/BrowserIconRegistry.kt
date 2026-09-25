@@ -54,6 +54,15 @@ class BrowserIconRegistry(
     private val iconDir: () -> Path,
     private val scope: CoroutineScope,
 ) {
+    // Resolved once, not per call. [iconDir] is a lambda so the front end owns the location and
+    // nothing resolves at construction; but on Android it is `appContext.filesDir`, and
+    // Context.getFilesDir() takes a lock and mkdir()s the directory every time it is asked. The
+    // object this replaced cached the File in init(), and iconModelFor is read from composition on
+    // the main thread by the bottom bar, the favorites grid, the omnibox suggestions and the
+    // napplet icon — so re-invoking the lambda there put a filesystem syscall on every frame that
+    // draws an icon.
+    private val dir: Path by lazy { iconDir() }
+
     private val _keys = MutableStateFlow<Set<String>>(emptySet())
 
     /** Sanitized host keys that currently have a stored icon. Observe to recompose when an icon arrives. */
@@ -73,7 +82,6 @@ class BrowserIconRegistry(
         started = true
         scope.launch {
             try {
-                val dir = iconDir()
                 platformFileSystem.createDirectories(dir)
                 val scanned =
                     platformFileSystem
@@ -103,7 +111,6 @@ class BrowserIconRegistry(
         // icon exists before the file backing it does.
         scope.launch {
             try {
-                val dir = iconDir()
                 platformFileSystem.createDirectories(dir)
                 platformFileSystem.write(dir / (key + PNG)) { write(bytes) }
                 _keys.update { it + key }
@@ -120,7 +127,7 @@ class BrowserIconRegistry(
     fun iconModelFor(host: String): String? {
         val key = sanitize(host)
         if (key !in _keys.value) return null
-        return "file://" + (iconDir() / (key + PNG))
+        return "file://" + (dir / (key + PNG))
     }
 
     companion object {
