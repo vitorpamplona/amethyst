@@ -79,6 +79,21 @@ class CordnGroupChatroom(
     val coordinatorPubKey: HexKey,
     /** Whose room this is, so [unreadCount] can tell news from an echo. */
     val accountPubKey: HexKey = "",
+    /**
+     * Told when [newest] becomes a different message, and only then.
+     *
+     * The inbox sorts rooms on this room's newest message, so it has to rebuild
+     * when that changes -- and the change can come from anywhere: a delivery
+     * filed through [CordnGroupList], an optimistic send that calls [add] on
+     * this room directly, or a restore. Hanging the signal off
+     * `CordnGroupList.add` caught only the first of those, which left the
+     * commonest case -- you send a message -- not re-sorting at all.
+     *
+     * Not called for a reaction, an edit or a re-delivered echo: those leave the
+     * newest message as it was, and rebuilding the whole inbox for one would be
+     * a rebuild per annotation for no visible change.
+     */
+    private val onNewestChanged: () -> Unit = {},
 ) : NotesGatherer {
     private val byId = LinkedHashMap<HexKey, CordnDeliveredMessage>()
 
@@ -184,7 +199,7 @@ class CordnGroupChatroom(
      * a newer message that live delivery already put here.
      */
     fun restorePreview(newest: CordnDeliveredMessage) {
-        if (byId.isEmpty()) _newest.value = newest
+        if (byId.isEmpty()) setNewest(newest)
     }
 
     /** Restores what the store remembered for this room. */
@@ -243,7 +258,21 @@ class CordnGroupChatroom(
                 .sortedWith(ORDER)
 
         _messages.value = visible
-        _newest.value = visible.lastOrNull()
+        setNewest(visible.lastOrNull())
+    }
+
+    /**
+     * Publishes a new preview, and says so exactly once per real change.
+     *
+     * Keyed on the envelope id rather than the message: [recompute] runs for
+     * every arrival, annotations included, and re-publishing an identical
+     * newest would tell the inbox to re-sort over and over for nothing.
+     */
+    private fun setNewest(value: CordnDeliveredMessage?) {
+        if (_newest.value?.envelope?.id == value?.envelope?.id) return
+
+        _newest.value = value
+        onNewestChanged()
     }
 
     private var cachedRow: Note? = null

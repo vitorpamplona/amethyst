@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,11 +79,18 @@ fun coordinatorDisplayName(
 }
 
 /**
- * A coordinator rendered as the user it is: avatar, then name.
+ * A coordinator rendered as the user it is: avatar, name, and whatever acts on
+ * it.
  *
  * The avatar navigates to the profile, because [UserPicture] already does and
  * a coordinator's profile is as worth reading as anyone's -- more, given it is
  * the party whose metadata exposure the group info screen is about.
+ *
+ * [name] is a `RowScope` slot so a caller can weight it, which both of them
+ * need; before it was, they weighted it anyway and compiled only because
+ * `ColumnScope.weight` happens to produce the same element. [trailing] is its
+ * own slot for the same reason: an action smuggled through a slot called `name`
+ * is a lie about where it lands.
  */
 @Composable
 fun CoordinatorIdentityRow(
@@ -93,7 +101,8 @@ fun CoordinatorIdentityRow(
     nav: INav,
     modifier: Modifier = Modifier,
     size: Dp = 28.dp,
-    name: @Composable (String) -> Unit,
+    trailing: @Composable RowScope.() -> Unit = {},
+    name: @Composable RowScope.(String) -> Unit,
 ) {
     Row(
         modifier,
@@ -102,5 +111,6 @@ fun CoordinatorIdentityRow(
     ) {
         UserPicture(userHex = pubKey, size = size, accountViewModel = accountViewModel, nav = nav)
         name(coordinatorDisplayName(pubKey, label, announced, accountViewModel))
+        trailing()
     }
 }

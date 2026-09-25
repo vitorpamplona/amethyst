@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * One account's cordn rooms, across every coordinator it talks to.
@@ -61,6 +62,13 @@ class CordnGroupList(
     private val _revision = MutableStateFlow(0L)
 
     /**
+     * `update` rather than `value++`: deliveries arrive off the sync loop while
+     * a send can be filing one from the UI, and a read-modify-write would drop
+     * bumps under exactly the interleaving the inbox needs to notice.
+     */
+    private fun bumpRevision() = _revision.update { it + 1 }
+
+    /**
      * Bumps on every change the inbox cares about: a room added or dropped,
      * **and** every message filed into one.
      *
@@ -83,10 +91,18 @@ class CordnGroupList(
     ): CordnGroupChatroom {
         val key = RoomKey(coordinatorPubKey, gid)
         rooms[key]?.let { return it }
-        val room = CordnGroupChatroom(gid, coordinatorPubKey, accountPubKey)
+        val room =
+            CordnGroupChatroom(
+                gid = gid,
+                coordinatorPubKey = coordinatorPubKey,
+                accountPubKey = accountPubKey,
+                // The room is the only place that sees every way its newest
+                // message can change, so it is the room that reports one.
+                onNewestChanged = { bumpRevision() },
+            )
         rooms[key] = room
         _all.value = rooms.values.toList()
-        _revision.value++
+        bumpRevision()
         return room
     }
 
@@ -105,13 +121,7 @@ class CordnGroupList(
         coordinatorPubKey: HexKey,
         gid: String,
         delivered: CordnDeliveredMessage,
-    ): Boolean =
-        getOrCreate(coordinatorPubKey, gid).add(delivered).also {
-            // Only a message the room did not already hold. A re-sync
-            // re-delivers, and rebuilding the inbox for an echo would be a
-            // rebuild per message per sync for no visible change.
-            if (it) _revision.value++
-        }
+    ): Boolean = getOrCreate(coordinatorPubKey, gid).add(delivered)
 
     /** Drops a room. The caller decides whether the stored state goes too. */
     fun forget(
@@ -120,7 +130,7 @@ class CordnGroupList(
     ) {
         if (rooms.remove(RoomKey(coordinatorPubKey, gid)) != null) {
             _all.value = rooms.values.toList()
-            _revision.value++
+            bumpRevision()
         }
     }
 
@@ -128,12 +138,12 @@ class CordnGroupList(
     fun forgetCoordinator(coordinatorPubKey: HexKey) {
         rooms.keys.filter { it.coordinatorPubKey == coordinatorPubKey }.forEach { rooms.remove(it) }
         _all.value = rooms.values.toList()
-        _revision.value++
+        bumpRevision()
     }
 
     fun clear() {
         rooms.clear()
         _all.value = emptyList()
-        _revision.value++
+        bumpRevision()
     }
 }

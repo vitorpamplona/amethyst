@@ -159,6 +159,12 @@ class CordnRuntime(
         val loop: CordnSyncLoop,
         val source: CordnSyncSource,
         val watcher: Job,
+        /**
+         * The one-shot profile fetch. Held so it can be cancelled with the rest:
+         * it is launched into the runtime scope, and an unheld launch outlives a
+         * logout or a forget for as long as its relays take to answer.
+         */
+        val prefetch: Job,
     )
 
     private val loops = mutableMapOf<HexKey, SyncLoopHandle>()
@@ -220,53 +226,62 @@ class CordnRuntime(
                 // own relays are where those live, so they are fetched here,
                 // from the relays this account already talks to for cordn.
                 //
-                // Not a nicety -- it is what keeps the screens' name-and-face
-                // lookup off this account's home relays. Rendering a
+                // Not a nicety -- it is what keeps the *outbox discovery* for
+                // this pubkey off this account's home relays. Rendering a
                 // coordinator with UserPicture/observeUserNameByHex puts it in
                 // LocalCache as a User, and UserOutboxFinderSubAssembler then
-                // asks who it is: with a relay list cached it has an outbox for
-                // the pubkey and issues no discovery filter at all
-                // (`if (noOutboxList.isEmpty()) return null`), while without
-                // one pickRelaysToLoadUsers falls through to this account's
-                // index and home relays -- telling them the account is
-                // interested in a pubkey that CEP-6 announcements publicly
-                // identify as a coordinator. Relay hints alone do not close
-                // that: it broadens the search anyway below three of them, and
-                // a coordinator usually lists one or two.
+                // asks who it is: given a cached relay list it has an outbox for
+                // the pubkey and issues no filter at all
+                // (`if (noOutboxList.isEmpty()) return null`), while without one
+                // pickRelaysToLoadUsers falls through to this account's index and
+                // home relays -- telling them the account is interested in a
+                // pubkey that CEP-6 announcements publicly identify as a
+                // coordinator. Relay hints alone would not close it either: the
+                // search broadens anyway below three hints, and a coordinator
+                // usually lists one or two.
+                //
+                // It is not a complete seal, and the KDoc above must not be read
+                // as one: this only silences the assembler that gates on a
+                // missing relay list. UserReportsSubAssembler and
+                // UserCardsSubAssembler ask this account's own relays about the
+                // pubkey either way, and a coordinator that publishes no kind
+                // 10002 falls back to the broad path regardless. What this buys
+                // is the largest of those queries, not silence.
                 //
                 // The global CacheClientConnector files whatever comes back, so
                 // there is nothing to consume here, and failure is silent on
                 // purpose: a coordinator with no profile is ordinary, and the
                 // screens already fall back to the key.
-                scope.launch {
-                    runCatching {
-                        val answered =
-                            client.fetchAll(
-                                filters =
-                                    config.relays.associateWith {
-                                        listOf(
-                                            Filter(
-                                                kinds =
-                                                    listOf(
-                                                        MetadataEvent.KIND,
-                                                        AdvertisedRelayListEvent.KIND,
-                                                        CvmKinds.SERVER_ANNOUNCEMENT,
-                                                    ),
-                                                authors = listOf(config.pubKey),
-                                            ),
-                                        )
-                                    },
-                            )
+                val prefetch =
+                    scope.launch {
+                        runCatching {
+                            val answered =
+                                client.fetchAll(
+                                    filters =
+                                        config.relays.associateWith {
+                                            listOf(
+                                                Filter(
+                                                    kinds =
+                                                        listOf(
+                                                            MetadataEvent.KIND,
+                                                            AdvertisedRelayListEvent.KIND,
+                                                            CvmKinds.SERVER_ANNOUNCEMENT,
+                                                        ),
+                                                    authors = listOf(config.pubKey),
+                                                ),
+                                            )
+                                        },
+                                )
 
-                        // The announcement is the one of the three the cache
-                        // cannot keep: no registered event class, so it would be
-                        // parsed by nobody and dropped. Read here, from the
-                        // events this fetch returned, and kept for the screens.
-                        announcedServerName(answered)?.let { name ->
-                            _announcedNames.update { it + (config.pubKey to name) }
+                            // The announcement is the one of the three the cache
+                            // cannot keep: no registered event class, so it would be
+                            // parsed by nobody and dropped. Read here, from the
+                            // events this fetch returned, and kept for the screens.
+                            announcedServerName(answered, config.pubKey)?.let { name ->
+                                _announcedNames.update { it + (config.pubKey to name) }
+                            }
                         }
                     }
-                }
                 // A coordinator that stops answering is otherwise invisible:
                 // the rooms are there, they are simply never updated again, and
                 // the whole sync path logged nothing at all. Only the failing
@@ -281,7 +296,7 @@ class CordnRuntime(
                             }
                     }
 
-                loops[config.pubKey] = SyncLoopHandle(loop, session.manager, watcher)
+                loops[config.pubKey] = SyncLoopHandle(loop, session.manager, watcher, prefetch)
             }
         }
         // Whatever the store already held, so a relaunch shows its rooms
@@ -580,12 +595,14 @@ class CordnRuntime(
         lock.withLock {
             loops.values.forEach {
                 it.watcher.cancel()
+                it.prefetch.cancel()
                 it.loop.stop()
             }
             loops.clear()
         }
         registry.close()
         groups.clear()
+        _announcedNames.value = emptyMap()
     }
 
     /** Drops one coordinator, leaving its stored groups on disk. */
@@ -593,10 +610,15 @@ class CordnRuntime(
         lock.withLock {
             loops.remove(coordinatorPubKey)?.let {
                 it.watcher.cancel()
+                it.prefetch.cancel()
                 it.loop.stop()
             }
         }
         registry.forget(coordinatorPubKey)
+        // A name learned about a coordinator this account no longer holds is
+        // nobody's to show, and keeping it would resurrect it on a re-add before
+        // the fresh announcement arrives.
+        _announcedNames.update { it - coordinatorPubKey }
         remember()
     }
 
@@ -618,6 +640,7 @@ class CordnRuntime(
     suspend fun purge(coordinatorPubKey: HexKey) {
         forget(coordinatorPubKey)
         groups.forgetCoordinator(coordinatorPubKey)
+        _announcedNames.update { it - coordinatorPubKey }
         withContext(Dispatchers.IO) {
             CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey).deleteRecursively()
         }

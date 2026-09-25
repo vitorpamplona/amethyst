@@ -41,6 +41,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -143,9 +144,8 @@ fun CordnCreateGroupScreen(
         // Coordinators this account has never used, from their CEP-6
         // announcements. Not added to the account by looking: picking one here
         // is what commits to it, and `createGroup` opens the session.
-        var discovered by remember { mutableStateOf<List<DiscoveredCoordinator>>(emptyList()) }
+        var discovered by remember { mutableStateOf<CordnCoordinatorDiscovery.Result?>(null) }
         var discovering by remember { mutableStateOf(false) }
-        var discoverChecked by remember { mutableStateOf(false) }
         val discoverFailed = stringRes(R.string.cordn_coordinators_discover_failed)
 
         // Offers this account already holds are not offers; they are the choices
@@ -154,10 +154,20 @@ fun CordnCreateGroupScreen(
         val offers =
             remember(discovered, known) {
                 val knownKeys = known.mapTo(mutableSetOf()) { it.pubKey }
-                discovered.filter { it.pubKey !in knownKeys }
+                discovered?.coordinators?.filter { it.pubKey !in knownKeys }.orEmpty()
             }
 
         val choices = remember(known, offers) { known + offers.map { it.toConfig() } }
+
+        // A re-discovery can drop the coordinator that was picked -- it stopped
+        // announcing, or it is now in `known` and therefore not an offer. Left
+        // alone, `selected` would name a coordinator no row shows: no radio
+        // checked, no exposure card, Create disabled, and nothing saying why.
+        // Falling back to the manual entry is the one state that explains itself,
+        // because its fields appear.
+        LaunchedEffect(choices) {
+            if (selected != null && choices.none { it.pubKey == selected }) selected = null
+        }
 
         val config = remember(selected, pubKeyInput, relaysInput, choices) { resolve(choices, selected, pubKeyInput, relaysInput) }
 
@@ -218,8 +228,7 @@ fun CordnCreateGroupScreen(
                     error = null
                     scope.launch {
                         try {
-                            discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value).coordinators
-                            discoverChecked = true
+                            discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                         } catch (e: Exception) {
                             error = e.message ?: discoverFailed
                         } finally {
@@ -232,9 +241,18 @@ fun CordnCreateGroupScreen(
                 Text(stringRes(R.string.cordn_create_coordinator_discover))
             }
 
-            if (discoverChecked && offers.isEmpty()) {
+            discovered?.takeIf { offers.isEmpty() }?.let { result ->
                 Text(
-                    text = stringRes(R.string.cordn_coordinators_discover_none),
+                    text =
+                        if (result.unreachable.isEmpty()) {
+                            stringRes(R.string.cordn_coordinators_discover_none)
+                        } else {
+                            // "Nobody is announcing" and "we were not told" are
+                            // different answers and only one of them is final.
+                            // Reporting the first for the second sends someone
+                            // off to paste a pubkey by hand over a timeout.
+                            stringRes(R.string.cordn_coordinators_discover_unheard, result.unreachable.size)
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

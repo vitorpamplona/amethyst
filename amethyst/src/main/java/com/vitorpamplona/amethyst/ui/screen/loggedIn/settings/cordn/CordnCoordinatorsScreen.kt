@@ -208,23 +208,25 @@ private fun CoordinatorCard(
                 announced = announced[config.pubKey],
                 accountViewModel = accountViewModel,
                 nav = nav,
+                trailing = {
+                    // The label was only ever settable while adding a coordinator
+                    // by hand, so one that arrived from discovery, or came back
+                    // with a restore, could not be named at all.
+                    IconButton(onClick = { renaming = true }) {
+                        Icon(
+                            symbol = MaterialSymbols.Edit,
+                            contentDescription = stringRes(R.string.cordn_coordinators_rename),
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
             ) { name ->
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
-                // The label was only ever settable while adding a coordinator by
-                // hand, so one that arrived from discovery, or came back with a
-                // restore, could not be named at all.
-                IconButton(onClick = { renaming = true }) {
-                    Icon(
-                        symbol = MaterialSymbols.Edit,
-                        contentDescription = stringRes(R.string.cordn_coordinators_rename),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
 
             if (renaming) {

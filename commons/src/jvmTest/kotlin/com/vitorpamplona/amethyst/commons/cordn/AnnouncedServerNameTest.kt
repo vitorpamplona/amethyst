@@ -40,7 +40,7 @@ class AnnouncedServerNameTest {
 
     @Test
     fun `the name comes off the server announcement`() {
-        assertEquals("Cordn Demo", announcedServerName(listOf(announcement(name = "Cordn Demo"))))
+        assertEquals("Cordn Demo", announcedServerName(listOf(announcement(name = "Cordn Demo")), coordinator))
     }
 
     @Test
@@ -48,9 +48,9 @@ class AnnouncedServerNameTest {
         // Absent and blank have to read the same, or the display chain stops at
         // a name that renders as nothing instead of falling through to the
         // profile and then the key.
-        assertNull(announcedServerName(listOf(announcement(name = ""))))
-        assertNull(announcedServerName(listOf(announcement(name = "   "))))
-        assertNull(announcedServerName(emptyList()))
+        assertNull(announcedServerName(listOf(announcement(name = "")), coordinator))
+        assertNull(announcedServerName(listOf(announcement(name = "   ")), coordinator))
+        assertNull(announcedServerName(emptyList(), coordinator))
     }
 
     @Test
@@ -61,8 +61,31 @@ class AnnouncedServerNameTest {
         val stale = announcement(name = "Old Name", createdAt = 1_000)
         val fresh = announcement(name = "New Name", createdAt = 2_000)
 
-        assertEquals("New Name", announcedServerName(listOf(fresh, stale)))
-        assertEquals("New Name", announcedServerName(listOf(stale, fresh)))
+        assertEquals("New Name", announcedServerName(listOf(fresh, stale), coordinator))
+        assertEquals("New Name", announcedServerName(listOf(stale, fresh), coordinator))
+    }
+
+    @Test
+    fun `an announcement by anybody else is not this coordinator's name`() {
+        // A REQ's `authors` is what was asked for, not a promise about what came
+        // back. Without the filter, one relay in a coordinator's own list could
+        // choose the name shown for it -- and that name ranks above its kind 0.
+        val impostor =
+            event(
+                kind = CvmKinds.SERVER_ANNOUNCEMENT,
+                createdAt = 9_000,
+                content = """{"protocolVersion":"2025-11-25"}""",
+                tags = arrayOf(arrayOf("name", "Not This Server")),
+                pubKey = "d".repeat(64),
+            )
+
+        assertNull(announcedServerName(listOf(impostor), coordinator))
+
+        // And it does not outrank the real one by being newer, either.
+        assertEquals(
+            "Real Name",
+            announcedServerName(listOf(impostor, announcement(name = "Real Name")), coordinator),
+        )
     }
 
     @Test
@@ -78,7 +101,7 @@ class AnnouncedServerNameTest {
                 tags = arrayOf(arrayOf("name", "Tools List")),
             )
 
-        assertNull(announcedServerName(listOf(tools)))
+        assertNull(announcedServerName(listOf(tools), coordinator))
     }
 
     private fun announcement(

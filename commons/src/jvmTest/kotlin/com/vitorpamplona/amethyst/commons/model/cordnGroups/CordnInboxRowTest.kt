@@ -116,6 +116,48 @@ class CordnInboxRowTest {
     }
 
     @Test
+    fun `a message put straight onto the room still tells the inbox to rebuild`() {
+        // The case that matters most and was missed: sending does not go through
+        // CordnGroupList at all -- the chat screen adds the optimistic message to
+        // the room directly, and the coordinator's echo is then already held by
+        // id so it files as a duplicate. Hanging the signal off the list meant
+        // your own messages never re-sorted the inbox, only other people's.
+        val list = CordnGroupList()
+        val room = list.getOrCreate(coordinator, "gid-1")
+        val revisionBefore = list.revision.value
+
+        assertTrue(room.add(message("1", at = 10, cursor = 1)))
+
+        assertTrue(list.revision.value > revisionBefore, "an optimistic send has to re-sort the inbox")
+    }
+
+    @Test
+    fun `an annotation does not tell the inbox to rebuild`() {
+        // A reaction leaves the newest message exactly as it was, so re-sorting
+        // for one would be a rebuild per reaction for no visible change.
+        val list = CordnGroupList()
+        val room = list.getOrCreate(coordinator, "gid-1")
+        room.add(message("1", at = 10, cursor = 1))
+
+        val revisionBefore = list.revision.value
+        room.add(
+            CordnDeliveredMessage(
+                CordnEnvelope(
+                    id = "2".padEnd(64, '0'),
+                    pubKey = alice,
+                    createdAt = 20,
+                    kind = CordnMessageKinds.REACTION,
+                    tags = arrayOf(arrayOf("e", "1".padEnd(64, '0'))),
+                    content = "+",
+                ),
+                2,
+            ),
+        )
+
+        assertEquals(revisionBefore, list.revision.value)
+    }
+
+    @Test
     fun `a re-delivered message does not tell the inbox to rebuild`() {
         // A re-sync re-walks the whole stream. Bumping per echo would rebuild
         // the Messages feed once per message for no visible change.
