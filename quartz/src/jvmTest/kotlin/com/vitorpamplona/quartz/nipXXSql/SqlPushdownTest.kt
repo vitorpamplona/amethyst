@@ -231,6 +231,25 @@ class SqlPushdownTest {
     }
 
     @Test
+    fun mathFunctionsRunOnTagValuesEverywhere() {
+        runBlocking {
+            listOf("21000", "5000", "1000000").forEachIndexed { i, msats ->
+                store.insert(bob.sign<Event>(30L + i, 9735, arrayOf(arrayOf("amount", msats)), ""))
+            }
+        }
+        val q =
+            "SELECT count(*), sum(CAST(value AS INTEGER)) / 1000, round(sqrt(avg(CAST(value AS REAL))), 3), " +
+                "floor(log10(max(CAST(value AS REAL)))), pow(2, 10), mod(21, 4), sign(-7), ceil(pi()) " +
+                "FROM tags WHERE kind = 9735 AND name = 'amount'"
+        val expected = listOf(listOf(3L, 1026L, 584.808, 6.0, 1024.0, 1.0, -1L, 4.0))
+        assertEquals(expected, sqlite(q))
+        // The pushdown (any non-SQL store, Vespa included) runs the same functions over its scratch rows.
+        assertEquals(expected, rows(q, Recording(refuseBroad = true)))
+        // Outside the domain, NULL rather than an error.
+        assertEquals(listOf(listOf<Any?>(null)), sqlite("SELECT sqrt(-1)"))
+    }
+
+    @Test
     fun contradictionsFetchNothing() {
         val backend = Recording()
         assertEquals(listOf(listOf(0L)), rows("SELECT count(*) FROM events WHERE kind = 1 AND kind = 7", backend))

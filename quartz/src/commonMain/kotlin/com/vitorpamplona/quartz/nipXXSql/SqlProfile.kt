@@ -99,5 +99,44 @@ object SqlProfile {
             "strftime",
         )
 
-    val FUNCTIONS = AGGREGATE_FUNCTIONS + WINDOW_FUNCTIONS + SCALAR_FUNCTIONS
+    /**
+     * SQLite's math functions (3.35+, built with `SQLITE_ENABLE_MATH_FUNCTIONS`, as the
+     * bundled driver is): deterministic, fixed-size output, NULL outside their domain.
+     * A relay whose SQLite lacks them does not implement the profile.
+     */
+    val MATH_FUNCTIONS =
+        setOf(
+            "acos",
+            "acosh",
+            "asin",
+            "asinh",
+            "atan",
+            "atan2",
+            "atanh",
+            "ceil",
+            "ceiling",
+            "cos",
+            "cosh",
+            "degrees",
+            "exp",
+            "floor",
+            "ln",
+            "log",
+            "log10",
+            "log2",
+            "mod",
+            "pi",
+            "pow",
+            "power",
+            "radians",
+            "sign",
+            "sin",
+            "sinh",
+            "sqrt",
+            "tan",
+            "tanh",
+            "trunc",
+        )
+
+    val FUNCTIONS = AGGREGATE_FUNCTIONS + WINDOW_FUNCTIONS + SCALAR_FUNCTIONS + MATH_FUNCTIONS
 }

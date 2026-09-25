@@ -369,6 +369,8 @@ class SqlDifferentialFuzzTest {
         private val strings = listOf("'nostr'", "'t'", "'p'", "'%o%'", "'n_str'", "'Nostr'", "''", "'a''b'", "'mention'")
         private val binOps = listOf("+", "-", "*", "/", "%", "||", "=", "==", "<>", "!=", "<", "<=", ">", ">=", "AND", "OR", "IS", "IS NOT")
         private val funcs1 = listOf("length", "lower", "upper", "abs", "typeof", "trim", "hex", "unicode")
+        private val math1 = listOf("sqrt", "ln", "log10", "log2", "exp", "floor", "ceil", "trunc", "sign", "sin", "cos", "atan", "degrees")
+        private val math2 = listOf("pow", "mod", "atan2", "log")
 
         private fun <T> pick(list: List<T>) = list[r.nextInt(list.size)]
 
@@ -387,7 +389,7 @@ class SqlDifferentialFuzzTest {
         ): String {
             if (depth <= 0) return atom(cols)
             val d = depth - 1
-            return when (r.nextInt(16)) {
+            return when (r.nextInt(17)) {
                 0, 1, 2, 3 -> "${expr(cols, d)} ${pick(binOps)} ${expr(cols, d)}"
                 4 -> "NOT ${expr(cols, d)}"
                 5 -> "- ${expr(cols, d)}"
@@ -400,6 +402,7 @@ class SqlDifferentialFuzzTest {
                 12 -> "${expr(cols, d)} ${if (r.nextBoolean()) "NOT " else ""}${pick(listOf("LIKE", "GLOB"))} ${pick(strings)}"
                 13 -> "${expr(cols, d)} ${pick(listOf("IS NULL", "ISNULL", "NOTNULL", "NOT NULL"))}"
                 14 -> "CAST(${expr(cols, d)} AS ${pick(listOf("INTEGER", "TEXT", "REAL"))})"
+                15 -> if (r.nextBoolean()) "${pick(math1)}(${expr(cols, d)})" else "${pick(math2)}(${expr(cols, d)}, ${expr(cols, d)})"
                 else -> "(${expr(cols, d)})"
             }
         }

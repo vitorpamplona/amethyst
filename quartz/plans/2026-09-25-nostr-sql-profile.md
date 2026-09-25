@@ -50,8 +50,13 @@ subqueries, `CASE`, `CAST` (INTEGER/REAL/TEXT/NUMERIC), `LIKE … ESCAPE`, `GLOB
 parameters.
 
 Functions: see `SqlProfile` (aggregates, window functions, bounded scalar and
-date functions). Out: `load_extension`, `sqlite_*`, `random*`, `zeroblob`,
-`printf`/`format`, JSON functions.
+date functions, and SQLite's math functions: `sqrt`, `pow`/`power`, `exp`,
+`ln`, `log`/`log10`/`log2`, `floor`/`ceil`/`trunc`, `sign`, `mod`, `pi`,
+`degrees`/`radians` and the trigonometric family). The math functions need an
+SQLite 3.35+ built with `SQLITE_ENABLE_MATH_FUNCTIONS`, as the bundled driver
+every Quartz store and the pushdown's scratch database use; a relay without
+them does not implement the profile. Out: `load_extension`, `sqlite_*`,
+`random*`, `zeroblob`, `printf`/`format`, JSON functions.
 
 **Out on purpose:** anything that isn't a single SELECT, `PRAGMA`, `ATTACH`,
 schema-qualified names, table-valued functions, `INDEXED BY`, blob literals,
