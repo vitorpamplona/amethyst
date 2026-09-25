@@ -28,6 +28,9 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
+import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
+import com.vitorpamplona.quartz.nipXXSql.SqlJackson
+import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
 
 class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
     val eventDeserializer = EventDeserializer()
@@ -133,6 +136,14 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                             null
                         }
                     NegErrMessage(subId, reason, cap)
+                }
+
+                SqlColsMessage.LABEL -> {
+                    SqlJackson.readCols(jp)
+                }
+
+                SqlRowsMessage.LABEL -> {
+                    SqlJackson.readRows(jp)
                 }
 
                 else -> {

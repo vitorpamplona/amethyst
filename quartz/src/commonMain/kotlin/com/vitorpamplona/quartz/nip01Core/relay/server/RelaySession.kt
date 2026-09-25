@@ -46,6 +46,11 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.nipXXSql.FetchCmd
+import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
+import com.vitorpamplona.quartz.nipXXSql.SqlCmd
+import com.vitorpamplona.quartz.nipXXSql.SqlCursorRegistry
+import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
@@ -77,6 +82,8 @@ class RelaySession(
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
+    /** Read-only SQL (`SQL` / `FETCH` / `SQL-CLOSE`); null answers those `unsupported`. */
+    sql: SqlQueryService? = null,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
@@ -114,6 +121,9 @@ class RelaySession(
     /** NIP-77 negentropy state for this connection. */
     private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
 
+    /** Open SQL cursors for this connection. */
+    private val sqlCursors = SqlCursorRegistry(sql, requestContext, ::send, scope)
+
     private fun addSubscription(
         subId: String,
         job: Job,
@@ -129,6 +139,7 @@ class RelaySession(
         subscriptions.forEach { _, job -> job.cancel() }
         subscriptions.clear()
         negentropy.clear()
+        sqlCursors.clear()
     }
 
     fun send(message: Message) {
@@ -189,6 +200,9 @@ class RelaySession(
             is NegOpenCmd -> negentropy.open(cmd, policy)
             is NegMsgCmd -> negentropy.msg(cmd)
             is NegCloseCmd -> negentropy.close(cmd)
+            is SqlCmd -> sqlCursors.open(cmd, policy)
+            is FetchCmd -> sqlCursors.fetch(cmd)
+            is SqlCloseCmd -> sqlCursors.close(cmd)
             else -> send(NoticeMessage("error: unsupported command ${cmd.label()}"))
         }
     }

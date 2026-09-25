@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
+import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
+import com.vitorpamplona.quartz.nipXXSql.SqlJsonValues
+import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -118,6 +121,17 @@ object MessageKSerializer : KSerializer<Message> {
                         // refusal with nothing to state stays.
                         value.cap?.let { add(JsonPrimitive(it)) }
                     }
+
+                    is SqlColsMessage -> {
+                        add(JsonPrimitive(value.queryId))
+                        add(buildJsonArray { value.columns.forEach { add(JsonPrimitive(it)) } })
+                    }
+
+                    is SqlRowsMessage -> {
+                        add(JsonPrimitive(value.queryId))
+                        add(SqlJsonValues.rowsToElement(value.rows))
+                        add(JsonPrimitive(if (value.done) SqlRowsMessage.DONE else SqlRowsMessage.MORE))
+                    }
                 }
             }
         jsonEncoder.encodeJsonElement(element)
@@ -195,6 +209,18 @@ object MessageKSerializer : KSerializer<Message> {
                     // an object or array — that would fail the whole message and
                     // lose the reason, where before this element was ignored.
                     cap = if (array.size > 3) (array[3] as? JsonPrimitive)?.longOrNull else null,
+                )
+            }
+
+            SqlColsMessage.LABEL -> {
+                SqlColsMessage(array[1].jsonPrimitive.content, array[2].jsonArray.map { it.jsonPrimitive.content })
+            }
+
+            SqlRowsMessage.LABEL -> {
+                SqlRowsMessage(
+                    queryId = array[1].jsonPrimitive.content,
+                    rows = SqlJsonValues.rowsFromElement(array[2]),
+                    done = array[3].jsonPrimitive.content == SqlRowsMessage.DONE,
                 )
             }
 

@@ -59,6 +59,7 @@ class SqlCompiler private constructor(
     private val sources: SqlTableSources,
     private val positional: List<Any?>,
     private val named: Map<String, Any?>,
+    private val maxRecursiveRows: Long?,
 ) {
     private val sb = StringBuilder()
     private val args = ArrayList<Any?>()
@@ -66,25 +67,37 @@ class SqlCompiler private constructor(
     /** Innermost last. Each frame maps lowercased CTE name -> generated name. */
     private val cteScopes = ArrayList<HashMap<String, String>>()
     private var cteCounter = 0
+
+    /** Generated names of CTEs whose body is being emitted; a reference to one of them is recursion. */
+    private val ctesInProgress = HashSet<String>()
+    private val recursiveCtes = HashSet<String>()
     private var nextPositional = 1
 
     companion object {
         const val CTE_PREFIX = "nsq_cte_"
 
+        /**
+         * @param maxRecursiveRows when set, every recursive CTE must end with
+         *   `LIMIT <integer literal>` no larger than this. SQLite stops adding
+         *   rows to a recursive table at its LIMIT, and recursion is the only way
+         *   a SELECT can run forever — this bounds it without an interrupt API.
+         */
         fun compile(
             sql: String,
             sources: SqlTableSources,
             positional: List<Any?> = emptyList(),
             named: Map<String, Any?> = emptyMap(),
-        ): CompiledQuery = compile(SqlParser.parse(sql), sources, positional, named)
+            maxRecursiveRows: Long? = null,
+        ): CompiledQuery = compile(SqlParser.parse(sql), sources, positional, named, maxRecursiveRows)
 
         fun compile(
             query: Query,
             sources: SqlTableSources,
             positional: List<Any?> = emptyList(),
             named: Map<String, Any?> = emptyMap(),
+            maxRecursiveRows: Long? = null,
         ): CompiledQuery {
-            val c = SqlCompiler(sources, positional, named)
+            val c = SqlCompiler(sources, positional, named, maxRecursiveRows)
             c.query(query)
             return CompiledQuery(c.sb.toString(), c.args)
         }
@@ -127,8 +140,11 @@ class SqlCompiler private constructor(
                     sb.append(')')
                 }
                 sb.append(" AS (")
+                ctesInProgress.add(generated)
                 query(cte.query)
+                ctesInProgress.remove(generated)
                 sb.append(')')
+                if (generated in recursiveCtes) checkRecursionBound(cte)
             }
             sb.append(' ')
         }
@@ -243,6 +259,7 @@ class SqlCompiler private constructor(
         val alias = quoteIdent(t.alias ?: t.name)
         for (i in cteScopes.indices.reversed()) {
             val generated = cteScopes[i][key] ?: continue
+            if (generated in ctesInProgress) recursiveCtes.add(generated)
             sb.append(quoteIdent(generated)).append(" AS ").append(alias)
             return
         }
@@ -258,6 +275,18 @@ class SqlCompiler private constructor(
             .append(") AS ")
             .append(alias)
         args.addAll(source.args)
+    }
+
+    private fun checkRecursionBound(cte: Cte) {
+        val max = maxRecursiveRows ?: return
+        val limit = cte.query.limit
+        val value = (limit as? Literal)?.takeIf { it.kind == LiteralKind.NUMBER }?.text?.toLongOrNull()
+        if (value == null || value < 0 || value > max) {
+            throw SqlException.unsupported(
+                "recursive CTE ${cte.name} must end with LIMIT n, n an integer from 0 to $max",
+                cte.pos,
+            )
+        }
     }
 
     private fun ordering(terms: List<OrderingTerm>) {

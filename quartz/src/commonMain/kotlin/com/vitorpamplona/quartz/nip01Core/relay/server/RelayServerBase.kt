@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -51,6 +52,8 @@ abstract class RelayServerBase(
     private val negentropySettings: NegentropySettings,
     listener: RelayServerListener,
     val limits: RelayLimits?,
+    /** Read-only SQL service; the server owns it and closes it on [close]. Null disables SQL. */
+    private val sql: SqlQueryService? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     protected val scope = CoroutineScope(parentContext + SupervisorJob())
@@ -88,6 +91,7 @@ abstract class RelayServerBase(
                 onSend = send,
                 onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
+                sql = sql,
             ),
         )
 
@@ -114,6 +118,9 @@ abstract class RelayServerBase(
     /** Cancels every open connection's subscriptions and clears the registry. */
     protected fun closeConnections() = connections.closeAll()
 
+    /** Closes the SQL service's pooled connections; call after [closeConnections]. */
+    protected fun closeSql() = sql?.close()
+
     /**
      * Shuts the server down: cancels all subscriptions and the server [scope].
      * Subclasses override to tear down extra resources (e.g. an event store),
@@ -121,6 +128,7 @@ abstract class RelayServerBase(
      */
     override fun close() {
         closeConnections()
+        closeSql()
         scope.cancel()
     }
 }

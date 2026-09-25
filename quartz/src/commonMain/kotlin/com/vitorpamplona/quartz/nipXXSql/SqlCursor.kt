@@ -27,6 +27,8 @@ import androidx.sqlite.SQLITE_DATA_NULL
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import kotlin.time.Duration
+import kotlin.time.TimeSource
 
 /**
  * A server-side cursor: one prepared statement stepped a page at a time,
@@ -70,11 +72,22 @@ class SqlCursor(
         }
     }
 
-    /** Steps up to [max] rows. After the last row [isDone] turns true and the statement is released. */
-    fun fetch(max: Int): List<List<Any?>> {
+    /**
+     * Steps up to [max] rows, stopping early (with at least one row) once
+     * [budget] has elapsed, so a slow producer returns a short page rather
+     * than holding the caller. The budget is checked between rows only: one
+     * step that takes long (a big aggregate or sort) can't be cut short.
+     * After the last row [isDone] turns true and the statement is released.
+     */
+    fun fetch(
+        max: Int,
+        budget: Duration = Duration.INFINITE,
+    ): List<List<Any?>> {
         if (isDone) return emptyList()
+        val start = TimeSource.Monotonic.markNow()
         val rows = ArrayList<List<Any?>>(minOf(max, 1024))
         while (rows.size < max) {
+            if (rows.isNotEmpty() && start.elapsedNow() >= budget) break
             if (!stmt.step()) {
                 close()
                 break

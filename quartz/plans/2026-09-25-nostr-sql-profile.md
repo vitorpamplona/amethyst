@@ -1,6 +1,6 @@
 # Nostr SQL profile: read-only SQL over websockets
 
-Status: **prototype** (parser + compiler + cursor in `quartz/…/nipXXSql/`; no relay wiring, no NIP text yet).
+Status: **prototype, wired into the relay.** Parser, compiler and cursor are in `quartz/…/nipXXSql/`. `SQL` / `FETCH` / `SQL-CLOSE` run through `NostrServer`, and geode has an opt-in `[sql]` section. No NIP text yet.
 
 ## Goal
 
@@ -87,25 +87,89 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
   statement must return the same columns, rows and errors as SQLite running the
   raw text against equivalent views. One-off runs with 2 more seeds × 40k
   queries: 0 mismatches.
+- `SqlRelayTest` (jvmTest): SQL/FETCH/SQL-CLOSE through a real `NostrServer`
+  session and the production JSON path. Covers paging, params, value types, error
+  prefixes, the recursion bound, hidden kinds, the policy gate, relays without
+  SQL, pool sharing and release on disconnect, the per-connection cap and id
+  replacement, idle expiry, and round trips through both serializers.
+- geode `NipXXSqlTest`: over a real `ws://` connection, plus `[sql]` config parsing.
+
+## Wire protocol
+
+```
+C→R  ["SQL", <id>, <sql>, {"params": [..] | {..}, "page": n}?]
+R→C  ["SQL-COLS", <id>, [<column>, …]]
+R→C  ["SQL-ROWS", <id>, [[<value>, …], …], "more" | "done"]
+C→R  ["FETCH", <id>, <maxRows>]
+C→R  ["SQL-CLOSE", <id>]
+R→C  ["CLOSED", <id>, "<prefix>: <reason>"]
+```
+
+- The first page is sent right after `SQL-COLS`, with no round trip. After `done`
+  the relay has already released the cursor. After `more`, the client either
+  `FETCH`es or sends `SQL-CLOSE`.
+- A value is a JSON string, a number (integers stay integers), or null.
+  SQLite's ±Infinity become the strings `"Inf"` / `"-Inf"`, which is how SQLite
+  itself renders them as text.
+- `CLOSED` prefixes:
+  - `invalid:` the query doesn't parse, or names a table or column that doesn't exist.
+  - `unsupported:` outside the profile, or the relay has no SQL.
+  - `blocked:` a pool or per-connection cap was hit.
+  - `error:` the engine failed, or the cursor id is unknown.
+  - `closed: cursor expired`.
+  - The policy may also return its own reason (e.g. `auth-required:`).
+- Reusing an id replaces the previous cursor, as REQ does.
+
+## Relay wiring
+
+- `NostrServer(sql = SqlQueryService.forStore(store))` enables it. Leaving `sql`
+  as null answers every SQL frame `unsupported`.
+- `SqlQueryService` holds a separate pool of **read-only** connections
+  (`SQLITE_OPEN_READONLY` plus `PRAGMA query_only`). Each open cursor owns one
+  connection. A slow query can therefore block other SQL cursors, but never REQs.
+- `SqlCursorRegistry` is per connection, alongside `NegSessionRegistry`. It steps
+  cursors on `Dispatchers.IO`, cuts a page short when its time budget runs out,
+  and expires cursors that sit idle or live too long. Each cursor has its own
+  mutex, because the expiry timer can race a `FETCH`.
+- `IRelayPolicy.acceptSql` is only a gate on opening a cursor. What a query can
+  see comes from the service's per-session `SqlTableSources`. REQ policies do
+  **not** apply to SQL, so anything they hide has to be hidden in the table
+  sources too. `SqlAccessPolicy` gates SQL on NIP-42 auth or a pubkey allowlist.
+- geode's `[sql]` section: `enabled` (default false), `require_auth`,
+  `allowed_pubkeys`, `hidden_kinds` (default `[1059]`), plus the cursor and page
+  limits. It fails at boot if the database isn't a SQLite file.
+
+## Bounding work (there is no interrupt)
+
+androidx.sqlite 2.7.1 does **not** expose `sqlite3_interrupt` or a progress
+handler. Checked against the jar: `BundledSQLiteConnection` has only `prepare`,
+`inTransaction` and `close`. So nothing can stop a statement that is running.
+What bounds the work instead:
+
+- **Recursion.** This is the only way a SELECT can run forever. Every recursive
+  CTE must end with `LIMIT <integer literal> ≤ maxRecursiveRows`. SQLite stops
+  adding rows to a recursive table when it reaches its LIMIT (verified). The
+  compiler detects self-references and enforces the rule.
+- **Everything else finishes**, but it can take as long as the data is large
+  (e.g. a 3-way cross join). What limits it: a dedicated pool (it can't starve
+  REQs), a per-connection cursor cap, the page time budget (applied between rows
+  only), the idle and lifetime timeouts, and the policy gate. A truly
+  interruptible engine needs a driver patch; see open items.
 
 ## Open items (in order)
 
-1. **Runaway queries.** Still unconfirmed whether androidx.sqlite exposes
-   `sqlite3_interrupt` / progress handler. Without it a `WITH RECURSIVE` without
-   a stop condition, or a large cross join, keeps a reader busy. Options: find
-   the API, patch the bundled driver, or run SQL on a dedicated, killable pool.
-   Memory: nested `replace()` can build big strings (bounded by
-   `SQLITE_MAX_LENGTH`).
-2. **Wire protocol + relay wiring:** `SQL` / `FETCH` / `SQL-CLOSE` → rows /
-   `CLOSED`, a `SqlCursorRegistry` beside `NegSessionRegistry`, a dedicated
-   `query_only` reader pool, cursor idle timeout and max lifetime (an open
-   cursor holds a read transaction and blocks WAL checkpoints), NIP-11
-   `limitation.sql`.
+1. **Stopping a running statement.** This needs a driver that exposes
+   `sqlite3_interrupt` or `sqlite3_progress_handler`: patch or fork the bundled
+   driver, or ask upstream. Until then, large joins and aggregates finish in
+   their own time. A related open item: nested `replace()` can build large
+   strings (up to `SQLITE_MAX_LENGTH`).
+2. **Advertising it:** a NIP-11 `limitation.sql` block (page and cursor limits,
+   `max_recursive_rows`) once the NIP has a number.
 3. **Indexed tags.** `tags` is derived from the tag JSON with `json_each`
    (correct, full scan). Add a text tag table (or columns) so tag-driven queries
    can use an index; measure the write/storage cost with relayBench.
 4. **Client side:** `INostrClient.sqlQuery()` in `relay/client/accessories/`,
-   `amy sql`.
+   and `amy sql`. The frames already parse on the client (`Message.fromJson`).
 5. **NIP draft:** schema, EBNF of the grammar, function list, DQS-off rule,
    `invalid:` / `unsupported:` / `error:` prefixes, conformance corpus (the fuzzer's
    events + queries + expected rows).
