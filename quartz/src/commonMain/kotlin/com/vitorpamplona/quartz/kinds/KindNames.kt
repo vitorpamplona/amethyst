@@ -35,6 +35,10 @@ import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -644,6 +648,10 @@ object KindNames {
             EventTrustedListEvent.KIND to KindName("Trusted List of Events", null),
             AddressableTrustedListEvent.KIND to KindName("Trusted List of Addressables", null),
             ExternalIdTrustedListEvent.KIND to KindName("Trusted List of External IDs", null),
+            ListHeaderEvent.KIND to KindName("Decentralized List", null),
+            AddressableListHeaderEvent.KIND to KindName("Editable Decentralized List", null),
+            ListItemEvent.KIND to KindName("Decentralized List Item", null),
+            AddressableListItemEvent.KIND to KindName("Editable Decentralized List Item", null),
             KeyPackageEvent.KIND to KindName("MLS KeyPackage", null),
             GitRepositoryStateEvent.KIND to KindName("Git Repo State", "34"),
             FeedDefinitionEvent.KIND to KindName("Feed Definition", null),
