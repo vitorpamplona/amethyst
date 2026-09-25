@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists
 
-import com.vitorpamplona.quartz.experimental.decentralizedLists.header.names
-import com.vitorpamplona.quartz.experimental.decentralizedLists.header.titles
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.comments
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.name
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.title
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.NamesTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.SingularPlural
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TitlesTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.CommentsTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.NameTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.TitleTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
@@ -42,18 +44,40 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
  * @return false when the visitor stopped the walk.
  */
 fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean {
-    names()?.let {
-        if (!visitor.visit(it.singular)) return false
-        if (!visitor.visit(it.plural)) return false
+    // The read path runs once per event per keystroke, so this is two allocation-free passes
+    // instead of one full scan (and one parsed object) per field. The first pass only remembers
+    // the first well-formed tag of each field; the fixed visiting order is applied afterwards.
+    var names: Array<String>? = null
+    var titles: Array<String>? = null
+    var name: String? = null
+    var title: String? = null
+    var description: String? = null
+    var comments: String? = null
+
+    fastForEach { tag ->
+        if (tag.size < 2 || tag[1].isEmpty()) return@fastForEach
+        when (tag[0]) {
+            NamesTag.TAG_NAME -> if (names == null && SingularPlural.isTag(tag, NamesTag.TAG_NAME)) names = tag
+            TitlesTag.TAG_NAME -> if (titles == null && SingularPlural.isTag(tag, TitlesTag.TAG_NAME)) titles = tag
+            NameTag.TAG_NAME -> if (name == null) name = tag[1]
+            TitleTag.TAG_NAME -> if (title == null) title = tag[1]
+            DescriptionTag.TAG_NAME -> if (description == null) description = tag[1]
+            CommentsTag.TAG_NAME -> if (comments == null) comments = tag[1]
+        }
     }
-    titles()?.let {
-        if (!visitor.visit(it.singular)) return false
-        if (!visitor.visit(it.plural)) return false
+
+    names?.let {
+        if (!visitor.visit(it[1])) return false
+        if (!visitor.visit(it[2])) return false
     }
-    name()?.let { if (!visitor.visit(it)) return false }
-    title()?.let { if (!visitor.visit(it)) return false }
-    description()?.let { if (!visitor.visit(it)) return false }
-    comments()?.let { if (!visitor.visit(it)) return false }
+    titles?.let {
+        if (!visitor.visit(it[1])) return false
+        if (!visitor.visit(it[2])) return false
+    }
+    name?.let { if (!visitor.visit(it)) return false }
+    title?.let { if (!visitor.visit(it)) return false }
+    description?.let { if (!visitor.visit(it)) return false }
+    comments?.let { if (!visitor.visit(it)) return false }
     fastForEach { tag ->
         HashtagTag.parse(tag)?.let { if (!visitor.visit(it)) return false }
     }

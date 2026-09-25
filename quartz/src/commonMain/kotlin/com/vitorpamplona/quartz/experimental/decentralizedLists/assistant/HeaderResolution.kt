@@ -61,6 +61,7 @@ object HeaderResolution {
         headers: Collection<AddressableListHeaderEvent>,
     ): AddressableListHeaderEvent? =
         candidates(user, slug, treasureMap).firstNotNullOfOrNull { candidate ->
-            headers.firstOrNull { it.pubKey == candidate.pubKeyHex && it.dTag() == candidate.dTag }
+            // several versions of one addressable header may be at hand: the newest is the header
+            headers.filter { it.pubKey == candidate.pubKeyHex && it.dTag() == candidate.dTag }.maxByOrNull { it.createdAt }
         }
 }

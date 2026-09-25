@@ -28,12 +28,14 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagR
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRuleType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TitlesTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
-fun TagArray.names() = firstNotNullOfOrNull(NamesTag::parse)
+fun TagArray.names() = fastFirstNotNullOfOrNull(NamesTag::parse)
 
-fun TagArray.titles() = firstNotNullOfOrNull(TitlesTag::parse)
+fun TagArray.titles() = fastFirstNotNullOfOrNull(TitlesTag::parse)
 
-fun TagArray.slugs() = firstNotNullOfOrNull(SlugsTag::parse)
+fun TagArray.slugs() = fastFirstNotNullOfOrNull(SlugsTag::parse)
 
 /** Every `required` / `allowed` / `recommended` / `disallowed` rule, in tag order. */
 fun TagArray.tagRules() = mapNotNull(TagRuleTag::parse)
@@ -52,10 +54,10 @@ fun TagArray.disallowedTags() = tagRuleNames(TagRuleType.DISALLOWED)
  * True when the tags carry a list declaration. Standard headers (9998/39998) must; an item
  * (9999/39999) that does is using the spec's "nonstandard" method to declare a list.
  */
-fun TagArray.declaresList() = any(NamesTag::isTag)
+fun TagArray.declaresList() = fastAny(NamesTag::isTag)
 
 /** The `concept-graph` pointer when present. See [ConceptGraphTag.compute] for the fallback. */
-fun TagArray.conceptGraph() = firstNotNullOfOrNull(ConceptGraphTag::parse)
+fun TagArray.conceptGraph() = fastFirstNotNullOfOrNull(ConceptGraphTag::parse)
 
 /** The `item-kind` declarations, in tag order. */
 fun TagArray.itemKinds() = mapNotNull(ItemKindTag::parse)

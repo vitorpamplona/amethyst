@@ -128,6 +128,10 @@ All kind 39999 items, told apart by their `z` tags:
   NIP-09 deletion.
 - `TaggingHeader` + `EventTagging`: tagging events. The target sits in
   `a`/`e`, so the tag is reached through a `z` to a per-tag header.
+- Federation: every builder takes a collection of concept namespaces and
+  writes one concept `z` per namespace; every parser takes the set of
+  namespaces the reader honors. Pass them all: a concept `z` the reader didn't
+  list would be taken for something else, e.g. a tagging header.
 - `polarity()`: no tag means apply, `≥ 0.5` applied, `≤ -0.5` disputed, and
   anything in between is not counted in v1.
 

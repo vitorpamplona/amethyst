@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.Parent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Polarity
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -71,21 +72,31 @@ object TaggingHeader {
      * @param taggingWithSpecificTagConcept the deployment's `tagging-with-specific-tag` concept.
      */
     fun build(
-        taggingWithSpecificTagConcept: String,
+        taggingWithSpecificTagConcepts: Collection<String>,
         tagElement: Address,
         singularName: String,
         pluralName: String,
         description: String? = null,
         createdAt: Long = TimeUtils.now(),
     ) = AddressableListItemEvent.build(
-        parent = ParentListTag.classify(taggingWithSpecificTagConcept),
+        parent = taggingWithSpecificTagConcepts.firstNamespace(),
         dTag = dTag(tagElement.dTag),
         createdAt = createdAt,
     ) {
+        conceptNamespaces(taggingWithSpecificTagConcepts)
         names(singularName, pluralName)
         description?.let { this.description(it) }
         itemAddress(tagElement)
     }
+
+    fun build(
+        taggingWithSpecificTagConcept: String,
+        tagElement: Address,
+        singularName: String,
+        pluralName: String,
+        description: String? = null,
+        createdAt: Long = TimeUtils.now(),
+    ) = build(listOf(taggingWithSpecificTagConcept), tagElement, singularName, pluralName, description, createdAt)
 }
 
 /**
@@ -118,13 +129,14 @@ data class EventTagging(
         ) = "event-tag-$tagSlug-${target.prefix}-${asserter.take(8)}"
 
         /**
-         * @param nostrEventTagConcept the deployment's `nostr-event-tag` concept address.
+         * @param nostrEventTagConcepts the `nostr-event-tag` concept of each authority namespace
+         *   to join: the deployment's own, plus any shared one it federates with.
          * @param taggingHeader the per-tag tagging header's coordinate.
          * @param tagSlug the applied tag's slug, for the deterministic `d`.
          * @param asserter the pubkey that will sign, for the deterministic `d`.
          */
         fun build(
-            nostrEventTagConcept: String,
+            nostrEventTagConcepts: Collection<String>,
             taggingHeader: Address,
             tagSlug: String,
             target: TaggingTarget,
@@ -132,10 +144,11 @@ data class EventTagging(
             apply: Boolean = true,
             createdAt: Long = TimeUtils.now(),
         ) = AddressableListItemEvent.build(
-            parent = ParentListTag.classify(nostrEventTagConcept),
+            parent = nostrEventTagConcepts.firstNamespace(),
             dTag = dTag(tagSlug, target, asserter),
             createdAt = createdAt,
         ) {
+            conceptNamespaces(nostrEventTagConcepts)
             parentList(ParentListTag.classify(taggingHeader.toValue()))
             when (target) {
                 is TaggingTarget.ByAddress -> itemAddress(target.address)
@@ -144,22 +157,42 @@ data class EventTagging(
             polarity(apply)
         }
 
-        /** Null unless [event] joins [nostrEventTagConcept], names a tagging header and a target. */
+        fun build(
+            nostrEventTagConcept: String,
+            taggingHeader: Address,
+            tagSlug: String,
+            target: TaggingTarget,
+            asserter: HexKey,
+            apply: Boolean = true,
+            createdAt: Long = TimeUtils.now(),
+        ) = build(listOf(nostrEventTagConcept), taggingHeader, tagSlug, target, asserter, apply, createdAt)
+
+        /**
+         * Null unless [event] joins one of the [honoredNamespaces]' `nostr-event-tag` concepts,
+         * names a tagging header and a target. Every namespace the reader honors must be passed:
+         * a federated tagging carries one concept `z` per namespace it joined, and any concept
+         * `z` the reader did not list would otherwise be taken for a tagging header.
+         */
         fun parse(
             event: AddressableListItemEvent,
-            nostrEventTagConcept: String,
+            honoredNamespaces: Set<String>,
         ): EventTagging? {
             val pointers = event.parentListPointers()
-            if (nostrEventTagConcept !in pointers) return null
-            val headers = pointers.filter { it != nostrEventTagConcept }
+            if (pointers.none { it in honoredNamespaces }) return null
+            val headers = pointers.filter { it !in honoredNamespaces }
             if (headers.isEmpty()) return null
 
             val target =
-                event.tags.firstNotNullOfOrNull(ATag::parseAddress)?.let { TaggingTarget.ByAddress(it) }
-                    ?: event.tags.firstNotNullOfOrNull(ETag::parseId)?.let { TaggingTarget.ByEventId(it) }
+                event.tags.fastFirstNotNullOfOrNull(ATag::parseAddress)?.let { TaggingTarget.ByAddress(it) }
+                    ?: event.tags.fastFirstNotNullOfOrNull(ETag::parseId)?.let { TaggingTarget.ByEventId(it) }
                     ?: return null
 
             return EventTagging(target, headers, event.tags.polarity())
         }
+
+        fun parse(
+            event: AddressableListItemEvent,
+            nostrEventTagConcept: String,
+        ) = parse(event, setOf(nostrEventTagConcept))
     }
 }

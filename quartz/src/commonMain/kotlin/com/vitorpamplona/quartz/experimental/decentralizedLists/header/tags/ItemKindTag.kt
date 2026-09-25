@@ -44,7 +44,7 @@ class ItemKindTag {
     companion object {
         const val TAG_NAME = "item-kind"
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].toIntOrNull() != null
+        fun isTag(tag: Array<String>) = parse(tag) != null
 
         fun parse(tag: Array<String>): ItemKind? {
             ensure(tag.has(1)) { return null }

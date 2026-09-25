@@ -24,11 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemAddress
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemEvent
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.CurationMethod
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -79,33 +79,47 @@ data class TagPin(
          * @param viewer the pubkey that will sign, needed for the deterministic `d`.
          */
         fun build(
-            tagPinningConcept: String,
+            tagPinningConcepts: Collection<String>,
             tagElement: AddressableListItemEvent,
             viewer: HexKey,
             curationMethod: CurationMethod,
             createdAt: Long = TimeUtils.now(),
         ) = AddressableListItemEvent.build(
-            parent = ParentListTag.classify(tagPinningConcept),
+            parent = tagPinningConcepts.firstNamespace(),
             dTag = dTag(tagElement.dTag(), tagElement.pubKey, viewer),
             createdAt = createdAt,
             content = JsonMapper.toJson(TagPinningContent(TagPinningInfo(tagElement.id, curationMethod))),
         ) {
+            conceptNamespaces(tagPinningConcepts)
             itemEvent(tagElement.id)
             itemAddress(tagElement.address())
             curationMethod(curationMethod)
         }
 
-        /** Null unless [event] joins [tagPinningConcept]. */
+        fun build(
+            tagPinningConcept: String,
+            tagElement: AddressableListItemEvent,
+            viewer: HexKey,
+            curationMethod: CurationMethod,
+            createdAt: Long = TimeUtils.now(),
+        ) = build(listOf(tagPinningConcept), tagElement, viewer, curationMethod, createdAt)
+
+        /** Null unless [event] joins one of the [honoredNamespaces]. */
         fun parse(
             event: AddressableListItemEvent,
-            tagPinningConcept: String,
+            honoredNamespaces: Set<String>,
         ): TagPin? {
-            if (tagPinningConcept !in event.parentListPointers()) return null
+            if (event.parentListPointers().none { it in honoredNamespaces }) return null
             return TagPin(
-                tag = event.tags.firstNotNullOfOrNull(ATag::parseAddress),
-                tagEventId = event.tags.firstNotNullOfOrNull(ETag::parseId),
+                tag = event.tags.fastFirstNotNullOfOrNull(ATag::parseAddress),
+                tagEventId = event.tags.fastFirstNotNullOfOrNull(ETag::parseId),
                 curationMethod = event.tags.curationMethod(),
             )
         }
+
+        fun parse(
+            event: AddressableListItemEvent,
+            tagPinningConcept: String,
+        ) = parse(event, setOf(tagPinningConcept))
     }
 }

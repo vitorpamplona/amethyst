@@ -26,8 +26,10 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritFrom
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.JsonTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
-fun TagArray.description() = firstNotNullOfOrNull(DescriptionTag::parse)
+fun TagArray.description() = fastFirstNotNullOfOrNull(DescriptionTag::parse)
 
 /** Every `b` link, in tag order. Excludes the `b-tag-deferred` marker. */
 fun TagArray.inheritFrom() = mapNotNull(InheritFromTag::parse)
@@ -39,10 +41,10 @@ fun TagArray.inheritFrom() = mapNotNull(InheritFromTag::parse)
 fun TagArray.inheritFromTargets(type: InheritType) = mapNotNull { InheritFromTag.parseTarget(it, type) }
 
 /** True when the event carries `["b", "b-tag-deferred"]`: deliberately affiliated with nothing. */
-fun TagArray.isDeliberatelyUnaffiliated() = any(InheritFromTag::isUnaffiliatedMarker)
+fun TagArray.isDeliberatelyUnaffiliated() = fastAny(InheritFromTag::isUnaffiliatedMarker)
 
 /** The raw `json` tag. */
-fun TagArray.json() = firstNotNullOfOrNull(JsonTag::parse)
+fun TagArray.json() = fastFirstNotNullOfOrNull(JsonTag::parse)
 
 /** The `json` tag parsed as a JSON object, or null when absent or malformed. */
 fun TagArray.wordWrapper() = json()?.let(WordWrapper::parse)

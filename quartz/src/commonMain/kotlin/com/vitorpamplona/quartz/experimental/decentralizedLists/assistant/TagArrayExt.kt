@@ -25,12 +25,13 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.assistant.tags.A
 import com.vitorpamplona.quartz.experimental.decentralizedLists.assistant.tags.DListCuration
 import com.vitorpamplona.quartz.experimental.decentralizedLists.assistant.tags.DListCurationTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
 // Both entry families ride NIP-85's kind 10040 but are bounded away from it: NIP-85 only reads
 // 30382-30385 keys, and these parsers only read 39998/39999 ones.
 
 /** The blanket assistant designation. On duplicates the first occurrence wins. */
-fun TagArray.dListAssistant() = firstNotNullOfOrNull(AssistantDesignationTag::parse)
+fun TagArray.dListAssistant() = fastFirstNotNullOfOrNull(AssistantDesignationTag::parse)
 
 /** Every per-list curation entry, first occurrence per (kind, d-tag). */
 fun TagArray.dListCurations() = mapNotNull(DListCurationTag::parse).distinctBy { it.kind to it.dTag }
@@ -38,7 +39,7 @@ fun TagArray.dListCurations() = mapNotNull(DListCurationTag::parse).distinctBy {
 fun TagArray.dListCuration(
     kind: Int,
     dTag: String,
-) = firstNotNullOfOrNull { tag -> DListCurationTag.parse(tag)?.takeIf { it.kind == kind && it.dTag == dTag } }
+) = fastFirstNotNullOfOrNull { tag -> DListCurationTag.parse(tag)?.takeIf { it.kind == kind && it.dTag == dTag } }
 
 /**
  * Sets the blanket designation in place, keeping every other tag verbatim — 10040 is

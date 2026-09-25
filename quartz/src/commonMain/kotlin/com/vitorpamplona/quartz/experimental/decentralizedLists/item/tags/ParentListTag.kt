@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
@@ -101,6 +102,12 @@ class ParentListTag {
             return if (looksLikeAddress(value)) AddressSerializer.parse(value) else null
         }
 
+        /** The raw `kind:pubkey:d` value when [tag] points at a coordinate. No parsing, no allocation. */
+        fun parseCoordinate(tag: Array<String>): String? {
+            val value = parseValue(tag) ?: return null
+            return if (looksLikeAddress(value)) value else null
+        }
+
         fun classify(value: String): ParentList {
             if (isEventId(value)) return ParentList.EventId(value)
             if (looksLikeAddress(value)) {
@@ -113,7 +120,7 @@ class ParentListTag {
 
         // Only coordinate-shaped values reach the address parser: it logs a warning for
         // everything it rejects, and a plain list name such as "dog" is not an error.
-        private fun looksLikeAddress(value: String) = value.length >= 66 && value.contains(':')
+        private fun looksLikeAddress(value: String) = CoordinateShape.matches(value)
 
         fun assemble(pointer: String) = arrayOf(TAG_NAME, pointer)
 

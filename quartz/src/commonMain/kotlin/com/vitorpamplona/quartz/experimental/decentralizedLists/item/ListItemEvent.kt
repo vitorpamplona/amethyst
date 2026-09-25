@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListCo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -83,13 +84,21 @@ class ListItemEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    /** Event items plus any parent lists referenced by id. */
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(ParentListTag::parseEventId)
+    /** Event items plus any parent lists referenced by id, in one pass. */
+    override fun linkedEventIds(): List<HexKey> {
+        val out = ArrayList<HexKey>()
+        tags.fastForEach { tag -> (ETag.parseId(tag) ?: ParentListTag.parseEventId(tag))?.let { out.add(it) } }
+        return out
+    }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    /** Addressable items plus any parent lists referenced by coordinate. */
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseValidAddress) + tags.mapNotNull { ParentListTag.parseAddress(it)?.toValue() }
+    /** Addressable items plus any parent lists referenced by coordinate, in one pass. */
+    override fun linkedAddressIds(): List<String> {
+        val out = ArrayList<String>()
+        tags.fastForEach { tag -> (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag))?.let { out.add(it) } }
+        return out
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

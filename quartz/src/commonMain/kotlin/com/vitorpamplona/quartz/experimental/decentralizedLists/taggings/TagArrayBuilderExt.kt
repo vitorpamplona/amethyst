@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.taggings
 
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.CurationMethod
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.CurationMethodTag
@@ -33,3 +34,15 @@ fun TagArrayBuilder<AddressableListItemEvent>.curationMethod(method: CurationMet
 
 /** Rides alongside the concept-membership `z`, never instead of it. */
 fun TagArrayBuilder<AddressableListItemEvent>.applicabilityHint(hint: TagApplicabilityHint) = addUniqueValueIfNew(ParentListTag.assemble(hint.code))
+
+/**
+ * Federation: one concept `z` per authority namespace the publisher joins (e.g. a shared
+ * canonical `nostr-event-tag` and the deployment's own). Joining several is opt-in; a reader
+ * scanning any one of them finds the event.
+ */
+fun TagArrayBuilder<AddressableListItemEvent>.conceptNamespaces(concepts: Collection<String>) = concepts.forEach { addUniqueValueIfNew(ParentListTag.assemble(it)) }
+
+internal fun Collection<String>.firstNamespace(): ParentList {
+    require(isNotEmpty()) { "At least one concept namespace is required" }
+    return ParentListTag.classify(first())
+}

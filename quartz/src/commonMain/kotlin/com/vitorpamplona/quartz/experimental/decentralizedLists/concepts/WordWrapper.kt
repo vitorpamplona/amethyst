@@ -73,10 +73,16 @@ data class WordSection(
     val slug: String? = null,
     val name: String? = null,
     val title: String? = null,
-    val wordTypes: List<String> = emptyList(),
+    // Nullable: this is authored JSON, and an explicit `null` must read as "absent" rather
+    // than fail the whole section. Use [types] / [memberOf] for the non-null view.
+    val wordTypes: List<String>? = null,
     /** Set on a concept's core nodes, pointing back at the concept; omitted by the header itself. */
-    val coreMemberOf: List<NodeRef> = emptyList(),
-)
+    val coreMemberOf: List<NodeRef>? = null,
+) {
+    fun types() = wordTypes.orEmpty()
+
+    fun memberOf() = coreMemberOf.orEmpty()
+}
 
 @Immutable
 @Serializable

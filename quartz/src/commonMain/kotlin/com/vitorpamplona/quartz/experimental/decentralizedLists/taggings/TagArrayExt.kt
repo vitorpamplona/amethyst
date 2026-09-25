@@ -25,18 +25,20 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Cu
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Polarity
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.PolarityTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstOrNull
 
 /**
  * How a v1 reader counts this tagging. No `polarity` tag means apply; a tag whose value is
  * not a number is not counted, rather than guessed.
  */
 fun TagArray.polarity(): Polarity {
-    val tag = firstOrNull(PolarityTag::isTag) ?: return Polarity.APPLIED
+    val tag = fastFirstOrNull(PolarityTag::isTag) ?: return Polarity.APPLIED
     val value = PolarityTag.parseValue(tag) ?: return Polarity.UNCOUNTED
     return PolarityTag.bucket(value)
 }
 
-fun TagArray.curationMethod() = firstNotNullOfOrNull(CurationMethodTag::parse)
+fun TagArray.curationMethod() = fastFirstNotNullOfOrNull(CurationMethodTag::parse)
 
 /** The applicability hints a tag-element's author recorded. Hints, never gates. */
 fun TagArray.applicabilityHints() = parentListPointers().mapNotNull(TagApplicabilityHint::fromCode)

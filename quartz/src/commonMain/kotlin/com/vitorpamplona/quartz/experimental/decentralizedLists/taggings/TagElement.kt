@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.experimental.decentralizedLists.taggings
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.Serializable
@@ -79,20 +78,30 @@ object TagElement {
      *   Deployment-specific: never hardcode it.
      */
     fun build(
-        tagConcept: String,
+        tagConcepts: Collection<String>,
         slug: String,
         name: String,
         description: String? = null,
         hints: Set<TagApplicabilityHint> = emptySet(),
         createdAt: Long = TimeUtils.now(),
     ) = AddressableListItemEvent.build(
-        parent = ParentListTag.classify(tagConcept),
+        parent = tagConcepts.firstNamespace(),
         dTag = slug,
         createdAt = createdAt,
         content = TagElementContent(TagInfo(slug, name, description)).toContent(),
     ) {
+        conceptNamespaces(tagConcepts)
         hints.forEach { applicabilityHint(it) }
     }
+
+    fun build(
+        tagConcept: String,
+        slug: String,
+        name: String,
+        description: String? = null,
+        hints: Set<TagApplicabilityHint> = emptySet(),
+        createdAt: Long = TimeUtils.now(),
+    ) = build(listOf(tagConcept), slug, name, description, hints, createdAt)
 
     fun content(event: AddressableListItemEvent) = TagElementContent.parse(event.content)
 }

@@ -25,11 +25,11 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.item.Addressable
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemAddress
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemPubKey
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Polarity
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -81,11 +81,11 @@ data class PubKeyTagging(
         ) = "profile-tag-$tagSlug-${target.take(8)}-${asserter.take(8)}"
 
         /**
-         * @param userTagConcept the deployment's `nostr-user-tag` concept address.
+         * @param userTagConcepts the `nostr-user-tag` concept of each authority namespace to join.
          * @param asserter the pubkey that will sign, needed for the deterministic `d`.
          */
         fun build(
-            userTagConcept: String,
+            userTagConcepts: Collection<String>,
             tagElement: Address,
             tagEventId: HexKey?,
             target: HexKey,
@@ -93,11 +93,12 @@ data class PubKeyTagging(
             apply: Boolean = true,
             createdAt: Long = TimeUtils.now(),
         ) = AddressableListItemEvent.build(
-            parent = ParentListTag.classify(userTagConcept),
+            parent = userTagConcepts.firstNamespace(),
             dTag = dTag(tagElement.dTag, target, asserter),
             createdAt = createdAt,
             content = JsonMapper.toJson(NostrUserTagContent(NostrUserTagInfo(target, tagEventId))),
         ) {
+            conceptNamespaces(userTagConcepts)
             itemPubKey(target)
             itemAddress(tagElement)
             tagEventId?.let { itemEvent(it) }
@@ -111,21 +112,36 @@ data class PubKeyTagging(
             asserter: HexKey,
             apply: Boolean = true,
             createdAt: Long = TimeUtils.now(),
-        ) = build(userTagConcept, tagElement.address(), tagElement.id, target, asserter, apply, createdAt)
+        ) = build(listOf(userTagConcept), tagElement.address(), tagElement.id, target, asserter, apply, createdAt)
 
-        /** Null unless [event] joins [userTagConcept] and names a target pubkey. */
+        fun build(
+            userTagConcept: String,
+            tagElement: Address,
+            tagEventId: HexKey?,
+            target: HexKey,
+            asserter: HexKey,
+            apply: Boolean = true,
+            createdAt: Long = TimeUtils.now(),
+        ) = build(listOf(userTagConcept), tagElement, tagEventId, target, asserter, apply, createdAt)
+
+        /** Null unless [event] joins one of the [honoredNamespaces] and names a target pubkey. */
         fun parse(
             event: AddressableListItemEvent,
-            userTagConcept: String,
+            honoredNamespaces: Set<String>,
         ): PubKeyTagging? {
-            if (userTagConcept !in event.parentListPointers()) return null
-            val target = event.tags.firstNotNullOfOrNull(PTag::parseKey) ?: return null
+            if (event.parentListPointers().none { it in honoredNamespaces }) return null
+            val target = event.tags.fastFirstNotNullOfOrNull(PTag::parseKey) ?: return null
             return PubKeyTagging(
                 target = target,
-                tag = event.tags.firstNotNullOfOrNull(ATag::parseAddress),
-                tagEventId = event.tags.firstNotNullOfOrNull(ETag::parseId),
+                tag = event.tags.fastFirstNotNullOfOrNull(ATag::parseAddress),
+                tagEventId = event.tags.fastFirstNotNullOfOrNull(ETag::parseId),
                 polarity = event.tags.polarity(),
             )
         }
+
+        fun parse(
+            event: AddressableListItemEvent,
+            userTagConcept: String,
+        ) = parse(event, setOf(userTagConcept))
     }
 }

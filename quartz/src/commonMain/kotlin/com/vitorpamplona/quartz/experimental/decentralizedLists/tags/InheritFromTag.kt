@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
@@ -82,15 +83,16 @@ data class InheritFromTag(
          */
         const val UNAFFILIATED = "b-tag-deferred"
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty() && tag[1] != UNAFFILIATED
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && CoordinateShape.matches(tag[1])
 
         fun isUnaffiliatedMarker(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == UNAFFILIATED
 
         fun parse(tag: Array<String>): InheritFromTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[1] != UNAFFILIATED) { return null }
+            // The value form is closed: a coordinate, or the reserved marker (which is not a
+            // target). Anything else derives nothing rather than becoming a bogus parent.
+            ensure(CoordinateShape.matches(tag[1])) { return null }
             return InheritFromTag(tag[1], InheritType.fromCode(tag.getOrNull(2)))
         }
 

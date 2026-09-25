@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SlugTa
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SubsetOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.TitleTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
@@ -39,13 +40,13 @@ fun TagArray.parentLists() = mapNotNull(ParentListTag::parse)
 /** The raw `z` values, as they would go into a `#z` filter. */
 fun TagArray.parentListPointers() = mapNotNull(ParentListTag::parseValue)
 
-fun TagArray.name() = firstNotNullOfOrNull(NameTag::parse)
+fun TagArray.name() = fastFirstNotNullOfOrNull(NameTag::parse)
 
-fun TagArray.title() = firstNotNullOfOrNull(TitleTag::parse)
+fun TagArray.title() = fastFirstNotNullOfOrNull(TitleTag::parse)
 
-fun TagArray.slug() = firstNotNullOfOrNull(SlugTag::parse)
+fun TagArray.slug() = fastFirstNotNullOfOrNull(SlugTag::parse)
 
-fun TagArray.comments() = firstNotNullOfOrNull(CommentsTag::parse)
+fun TagArray.comments() = fastFirstNotNullOfOrNull(CommentsTag::parse)
 
 /** Pubkeys declared as items (`p`). */
 fun TagArray.itemPubKeys() = mapNotNull(PTag::parse)
