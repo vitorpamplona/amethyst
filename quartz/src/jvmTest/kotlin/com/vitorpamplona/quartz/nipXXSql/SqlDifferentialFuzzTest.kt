@@ -1,0 +1,266 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nipXXSql
+
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.deleteIfExists
+import kotlin.random.Random
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
+import kotlin.test.fail
+
+/**
+ * Differential test: SQLite is the spec, so for any query the profile
+ * accepts, the compiled statement must return exactly what SQLite returns
+ * for the client's raw text run against `events` / `tags` views built from
+ * the same [TableSource]s. Same rows, same column names, same errors.
+ *
+ * The generator writes operators without parentheses on purpose, so any
+ * precedence the parser gets wrong shows up as a row mismatch.
+ */
+class SqlDifferentialFuzzTest {
+    private lateinit var dbFile: Path
+    private lateinit var store: EventStore
+
+    /** Runs compiled queries. */
+    private lateinit var profileConn: SQLiteConnection
+
+    /** Runs the raw text against TEMP views: the reference. */
+    private lateinit var oracleConn: SQLiteConnection
+
+    private val sources = EventStoreTableSources.build()
+
+    @BeforeTest
+    fun setup() {
+        dbFile = Files.createTempFile("nostr-sql-fuzz-", ".db")
+        Files.deleteIfExists(dbFile)
+        store = EventStore(dbName = dbFile.toAbsolutePath().toString(), relay = null)
+
+        val rnd = Random(7)
+        val signers = List(4) { NostrSignerSync() }
+        val words = listOf("nostr", "sql", "Nostr", "relay", "zap", "a_b", "50%", "")
+        runBlocking {
+            repeat(60) { i ->
+                val s = signers[i % signers.size]
+                val kind = listOf(0, 1, 1, 1, 3, 7, 20, 30023)[rnd.nextInt(8)]
+                val tags = ArrayList<Array<String>>()
+                repeat(rnd.nextInt(4)) { tags.add(arrayOf("t", words[rnd.nextInt(words.size)])) }
+                if (rnd.nextBoolean()) tags.add(arrayOf("p", signers[rnd.nextInt(signers.size)].pubKey, "wss://r", "mention"))
+                if (kind == 30023) tags.add(arrayOf("d", "slug-$i"))
+                if (rnd.nextInt(5) == 0) tags.add(arrayOf("imeta", "url x", "m y", "a", "b", "c", "d"))
+                val content = words[rnd.nextInt(words.size)] + " " + i
+                // Older replaceables (kinds 0/3) are refused by the store; that's fine here.
+                runCatching { store.insert(s.sign<Event>(1_700_000_000L + rnd.nextInt(1000), kind, tags.toTypedArray(), content)) }
+            }
+        }
+
+        val driver = BundledSQLiteDriver()
+        profileConn = driver.open(dbFile.toAbsolutePath().toString())
+        profileConn.execSQL("PRAGMA query_only = ON")
+        oracleConn = driver.open(dbFile.toAbsolutePath().toString())
+        oracleConn.execSQL("CREATE TEMP VIEW events AS ${sources.events.sql}")
+        oracleConn.execSQL("CREATE TEMP VIEW tags AS ${sources.tags.sql}")
+    }
+
+    @AfterTest
+    fun tearDown() {
+        profileConn.close()
+        oracleConn.close()
+        store.close()
+        listOf("", "-wal", "-shm", "-journal").forEach { Path.of(dbFile.toString() + it).deleteIfExists() }
+    }
+
+    private class Outcome(
+        val columns: List<String>,
+        val rows: List<String>,
+        val error: Boolean,
+    ) {
+        override fun toString() = if (error) "ERROR" else "$columns ${rows.size} rows ${rows.take(5)}"
+    }
+
+    private fun runOn(
+        conn: SQLiteConnection,
+        sql: String,
+        args: List<Any?>,
+    ): Outcome =
+        try {
+            SqlCursor(conn, CompiledQuery(sql, args)).use { c ->
+                // Multiset comparison: generated queries rarely have a total order.
+                Outcome(c.columns, c.fetch(100_000).map { it.toString() }.sorted(), false)
+            }
+        } catch (e: Exception) {
+            if (e is SqlException) throw e
+            Outcome(emptyList(), emptyList(), true)
+        }
+
+    @Test
+    fun compiledQueriesMatchSqliteOnRawText() {
+        val gen = QueryGen(Random(42))
+        var compared = 0
+        var engineErrors = 0
+        var rejectedBoth = 0
+        repeat(3000) { n ->
+            val sql = gen.query()
+            val expected = runOn(oracleConn, sql, emptyList())
+            val compiled =
+                try {
+                    SqlCompiler.compile(sql, sources)
+                } catch (e: SqlException) {
+                    // Refusing what SQLite refuses is fine; refusing what it runs is a parser bug.
+                    if (!expected.error) fail("profile rejected a query SQLite runs, #$n: ${e.message}\n$sql")
+                    rejectedBoth++
+                    return@repeat
+                }
+            val actual = runOn(profileConn, compiled.sql, compiled.args)
+            if (expected.error != actual.error || expected.columns != actual.columns || expected.rows != actual.rows) {
+                fail("mismatch on #$n\n  query:    $sql\n  compiled: ${compiled.sql}\n  sqlite:   $expected\n  profile:  $actual")
+            }
+            compared++
+            if (expected.error) engineErrors++
+        }
+        // Keep the generator honest: most queries must actually run.
+        assertTrue(engineErrors + rejectedBoth < compared / 5, "too many invalid queries: $engineErrors + $rejectedBoth of $compared")
+    }
+
+    /**
+     * Random profile queries over the virtual schema. Expressions are
+     * emitted without parentheses so the parser's precedence is under test.
+     */
+    private class QueryGen(
+        val r: Random,
+    ) {
+        private val eventsCols = listOf("id", "pubkey", "created_at", "kind", "content")
+        private val tagsCols = listOf("event_id", "idx", "name", "value", "v2", "v3", "rest", "created_at", "kind")
+        private val strings = listOf("'nostr'", "'t'", "'p'", "'%o%'", "'n_str'", "'Nostr'", "''", "'a''b'", "'mention'")
+        private val binOps = listOf("+", "-", "*", "/", "%", "||", "=", "==", "<>", "!=", "<", "<=", ">", ">=", "AND", "OR", "IS", "IS NOT")
+        private val funcs1 = listOf("length", "lower", "upper", "abs", "typeof", "trim", "hex", "unicode")
+
+        private fun <T> pick(list: List<T>) = list[r.nextInt(list.size)]
+
+        fun atom(cols: List<String>): String =
+            when (r.nextInt(10)) {
+                in 0..4 -> pick(cols)
+                5, 6 -> r.nextInt(0, 6).toString()
+                7 -> pick(strings)
+                8 -> "NULL"
+                else -> (1_700_000_000 + r.nextInt(1000)).toString()
+            }
+
+        fun expr(
+            cols: List<String>,
+            depth: Int,
+        ): String {
+            if (depth <= 0) return atom(cols)
+            val d = depth - 1
+            return when (r.nextInt(16)) {
+                0, 1, 2, 3 -> "${expr(cols, d)} ${pick(binOps)} ${expr(cols, d)}"
+                4 -> "NOT ${expr(cols, d)}"
+                5 -> "- ${expr(cols, d)}"
+                6 -> "${pick(funcs1)}(${expr(cols, d)})"
+                7 -> "coalesce(${expr(cols, d)}, ${expr(cols, d)})"
+                8 -> "substr(${expr(cols, d)}, ${r.nextInt(0, 4)}, ${r.nextInt(0, 5)})"
+                9 -> "CASE WHEN ${expr(cols, d)} THEN ${expr(cols, d)} ELSE ${expr(cols, d)} END"
+                10 -> "${expr(cols, d)} ${if (r.nextBoolean()) "NOT " else ""}BETWEEN ${expr(cols, d)} AND ${expr(cols, d)}"
+                11 -> "${expr(cols, d)} ${if (r.nextBoolean()) "NOT " else ""}IN (${expr(cols, d)}, ${atom(cols)})"
+                12 -> "${expr(cols, d)} ${if (r.nextBoolean()) "NOT " else ""}${pick(listOf("LIKE", "GLOB"))} ${pick(strings)}"
+                13 -> "${expr(cols, d)} ${pick(listOf("IS NULL", "ISNULL", "NOTNULL", "NOT NULL"))}"
+                14 -> "CAST(${expr(cols, d)} AS ${pick(listOf("INTEGER", "TEXT", "REAL"))})"
+                else -> "(${expr(cols, d)})"
+            }
+        }
+
+        private fun source(): Pair<String, List<String>> =
+            when (r.nextInt(4)) {
+                0 -> "events" to eventsCols
+                1 -> "tags" to tagsCols
+                2 -> "events e JOIN tags t ON t.event_id = e.id" to listOf("e.kind", "e.content", "t.name", "t.value", "e.created_at", "t.idx")
+                else -> "(SELECT kind, content AS c, created_at FROM events WHERE kind ${pick(listOf("<", ">", "="))} ${r.nextInt(0, 8)}) s" to listOf("kind", "c", "created_at", "s.kind")
+            }
+
+        fun select(width: Int? = null): String {
+            val (from, cols) = source()
+            val n = width ?: r.nextInt(1, 4)
+            val sb = StringBuilder("SELECT ")
+            if (r.nextInt(5) == 0) sb.append("DISTINCT ")
+            val grouped = r.nextInt(4) == 0
+            if (grouped) {
+                val key = pick(cols)
+                val items = listOf(key) + List(n - 1) { pick(listOf("count(*)", "max(${pick(cols)})", "min(${expr(cols, 1)})", "sum(length(${pick(cols)}))", "total(${pick(cols)})")) }
+                sb.append(items.joinToString(", "))
+                sb.append(" FROM ").append(from)
+                if (r.nextBoolean()) sb.append(" WHERE ").append(expr(cols, 2))
+                sb.append(" GROUP BY ").append(key)
+                if (r.nextBoolean()) sb.append(" HAVING count(*) > ").append(r.nextInt(0, 3))
+            } else {
+                sb.append(List(n) { if (r.nextInt(3) == 0) "${expr(cols, 2)} AS c$it" else expr(cols, 2) }.joinToString(", "))
+                sb.append(" FROM ").append(from)
+                if (r.nextInt(4) != 0) sb.append(" WHERE ").append(expr(cols, 3))
+            }
+            return sb.toString()
+        }
+
+        fun query(): String =
+            when (r.nextInt(10)) {
+                0 -> {
+                    val w = r.nextInt(1, 3)
+                    select(w) + " " + pick(listOf("UNION", "UNION ALL", "INTERSECT", "EXCEPT")) + " " + select(w) +
+                        " " + pick(listOf("UNION", "INTERSECT", "EXCEPT")) + " " + select(w)
+                }
+
+                1 -> {
+                    "WITH x AS (SELECT kind, content, created_at FROM events WHERE ${expr(eventsCols, 2)}) " +
+                        "SELECT kind, count(*) FROM x GROUP BY kind"
+                }
+
+                2 -> {
+                    "SELECT kind, content, row_number() OVER (PARTITION BY kind ORDER BY created_at DESC, id) AS rn FROM events"
+                }
+
+                3 -> {
+                    "SELECT e.kind, (SELECT count(*) FROM tags t WHERE t.event_id = e.id AND ${expr(listOf("t.name", "t.value", "t.idx"), 2)}) FROM events e"
+                }
+
+                4 -> {
+                    "WITH RECURSIVE n(i) AS (SELECT ${r.nextInt(0, 3)} UNION ALL SELECT i + 1 FROM n WHERE i < ${r.nextInt(3, 20)}) " +
+                        "SELECT i, ${expr(listOf("i"), 2)} FROM n"
+                }
+
+                5 -> {
+                    // ORDER BY every output column so LIMIT picks a deterministic multiset.
+                    select(2) + " ORDER BY 1, 2 LIMIT ${r.nextInt(0, 10)} OFFSET ${r.nextInt(0, 3)}"
+                }
+
+                else -> {
+                    select()
+                }
+            }
+    }
+}
