@@ -49,6 +49,8 @@ class ScanSpec(
     val tagName: String? = null,
     /** `tags` only: the row's own `value` (may be set without [tagName]). */
     val tagValues: Set<String>? = null,
+    /** `tags` only: `value <> ''` (so also not null), the rows a tag-value index holds. */
+    val valueNonEmpty: Boolean = false,
     /** Newest-first cap on events, only set when the whole query is a plain newest-first listing. */
     val limit: Int? = null,
     val exact: Boolean = false,
@@ -85,11 +87,16 @@ class ScanSpec(
             limit = limit,
         )
 
-    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, limit, exact)
+    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, exact)
+
+    fun withTimeRange(
+        since: Long?,
+        until: Long?,
+    ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact)
 
     override fun toString() =
         "ScanSpec($table ids=$ids authors=$authors kinds=$kinds since=$since until=$until " +
-            "tag=$tagName:$tagValues limit=$limit exact=$exact)"
+            "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty limit=$limit exact=$exact)"
 }
 
 /**
@@ -115,6 +122,7 @@ internal class ScanAnalyzer(
         var until: Long? = null
         var names: Set<String>? = null
         var values: Set<String>? = null
+        var valueNonEmpty = false
         var exact = true
 
         fun column(e: Expr): String? {
@@ -190,6 +198,13 @@ internal class ScanAnalyzer(
                     }
                 }
 
+                // value <> '' / '' <> value
+                p is Binary && p.op == "<>" && isTags &&
+                    ((column(p.left) == "value" && constant(p.right) == "") || (column(p.right) == "value" && constant(p.left) == "")) -> {
+                    used = true
+                    valueNonEmpty = true
+                }
+
                 // created_at <op> const, either side
                 p is Binary && p.op in RANGE_OPS -> {
                     val leftCol = column(p.left)
@@ -238,6 +253,7 @@ internal class ScanAnalyzer(
             until = until,
             tagName = name,
             tagValues = values,
+            valueNonEmpty = valueNonEmpty,
             // Several candidate names (`name IN ('a','b')`) aren't expressible.
             exact = exact && (names == null || name != null),
         )

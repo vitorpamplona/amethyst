@@ -218,7 +218,7 @@ object SqlPushdown {
             load(it)
         }
         if (count >= limit && limit > 0) {
-            backend.events(ScanSpec(spec.table, spec.ids, spec.authors, spec.kinds, oldest, oldest, spec.tagName, spec.tagValues, exact = spec.exact), load)
+            backend.events(spec.withTimeRange(oldest, oldest), load)
         }
     }
 

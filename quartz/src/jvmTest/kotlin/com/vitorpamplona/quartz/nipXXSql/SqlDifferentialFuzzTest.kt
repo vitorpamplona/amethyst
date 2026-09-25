@@ -257,7 +257,8 @@ class SqlDifferentialFuzzTest {
                         (spec.since == null || (r["created_at"] as Long) >= spec.since!!) &&
                         (spec.until == null || (r["created_at"] as Long) <= spec.until!!) &&
                         (spec.tagName == null || r["name"] == spec.tagName) &&
-                        (spec.tagValues == null || r["value"] in spec.tagValues!!)
+                        (spec.tagValues == null || r["value"] in spec.tagValues!!) &&
+                        (!spec.valueNonEmpty || (r["value"] != null && r["value"] != ""))
                 }
             val groups = if (plan.groupBy.isEmpty()) mapOf(emptyList<Any?>() to kept) else kept.groupBy { r -> plan.groupBy.map { r[it] } }
             answered++
@@ -473,7 +474,8 @@ class SqlDifferentialFuzzTest {
                 }
 
                 17 -> {
-                    "SELECT DISTINCT value FROM tags WHERE name = ${pick(tagNames)}" + (if (r.nextBoolean()) " AND kind = ${pick(kindList)}" else "")
+                    "SELECT DISTINCT value FROM tags WHERE name = ${pick(tagNames)}" + (if (r.nextBoolean()) " AND kind = ${pick(kindList)}" else "") +
+                        (if (r.nextBoolean()) " AND value <> ''" else "")
                 }
 
                 18 -> {
