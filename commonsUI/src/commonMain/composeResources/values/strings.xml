@@ -5391,7 +5391,7 @@
     <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>
     <string name="new_conversation_cordn_chip">Coordinated</string>
     <string name="new_conversation_cordn_best">Best for teams that want one reliable ordering of the conversation.</string>
-    <string name="new_conversation_cordn_cta">Create cordn group</string>
+    <string name="new_conversation_cordn_cta">Create Cordn group</string>
     <string name="new_conversation_cordn_pro_1">End-to-end encrypted with MLS — the coordinator can never read a message.</string>
     <string name="new_conversation_cordn_pro_2">One agreed order for everyone, so history cannot be reshuffled by a bad clock.</string>
     <string name="new_conversation_cordn_con_1">The coordinator learns who is in the group and when you talk, even though it cannot read what you say.</string>

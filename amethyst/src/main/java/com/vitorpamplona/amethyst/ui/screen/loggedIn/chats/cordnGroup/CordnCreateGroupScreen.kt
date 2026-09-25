@@ -39,6 +39,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,11 +50,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
+import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -67,8 +70,11 @@ import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 
 /**
@@ -146,6 +152,8 @@ fun CordnCreateGroupScreen(
         // is what commits to it, and `createGroup` opens the session.
         var discovered by remember { mutableStateOf<CordnCoordinatorDiscovery.Result?>(null) }
         var discovering by remember { mutableStateOf(false) }
+        var showStale by remember { mutableStateOf(false) }
+        var showAllLive by remember { mutableStateOf(false) }
         val discoverFailed = stringRes(R.string.cordn_coordinators_discover_failed)
 
         // Offers this account already holds are not offers; they are the choices
@@ -196,21 +204,82 @@ fun CordnCreateGroupScreen(
                     label = coordinator.label ?: coordinator.pubKey.take(16),
                     selected = selected == coordinator.pubKey,
                     onSelect = { selected = coordinator.pubKey },
+                    relays = relayLabel(coordinator.relays),
                 )
             }
 
-            offers.forEach { offer ->
+            // Split on staleness rather than listing everything flat. A run
+            // against a public relay returns a long tail of coordinators that
+            // last announced months ago, and creating a group on one that has
+            // gone away fails at the first call -- so the live ones come first
+            // and the rest sit behind a count.
+            val cutoff = TimeUtils.now() - TimeUtils.ONE_MONTH
+            val live = offers.filter { it.announcedAt >= cutoff }
+            val stale = offers.filter { it.announcedAt < cutoff }
+            val names = offers.map { it.displayName() }
+
+            // Bounded rather than lazy. The obvious fix for a long list is a
+            // LazyColumn, and it is the wrong one here: this screen is a form,
+            // and a lazy list disposes what scrolls off it -- which for the
+            // text fields below would throw away focus and IME state mid-typing.
+            // Capping the rows keeps composition bounded without putting a form
+            // inside a recycler.
+            val shownLive = if (showAllLive) live else live.take(LIVE_PREVIEW)
+
+            shownLive.forEach { offer ->
                 CoordinatorChoice(
                     // Its own word for itself, and only that: nothing here has
                     // verified the name a coordinator announces.
-                    label = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
+                    label = disambiguate(offer.displayName(), offer.pubKey, names),
                     selected = selected == offer.pubKey,
                     onSelect = { selected = offer.pubKey },
-                    // Staleness decides whether this choice can work at all: a
-                    // coordinator that announced itself two years ago and went
-                    // away takes the group creation down with it.
-                    detail = stringRes(R.string.cordn_coordinators_discover_seen, timeAgoNoDot(offer.announcedAt).trim()),
+                    detail = announcedLabel(offer.announcedAt),
+                    relays = relayLabel(offer.relays),
+                    about = offer.surface.about?.takeIf { it.isNotBlank() },
                 )
+            }
+
+            if (live.size > LIVE_PREVIEW) {
+                TextButton(onClick = { showAllLive = !showAllLive }) {
+                    Text(
+                        if (showAllLive) {
+                            stringRes(R.string.cordn_coordinators_show_fewer)
+                        } else {
+                            stringRes(R.string.cordn_coordinators_show_all, live.size)
+                        },
+                    )
+                }
+            }
+
+            if (stale.isNotEmpty()) {
+                TextButton(onClick = { showStale = !showStale }) {
+                    Text(
+                        if (showStale) {
+                            stringRes(R.string.cordn_coordinators_hide_older)
+                        } else {
+                            stringRes(R.string.cordn_coordinators_show_older, stale.size)
+                        },
+                    )
+                }
+            }
+
+            if (showStale && stale.isNotEmpty()) {
+                Text(
+                    text = stringRes(R.string.cordn_coordinators_stale_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                stale.forEach { offer ->
+                    CoordinatorChoice(
+                        label = disambiguate(offer.displayName(), offer.pubKey, names),
+                        selected = selected == offer.pubKey,
+                        onSelect = { selected = offer.pubKey },
+                        detail = announcedLabel(offer.announcedAt),
+                        relays = relayLabel(offer.relays),
+                        about = offer.surface.about?.takeIf { it.isNotBlank() },
+                        dimmed = true,
+                    )
+                }
             }
 
             CoordinatorChoice(
@@ -395,24 +464,102 @@ private fun CoordinatorChoice(
     selected: Boolean,
     onSelect: () -> Unit,
     detail: String? = null,
+    /** Where it answers. A coordinator has no address beyond its pubkey (§8.5). */
+    relays: String? = null,
+    /** Its own sentence about itself, if it published one. */
+    about: String? = null,
+    /** Dimmed for a coordinator that stopped announcing long ago. */
+    dimmed: Boolean = false,
 ) {
+    val fade = if (dimmed) 0.6f else 1f
     Row(
-        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect),
+        modifier = Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect).padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = onSelect)
-        Column {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = fade),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            relays?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = fade),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            about?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = fade),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             detail?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = fade),
                 )
             }
         }
     }
 }
+
+/** How many live coordinators a discovery run shows before it asks. */
+private const val LIVE_PREVIEW = 8
+
+/** Its announced name, or the key when it published none. */
+private fun DiscoveredCoordinator.displayName(): String = surface.name?.takeIf { it.isNotBlank() } ?: pubKey.take(16)
+
+/**
+ * How long ago a coordinator last announced, in words that stay words.
+ *
+ * `timeAgoNoDot` answers with a span for something recent and an absolute date
+ * for anything past a month, and the caller used one template for both — so
+ * every stale coordinator on the discovery list read "Last announced Aug 7
+ * ago". The date branch gets a template with no "ago" in it.
+ */
+@Composable
+private fun announcedLabel(announcedAt: Long): String =
+    if (TimeUtils.now() - announcedAt > TimeUtils.ONE_MONTH) {
+        stringRes(R.string.cordn_coordinators_discover_seen_on, timeAgoNoDot(announcedAt).trim())
+    } else {
+        stringRes(R.string.cordn_coordinators_discover_seen, timeAgoNoDot(announcedAt).trim())
+    }
+
+/** The hosts it answers on, the first two and a count of the rest. */
+@Composable
+private fun relayLabel(relays: List<NormalizedRelayUrl>): String? {
+    if (relays.isEmpty()) return null
+    val hosts = relays.map { it.url.substringAfter("://").trim('/') }.distinct()
+    val shown = hosts.take(2).joinToString(", ")
+    return if (hosts.size <= 2) {
+        shown
+    } else {
+        stringRes(R.string.cordn_coordinators_relays_more, shown, hosts.size - 2)
+    }
+}
+
+/**
+ * Names are the coordinator's own word for itself and collide constantly — the
+ * reference server ships as "My coordinator", so a discovery run returns a
+ * dozen rows with that name and nothing to tell them apart. A pubkey prefix is
+ * added only to the ones that actually clash, so the common case stays clean.
+ */
+internal fun disambiguate(
+    name: String,
+    pubKey: HexKey,
+    allNames: List<String>,
+): String = if (allNames.count { it == name } > 1) "$name \u00b7 ${pubKey.take(8)}" else name
 
 /**
  * The coordinator this screen would create against, or null while the form

@@ -365,7 +365,7 @@
     <string name="cordn_info_members">Members</string>
     <string name="cordn_info_egalitarian">This group has no admins: everyone can add, remove and rename, permanently.</string>
     <string name="cordn_info_technical">Technical details</string>
-    <string name="cordn_create_title">New cordn group</string>
+    <string name="cordn_create_title">New Cordn group</string>
     <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
     <string name="cordn_create_coordinator">Coordinator</string>
     <string name="cordn_create_coordinator_discover">Find coordinators</string>
@@ -403,7 +403,15 @@
     <string name="cordn_coordinators_discover_failed">Could not read announcements</string>
     <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
     <string name="cordn_coordinators_discover_unheard">Nothing found, and %1$d of your relays did not answer.</string>
-    <string name="cordn_coordinators_discover_seen">Last announced %1$s ago</string>
+    <string name="cordn_coordinators_discover_seen">Announced %1$s ago</string>
+    <string name="cordn_coordinators_discover_seen_on">Last announced %1$s</string>
+    <string name="cordn_coordinators_relays">%1$s</string>
+    <string name="cordn_coordinators_relays_more">%1$s +%2$d more</string>
+    <string name="cordn_coordinators_show_all">Show all %1$d</string>
+    <string name="cordn_coordinators_show_fewer">Show fewer</string>
+    <string name="cordn_coordinators_show_older">Show %1$d that stopped announcing</string>
+    <string name="cordn_coordinators_hide_older">Hide the ones that stopped announcing</string>
+    <string name="cordn_coordinators_stale_note">These have not announced in over a month. Creating a group on one that has gone away will fail.</string>
     <string name="cordn_info_add_member">Add someone</string>
     <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
     <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
