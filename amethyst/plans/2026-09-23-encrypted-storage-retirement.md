@@ -42,10 +42,20 @@ to none of those fails that test at the commit that adds it.
 | NIP-46 material, wallets, payment source | the account's encrypted DataStore | **kept** |
 | current account, saved accounts | the encrypted roster store | **kept** |
 | UI settings (`shared_settings`) | `UiSharedPreferences`' own DataStore | none left |
+| location-chat identity — seed, nickname | the account's encrypted DataStore, as its own `GeohashIdentitySecrets` group | **kept** |
 
-The three stores that still mirror are the ones whose loss is not an
-annoyance: an account that cannot be listed, signed with, or paid from. They
-keep the rollback window open until the device pass below has happened.
+The stores that still mirror are the ones whose loss is not an annoyance: an
+account that cannot be listed, signed with, or paid from. They keep the
+rollback window open until the device pass below has happened.
+
+The location-chat identity is the odd one, in two ways worth knowing before
+step 4. It is its **own** group rather than fields on `AccountSecrets`: every
+account save mirrors a whole `AccountSecrets` built from `AccountSettings`,
+which does not hold these, and that group save removes keys whose value is
+null — folded in, the seed would be deleted by the next unrelated save and
+every geohash identity the user has would silently change. And its legacy home
+is a **different file**, `secret_keeper_<pubkey hex>`, because its writer
+passed `signer.pubKey` where every other caller passes an npub.
 
 The UI settings copy is **guarded** where the others are not. That store has
 been the real home of these settings for a while, so most installs already
@@ -69,7 +79,11 @@ cleanup treat any *other* unclaimed key as a reason to keep the file.
 ## Deleting a legacy file
 
 `LegacyPreferenceCleanup` runs after every successful account load and deletes
-that account's file only when it can prove nothing would be lost:
+that account's files — `secret_keeper_<npub>` **and** the location-chat
+identity's `secret_keeper_<pubkey hex>` — only when it can prove nothing would
+be lost. Both, because nothing else would ever remove the second one: the
+cleanup enumerates npub-keyed files, so left out of this it would sit on disk
+holding a seed forever.
 
 1. **Every key in the file is accounted for** — claimed by a table, one of the
    secrets, or on the accepted list. Driven from the file's own keys, not from
@@ -83,9 +97,14 @@ that account's file only when it can prove nothing would be lost:
 3. **The secrets and the private key read back identical** from the current
    stores. Those *are* still dual-written, so the stronger question is
    available and is asked.
-4. A store that cannot be read is a reason, never a pass.
+4. **The location-chat identity has been copied**, when its file holds one.
+   Read from the hex-keyed file, not the npub one — these two keys were never
+   in that one, so a check pointed at it would never fire. An account that
+   never opened a location chat holds neither key, which is a real answer and
+   must not hold the file hostage.
+5. A store that cannot be read is a reason, never a pass.
 
-It refuses today, and says so, because of the fifth condition:
+It refuses today, and says so, because of the last condition:
 `LEGACY_WRITES_RETIRED` is false. While the app still mirrors into the file,
 deleting it achieves nothing — the next save recreates it — and would look
 like it had worked.
@@ -97,7 +116,10 @@ like it had worked.
 3. Do the device pass below.
 4. Flip `LEGACY_WRITES_RETIRED` and drop the legacy writes for the identity,
    key, secret and roster stores. This ends the rollback window, so it is a
-   release of its own.
+   release of its own. The flag is `internal`, not private, so the
+   location-chat mirror in `GeohashChatIdentityState` reads the same switch —
+   flipping it stops that write too, and the cleanup then removes both of the
+   account's legacy files. One flip, nothing left behind.
 5. Keep the reader, and `androidx.security.crypto`, indefinitely.
 
 ## Verification this needs and has not had
@@ -110,6 +132,9 @@ the one irreversible step in the whole series.
 On a real device, before step 4 ships: upgrade an install holding accounts and
 confirm they all list; open one and sign; force-stop and relaunch; add and
 remove an account; pair a NIP-46 signer; pay from a wallet; check the
-key-backup nudge stays dismissed; confirm UI settings survive the upgrade.
+key-backup nudge stays dismissed; confirm UI settings survive the upgrade;
+open a location chat under a bunker or external signer and confirm the
+throwaway identity and nickname are the same ones as before the upgrade — the
+seed is the one migrated value whose loss is silent rather than visible.
 Then let the cleanup run with the flag flipped, and confirm the files are gone
 and everything above still holds on the next cold start.

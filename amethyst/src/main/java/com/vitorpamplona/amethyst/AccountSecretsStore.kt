@@ -127,6 +127,14 @@ class AccountSecretsStore(
         return legacy
     }
 
+    /**
+     * What the current store holds for the location-chat identity, with no
+     * fallback to the legacy file — the same distinction [stored] draws, and
+     * for the same reader: [LegacyPreferenceCleanup] has to tell "migrated"
+     * from "falling back and looking migrated".
+     */
+    suspend fun storedGeohashIdentity(npub: String): GeohashIdentitySecrets? = stores.loadGeohashIdentity(npub)
+
     /** Mirrors a save into the new store. The legacy write stays where it is. */
     suspend fun mirrorGeohashIdentity(
         npub: String,

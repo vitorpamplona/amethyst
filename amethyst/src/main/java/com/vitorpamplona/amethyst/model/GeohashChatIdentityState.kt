@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LegacySharedPreferences
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.accountSecretsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
@@ -121,7 +122,11 @@ class GeohashChatIdentityState(
             persist(current().copy(nickname = trimmed))
             // Mirrored, not moved: the legacy file stays readable until the
             // legacy writes are retired app-wide, so a rollback keeps the handle.
-            Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
+            // Gated on the same switch as every other mirror — otherwise flipping
+            // it would retire the documented four and leave this one writing.
+            if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
+                Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
+            }
         }
     }
 
@@ -151,7 +156,9 @@ class GeohashChatIdentityState(
 
         val fresh = RandomInstance.bytes(GeohashKeyDerivation.SEED_SIZE)
         persist(current().copy(deviceSeed = fresh.toHexKey()))
-        Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_KEY, fresh.toHexKey()) }
+        if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
+            Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_KEY, fresh.toHexKey()) }
+        }
         return fresh
     }
 

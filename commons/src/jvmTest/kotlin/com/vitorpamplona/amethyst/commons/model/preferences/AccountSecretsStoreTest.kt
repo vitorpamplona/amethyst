@@ -296,4 +296,25 @@ class AccountSecretsStoreTest {
 
             assertEquals(identity, subject.loadGeohashIdentity(npub))
         }
+
+    /**
+     * The copy has to be idempotent, because the loader now runs it on every
+     * account load rather than only when a location chat is opened. A second
+     * run must not overwrite what the user has changed since the first.
+     */
+    @Test
+    fun recopyingDoesNotClobberALaterEdit() =
+        runTest {
+            val subject = stores()
+            subject.saveGeohashIdentity(npub, GeohashIdentitySecrets(deviceSeed = "a".repeat(64), nickname = "old"))
+
+            // What a fresh load would find in the legacy file: the pre-migration value.
+            val stored = subject.loadGeohashIdentity(npub)
+            assertEquals("old", stored?.nickname)
+
+            subject.saveGeohashIdentity(npub, GeohashIdentitySecrets(deviceSeed = "a".repeat(64), nickname = "new"))
+
+            assertEquals("new", subject.loadGeohashIdentity(npub)?.nickname)
+            assertEquals("a".repeat(64), subject.loadGeohashIdentity(npub)?.deviceSeed)
+        }
 }

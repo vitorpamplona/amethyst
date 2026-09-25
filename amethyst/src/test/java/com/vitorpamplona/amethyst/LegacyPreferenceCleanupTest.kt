@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
+import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyBooleanKey
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyKeyTable
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyPreferenceSource
@@ -52,18 +53,26 @@ private class MapSource(
 
 private class FakeFiles(
     private val values: Map<String, Any>,
+    private val geohashValues: Map<String, Any> = emptyMap(),
 ) : LegacyAccountFiles {
     var deleted = false
+        private set
+
+    /** The `secret_keeper_<pubkey hex>` file goes with the account's own. */
+    var deletedGeohash = false
         private set
 
     var present = true
 
     override fun source(npub: String) = MapSource(values)
 
+    override fun geohashSource(npub: String) = MapSource(geohashValues)
+
     override fun exists(npub: String) = present
 
     override suspend fun delete(npub: String): Boolean {
         deleted = true
+        deletedGeohash = true
         present = false
         return true
     }
@@ -73,6 +82,7 @@ private class FakeSecrets(
     private val stored: AccountSecrets? = AccountSecrets(),
     private val key: String? = null,
     private val throws: Boolean = false,
+    private val geohash: GeohashIdentitySecrets? = GeohashIdentitySecrets(),
 ) : MigratedSecrets {
     override suspend fun secrets(npub: String): AccountSecrets? {
         if (throws) throw IllegalStateException("keystore unavailable")
@@ -82,6 +92,11 @@ private class FakeSecrets(
     override suspend fun privateKey(npub: String): String? {
         if (throws) throw IllegalStateException("keystore unavailable")
         return key
+    }
+
+    override suspend fun geohashIdentity(npub: String): GeohashIdentitySecrets? {
+        if (throws) throw IllegalStateException("keystore unavailable")
+        return geohash
     }
 }
 
@@ -306,5 +321,78 @@ class LegacyPreferenceCleanupTest {
                 ),
                 subject.verify(NPUB),
             )
+        }
+    // ── the location-chat identity's own legacy file ──────────────────
+
+    /**
+     * The seed is in `secret_keeper_<pubkey hex>`, and [delete] removes that
+     * file too. So the gate has to refuse while it holds something the current
+     * store does not — otherwise every geohash identity the account has would
+     * change on the next launch.
+     */
+    @Test
+    fun anUncopiedLocationChatIdentityBlocksDeletion() =
+        runTest {
+            val (files, subject) =
+                cleanup(
+                    values = emptyMap(),
+                    files = FakeFiles(emptyMap(), mapOf("geohash_chat_device_seed" to "a".repeat(64))),
+                    secrets = FakeSecrets(geohash = null),
+                )
+
+            val result = subject.deleteIfVerified(NPUB)
+
+            assertTrue(result is LegacyCleanupResult.Kept)
+            assertTrue(
+                "was ${(result as LegacyCleanupResult.Kept).reasons}",
+                result.reasons.any { it.contains("location-chat identity") },
+            )
+            assertTrue(!files.deleted)
+        }
+
+    /** Copied across: nothing to lose, so it must not block. */
+    @Test
+    fun aCopiedLocationChatIdentityDoesNotBlockDeletion() =
+        runTest {
+            val (files, subject) =
+                cleanup(
+                    values = emptyMap(),
+                    files = FakeFiles(emptyMap(), mapOf("geohash_chat_device_seed" to "a".repeat(64))),
+                    secrets = FakeSecrets(geohash = GeohashIdentitySecrets(deviceSeed = "a".repeat(64))),
+                )
+
+            assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
+            assertTrue(files.deleted)
+        }
+
+    /**
+     * An account that never opened a location chat holds neither key. That is a
+     * real answer, not "not migrated", and must not hold the file hostage.
+     */
+    @Test
+    fun anAccountWithNoLocationChatIdentityIsNotBlocked() =
+        runTest {
+            val (files, subject) =
+                cleanup(
+                    values = emptyMap(),
+                    files = FakeFiles(emptyMap(), emptyMap()),
+                    secrets = FakeSecrets(geohash = null),
+                )
+
+            assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
+            assertTrue(files.deleted)
+        }
+
+    /**
+     * Both files go, or the hex one is an orphan nothing will ever remove —
+     * the whole reason it is wired into this gate.
+     */
+    @Test
+    fun deletingTheAccountFileAlsoRemovesTheLocationChatFile() =
+        runTest {
+            val (files, subject) = cleanup(values = emptyMap())
+
+            assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
+            assertTrue("the hex-keyed file must be deleted with the account's own", files.deletedGeohash)
         }
 }

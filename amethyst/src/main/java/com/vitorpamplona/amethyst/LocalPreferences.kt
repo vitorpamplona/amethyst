@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettings
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.orIfUnusable
 import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSecrets
+import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -78,6 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -325,8 +327,14 @@ object LocalPreferences {
      * Flipping this is a release of its own, and it ends the rollback window.
      * It waits on the device pass in
      * `amethyst/plans/2026-09-23-encrypted-storage-retirement.md`.
+     *
+     * `internal` rather than private because the mirror is not all in this
+     * file: [com.vitorpamplona.amethyst.model.GeohashChatIdentityState] writes
+     * the location-chat identity into its own legacy file and reads this to
+     * know when to stop. Private, it would have kept writing after the flip
+     * and the switch would only half work.
      */
-    private const val LEGACY_WRITES_RETIRED = false
+    internal const val LEGACY_WRITES_RETIRED = false
 
     private val legacyCleanup: LegacyPreferenceCleanup by lazy {
         LegacyPreferenceCleanup(
@@ -338,12 +346,25 @@ object LocalPreferences {
 
                     override fun exists(npub: String) = legacyAccountFile(npub).exists()
 
+                    override fun geohashSource(npub: String) = LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub)))
+
                     override suspend fun delete(npub: String): Boolean {
                         // Clear before unlinking, as deleteAccount does: the live
                         // SharedPreferences still holds the values in memory and
                         // would write them straight back out.
                         encryptedPreferences(npub).edit(commit = true) { clear() }
-                        return legacyAccountFile(npub).delete()
+                        val removedAccountFile = legacyAccountFile(npub).delete()
+
+                        // The location-chat identity is in a SECOND file, keyed by the
+                        // pubkey hex rather than the npub, because that is the key its
+                        // writer passed. Nothing else would ever remove it, so it is
+                        // deleted here with the account's own file rather than left as
+                        // an orphan holding a seed forever.
+                        val hex = geohashLegacyKey(npub)
+                        encryptedPreferences(hex).edit(commit = true) { clear() }
+                        legacyAccountFile(hex).delete()
+
+                        return removedAccountFile
                     }
                 },
             currentStore = { npub -> accountStores.getDataStore(npub).data.first() },
@@ -352,6 +373,8 @@ object LocalPreferences {
                     override suspend fun secrets(npub: String) = accountSecretsStore.stored(npub)
 
                     override suspend fun privateKey(npub: String) = accountKeyStore.stored(npub)
+
+                    override suspend fun geohashIdentity(npub: String) = accountSecretsStore.storedGeohashIdentity(npub)
                 },
             legacyWritesRetired = LEGACY_WRITES_RETIRED,
         )
@@ -366,6 +389,37 @@ object LocalPreferences {
     private fun legacyAccountFile(npub: String): File {
         val name = if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) "${DEBUG_PREFERENCES_NAME}_$npub" else EncryptedStorage.prefsFileName(npub)
         return File(prefsDirPath, "$name.xml")
+    }
+
+    /**
+     * The key the location-chat identity's legacy file is named by.
+     *
+     * [GeohashChatIdentityState] passed `signer.pubKey` — hex — where every
+     * other caller of [encryptedPreferences] passes an npub, so that material
+     * sits in `secret_keeper_<hex>`, a different file from the account's own
+     * `secret_keeper_<npub>`. Converting here keeps that quirk in one place.
+     */
+    private fun geohashLegacyKey(npub: String): String = npub.bechToBytes("npub").toHexKey()
+
+    /**
+     * Copies the location-chat identity out of `secret_keeper_<pubkey hex>` on
+     * the first load after the upgrade.
+     *
+     * Eager, not lazy. [GeohashChatIdentityState] also copies on first use, but
+     * only a user who opens a location chat ever reaches it — and the cleanup
+     * refuses to delete an account's legacy files while that file still holds
+     * an identity the current store does not. Left to the lazy path alone, a
+     * user who never opens another location chat would keep both files
+     * forever, which is the opposite of what the migration is for.
+     *
+     * Idempotent: the store's marker makes every run after the first a no-op,
+     * so re-running it on each load cannot overwrite a later edit.
+     */
+    private suspend fun copyGeohashIdentity(npub: String) {
+        accountSecretsStore.readGeohashIdentity(
+            npub = npub,
+            legacy = readLegacyGeohashIdentity(LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub)))),
+        )
     }
 
     /**
@@ -1031,7 +1085,15 @@ object LocalPreferences {
             // while `mutex` serialises every account load — under the lock, each
             // account on a multi-account cold start would wait for the previous
             // one's full cleanup pass. Nothing here feeds the load.
-            if (loadedHere) legacyCleanup.deleteIfVerified(npub)
+            if (loadedHere) {
+                // Before the cleanup, which refuses to delete this account's files
+                // while the location-chat identity has not been copied. Here rather
+                // than inside the loader for the reason [AccountStoreData] gives:
+                // that method is at the JVM's 64KB limit and one more suspend call
+                // inside it does not fit.
+                copyGeohashIdentity(npub)
+                legacyCleanup.deleteIfVerified(npub)
+            }
 
             accountSettings
         }

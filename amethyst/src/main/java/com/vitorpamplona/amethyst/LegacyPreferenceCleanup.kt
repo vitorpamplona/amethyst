@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AccountIdentityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissalStore
 import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibilityStore
+import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyAccountSecretNames
 import com.vitorpamplona.amethyst.commons.model.preferences.LegacyKeyTable
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsSto
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -100,6 +102,17 @@ sealed interface LegacyCleanupResult {
 interface LegacyAccountFiles {
     fun source(npub: String): LegacyPreferenceSource
 
+    /**
+     * The account's OTHER legacy file: the location-chat identity, which lives
+     * in `secret_keeper_<pubkey hex>` rather than `secret_keeper_<npub>`
+     * because that is the key its writer passed.
+     *
+     * Separate from [source] because [delete] removes both, and a check that
+     * read the npub file for these keys would never find them — they are not
+     * in it. That mistake was made once already.
+     */
+    fun geohashSource(npub: String): LegacyPreferenceSource
+
     fun exists(npub: String): Boolean
 
     /** Returns false when there was nothing to delete. */
@@ -113,6 +126,14 @@ interface MigratedSecrets {
 
     /** Null only when the account genuinely has no private key. Throws when the store is unreadable. */
     suspend fun privateKey(npub: String): String?
+
+    /**
+     * The location-chat identity, or null when it has not been copied across.
+     *
+     * Its own question because it migrates out of its own file: [AccountSecrets]
+     * being present says nothing about whether this was carried over.
+     */
+    suspend fun geohashIdentity(npub: String): GeohashIdentitySecrets?
 }
 
 /**
@@ -255,7 +276,40 @@ class LegacyPreferenceCleanup(
             }
         }
 
+        reasons += geohashMismatches(npub)
+
         return reasons
+    }
+
+    /**
+     * Whether deleting this account's `secret_keeper_<pubkey hex>` file would
+     * lose its location-chat identity.
+     *
+     * Read from [LegacyAccountFiles.geohashSource], not from the npub file the
+     * rest of [verify] walks: these two keys were never in that one. An account
+     * that never opened a location chat holds neither, and needs no copy.
+     */
+    private suspend fun geohashMismatches(npub: String): List<String> {
+        val legacy =
+            try {
+                readLegacyGeohashIdentity(files.geohashSource(npub))
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not read the location-chat identity file for $npub", e)
+                return listOf("the location-chat identity file could not be read")
+            }
+
+        if (legacy == GeohashIdentitySecrets()) return emptyList()
+
+        return try {
+            if (secrets.geohashIdentity(npub) == null) {
+                listOf("the location-chat identity has not been copied across")
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read the location-chat identity store for $npub", e)
+            listOf("the location-chat identity store could not be read")
+        }
     }
 
     /**
