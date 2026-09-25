@@ -40,9 +40,15 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.TakenKeyPackage
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -150,15 +156,17 @@ class CordnRuntimeTest {
                 CoroutineExceptionHandler { _, throwable -> leaked += throwable },
         ).also { scopes += it }
 
-    private fun runtime(scope: CoroutineScope) =
-        CordnRuntime(
-            accountSigner = signer,
-            client = EmptyNostrClient(),
-            filesDir = root,
-            scope = scope,
-            cipher = XorCipher(),
-            links = links,
-        )
+    private fun runtime(
+        scope: CoroutineScope,
+        client: INostrClient = EmptyNostrClient(),
+    ) = CordnRuntime(
+        accountSigner = signer,
+        client = client,
+        filesDir = root,
+        scope = scope,
+        cipher = XorCipher(),
+        links = links,
+    )
 
     /**
      * Waits for [condition], or fails by name.
@@ -195,6 +203,71 @@ class CordnRuntimeTest {
         val real = leaked.filterNot { it is CancellationException }
         check(real.isEmpty()) { "a runtime coroutine leaked: ${real.joinToString { it.toString() }}" }
     }
+
+    /**
+     * Records every REQ, so a test can say which relays were asked what.
+     *
+     * [EmptyNostrClient] answers nothing, which is all this needs: the
+     * assertion is about the filter that goes out, not the events that come
+     * back.
+     */
+    private class RecordingClient(
+        delegate: INostrClient = EmptyNostrClient(),
+    ) : INostrClient by delegate {
+        val reqs = java.util.concurrent.CopyOnWriteArrayList<Map<NormalizedRelayUrl, List<Filter>>>()
+
+        override fun subscribe(
+            subId: String,
+            filters: Map<NormalizedRelayUrl, List<Filter>>,
+            listener: SubscriptionListener?,
+        ) {
+            reqs += filters
+        }
+    }
+
+    @Test
+    fun `opening a coordinator asks its own relays who it is`() =
+        runBlocking {
+            // The screens render a coordinator as the Nostr user it is, which
+            // puts it in LocalCache and sets the user-metadata machinery looking
+            // for its kind 0. Left alone, that lookup has no outbox to go on and
+            // falls through to THIS ACCOUNT's index and home relays -- telling
+            // them the account is interested in a pubkey that CEP-6
+            // announcements publicly identify as a coordinator. Fetching the
+            // kind 0 and the kind 10002 here, from the coordinator's own relays,
+            // is what stops that: with a relay list cached the outbox finder
+            // issues no discovery filter at all.
+            val client = RecordingClient()
+            val config = configFor(keyA)
+
+            runtime(runtimeScope(), client).session(config)
+
+            awaitUntil("the coordinator's profile to be requested") { client.reqs.isNotEmpty() }
+
+            val profileReqs =
+                client.reqs.filter { req ->
+                    req.values.any { filters ->
+                        filters.any { it.authors == listOf(keyA) }
+                    }
+                }
+
+            assertTrue("no request carried the coordinator as its author", profileReqs.isNotEmpty())
+
+            profileReqs.forEach { req ->
+                assertEquals(
+                    "asked the wrong relays -- this must not reach the account's own relays",
+                    config.relays.toSet(),
+                    req.keys,
+                )
+                req.values.flatten().forEach {
+                    assertEquals(
+                        "expected only the profile and relay-list kinds (CEP-23, CEP-17)",
+                        listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
+                        it.kinds,
+                    )
+                }
+            }
+        }
 
     @Test
     fun `opening a coordinator with nothing published does not publish a key package`() =

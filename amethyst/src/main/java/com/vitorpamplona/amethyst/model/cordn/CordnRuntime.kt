@@ -51,9 +51,13 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +162,45 @@ class CordnRuntime(
                     )
                 loops[config.pubKey] = loop
                 loop.start(scope)
+
+                // A coordinator is a Nostr identity, and CEP-23/CEP-17 say it
+                // may publish a kind 0 and a kind 10002 like anybody else. Its
+                // own relays are where those live, so they are fetched here,
+                // from the relays this account already talks to for cordn.
+                //
+                // Not a nicety -- it is what keeps the screens' name-and-face
+                // lookup off this account's home relays. Rendering a
+                // coordinator with UserPicture/observeUserNameByHex puts it in
+                // LocalCache as a User, and UserOutboxFinderSubAssembler then
+                // asks who it is: with a relay list cached it has an outbox for
+                // the pubkey and issues no discovery filter at all
+                // (`if (noOutboxList.isEmpty()) return null`), while without
+                // one pickRelaysToLoadUsers falls through to this account's
+                // index and home relays -- telling them the account is
+                // interested in a pubkey that CEP-6 announcements publicly
+                // identify as a coordinator. Relay hints alone do not close
+                // that: it broadens the search anyway below three of them, and
+                // a coordinator usually lists one or two.
+                //
+                // The global CacheClientConnector files whatever comes back, so
+                // there is nothing to consume here, and failure is silent on
+                // purpose: a coordinator with no profile is ordinary, and the
+                // screens already fall back to the key.
+                scope.launch {
+                    runCatching {
+                        client.fetchAll(
+                            filters =
+                                config.relays.associateWith {
+                                    listOf(
+                                        Filter(
+                                            kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
+                                            authors = listOf(config.pubKey),
+                                        ),
+                                    )
+                                },
+                        )
+                    }
+                }
                 // A coordinator that stops answering is otherwise invisible:
                 // the rooms are there, they are simply never updated again, and
                 // the whole sync path logged nothing at all. Only the failing
