@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -340,6 +341,19 @@ private fun CordnGroupChat(
             val newest = rows.firstOrNull()?.envelope
             AutoScrollToNewest(listState, newest?.id, mine = newest?.pubKey == me)
 
+            // A room with nothing in it said nothing at all, where every other chat
+            // crossfades a real empty state. There is no error or loading branch to
+            // match: the session opens behind `restoreRoomState` and a room that cannot
+            // reach its coordinator says so through the send banner below, on the
+            // action that actually needed it.
+            if (rows.isEmpty()) {
+                EmptyState(
+                    title = stringRes(R.string.cordn_chat_empty_title),
+                    description = stringRes(R.string.cordn_chat_empty_description),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             LazyColumn(
                 state = listState,
                 // Anchored at the bottom like every other chat: a room opens on
@@ -347,7 +361,14 @@ private fun CordnGroupChat(
                 // are reversed to match.
                 reverseLayout = true,
                 contentPadding = FeedPadding,
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
+                // No weight while the empty state holds the space, or the two would
+                // split the screen and the placeholder would sit in half of it.
+                modifier =
+                    if (rows.isEmpty()) {
+                        Modifier.fillMaxWidth()
+                    } else {
+                        Modifier.weight(1f).fillMaxWidth()
+                    }.padding(horizontal = 12.dp),
             ) {
                 itemsIndexed(rows, key = { _, it -> it.envelope.id }) { index, message ->
                     // `rows` runs newest-first and the list is reverse-laid-out,

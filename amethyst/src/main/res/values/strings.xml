@@ -324,7 +324,6 @@
     <string name="cordn_action_pin">Pin</string>
     <string name="cordn_action_unpin">Unpin</string>
     <string name="cordn_action_editing">Editing your message</string>
-    <string name="cordn_media_attach">Attach a file</string>
     <string name="cordn_media_upload_failed">Could not send that file.</string>
     <string name="cordn_send_failed">That did not send.</string>
     <string name="cordn_send_no_session">This group\'s coordinator is not open, so nothing can be sent yet.</string>
@@ -373,6 +372,8 @@
     <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
     <string name="cordn_chat_yesterday">Yesterday</string>
     <string name="cordn_chat_unread_divider">New messages</string>
+    <string name="cordn_chat_empty_title">No messages yet</string>
+    <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
     <string name="cordn_reactions_title">Reactions</string>
     <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
     <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>

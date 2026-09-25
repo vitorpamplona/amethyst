@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -47,10 +44,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
@@ -59,8 +58,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -113,8 +114,20 @@ internal fun CordnComposer(
             )
         }
 
-    DisposableEffect(suggestions) {
-        onDispose { suggestions.reset() }
+    // `:shortcode:` completion, as the DM and Concord composers have. Cordn inserts the
+    // emoji's URL rather than its shortcode: a shortcode only resolves for a reader who
+    // also got the NIP-30 `emoji` tags, and a cordn message carries none — so everyone
+    // else would have read a literal ":shrug:". Same reasoning as forcing `nostr:` for
+    // user mentions, and the URL renders as the image for every reader.
+    val emojiSuggestions = remember(accountViewModel) { EmojiSuggestionState(accountViewModel.account.emoji) }
+
+    WatchAndLoadMyEmojiList(accountViewModel)
+
+    DisposableEffect(suggestions, emojiSuggestions) {
+        onDispose {
+            suggestions.reset()
+            emojiSuggestions.reset()
+        }
     }
 
     LaunchedEffect(draftState, room) {
@@ -133,6 +146,7 @@ internal fun CordnComposer(
                 // onTextChanged only fires for typing, so a list left open by a
                 // half-typed "@na" survived the field being cleared on send.
                 suggestions.reset()
+                emojiSuggestions.reset()
             }
         }
     }
@@ -140,11 +154,6 @@ internal fun CordnComposer(
     // A recorded voice note is something to send even with nothing typed; the text
     // beside it rides along as its caption.
     val canPost by remember(pendingVoice) { derivedStateOf { draftState.text.isNotBlank() || pendingVoice != null } }
-
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let(onAttach)
-        }
 
     Column(modifier = EditFieldModifier) {
         // The same preview the post screens use: listen back, re-record, or drop it.
@@ -173,6 +182,13 @@ internal fun CordnComposer(
             )
         }
 
+        ShowEmojiSuggestionList(
+            emojiSuggestions,
+            onSelect = { insertEmojiUrl(draftState, emojiSuggestions, it) },
+            onFullSize = { insertEmojiUrl(draftState, emojiSuggestions, it) },
+            modifier = SuggestionListDefaultHeightChat,
+        )
+
         ShowUserSuggestionList(
             suggestions,
             onSelect = { user ->
@@ -190,10 +206,21 @@ internal fun CordnComposer(
                 // word" is whatever is highlighted, which is not something being typed.
                 if (draftState.selection.collapsed) {
                     val lastWord = draftState.currentWord()
-                    if (lastWord.startsWith("@")) {
-                        suggestions.processCurrentWord(lastWord)
-                    } else {
-                        suggestions.reset()
+                    when {
+                        lastWord.startsWith("@") -> {
+                            suggestions.processCurrentWord(lastWord)
+                            emojiSuggestions.reset()
+                        }
+
+                        lastWord.startsWith(":") -> {
+                            emojiSuggestions.processCurrentWord(lastWord)
+                            suggestions.reset()
+                        }
+
+                        else -> {
+                            suggestions.reset()
+                            emojiSuggestions.reset()
+                        }
                     }
                 }
             },
@@ -221,13 +248,17 @@ internal fun CordnComposer(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 4.dp, end = 4.dp),
                 ) {
-                    IconButton(onClick = { picker.launch("*/*") }, enabled = !attaching) {
-                        Icon(
-                            MaterialSymbols.AttachFile,
-                            contentDescription = stringRes(R.string.cordn_media_attach),
-                            tint = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    }
+                    // The app's own gallery picker, so this composer offers the same
+                    // affordance and the same multi-select as the DM and Marmot ones
+                    // rather than a bare file dialog. Each pick is its own encrypted
+                    // upload and its own message, which is what the send path does.
+                    SelectFromGallery(
+                        isUploading = attaching,
+                        enabled = !attaching,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier,
+                        onImageChosen = { picked -> picked.forEach { onAttach(it.uri) } },
+                    )
                     VoiceNoteButton(enabled = !attaching, onRecorded = onVoiceNote)
                 }
             },
@@ -246,4 +277,20 @@ internal fun CordnComposer(
                 ),
         )
     }
+}
+
+/**
+ * Puts [item]'s URL where the half-typed `:shortcode:` was, and closes the list.
+ *
+ * [EmojiSuggestionState.autocompleteInto] inserts the shortcode, which is right for a
+ * composer whose send path attaches the matching `emoji` tags. Cordn's does not, so the
+ * URL goes in instead — see the state's comment above.
+ */
+private fun insertEmojiUrl(
+    field: TextFieldState,
+    state: EmojiSuggestionState,
+    item: EmojiPackState.EmojiMedia,
+) {
+    field.replaceCurrentWord(item.link + " ")
+    state.reset()
 }
