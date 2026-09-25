@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
+import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -596,14 +597,14 @@ private fun CordnGroupRoomCompose(
     // row and told a reader nothing they could act on; the coordinator is the
     // one server that sees every message in the group, so naming it is the
     // thing worth the space.
-    val runtime = accountViewModel.account.cordnRuntime
-    val coordinators by (runtime?.coordinators ?: MutableStateFlow(emptyList())).collectAsStateWithLifecycle()
-    val announced by (runtime?.announcedNames ?: MutableStateFlow(emptyMap())).collectAsStateWithLifecycle()
+    val coordinators by (
+        accountViewModel.account.cordnRuntime?.coordinators
+            ?: remember { MutableStateFlow(emptyList<CoordinatorConfig>()) }
+    ).collectAsStateWithLifecycle()
     val coordinatorName =
         coordinatorDisplayName(
             pubKey = chatroom.coordinatorPubKey,
             label = coordinators.firstOrNull { it.pubKey == chatroom.coordinatorPubKey }?.label,
-            announced = announced[chatroom.coordinatorPubKey],
             accountViewModel = accountViewModel,
         )
 
