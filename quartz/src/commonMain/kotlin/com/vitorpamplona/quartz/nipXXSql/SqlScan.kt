@@ -45,11 +45,11 @@ class ScanSpec(
     val since: Long? = null,
     /** Inclusive. */
     val until: Long? = null,
-    /** `tags` only: the row's own `name` (may be set without [tagValues]). */
+    /** `tags` only: the row's `t0` (may be set without [tagValues]). */
     val tagName: String? = null,
-    /** `tags` only: the row's own `value` (may be set without [tagName]). */
+    /** `tags` only: the row's `t1` (may be set without [tagName]). */
     val tagValues: Set<String>? = null,
-    /** `tags` only: `value <> ''` (so also not null), the rows a tag-value index holds. */
+    /** `tags` only: `t1 <> ''` (so also not null), the rows a tag-value index holds. */
     val valueNonEmpty: Boolean = false,
     /** Newest-first cap on events, only set when the whole query is a plain newest-first listing. */
     val limit: Int? = null,
@@ -222,8 +222,8 @@ internal class ScanAnalyzer(
                                     since = maxOf(since ?: it, it)
                                     until = minOf(until ?: it, it)
                                 } ?: run { used = false }
-                            "name" -> if (isTags) strings(other)?.let { names = intersect(names, it) } ?: run { used = false } else used = false
-                            "value" -> if (isTags) strings(other)?.let { values = intersect(values, it) } ?: run { used = false } else used = false
+                            "t0" -> if (isTags) strings(other)?.let { names = intersect(names, it) } ?: run { used = false } else used = false
+                            "t1" -> if (isTags) strings(other)?.let { values = intersect(values, it) } ?: run { used = false } else used = false
                             else -> used = false
                         }
                     }
@@ -245,10 +245,10 @@ internal class ScanAnalyzer(
                             col == "kind" -> {
                                 if (consts.all { it is Long }) kinds = intersect(kinds, consts.map { (it as Long).toIntOrNull() ?: Int.MIN_VALUE }.toSet()) else used = false
                             }
-                            col == "name" && isTags -> {
+                            col == "t0" && isTags -> {
                                 if (consts.all { it is String }) names = intersect(names, consts.map { it as String }.toSet()) else used = false
                             }
-                            col == "value" && isTags -> {
+                            col == "t1" && isTags -> {
                                 if (consts.all { it is String }) values = intersect(values, consts.map { it as String }.toSet()) else used = false
                             }
                             else -> used = false
@@ -256,9 +256,9 @@ internal class ScanAnalyzer(
                     }
                 }
 
-                // value <> '' / '' <> value
+                // t1 <> '' / '' <> t1
                 p is Binary && p.op == "<>" && isTags &&
-                    ((column(p.left) == "value" && constant(p.right) == "") || (column(p.right) == "value" && constant(p.left) == "")) -> {
+                    ((column(p.left) == "t1" && constant(p.right) == "") || (column(p.right) == "t1" && constant(p.left) == "")) -> {
                     used = true
                     valueNonEmpty = true
                 }

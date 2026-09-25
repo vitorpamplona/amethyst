@@ -35,12 +35,12 @@ object SqlProfile {
     val EVENTS_COLUMNS = listOf("id", "pubkey", "created_at", "kind", "content", "sig")
 
     /**
-     * One row per tag. `value`, `v2`..`v4` are `tag[1]`..`tag[4]` (NULL
-     * when absent); `rest` is a JSON array of `tag[5..]` (NULL when none).
+     * One row per tag. `t0`..`t4` are `tag[0]`..`tag[4]` (NULL when absent);
+     * `rest` is a JSON array of `tag[5..]` (NULL when none).
      * `created_at` / `kind` / `pubkey` are copied from the parent event so
      * tag-only aggregates don't need a join.
      */
-    val TAGS_COLUMNS = listOf("event_id", "idx", "name", "value", "v2", "v3", "v4", "rest", "created_at", "kind", "pubkey")
+    val TAGS_COLUMNS = listOf("event_id", "idx", "t0", "t1", "t2", "t3", "t4", "rest", "created_at", "kind", "pubkey")
 
     val TABLES = mapOf(EVENTS to EVENTS_COLUMNS, TAGS to TAGS_COLUMNS)
 

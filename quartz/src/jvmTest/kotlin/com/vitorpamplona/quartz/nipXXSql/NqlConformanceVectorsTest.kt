@@ -198,7 +198,7 @@ class NqlConformanceVectorsTest {
         val conn = BundledSQLiteDriver().open(":memory:")
         conn.execSQL("CREATE TABLE events (id TEXT, pubkey TEXT, created_at INTEGER, kind INTEGER, content TEXT, sig TEXT)")
         conn.execSQL(
-            "CREATE TABLE tags (event_id TEXT, idx INTEGER, name TEXT, value TEXT, v2 TEXT, v3 TEXT, v4 TEXT, created_at INTEGER, kind INTEGER, pubkey TEXT)",
+            "CREATE TABLE tags (event_id TEXT, idx INTEGER, t0 TEXT, t1 TEXT, t2 TEXT, t3 TEXT, t4 TEXT, created_at INTEGER, kind INTEGER, pubkey TEXT)",
         )
         conn.prepare("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?)").use { ins ->
             for (e in events) {

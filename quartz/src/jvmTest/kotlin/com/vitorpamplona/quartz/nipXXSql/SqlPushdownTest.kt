@@ -125,7 +125,7 @@ class SqlPushdownTest {
 
     @Test
     fun eachReferenceGetsItsOwnConditions() {
-        val q = "SELECT count(*) FROM events e JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 AND t.name = 'p' AND t.value = ?"
+        val q = "SELECT count(*) FROM events e JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 AND t.t0 = 'p' AND t.t1 = ?"
         val backend = Recording()
         assertEquals(sqlite(q, bob.pubKey), rows(q, backend, bob.pubKey))
         val (events, tags) = backend.scans
@@ -181,7 +181,7 @@ class SqlPushdownTest {
     @Test
     fun aReferenceTheStoreRefusesIsFetchedByTheJoinKey() {
         // `d` has only a tag name, which no index answers; the join pins it to `l`'s events.
-        val q = "SELECT d.value FROM tags l JOIN tags d ON d.event_id = l.event_id AND d.name = 'e' WHERE l.kind = 7 AND l.name = 'p'"
+        val q = "SELECT d.t1 FROM tags l JOIN tags d ON d.event_id = l.event_id AND d.t0 = 'e' WHERE l.kind = 7 AND l.t0 = 'p'"
         val backend = Recording(refuseBroad = true)
         assertEquals(sqlite(q), rows(q, backend))
         assertEquals(1, sqlite(q).size)
@@ -193,7 +193,7 @@ class SqlPushdownTest {
     @Test
     fun joinKeysCanBeTagValues() {
         // The reactions' `e` values are the ids to fetch the notes by; the notes carry no condition of their own.
-        val q = "SELECT count(*) FROM tags t JOIN events n ON n.id = t.value WHERE t.kind = 7 AND t.name = 'e'"
+        val q = "SELECT count(*) FROM tags t JOIN events n ON n.id = t.t1 WHERE t.kind = 7 AND t.t0 = 'e'"
         val backend = Recording(refuseBroad = true)
         assertEquals(sqlite(q), rows(q, backend))
         assertEquals(setOf("x".repeat(64)), backend.scans[1].ids)
@@ -204,7 +204,7 @@ class SqlPushdownTest {
         // `e` keeps every row whatever `t` holds, so it must be fetched on its own conditions or refused.
         val backend = Recording(refuseBroad = true)
         assertFailsWith<SqlException> { rows("SELECT e.id FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.kind = 7", backend) }
-        val q = "SELECT e.content, t.name FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 ORDER BY e.content, t.idx"
+        val q = "SELECT e.content, t.t0 FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 ORDER BY e.content, t.idx"
         assertEquals(sqlite(q), rows(q, Recording(refuseBroad = true)))
     }
 
@@ -238,9 +238,9 @@ class SqlPushdownTest {
             }
         }
         val q =
-            "SELECT count(*), sum(CAST(value AS INTEGER)) / 1000, round(sqrt(avg(CAST(value AS REAL))), 3), " +
-                "floor(log10(max(CAST(value AS REAL)))), pow(2, 10), mod(21, 4), sign(-7), ceil(pi()) " +
-                "FROM tags WHERE kind = 9735 AND name = 'amount'"
+            "SELECT count(*), sum(CAST(t1 AS INTEGER)) / 1000, round(sqrt(avg(CAST(t1 AS REAL))), 3), " +
+                "floor(log10(max(CAST(t1 AS REAL)))), pow(2, 10), mod(21, 4), sign(-7), ceil(pi()) " +
+                "FROM tags WHERE kind = 9735 AND t0 = 'amount'"
         val expected = listOf(listOf(3L, 1026L, 584.808, 6.0, 1024.0, 1.0, -1L, 4.0))
         assertEquals(expected, sqlite(q))
         // The pushdown (any non-SQL store, Vespa included) runs the same functions over its scratch rows.

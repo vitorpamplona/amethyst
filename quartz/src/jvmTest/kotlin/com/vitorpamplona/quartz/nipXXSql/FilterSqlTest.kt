@@ -140,7 +140,7 @@ class FilterSqlTest {
         val all = runBlocking { store.query<Event>(Filter()) }.sortedByDescending { it.createdAt }
         val rebuilt = events(Filter(), ::sqlite)
         assertEquals(all.map { it.wire() }, rebuilt.map { it.wire() })
-        assertTrue(rebuilt.any { e -> e.tags.any { it.size == 7 } }, "a tag past v4 should round-trip through rest")
+        assertTrue(rebuilt.any { e -> e.tags.any { it.size == 7 } }, "a tag past t4 should round-trip through rest")
         assertTrue(rebuilt.any { e -> e.tags.any { it.size == 1 } }, "a name-only tag should round-trip")
     }
 

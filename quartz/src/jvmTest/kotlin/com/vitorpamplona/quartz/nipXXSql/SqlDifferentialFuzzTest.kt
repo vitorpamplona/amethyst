@@ -298,11 +298,11 @@ class SqlDifferentialFuzzTest {
                             mapOf(
                                 "event_id" to e.id,
                                 "idx" to i.toLong(),
-                                "name" to t.getOrNull(0),
-                                "value" to t.getOrNull(1),
-                                "v2" to t.getOrNull(2),
-                                "v3" to t.getOrNull(3),
-                                "v4" to t.getOrNull(4),
+                                "t0" to t.getOrNull(0),
+                                "t1" to t.getOrNull(1),
+                                "t2" to t.getOrNull(2),
+                                "t3" to t.getOrNull(3),
+                                "t4" to t.getOrNull(4),
                                 "created_at" to e.createdAt,
                                 "kind" to e.kind.toLong(),
                                 "pubkey" to e.pubKey,
@@ -318,9 +318,9 @@ class SqlDifferentialFuzzTest {
                         (spec.kinds == null || (r["kind"] as Long).toInt() in spec.kinds!!) &&
                         (spec.since == null || (r["created_at"] as Long) >= spec.since!!) &&
                         (spec.until == null || (r["created_at"] as Long) <= spec.until!!) &&
-                        (spec.tagName == null || r["name"] == spec.tagName) &&
-                        (spec.tagValues == null || r["value"] in spec.tagValues!!) &&
-                        (!spec.valueNonEmpty || (r["value"] != null && r["value"] != ""))
+                        (spec.tagName == null || r["t0"] == spec.tagName) &&
+                        (spec.tagValues == null || r["t1"] in spec.tagValues!!) &&
+                        (!spec.valueNonEmpty || (r["t1"] != null && r["t1"] != ""))
                 }
             val groups = if (plan.groupBy.isEmpty()) mapOf(emptyList<Any?>() to kept) else kept.groupBy { r -> plan.groupBy.map { r[it] } }
             answered++
@@ -365,7 +365,7 @@ class SqlDifferentialFuzzTest {
         val r: Random,
     ) {
         private val eventsCols = listOf("id", "pubkey", "created_at", "kind", "content")
-        private val tagsCols = listOf("event_id", "idx", "name", "value", "v2", "v3", "rest", "created_at", "kind")
+        private val tagsCols = listOf("event_id", "idx", "t0", "t1", "t2", "t3", "rest", "created_at", "kind")
         private val strings = listOf("'nostr'", "'t'", "'p'", "'%o%'", "'n_str'", "'Nostr'", "''", "'a''b'", "'mention'")
         private val binOps = listOf("+", "-", "*", "/", "%", "||", "=", "==", "<>", "!=", "<", "<=", ">", ">=", "AND", "OR", "IS", "IS NOT")
         private val funcs1 = listOf("length", "lower", "upper", "abs", "typeof", "trim", "hex", "unicode")
@@ -411,7 +411,7 @@ class SqlDifferentialFuzzTest {
             when (r.nextInt(4)) {
                 0 -> "events" to eventsCols
                 1 -> "tags" to tagsCols
-                2 -> "events e JOIN tags t ON t.event_id = e.id" to listOf("e.kind", "e.content", "t.name", "t.value", "e.created_at", "t.idx")
+                2 -> "events e JOIN tags t ON t.event_id = e.id" to listOf("e.kind", "e.content", "t.t0", "t.t1", "e.created_at", "t.idx")
                 else -> "(SELECT kind, content AS c, created_at FROM events WHERE kind ${pick(listOf("<", ">", "="))} ${r.nextInt(0, 8)}) s" to listOf("kind", "c", "created_at", "s.kind")
             }
 
@@ -441,14 +441,14 @@ class SqlDifferentialFuzzTest {
         private val kindList = listOf(0, 1, 1, 3, 7, 20, 30023, 5)
         private val tagValues = listOf("'nostr'", "'sql'", "'Nostr'", "'relay'", "''", "'slug-3'", "'url x'", "'zap'")
 
-        /** `name = … AND value = …` or `… value IN (…)`, in random order, on columns prefixed by [a]. */
+        /** `t0 = … AND t1 = …` or `… t1 IN (…)`, in random order, on columns prefixed by [a]. */
         private fun tagEq(a: String): String {
-            val name = "${a}name = ${pick(tagNames)}"
+            val name = "${a}t0 = ${pick(tagNames)}"
             val value =
                 if (r.nextBoolean()) {
-                    if (r.nextBoolean()) "${a}value = ${pick(tagValues)}" else "${pick(tagValues)} = ${a}value"
+                    if (r.nextBoolean()) "${a}t1 = ${pick(tagValues)}" else "${pick(tagValues)} = ${a}t1"
                 } else {
-                    "${a}value IN (${List(r.nextInt(1, 4)) { pick(tagValues) }.joinToString(", ")})"
+                    "${a}t1 IN (${List(r.nextInt(1, 4)) { pick(tagValues) }.joinToString(", ")})"
                 }
             return if (r.nextBoolean()) "$name AND $value" else "$value AND $name"
         }
@@ -471,7 +471,7 @@ class SqlDifferentialFuzzTest {
                 }
 
                 3 -> {
-                    "SELECT e.kind, (SELECT count(*) FROM tags t WHERE t.event_id = e.id AND ${expr(listOf("t.name", "t.value", "t.idx"), 2)}) FROM events e"
+                    "SELECT e.kind, (SELECT count(*) FROM tags t WHERE t.event_id = e.id AND ${expr(listOf("t.t0", "t.t1", "t.idx"), 2)}) FROM events e"
                 }
 
                 4 -> {
@@ -486,22 +486,22 @@ class SqlDifferentialFuzzTest {
 
                 // ---- tags pushdown shapes; the result must not change ----
                 6 -> {
-                    "SELECT value, count(*) FROM tags WHERE ${tagEq("")}" +
-                        (if (r.nextBoolean()) " AND ${expr(tagsCols, 1)}" else "") + " GROUP BY value"
+                    "SELECT t1, count(*) FROM tags WHERE ${tagEq("")}" +
+                        (if (r.nextBoolean()) " AND ${expr(tagsCols, 1)}" else "") + " GROUP BY t1"
                 }
 
                 7 -> {
-                    "SELECT e.kind, t.value, t.idx FROM events e JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")} WHERE ${expr(listOf("e.kind", "e.content", "t.v2"), 2)}"
+                    "SELECT e.kind, t.t1, t.idx FROM events e JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")} WHERE ${expr(listOf("e.kind", "e.content", "t.t2"), 2)}"
                 }
 
                 8 -> {
                     // Right side of a LEFT JOIN: the ON constraint may be pushed.
-                    "SELECT e.id, t.value FROM events e LEFT JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")}"
+                    "SELECT e.id, t.t1 FROM events e LEFT JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")}"
                 }
 
                 9 -> {
                     // Preserved side of a LEFT JOIN: the ON constraint must NOT be pushed.
-                    "SELECT t.value, t.name, e.kind FROM tags t LEFT JOIN events e ON e.id = t.event_id AND ${tagEq("t.")}"
+                    "SELECT t.t1, t.t0, e.kind FROM tags t LEFT JOIN events e ON e.id = t.event_id AND ${tagEq("t.")}"
                 }
 
                 10 -> {
@@ -519,7 +519,7 @@ class SqlDifferentialFuzzTest {
                 }
 
                 13 -> {
-                    "SELECT a.value, b.value FROM tags a JOIN tags b ON a.event_id = b.event_id AND ${tagEq("a.")} WHERE ${tagEq("b.")}"
+                    "SELECT a.t1, b.t1 FROM tags a JOIN tags b ON a.event_id = b.event_id AND ${tagEq("a.")} WHERE ${tagEq("b.")}"
                 }
 
                 // ---- store pushdown shapes: limits, native aggregates ----
@@ -539,8 +539,8 @@ class SqlDifferentialFuzzTest {
                 }
 
                 17 -> {
-                    "SELECT DISTINCT value FROM tags WHERE name = ${pick(tagNames)}" + (if (r.nextBoolean()) " AND kind = ${pick(kindList)}" else "") +
-                        (if (r.nextBoolean()) " AND value <> ''" else "")
+                    "SELECT DISTINCT t1 FROM tags WHERE t0 = ${pick(tagNames)}" + (if (r.nextBoolean()) " AND kind = ${pick(kindList)}" else "") +
+                        (if (r.nextBoolean()) " AND t1 <> ''" else "")
                 }
 
                 18 -> {
@@ -549,7 +549,7 @@ class SqlDifferentialFuzzTest {
                 }
 
                 19 -> {
-                    "SELECT value, count(*), sum(idx) FROM tags WHERE name = ${pick(tagNames)} AND kind = ${pick(kindList)} GROUP BY value ORDER BY 2 DESC, 1 LIMIT 5"
+                    "SELECT t1, count(*), sum(idx) FROM tags WHERE t0 = ${pick(tagNames)} AND kind = ${pick(kindList)} GROUP BY t1 ORDER BY 2 DESC, 1 LIMIT 5"
                 }
 
                 20 -> {

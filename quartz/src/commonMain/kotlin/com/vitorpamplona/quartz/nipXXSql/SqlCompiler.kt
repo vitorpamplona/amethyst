@@ -42,7 +42,7 @@ class SqlTableSources(
     val tags: TableSource,
     /**
      * A narrower `tags` source for a reference the query constrains with
-     * `name = <n> AND value IN (<values>)`, or null to keep [tags]. It must
+     * `t0 = <n> AND t1 IN (<values>)`, or null to keep [tags]. It must
      * return every row [tags] would for events having such a tag (extra
      * rows are fine: the query's own predicates still run on top).
      */
@@ -55,7 +55,7 @@ class SqlTableSources(
     val perReference: ((ScanSpec) -> TableSource)? = null,
 )
 
-/** Equality constraints found on one `tags` reference: `name = [name]` and `value IN [values]`. */
+/** Equality constraints found on one `tags` reference: `t0 = [name]` and `t1 IN [values]`. */
 class TagConstraint(
     val name: String,
     val values: List<String>,

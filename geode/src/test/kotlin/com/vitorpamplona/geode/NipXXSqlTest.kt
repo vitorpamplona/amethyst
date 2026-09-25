@@ -109,8 +109,8 @@ class NipXXSqlTest {
     @Test
     fun hashtagCountsThenPagedRowsOverWebSocket() =
         runBlocking<Unit> {
-            ws.send(SqlCmd("tags", "SELECT value, count(*) AS n FROM tags WHERE name = 't' GROUP BY value ORDER BY value").toJson())
-            assertEquals(listOf("value", "n"), assertIs<SqlColsMessage>(next()).columns)
+            ws.send(SqlCmd("tags", "SELECT t1, count(*) AS n FROM tags WHERE t0 = 't' GROUP BY t1 ORDER BY t1").toJson())
+            assertEquals(listOf("t1", "n"), assertIs<SqlColsMessage>(next()).columns)
             val counts = assertIs<SqlRowsMessage>(next())
             assertEquals(listOf(listOf("even", 4L), listOf("odd", 3L)), counts.rows)
             assertTrue(counts.done)

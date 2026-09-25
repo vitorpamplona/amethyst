@@ -130,7 +130,7 @@ class SqlEventStoreQueryTest {
     fun topHashtagsFromTheTagsTable() {
         assertEquals(
             listOf(listOf("nostr", 6L), listOf("sql", 3L)),
-            run("SELECT lower(value) AS tag, count(*) AS n FROM tags WHERE name = 't' GROUP BY 1 ORDER BY n DESC, tag"),
+            run("SELECT lower(t1) AS tag, count(*) AS n FROM tags WHERE t0 = 't' GROUP BY 1 ORDER BY n DESC, tag"),
         )
     }
 
@@ -156,8 +156,8 @@ class SqlEventStoreQueryTest {
                 WITH RECURSIVE reach(pk, depth) AS (
                   SELECT ?, 0
                   UNION
-                  SELECT t.value, r.depth + 1
-                  FROM reach r JOIN tags t ON t.pubkey = r.pk AND t.kind = 3 AND t.name = 'p'
+                  SELECT t.t1, r.depth + 1
+                  FROM reach r JOIN tags t ON t.pubkey = r.pk AND t.kind = 3 AND t.t0 = 'p'
                   WHERE r.depth < 2
                 )
                 SELECT pk, min(depth) FROM reach GROUP BY pk ORDER BY 2
@@ -173,8 +173,8 @@ class SqlEventStoreQueryTest {
             SqlCompiler.compile(
                 """
                 SELECT count(*) FROM events r
-                JOIN tags t ON t.event_id = r.id AND t.name = 'e'
-                JOIN events n ON n.id = t.value
+                JOIN tags t ON t.event_id = r.id AND t.t0 = 'e'
+                JOIN events n ON n.id = t.t1
                 WHERE r.kind = 7 AND n.pubkey = :author
                 """.trimIndent(),
                 EventStoreTableSources.sources,
@@ -185,12 +185,12 @@ class SqlEventStoreQueryTest {
 
     @Test
     fun longTagsKeepTheirTail() {
-        val rows = run("SELECT idx, value, v2, v3, v4, rest FROM tags WHERE name = 'imeta'")
+        val rows = run("SELECT idx, t1, t2, t3, t4, rest FROM tags WHERE t0 = 'imeta'")
         assertEquals(
             listOf(listOf(0L, "url https://x/y.jpg", "m image/jpeg", "dim 10x10", "alt cat", "[\"blurhash abc\",\"x deadbeef\"]")),
             rows,
         )
-        assertEquals(listOf(listOf(null)), run("SELECT rest FROM tags WHERE name = 'e'"))
+        assertEquals(listOf(listOf(null)), run("SELECT rest FROM tags WHERE t0 = 'e'"))
     }
 
     @Test
@@ -230,7 +230,7 @@ class SqlEventStoreQueryTest {
     @Test
     fun tagPushdownUsesTheTagIndex() {
         val pushdown = EventStoreTableSources.forStore(TagNameValueHasher(store.store.seedModule.getSeed(conn)), store.store.indexStrategy)
-        val sql = "SELECT count(*) FROM tags WHERE name = 't' AND value = 'nostr'"
+        val sql = "SELECT count(*) FROM tags WHERE t0 = 't' AND t1 = 'nostr'"
         val compiled = SqlCompiler.compile(sql, pushdown)
 
         val plan = ArrayList<String>()
@@ -261,7 +261,7 @@ class SqlEventStoreQueryTest {
 
     @Test
     fun storeSqlMatchesTheRelayPath() {
-        val q = "SELECT lower(value) AS tag, count(*) AS n FROM tags WHERE name = 't' GROUP BY 1 ORDER BY n DESC, tag"
+        val q = "SELECT lower(t1) AS tag, count(*) AS n FROM tags WHERE t0 = 't' GROUP BY 1 ORDER BY n DESC, tag"
         val (columns, rows) = storeSql(store, q)
         assertEquals(listOf("tag", "n"), columns)
         assertEquals(run(q), rows)
@@ -284,7 +284,7 @@ class SqlEventStoreQueryTest {
         val memory = EventStore(dbName = null, relay = null)
         try {
             runBlocking { memory.insert(alice.sign<Event>(1, 1, arrayOf(arrayOf("t", "x")), "m")) }
-            assertEquals(listOf(listOf("x")), storeSql(memory, "SELECT value FROM tags WHERE name = 't' AND value = 'x'").second)
+            assertEquals(listOf(listOf("x")), storeSql(memory, "SELECT t1 FROM tags WHERE t0 = 't' AND t1 = 'x'").second)
         } finally {
             memory.close()
         }

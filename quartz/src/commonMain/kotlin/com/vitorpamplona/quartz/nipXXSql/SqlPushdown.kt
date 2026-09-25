@@ -289,7 +289,7 @@ object SqlPushdown {
         if (column !in (if (isTags) SqlProfile.TAGS_COLUMNS else SqlProfile.EVENTS_COLUMNS)) return null
         val source = if (isTags) EventStoreTableSources.tagsSql("s$j") else EventStoreTableSources.eventsSql("s$j")
         val col = SqlCompiler.quoteIdent(column)
-        val byName = if (isTags && spec.tagName != null) " AND x.`name` = ?" else ""
+        val byName = if (isTags && spec.tagName != null) " AND x.`t0` = ?" else ""
         val out = HashSet<String>()
         conn.prepare("SELECT DISTINCT x.$col FROM ($source) AS x WHERE typeof(x.$col) = 'text'$byName").use { stmt ->
             if (byName.isNotEmpty()) stmt.bindText(1, spec.tagName!!)

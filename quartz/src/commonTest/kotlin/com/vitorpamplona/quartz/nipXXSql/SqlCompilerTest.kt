@@ -232,14 +232,14 @@ class SqlCompilerTest {
 
     @Test
     fun pushesNameAndValueIntoTags() {
-        val c = pushed("SELECT value FROM tags WHERE name = 't' AND value = 'nostr'")
+        val c = pushed("SELECT t1 FROM tags WHERE t0 = 't' AND t1 = 'nostr'")
         assertTrue(c.sql.contains("FROM (SELECT * FROM tag_pushed WHERE n = ? AND v IN (?)) AS `tags`"), c.sql)
         assertEquals(listOf("t", "nostr"), c.args)
     }
 
     @Test
     fun pushesInListsParamsAndEitherOperandOrder() {
-        val c = pushed("SELECT count(*) FROM tags t WHERE ? = t.name AND t.value IN (?, 'b', ?1)", "t", "a")
+        val c = pushed("SELECT count(*) FROM tags t WHERE ? = t.t0 AND t.t1 IN (?, 'b', ?1)", "t", "a")
         assertTrue(c.sql.contains("tag_pushed"), c.sql)
         // `?` = ?1 = "t", the bare `?` in the list is ?2 = "a". Source args
         // (name, then distinct values) come first, then the query's own in text order.
@@ -248,11 +248,11 @@ class SqlCompilerTest {
 
     @Test
     fun pushesIntoJoinsWhereItIsSafe() {
-        assertTrue(pushed("SELECT 1 FROM events e JOIN tags t ON t.event_id = e.id AND t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+        assertTrue(pushed("SELECT 1 FROM events e JOIN tags t ON t.event_id = e.id AND t.t0 = 'e' AND t.t1 = 'x'").sql.contains("tag_pushed"))
         // Right side of a LEFT JOIN: ON only restricts the null-extended side.
-        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.t0 = 'e' AND t.t1 = 'x'").sql.contains("tag_pushed"))
         // A strict WHERE on the null-extended side.
-        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE t.t0 = 'e' AND t.t1 = 'x'").sql.contains("tag_pushed"))
     }
 
     @Test
@@ -265,24 +265,24 @@ class SqlCompilerTest {
             assertFalse(c.sql.contains("tag_pushed"), sql)
         }
         // ON of a LEFT JOIN doesn't filter its preserved side.
-        notPushed("SELECT 1 FROM tags t LEFT JOIN events e ON e.id = t.event_id AND t.name = 'e' AND t.value = 'x'")
+        notPushed("SELECT 1 FROM tags t LEFT JOIN events e ON e.id = t.event_id AND t.t0 = 'e' AND t.t1 = 'x'")
         // Not a top-level conjunct.
-        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = 'x' OR kind = 1")
-        notPushed("SELECT 1 FROM tags WHERE NOT (name = 'e' AND value = 'x')")
-        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value NOT IN ('x')")
+        notPushed("SELECT 1 FROM tags WHERE t0 = 'e' AND t1 = 'x' OR kind = 1")
+        notPushed("SELECT 1 FROM tags WHERE NOT (t0 = 'e' AND t1 = 'x')")
+        notPushed("SELECT 1 FROM tags WHERE t0 = 'e' AND t1 NOT IN ('x')")
         // Only one of the two, or not a string.
-        notPushed("SELECT 1 FROM tags WHERE name = 'e'")
-        notPushed("SELECT 1 FROM tags WHERE value = 'x'")
-        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = ?", 5L)
-        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = content")
+        notPushed("SELECT 1 FROM tags WHERE t0 = 'e'")
+        notPushed("SELECT 1 FROM tags WHERE t1 = 'x'")
+        notPushed("SELECT 1 FROM tags WHERE t0 = 'e' AND t1 = ?", 5L)
+        notPushed("SELECT 1 FROM tags WHERE t0 = 'e' AND t1 = content")
         // Unqualified columns with more than one source are ambiguous here.
-        notPushed("SELECT 1 FROM tags, events WHERE name = 'e' AND value = 'x'")
+        notPushed("SELECT 1 FROM tags, events WHERE t0 = 'e' AND t1 = 'x'")
         // Another alias's columns: only `b` is narrowed.
-        val two = pushed("SELECT 1 FROM tags a, tags b WHERE b.name = 'e' AND b.value = 'x' AND a.idx = 0")
+        val two = pushed("SELECT 1 FROM tags a, tags b WHERE b.t0 = 'e' AND b.t1 = 'x' AND a.idx = 0")
         assertEquals(1, Regex("tag_pushed").findAll(two.sql).count(), two.sql)
         assertTrue(two.sql.contains("(SELECT * FROM tag_phys) AS `a`"), two.sql)
         // A CTE named tags is not the base table.
-        notPushed("WITH tags AS (SELECT 'e' AS name, 'x' AS value) SELECT 1 FROM tags WHERE name = 'e' AND value = 'x'")
+        notPushed("WITH tags AS (SELECT 'e' AS t0, 'x' AS t1) SELECT 1 FROM tags WHERE t0 = 'e' AND t1 = 'x'")
     }
 
     @Test

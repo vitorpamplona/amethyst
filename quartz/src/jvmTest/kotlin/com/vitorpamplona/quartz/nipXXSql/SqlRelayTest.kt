@@ -229,7 +229,7 @@ class SqlRelayTest {
             val memory = EventStore(dbName = null, relay = null)
             memory.insert(alice.sign<Event>(5, 1, arrayOf(arrayOf("t", "x")), "m"))
             val c = server(backingStore = memory).client()
-            c.send("""["SQL","u","SELECT count(*) FROM tags WHERE name = 't' AND value = 'x'"]""")
+            c.send("""["SQL","u","SELECT count(*) FROM tags WHERE t0 = 't' AND t1 = 'x'"]""")
             assertEquals(listOf("count(*)"), assertIs<SqlColsMessage>(c.next()).columns)
             assertEquals(listOf(listOf(1L)), assertIs<SqlRowsMessage>(c.next()).rows)
         }

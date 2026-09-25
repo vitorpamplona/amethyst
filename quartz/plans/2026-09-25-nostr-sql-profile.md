@@ -25,10 +25,10 @@ has to be complete on day one.
 
 ```sql
 events(id, pubkey, created_at, kind, content, sig)
-tags(event_id, idx, name, value, v2, v3, v4, rest, created_at, kind, pubkey)
+tags(event_id, idx, t0, t1, t2, t3, t4, rest, created_at, kind, pubkey)
 ```
 
-- One row per tag. `value`, `v2`..`v4` = `tag[1..4]` (NULL if absent); `rest` =
+- One row per tag. `t0`..`t4` = `tag[0..4]` (NULL if absent); `rest` =
   JSON array of `tag[5..]` (NULL if none); `idx` = position in the event's tag
   array. `created_at`/`kind`/`pubkey` are copied from the parent so tag
   aggregates need no join.
@@ -114,8 +114,8 @@ uses `query` and `count`):
    Accepted references load first; a refused one tied by `id`/`event_id` or
    `pubkey` to a loaded reference is fetched by the distinct values that
    reference holds (`tags` narrowed to the spec's tag name), 500 keys per store
-   call. So `tags d ON d.event_id = l.event_id AND d.name = 'd'` reads only
-   `l`'s events, and `JOIN events n ON n.id = t.value` only the referenced
+   call. So `tags d ON d.event_id = l.event_id AND d.t0 = 'd'` reads only
+   `l`'s events, and `JOIN events n ON n.id = t.t1` only the referenced
    notes. Only when no link applies does the query fail `unsupported:`.
 6. **Id walks for id listings.** The compiler records what the whole query
    reads of each reference (`ColumnUsage`), leaving out the predicates the
@@ -170,8 +170,8 @@ and `ObservableEventStore` / `InterningEventStore` pass it through.
 
 ## Tags pushdown
 
-When a query pins a `tags` reference with `name = '<x>'` and `value = '<y>'` (or
-`value IN (…)`), using string literals or string parameters, the compiler asks
+When a query pins a `tags` reference with `t0 = '<x>'` and `t1 = '<y>'` (or
+`t1 IN (…)`), using string literals or string parameters, the compiler asks
 `SqlTableSources.tagsMatching` for a narrower source. Over the event store that
 is the same JSON expansion, restricted to the events that `event_tags` holds a
 matching `tag_hash` for:
@@ -181,7 +181,7 @@ matching `tag_hash` for:
 WHERE h.row_id IN (SELECT event_header_row_id FROM event_tags WHERE tag_hash IN (?, …))
 ```
 
-- **Superset, so it's always correct.** The query's own `name`/`value`
+- **Superset, so it's always correct.** The query's own `t0`/`t1`
   predicates still run on top, so a hash collision only adds candidates. It is
   enabled only for single-letter names under `DefaultIndexingStrategy`, which
   indexes every such tag with a value, for every kind. The hash uses the
@@ -189,7 +189,7 @@ WHERE h.row_id IN (SELECT event_header_row_id FROM event_tags WHERE tag_hash IN 
 - **Where constraints come from:** top-level `AND` conjuncts of `WHERE`, and of
   `ON` for any join except a `LEFT JOIN` whose preserved (left) side holds the
   reference. Equality is strict, so a `WHERE` constraint may also narrow the
-  null-extended side of a `LEFT JOIN`. Unqualified `name`/`value` count only
+  null-extended side of a `LEFT JOIN`. Unqualified `t0`/`t1` count only
   when `tags` is the only table in `FROM`.
 - **Parameters:** the parser numbers bare `?` in text order the way SQLite does,
   so every parameter's value is known at compile time.
@@ -274,7 +274,7 @@ beyond, and a large join takes as long as the data makes it.
    their own time. A related open item: nested `replace()` can build large
    strings (up to `SQLITE_MAX_LENGTH`).
 2. **Advertising it** in NIP-11 once the NIP has a number.
-3. **Tag queries without an exact name and value** (e.g. `name = 't' AND value LIKE 'nos%'`,
+3. **Tag queries without an exact name and value** (e.g. `t0 = 't' AND t1 LIKE 'nos%'`,
    or multi-letter names like `imeta`) still expand every event's JSON. A text tag
    table would cover them; measure its write and storage cost with relayBench first.
 4. **`amy sql`** (local via `IEventStore.sql`, remote via `INostrClient.sql`). The frames already parse on the client (`Message.fromJson`).

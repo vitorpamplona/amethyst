@@ -104,7 +104,7 @@ object FilterSql {
         require(ids.size <= HYDRATE_CHUNK) { "at most $HYDRATE_CHUNK ids per hydrate" }
         val marks = ids.joinToString(",") { "?" }
         val sql =
-            "SELECT e.id, e.pubkey, e.created_at, e.kind, e.content, e.sig, t.idx, t.name, t.value, t.v2, t.v3, t.v4, t.rest " +
+            "SELECT e.id, e.pubkey, e.created_at, e.kind, e.content, e.sig, t.idx, t.t0, t.t1, t.t2, t.t3, t.t4, t.rest " +
                 "FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.event_id IN ($marks) " +
                 "WHERE e.id IN ($marks) ORDER BY e.created_at DESC, e.id, t.idx"
         return Query(sql, ids.toList() + ids.toList())
@@ -149,7 +149,7 @@ object FilterSql {
             head = null
         }
 
-        /** `[name, value, v2, v3, v4, ...rest]`, stopping at the first absent position. */
+        /** `[t0, t1, t2, t3, t4, ...rest]`, stopping at the first absent position. */
         private fun tag(row: List<Any?>): Array<String> {
             val t = ArrayList<String>(5)
             t.add(row[7] as String)
@@ -222,7 +222,7 @@ object FilterSql {
             filter: Filter,
         ): String {
             params += name
-            val head = "$a.name = ? AND $a.value IN (${marks(values)})"
+            val head = "$a.t0 = ? AND $a.t1 IN (${marks(values)})"
             return (listOf(head) + common(a, "event_id", filter)).joinToString(" AND ")
         }
 

@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
  *
  * `tags` is derived from the stored tag JSON with `json_each`. On its own
  * that scans every event; [forStore] adds a pushdown so a query that pins
- * `name` and `value` only expands the events `event_tags` says have that tag.
+ * `t0` and `t1` only expands the events `event_tags` says have that tag.
  */
 object EventStoreTableSources {
     /** `events` over a table laid out like `event_headers`. */
@@ -46,11 +46,11 @@ object EventStoreTableSources {
     fun tagsSql(table: String) =
         """
         SELECT h.id AS event_id, j.key AS idx,
-               json_extract(j.value, '$[0]') AS name,
-               json_extract(j.value, '$[1]') AS value,
-               json_extract(j.value, '$[2]') AS v2,
-               json_extract(j.value, '$[3]') AS v3,
-               json_extract(j.value, '$[4]') AS v4,
+               json_extract(j.value, '$[0]') AS t0,
+               json_extract(j.value, '$[1]') AS t1,
+               json_extract(j.value, '$[2]') AS t2,
+               json_extract(j.value, '$[3]') AS t3,
+               json_extract(j.value, '$[4]') AS t4,
                CASE WHEN json_array_length(j.value) > 5
                     THEN json_remove(j.value, '$[0]', '$[0]', '$[0]', '$[0]', '$[0]') END AS rest,
                h.created_at, h.kind, h.pubkey
@@ -69,7 +69,7 @@ object EventStoreTableSources {
      * indexes, which is every single-letter tag with a value, whatever the
      * kind. So for a single-letter name, the events with a matching hash are
      * a superset of the events holding that tag (a collision only adds
-     * candidates, which the query's own `name` / `value` predicates drop).
+     * candidates, which the query's own `t0` / `t1` predicates drop).
      * Any other strategy may skip tags, so it gets no pushdown.
      */
     fun forStore(
