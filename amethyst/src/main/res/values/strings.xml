@@ -348,6 +348,7 @@
     <string name="cordn_backup_failed">That did not work. Check the passphrase and the file.</string>
     <string name="cordn_send">Send</string>
     <string name="cordn_info_coordinator">Coordinator</string>
+    <string name="cordn_info_coordinator_key">Coordinator key</string>
     <string name="cordn_info_gid">Group id</string>
     <string name="cordn_info_epoch">Epoch</string>
     <string name="cordn_info_members">Members</string>

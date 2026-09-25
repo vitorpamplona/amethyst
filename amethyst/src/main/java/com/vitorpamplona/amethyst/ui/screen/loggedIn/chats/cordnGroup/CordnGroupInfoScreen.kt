@@ -374,6 +374,28 @@ private fun CordnGroupInfo(
 
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
+            Text(stringRes(R.string.cordn_info_coordinator), style = MaterialTheme.typography.titleMedium)
+
+            // A coordinator is a Nostr identity, not an opaque service address:
+            // ContextVM addresses it with ordinary p-tags, so it has a kind 0
+            // like anyone else and the app can already resolve it. Rendering it
+            // as the 64 hex characters it happens to be stored as told the user
+            // nothing, and threw away a name, an avatar and a profile to tap
+            // through to -- all of which this screen was already drawing, ten
+            // lines up, for every member.
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                UserPicture(userHex = coordinatorPubKey, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+                Text(
+                    text = observeUserNameByHex(coordinatorPubKey, accountViewModel),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             // Computed, never asserted. Hardcoding these made the card look like a
             // disclosure while reporting the same four values for every group --
             // which is exactly the regression §7 risk 4 of the plan warns about.
@@ -389,10 +411,11 @@ private fun CordnGroupInfo(
 
             exposure?.let { CordnExposureCard(it) }
 
-            // The coordinator key, the group id and the epoch are what you need
-            // to file a bug or tell two devices apart, and nothing you need to
-            // read a message. They sit beside the exposure card, which is the
-            // page's other protocol-literate block, instead of above the people.
+            // The exact values, for filing a bug or telling two devices apart.
+            // The key stays here as well as above because the two answer
+            // different questions: the row above says who the coordinator is,
+            // this says which bytes to compare against a share ref, a device
+            // document or a log -- all of which speak hex.
             TechnicalDetails(coordinatorPubKey, room.gid, epoch)
         }
     }
@@ -437,7 +460,7 @@ private fun TechnicalDetails(
     AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
         SelectionContainer {
             Column {
-                InfoRow(stringRes(R.string.cordn_info_coordinator), coordinatorPubKey)
+                InfoRow(stringRes(R.string.cordn_info_coordinator_key), coordinatorPubKey)
                 InfoRow(stringRes(R.string.cordn_info_gid), gid)
                 InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
             }
