@@ -24,14 +24,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -48,10 +54,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * 1. `CoordinatorConfig.label` -- documented as "what the user calls it. Never
  *    a claim -- a coordinator cannot prove a name." The only name here that
  *    means anything, so it wins.
- * 2. The CEP-6 announcement's name, when one was heard. Before the profile
- *    because a coordinator added from discovery was *picked* by this name, and
- *    having the settings screen rename it afterwards would be its own small
- *    confusion.
+ * 2. The CEP-6 announcement's name, when the cache holds one. Before the
+ *    profile because a coordinator added from discovery was *picked* by this
+ *    name, and having the settings screen rename it afterwards would be its own
+ *    small confusion.
  * 3. The kind 0's display name (CEP-23).
  * 4. The key's first characters.
  *
@@ -65,17 +71,40 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 fun coordinatorDisplayName(
     pubKey: HexKey,
     label: String?,
-    announced: String?,
     accountViewModel: AccountViewModel,
 ): String {
-    // Unconditional: this is what subscribes for the kind 0 (observeUserName
-    // registers a UserFinder subscription), and it must not come and go with
-    // whether a label or an announcement happens to be present.
+    // Both unconditional: each one registers the subscription that fetches what
+    // it reads, so neither may come and go with whether an earlier source in the
+    // chain happens to have an answer.
     val fromProfile = observeUserNameByHex(pubKey, accountViewModel)
+    val announced = observeAnnouncedServerName(pubKey, accountViewModel)
 
     return label?.takeIf { it.isNotBlank() }
-        ?: announced?.takeIf { it.isNotBlank() }
+        ?: announced
         ?: fromProfile
+}
+
+/**
+ * The name from the coordinator's CEP-6 announcement, as the cache holds it.
+ *
+ * A [CvmServerAnnouncementEvent] is a replaceable event like any other now, so
+ * reading it here gets the newest one per coordinator, already verified, and
+ * fetched by the same event-finder data source the rest of the app uses --
+ * rather than a hand-rolled fetch, a hand-rolled newest-wins and a second copy
+ * of the name kept beside the cache.
+ */
+@Composable
+fun observeAnnouncedServerName(
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+): String? {
+    val note =
+        remember(pubKey) {
+            LocalCache.getOrCreateAddressableNote(Address(CvmServerAnnouncementEvent.KIND, pubKey, ""))
+        }
+    val announcement by observeNoteEvent<CvmServerAnnouncementEvent>(note, accountViewModel)
+
+    return announcement?.serverName()
 }
 
 /**
@@ -96,7 +125,6 @@ fun coordinatorDisplayName(
 fun CoordinatorIdentityRow(
     pubKey: HexKey,
     label: String?,
-    announced: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -110,7 +138,7 @@ fun CoordinatorIdentityRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         UserPicture(userHex = pubKey, size = size, accountViewModel = accountViewModel, nav = nav)
-        name(coordinatorDisplayName(pubKey, label, announced, accountViewModel))
+        name(coordinatorDisplayName(pubKey, label, accountViewModel))
         trailing()
     }
 }
