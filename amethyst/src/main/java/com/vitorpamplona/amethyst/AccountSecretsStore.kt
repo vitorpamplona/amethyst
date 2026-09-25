@@ -105,26 +105,33 @@ class AccountSecretsStore(
      * The account's location-chat identity, migrating out of the legacy file on
      * first use, on the same terms as [read].
      *
-     * @param legacy what `secret_keeper_<pubkey hex>` holds. Note the *hex*: this
-     *   group's legacy file is keyed by the signer's pubkey rather than the npub
-     *   every other group uses, so the caller opens a different file for it.
+     * @param legacy opens and reads `secret_keeper_<pubkey hex>`. Note the
+     *   *hex*: this group's legacy file is keyed by the signer's pubkey rather
+     *   than the npub every other group uses, so it is a different file.
+     *
+     *   A lambda, not a value, because opening that file **creates** it — an
+     *   `EncryptedSharedPreferences` writes its Tink keyset on construction. An
+     *   eager read would resurrect the file on the load after the cleanup
+     *   deleted it, and would cost a Keystore-backed open per account on every
+     *   cold start. Called only when the store has nothing yet.
      */
     suspend fun readGeohashIdentity(
         npub: String,
-        legacy: GeohashIdentitySecrets,
+        legacy: suspend () -> GeohashIdentitySecrets,
     ): GeohashIdentitySecrets {
         val stored =
             try {
                 stores.loadGeohashIdentity(npub)
             } catch (e: Exception) {
                 Log.w(TAG, "Could not read the location-chat identity for $npub; using the legacy file", e)
-                return legacy
+                return legacy()
             }
 
         if (stored != null) return stored
 
-        mirrorGeohashIdentity(npub, legacy)
-        return legacy
+        val fromLegacy = legacy()
+        mirrorGeohashIdentity(npub, fromLegacy)
+        return fromLegacy
     }
 
     /**

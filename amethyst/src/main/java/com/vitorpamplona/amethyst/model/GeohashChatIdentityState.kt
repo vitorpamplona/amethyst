@@ -87,15 +87,27 @@ class GeohashChatIdentityState(
 
     @Volatile private var loaded: GeohashIdentitySecrets? = null
 
-    /** What `secret_keeper_<pubkey hex>` holds. Touches disk; callers are off the main thread. */
+    /**
+     * What `secret_keeper_<pubkey hex>` holds.
+     *
+     * Only called when the store has nothing yet: opening this file creates it,
+     * so reading it unconditionally would resurrect it after the cleanup has
+     * deleted it. Touches disk; callers are off the main thread.
+     */
     private fun legacy(): GeohashIdentitySecrets = readLegacyGeohashIdentity(LegacySharedPreferences(Amethyst.instance.encryptedStorage(signer.pubKey)))
 
-    /** The stored identity, copying it out of the legacy file the first time. */
+    /**
+     * The stored identity, copying it out of the legacy file the first time.
+     *
+     * **Call under [mutex].** Not self-locking, because [keyPair] already holds
+     * the lock when it reaches here and [Mutex] is not reentrant.
+     */
     private suspend fun current(): GeohashIdentitySecrets {
         loaded?.let { return it }
-        return accountSecretsStore.readGeohashIdentity(npub, legacy()).also { loaded = it }
+        return accountSecretsStore.readGeohashIdentity(npub) { legacy() }.also { loaded = it }
     }
 
+    /** Call under [mutex], for the reason [current] gives. */
     private suspend fun persist(value: GeohashIdentitySecrets) {
         loaded = value
         accountSecretsStore.mirrorGeohashIdentity(npub, value)
@@ -107,7 +119,7 @@ class GeohashChatIdentityState(
      * messages are ephemeral (relays needn't store them), so the only durable home for it is the device.
      * Empty string means "no nickname set".
      */
-    suspend fun nickname(): String = current().nickname ?: ""
+    suspend fun nickname(): String = mutex.withLock { current().nickname ?: "" }
 
     /**
      * Persists the global location-chat nickname (trimmed) for this account.
@@ -119,13 +131,20 @@ class GeohashChatIdentityState(
     fun setNickname(value: String) {
         val trimmed = value.trim()
         scope.launch {
-            persist(current().copy(nickname = trimmed))
-            // Mirrored, not moved: the legacy file stays readable until the
-            // legacy writes are retired app-wide, so a rollback keeps the handle.
-            // Gated on the same switch as every other mirror — otherwise flipping
-            // it would retire the documented four and leave this one writing.
-            if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
-                Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
+            // Under the lock: this is a read-modify-write of the same group
+            // deviceSeed() writes. Racing the first seed mint, an unlocked copy
+            // would persist the nickname over a null deviceSeed, putOrRemove
+            // would delete the seed, and every per-cell identity minted that
+            // session would be unreproducible on the next launch.
+            mutex.withLock {
+                persist(current().copy(nickname = trimmed))
+                // Mirrored, not moved: the legacy file stays readable until the
+                // legacy writes are retired app-wide, so a rollback keeps the handle.
+                // Gated on the same switch as every other mirror — otherwise flipping
+                // it would retire the documented four and leave this one writing.
+                if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
+                    Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
+                }
             }
         }
     }

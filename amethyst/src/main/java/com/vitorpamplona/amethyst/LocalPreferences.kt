@@ -344,7 +344,9 @@ object LocalPreferences {
                 object : LegacyAccountFiles {
                     override fun source(npub: String) = legacySource(npub)
 
-                    override fun exists(npub: String) = legacyAccountFile(npub).exists()
+                    // Either file: once the npub one is gone, the hex one still
+                    // has to be reachable or it can never be removed.
+                    override fun exists(npub: String) = legacyAccountFile(npub).exists() || legacyAccountFile(geohashLegacyKey(npub)).exists()
 
                     override fun geohashSource(npub: String) = LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub)))
 
@@ -357,14 +359,12 @@ object LocalPreferences {
 
                         // The location-chat identity is in a SECOND file, keyed by the
                         // pubkey hex rather than the npub, because that is the key its
-                        // writer passed. Nothing else would ever remove it, so it is
-                        // deleted here with the account's own file rather than left as
-                        // an orphan holding a seed forever.
-                        val hex = geohashLegacyKey(npub)
-                        encryptedPreferences(hex).edit(commit = true) { clear() }
-                        legacyAccountFile(hex).delete()
+                        // writer passed. Nothing else would ever remove it, so it goes
+                        // with the account's own file rather than being left as an
+                        // orphan holding a seed forever.
+                        val removedGeohashFile = deleteGeohashLegacyFile(npub)
 
-                        return removedAccountFile
+                        return removedAccountFile || removedGeohashFile
                     }
                 },
             currentStore = { npub -> accountStores.getDataStore(npub).data.first() },
@@ -402,6 +402,19 @@ object LocalPreferences {
     private fun geohashLegacyKey(npub: String): String = npub.bechToBytes("npub").toHexKey()
 
     /**
+     * Clears and unlinks `secret_keeper_<pubkey hex>`.
+     *
+     * Clear before unlinking, as everything else here does: the live
+     * SharedPreferences still holds the values in memory and would write them
+     * straight back out.
+     */
+    private fun deleteGeohashLegacyFile(npub: String): Boolean {
+        val hex = geohashLegacyKey(npub)
+        encryptedPreferences(hex).edit(commit = true) { clear() }
+        return legacyAccountFile(hex).delete()
+    }
+
+    /**
      * Copies the location-chat identity out of `secret_keeper_<pubkey hex>` on
      * the first load after the upgrade.
      *
@@ -412,14 +425,17 @@ object LocalPreferences {
      * user who never opens another location chat would keep both files
      * forever, which is the opposite of what the migration is for.
      *
-     * Idempotent: the store's marker makes every run after the first a no-op,
-     * so re-running it on each load cannot overwrite a later edit.
+     * Idempotent, and cheap after the first run: the store's marker short-circuits
+     * it, so re-running on each load cannot overwrite a later edit and — because
+     * the legacy read is a lambda — does not open `secret_keeper_<pubkey hex>`
+     * either. That matters beyond speed: opening an `EncryptedSharedPreferences`
+     * writes its Tink keyset, so an eager read would recreate the file on the
+     * load right after the cleanup deleted it, permanently.
      */
     private suspend fun copyGeohashIdentity(npub: String) {
-        accountSecretsStore.readGeohashIdentity(
-            npub = npub,
-            legacy = readLegacyGeohashIdentity(LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub)))),
-        )
+        accountSecretsStore.readGeohashIdentity(npub) {
+            readLegacyGeohashIdentity(LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub))))
+        }
     }
 
     /**
@@ -686,6 +702,11 @@ object LocalPreferences {
             // would resurrect the deleted settings from this cache.
             mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
+            // The location-chat identity's own file, keyed by pubkey hex. Without
+            // this the anonymous device seed outlives the account that owned it
+            // and comes back if the same npub is re-added — the opposite of what
+            // an unlinkable per-cell identity is for.
+            deleteGeohashLegacyFile(accountInfo.npub)
             accountKeyStore.delete(accountInfo.npub)
             accountSecretsStore.delete(accountInfo.npub)
             // The account's plain DataStore, which deleteUserPreferenceFile cannot
@@ -1091,7 +1112,15 @@ object LocalPreferences {
                 // than inside the loader for the reason [AccountStoreData] gives:
                 // that method is at the JVM's 64KB limit and one more suspend call
                 // inside it does not fit.
-                copyGeohashIdentity(npub)
+                // Never fatal, like every other legacy step here: this runs on
+                // the account-load path, and an EncryptedSharedPreferences that
+                // cannot be opened must not take the whole load — and with it the
+                // per-account loops in the notification consumers — down with it.
+                try {
+                    copyGeohashIdentity(npub)
+                } catch (e: Exception) {
+                    Log.w("LocalPreferences", "Could not copy the location-chat identity for $npub", e)
+                }
                 legacyCleanup.deleteIfVerified(npub)
             }
 

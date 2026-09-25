@@ -64,16 +64,23 @@ private class FakeFiles(
 
     var present = true
 
+    /**
+     * Tracked apart from [present]: the two are different files, and the gate
+     * has to stay reachable while only one of them is left.
+     */
+    var geohashPresent = true
+
     override fun source(npub: String) = MapSource(values)
 
     override fun geohashSource(npub: String) = MapSource(geohashValues)
 
-    override fun exists(npub: String) = present
+    override fun exists(npub: String) = present || geohashPresent
 
     override suspend fun delete(npub: String): Boolean {
         deleted = true
         deletedGeohash = true
         present = false
+        geohashPresent = false
         return true
     }
 }
@@ -292,10 +299,15 @@ class LegacyPreferenceCleanupTest {
             assertTrue(!files.deleted)
         }
 
+    /** Neither file — the account's own nor the location-chat one. */
     @Test
     fun anAccountWithNoLegacyFileIsAlreadyDone() =
         runTest {
-            val files = FakeFiles(emptyMap()).also { it.present = false }
+            val files =
+                FakeFiles(emptyMap()).also {
+                    it.present = false
+                    it.geohashPresent = false
+                }
             val (_, subject) = cleanup(emptyMap(), files = files)
 
             assertEquals(LegacyCleanupResult.NothingToDelete, subject.deleteIfVerified(NPUB))
@@ -394,5 +406,26 @@ class LegacyPreferenceCleanupTest {
 
             assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
             assertTrue("the hex-keyed file must be deleted with the account's own", files.deletedGeohash)
+        }
+
+    /**
+     * Once the npub file is gone, the hex-keyed one is all that is left — and
+     * it still has to be removable. Gating on the account file alone returned
+     * NothingToDelete and stranded it forever.
+     */
+    @Test
+    fun theGateStillRunsWhenOnlyTheLocationChatFileIsLeft() =
+        runTest {
+            val files = FakeFiles(emptyMap(), mapOf("geohash_chat_nickname" to "vitor"))
+            files.present = false
+            val (_, subject) =
+                cleanup(
+                    values = emptyMap(),
+                    files = files,
+                    secrets = FakeSecrets(geohash = GeohashIdentitySecrets(nickname = "vitor")),
+                )
+
+            assertEquals(LegacyCleanupResult.Deleted, subject.deleteIfVerified(NPUB))
+            assertTrue(files.deletedGeohash)
         }
 }
