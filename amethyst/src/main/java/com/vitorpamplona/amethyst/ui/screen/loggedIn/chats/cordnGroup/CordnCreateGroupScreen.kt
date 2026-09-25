@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -127,6 +128,7 @@ fun CordnCreateGroupScreen(
         val scope = rememberCoroutineScope()
 
         var selected by remember { mutableStateOf<String?>(null) }
+        var adminOnlyMe by remember { mutableStateOf(false) }
         var pubKeyInput by remember { mutableStateOf("") }
         var relaysInput by remember { mutableStateOf("") }
         var name by remember { mutableStateOf("") }
@@ -214,14 +216,36 @@ fun CordnCreateGroupScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text(
-                // spec/01.md §5.3: leaving the admin list empty is not "set it
-                // up later", it is choosing egalitarian permanently. Saying so
-                // here is the only moment it is still a decision.
-                text = stringRes(R.string.cordn_create_egalitarian_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // spec/01.md §5.3: leaving the admin list empty is not "set it up
+            // later", it is choosing egalitarian permanently — so it is offered
+            // as a decision here rather than described as one.
+            //
+            // The web client picks admins out of the members being added. This
+            // screen adds nobody — a cordn group starts with its creator and
+            // invites follow — so at this moment the only admin there could be
+            // is you, and the choice collapses to one switch. The same rule the
+            // web client states holds either way: choosing any admin at all
+            // must include yourself, or the group is born unadministrable.
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringRes(R.string.cordn_create_admin_only_me), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text =
+                            if (adminOnlyMe) {
+                                stringRes(R.string.cordn_create_admin_only_me_on)
+                            } else {
+                                stringRes(R.string.cordn_create_egalitarian_note)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = adminOnlyMe, onCheckedChange = { adminOnlyMe = it })
+            }
 
             config?.let {
                 CordnExposureCard(
@@ -256,7 +280,12 @@ fun CordnCreateGroupScreen(
                             val gid =
                                 runtime.createGroup(
                                     config = target,
-                                    metadata = CordnGroupMetadata(name = name.trim(), description = description.trim()),
+                                    metadata =
+                                        CordnGroupMetadata(
+                                            name = name.trim(),
+                                            description = description.trim(),
+                                            adminPubkeys = if (adminOnlyMe) listOf(accountViewModel.account.signer.pubKey) else emptyList(),
+                                        ),
                                 )
                             nav.nav(Route.CordnGroupChat(target.pubKey, gid))
                         } catch (e: Exception) {

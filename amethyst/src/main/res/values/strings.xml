@@ -361,7 +361,15 @@
     <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
     <string name="cordn_create_name">Group name</string>
     <string name="cordn_create_description">Description (optional)</string>
-    <string name="cordn_create_egalitarian_note">Everyone in this group will have the same administrative rights. That is permanent — cordn has no way to promote an admin later.</string>
+    <string name="cordn_create_egalitarian_note">Everyone in the group can invite, remove members and change its details. Any member can name admins later, which ends that.</string>
+    <string name="cordn_create_admin_only_me">Only I manage this group</string>
+    <string name="cordn_admin_action_failed">That change could not be made.</string>
+    <string name="cordn_info_remove_member">Remove</string>
+    <string name="cordn_info_remove_confirm_title">Remove from group?</string>
+    <string name="cordn_info_remove_confirm_body">%1$s stops receiving messages from here. They keep what they have already read, and this cannot be undone — they would have to be invited again.</string>
+    <string name="cordn_info_edit_details">Edit details</string>
+    <string name="cordn_info_save">Save</string>
+    <string name="cordn_create_admin_only_me_on">Only you can invite, remove members or change the group\'s details. You can hand that to someone else later.</string>
     <string name="cordn_create_action">Create group</string>
     <string name="cordn_create_failed">The group could not be created.</string>
     <string name="cordn_invitations_title">cordn invitations</string>
@@ -1149,4 +1157,8 @@
     <string name="backup_profile_field_birthday">Birthday</string>
     <string name="backup_profile_field_clink_offer">CLINK offer</string>
     <string name="backup_profile_field_bot">Bot flag</string>
+    <plurals name="cordn_info_admins_kept">
+        <item quantity="one">The group\'s %1$d admin stays as it is.</item>
+        <item quantity="other">The group\'s %1$d admins stay as they are.</item>
+    </plurals>
 </resources>
