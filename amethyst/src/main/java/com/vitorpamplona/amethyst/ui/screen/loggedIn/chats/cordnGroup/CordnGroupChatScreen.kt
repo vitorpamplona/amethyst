@@ -31,7 +31,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -66,10 +65,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
-import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -83,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
@@ -748,51 +744,6 @@ private fun CordnChatTopBar(
             }
         },
     )
-}
-
-/**
- * A message's text, with `nostr:` mentions rendered as names.
- *
- * Deliberately not Amethyst's rich-text renderer: that one is built on `Note`,
- * and a `Note` comes from `LocalCache`. Nothing a cordn room receives may go
- * in there — see the screen KDoc. `CordnMentions` splits the envelope's own
- * content instead, and this walks the result.
- *
- * Looking a mentioned pubkey up for a display name is a different thing and a
- * safe one: a profile is public relay data the cache already holds, and
- * reading one puts no part of this conversation into it.
- */
-@Composable
-internal fun MessageBody(
-    text: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val segments = remember(text) { CordnMentions.segment(text) }
-
-    if (segments.none { it is CordnMentions.Segment.Mention }) {
-        Text(text, style = MaterialTheme.typography.bodyMedium)
-        return
-    }
-
-    FlowRow(verticalArrangement = Arrangement.Center) {
-        segments.forEach { segment ->
-            when (segment) {
-                is CordnMentions.Segment.Text ->
-                    Text(segment.value, style = MaterialTheme.typography.bodyMedium)
-
-                is CordnMentions.Segment.Mention -> {
-                    val name by observeUserName(LocalCache.getOrCreateUser(segment.pubKey), accountViewModel)
-                    Text(
-                        text = "@$name",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { nav.nav(Route.Profile(segment.pubKey)) },
-                    )
-                }
-            }
-        }
-    }
 }
 
 /** A reason an attachment did not go, in words meant for the person who tried. */

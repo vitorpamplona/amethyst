@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
@@ -296,7 +298,33 @@ private fun CordnBubbleContents(
         // Emoji-only messages render bare and large, over a transparent bubble.
         jumboCount > 0 -> Text(text = text.trim(), fontSize = jumboEmojiFontSize(jumboCount))
 
-        else -> MessageBody(text, accountViewModel, nav)
+        // The app's own message renderer, which is what every other chat's bubble
+        // reaches through RenderRegularTextNote. Cordn hand-rolled plain Text plus a
+        // row of mention spans, so a link, an image URL, a hashtag, a `nostr:` entity
+        // and — since the composer started inserting them — a custom emoji's URL all
+        // arrived as raw text. Nothing here needed a Note: the viewer takes a String,
+        // the bubble's colour and an id.
+        //
+        // `tags` is EmptyTagList deliberately. A cordn envelope's tags are cordn's own
+        // (§4 media, references), not NIP-92/NIP-30, so handing them over would ask the
+        // viewer to read them as something they are not.
+        //
+        // canPreview = true is what an unblocked note gets in a DM, which is equally
+        // end-to-end encrypted. It does not force previews: whether one is fetched is
+        // still `automaticallyShowUrlPreview`, the account's own Tor-aware setting.
+        else ->
+            TranslatableRichTextViewer(
+                content = text,
+                canPreview = true,
+                quotesLeft = 1,
+                modifier = Modifier,
+                tags = EmptyTagList,
+                backgroundColor = bubbleColor,
+                id = message.envelope.id,
+                authorPubKey = message.envelope.pubKey,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
     }
 
     // Only on a live message: a deleted one must not keep offering its attachment,
