@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
@@ -1586,31 +1587,48 @@ open class Note(
     // `@Volatile`: created/destroyed under [syncLock] but read lock-free by
     // every `flowSet?.x?.invalidateData()` call on writer threads.
     @Volatile
-    var flowSet: NoteFlowSet? = null
+    private var strongFlowSet: NoteFlowSet? = null
+
+    // A set [clearFlow] released while nobody was collecting it. It is only weakly held here,
+    // but a composable that remembered one of its flows keeps it alive: a collector paused by
+    // its lifecycle (app in the background) unsubscribes without forgetting the flow it
+    // remembered. Handing out a fresh set instead would orphan that composable, which then
+    // resubscribes to a flow nothing invalidates anymore and stops updating for good.
+    @Volatile
+    private var releasedFlowSet: WeakReference<NoteFlowSet>? = null
+
+    val flowSet: NoteFlowSet?
+        get() = strongFlowSet ?: releasedFlowSet?.get()
 
     fun createOrDestroyFlowSync(create: Boolean) =
         syncLock.withLock {
             if (create) {
-                if (flowSet == null) {
-                    flowSet = NoteFlowSet(this)
-                }
+                retainFlowSet()
             } else {
-                if (flowSet != null && flowSet?.isInUse() == false) {
-                    flowSet = null
+                val current = strongFlowSet
+                if (current != null && !current.isInUse()) {
+                    releasedFlowSet = WeakReference(current)
+                    strongFlowSet = null
                 }
             }
+        }
+
+    // Must be called under [syncLock].
+    private fun retainFlowSet(): NoteFlowSet =
+        strongFlowSet ?: (releasedFlowSet?.get() ?: NoteFlowSet(this)).also {
+            strongFlowSet = it
+            releasedFlowSet = null
         }
 
     fun flow(): NoteFlowSet =
         // Fast path reads the @Volatile field once; the slow path re-checks under
         // the same lock createOrDestroyFlowSync() uses, so a concurrent clearFlow()
-        // between the two can't leave us dereferencing a just-nulled set.
-        flowSet ?: syncLock.withLock {
-            flowSet ?: NoteFlowSet(this).also { flowSet = it }
-        }
+        // between the two can't leave us dereferencing a just-released set.
+        strongFlowSet ?: syncLock.withLock { retainFlowSet() }
 
     fun clearFlow() {
-        if (flowSet != null && flowSet?.isInUse() == false) {
+        val current = strongFlowSet
+        if (current != null && !current.isInUse()) {
             createOrDestroyFlowSync(false)
         }
     }
@@ -1630,16 +1648,16 @@ class NoteFlowSet(
     u: Note,
 ) {
     // Observers line up here.
-    val metadata = NoteBundledRefresherFlow(u)
-    val reports = NoteBundledRefresherFlow(u)
-    val relays = NoteBundledRefresherFlow(u)
-    val reactions = NoteBundledRefresherFlow(u)
-    val boosts = NoteBundledRefresherFlow(u)
-    val replies = NoteBundledRefresherFlow(u)
-    val zaps = NoteBundledRefresherFlow(u)
-    val ots = NoteBundledRefresherFlow(u)
-    val edits = NoteBundledRefresherFlow(u)
-    val labels = NoteBundledRefresherFlow(u)
+    val metadata = NoteBundledRefresherFlow(u, this)
+    val reports = NoteBundledRefresherFlow(u, this)
+    val relays = NoteBundledRefresherFlow(u, this)
+    val reactions = NoteBundledRefresherFlow(u, this)
+    val boosts = NoteBundledRefresherFlow(u, this)
+    val replies = NoteBundledRefresherFlow(u, this)
+    val zaps = NoteBundledRefresherFlow(u, this)
+    val ots = NoteBundledRefresherFlow(u, this)
+    val edits = NoteBundledRefresherFlow(u, this)
+    val labels = NoteBundledRefresherFlow(u, this)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun author() =
@@ -1665,12 +1683,13 @@ class NoteFlowSet(
 @Stable
 class NoteBundledRefresherFlow(
     val note: Note,
+    private val owner: NoteFlowSet? = null,
 ) {
     // Refreshes observers in batches.
-    val stateFlow = MutableStateFlow(NoteState(note))
+    val stateFlow = MutableStateFlow(NoteState(note, owner))
 
     fun invalidateData() {
-        stateFlow.tryEmit(NoteState(note))
+        stateFlow.tryEmit(NoteState(note, owner))
     }
 
     fun hasObservers() = stateFlow.subscriptionCount.value > 0
@@ -1679,6 +1698,9 @@ class NoteBundledRefresherFlow(
 @Immutable
 class NoteState(
     val note: Note,
+    // Anchors the emitting [NoteFlowSet] to whoever holds this flow's current value, so a
+    // set released by [Note.clearFlow] stays reachable (and reused) while the UI holds it.
+    private val owner: NoteFlowSet? = null,
 )
 
 fun List<AddressableNote>.eventIdSet() = mapNotNullTo(mutableSetOf<HexKey>()) { it.event?.id }
