@@ -215,4 +215,80 @@ class SqlCompilerTest {
     fun sqliteLimitCommaIsOffsetThenCount() {
         assertTrue(compile("SELECT id FROM events LIMIT 10, 5").sql.endsWith(" LIMIT 5 OFFSET 10"))
     }
+
+    // ---- tags pushdown -------------------------------------------------------
+
+    private val pushSources =
+        SqlTableSources(
+            events = TableSource("SELECT * FROM ev_phys"),
+            tags = TableSource("SELECT * FROM tag_phys"),
+            tagsMatching = { c -> TableSource("SELECT * FROM tag_pushed WHERE n = ? AND v IN (${c.values.joinToString(", ") { "?" }})", listOf(c.name) + c.values) },
+        )
+
+    private fun pushed(
+        sql: String,
+        vararg params: Any?,
+    ) = SqlCompiler.compile(sql, pushSources, params.toList())
+
+    @Test
+    fun pushesNameAndValueIntoTags() {
+        val c = pushed("SELECT value FROM tags WHERE name = 't' AND value = 'nostr'")
+        assertTrue(c.sql.contains("FROM (SELECT * FROM tag_pushed WHERE n = ? AND v IN (?)) AS `tags`"), c.sql)
+        assertEquals(listOf("t", "nostr"), c.args)
+    }
+
+    @Test
+    fun pushesInListsParamsAndEitherOperandOrder() {
+        val c = pushed("SELECT count(*) FROM tags t WHERE ? = t.name AND t.value IN (?, 'b', ?1)", "t", "a")
+        assertTrue(c.sql.contains("tag_pushed"), c.sql)
+        // `?` = ?1 = "t", the bare `?` in the list is ?2 = "a". Source args
+        // (name, then distinct values) come first, then the query's own in text order.
+        assertEquals(listOf("t", "a", "b", "t", "t", "a", "t"), c.args)
+    }
+
+    @Test
+    fun pushesIntoJoinsWhereItIsSafe() {
+        assertTrue(pushed("SELECT 1 FROM events e JOIN tags t ON t.event_id = e.id AND t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+        // Right side of a LEFT JOIN: ON only restricts the null-extended side.
+        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+        // A strict WHERE on the null-extended side.
+        assertTrue(pushed("SELECT 1 FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE t.name = 'e' AND t.value = 'x'").sql.contains("tag_pushed"))
+    }
+
+    @Test
+    fun doesNotPushWhereItWouldChangeResults() {
+        fun notPushed(
+            sql: String,
+            vararg params: Any?,
+        ) {
+            val c = pushed(sql, *params)
+            assertFalse(c.sql.contains("tag_pushed"), sql)
+        }
+        // ON of a LEFT JOIN doesn't filter its preserved side.
+        notPushed("SELECT 1 FROM tags t LEFT JOIN events e ON e.id = t.event_id AND t.name = 'e' AND t.value = 'x'")
+        // Not a top-level conjunct.
+        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = 'x' OR kind = 1")
+        notPushed("SELECT 1 FROM tags WHERE NOT (name = 'e' AND value = 'x')")
+        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value NOT IN ('x')")
+        // Only one of the two, or not a string.
+        notPushed("SELECT 1 FROM tags WHERE name = 'e'")
+        notPushed("SELECT 1 FROM tags WHERE value = 'x'")
+        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = ?", 5L)
+        notPushed("SELECT 1 FROM tags WHERE name = 'e' AND value = content")
+        // Unqualified columns with more than one source are ambiguous here.
+        notPushed("SELECT 1 FROM tags, events WHERE name = 'e' AND value = 'x'")
+        // Another alias's columns: only `b` is narrowed.
+        val two = pushed("SELECT 1 FROM tags a, tags b WHERE b.name = 'e' AND b.value = 'x' AND a.idx = 0")
+        assertEquals(1, Regex("tag_pushed").findAll(two.sql).count(), two.sql)
+        assertTrue(two.sql.contains("(SELECT * FROM tag_phys) AS `a`"), two.sql)
+        // A CTE named tags is not the base table.
+        notPushed("WITH tags AS (SELECT 'e' AS name, 'x' AS value) SELECT 1 FROM tags WHERE name = 'e' AND value = 'x'")
+    }
+
+    @Test
+    fun positionalParametersAreNumberedLikeSqlite() {
+        // Bare `?` is one more than the largest number seen so far, in text order.
+        assertEquals(listOf("a", "a", "b"), compile("SELECT ?, ?1, ?", "a", "b").args)
+        assertEquals(listOf("b", "c"), compile("SELECT ?2, ?", "a", "b", "c").args)
+    }
 }

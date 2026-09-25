@@ -40,6 +40,19 @@ class TableSource(
 class SqlTableSources(
     val events: TableSource,
     val tags: TableSource,
+    /**
+     * A narrower `tags` source for a reference the query constrains with
+     * `name = <n> AND value IN (<values>)`, or null to keep [tags]. It must
+     * return every row [tags] would for events having such a tag (extra
+     * rows are fine: the query's own predicates still run on top).
+     */
+    val tagsMatching: ((TagConstraint) -> TableSource?)? = null,
+)
+
+/** Equality constraints found on one `tags` reference: `name = [name]` and `value IN [values]`. */
+class TagConstraint(
+    val name: String,
+    val values: List<String>,
 )
 
 class CompiledQuery(
@@ -65,8 +78,10 @@ class SqlCompiler private constructor(
 
     /** Innermost last. Each frame maps lowercased CTE name -> generated name. */
     private val cteScopes = ArrayList<HashMap<String, String>>()
+
+    /** `tags` references of the SELECT being emitted that can use [SqlTableSources.tagsMatching]. */
+    private var tagConstraints: Map<TableRef, TagConstraint> = emptyMap()
     private var cteCounter = 0
-    private var nextPositional = 1
 
     companion object {
         const val CTE_PREFIX = "nsq_cte_"
@@ -194,8 +209,11 @@ class SqlCompiler private constructor(
             }
         }
         s.from?.let {
+            val outer = tagConstraints
+            tagConstraints = if (sources.tagsMatching != null) findTagConstraints(s, it) else emptyMap()
             sb.append(" FROM ")
             from(it)
+            tagConstraints = outer
         }
         s.where?.let {
             sb.append(" WHERE ")
@@ -249,7 +267,7 @@ class SqlCompiler private constructor(
         val source =
             when (key) {
                 SqlProfile.EVENTS -> sources.events
-                SqlProfile.TAGS -> sources.tags
+                SqlProfile.TAGS -> tagConstraints[t]?.let { sources.tagsMatching?.invoke(it) } ?: sources.tags
                 else -> throw SqlException.invalid("no such table: ${t.name} (tables are ${SqlProfile.TABLES.keys.joinToString()})", t.pos)
             }
         sb
@@ -259,6 +277,131 @@ class SqlCompiler private constructor(
             .append(alias)
         args.addAll(source.args)
     }
+
+    // ---- tags pushdown -----------------------------------------------------
+
+    /**
+     * For each `tags` reference in [from] that resolves to the base table,
+     * looks for `name = <string>` and `value = <string>` / `value IN
+     * (<strings>)` among the conjuncts that must hold for its rows: the
+     * top-level ANDs of WHERE, and of the ON of any join except a LEFT JOIN
+     * whose preserved (left) side holds the reference. Equality is strict,
+     * so a constraint from WHERE can also be pushed into the null-extended
+     * side of a LEFT JOIN.
+     */
+    private fun findTagConstraints(
+        s: Select,
+        from: FromItem,
+    ): Map<TableRef, TagConstraint> {
+        val refs = ArrayList<TableRef>()
+        collectBaseTagRefs(from, refs)
+        if (refs.isEmpty()) return emptyMap()
+        val whereConjuncts = conjuncts(s.where)
+        val result = HashMap<TableRef, TagConstraint>()
+        for (ref in refs) {
+            val preds = whereConjuncts + onConjunctsFor(ref, from)
+            val alias = (ref.alias ?: ref.name).lowercase()
+            val single = from === ref
+
+            fun isCol(
+                e: Expr,
+                column: String,
+            ) = e is ColumnRef && e.column.equals(column, ignoreCase = true) && (e.table?.lowercase() == alias || (e.table == null && single))
+
+            val name =
+                preds.firstNotNullOfOrNull { p ->
+                    if (p !is Binary || p.op != "=") return@firstNotNullOfOrNull null
+                    when {
+                        isCol(p.left, "name") -> constantString(p.right)
+                        isCol(p.right, "name") -> constantString(p.left)
+                        else -> null
+                    }
+                } ?: continue
+            val values =
+                preds.firstNotNullOfOrNull { p ->
+                    when {
+                        p is Binary && p.op == "=" && isCol(p.left, "value") -> constantString(p.right)?.let { listOf(it) }
+                        p is Binary && p.op == "=" && isCol(p.right, "value") -> constantString(p.left)?.let { listOf(it) }
+                        p is InList && !p.not && isCol(p.expr, "value") && p.items.isNotEmpty() -> {
+                            val strings = p.items.map { constantString(it) }
+                            if (strings.all { it != null }) strings.filterNotNull().distinct() else null
+                        }
+                        else -> null
+                    }
+                } ?: continue
+            result[ref] = TagConstraint(name, values)
+        }
+        return result
+    }
+
+    private fun collectBaseTagRefs(
+        f: FromItem,
+        out: MutableList<TableRef>,
+    ) {
+        when (f) {
+            is TableRef -> if (f.name.equals(SqlProfile.TAGS, ignoreCase = true) && !isCte(f.name)) out.add(f)
+            is Join -> {
+                collectBaseTagRefs(f.left, out)
+                collectBaseTagRefs(f.right, out)
+            }
+            is SubqueryRef -> {}
+        }
+    }
+
+    private fun isCte(name: String): Boolean {
+        val key = name.lowercase()
+        return cteScopes.any { key in it }
+    }
+
+    /** ON conjuncts that restrict [ref]'s rows; see [findTagConstraints]. */
+    private fun onConjunctsFor(
+        ref: TableRef,
+        f: FromItem,
+    ): List<Expr> {
+        if (f !is Join) return emptyList()
+        val inRight = f.right === ref
+        val inLeft = contains(f.left, ref)
+        val own =
+            when {
+                f.on == null -> emptyList()
+                inRight -> conjuncts(f.on)
+                inLeft && f.type != JoinType.LEFT -> conjuncts(f.on)
+                else -> emptyList()
+            }
+        return own + onConjunctsFor(ref, f.left)
+    }
+
+    private fun contains(
+        f: FromItem,
+        ref: TableRef,
+    ): Boolean =
+        when (f) {
+            is TableRef -> f === ref
+            is Join -> contains(f.left, ref) || contains(f.right, ref)
+            is SubqueryRef -> false
+        }
+
+    private fun conjuncts(e: Expr?): List<Expr> =
+        when {
+            e == null -> emptyList()
+            e is Binary && e.op == "AND" -> conjuncts(e.left) + conjuncts(e.right)
+            else -> listOf(e)
+        }
+
+    /** A string known at compile time: a string literal or a string parameter. */
+    private fun constantString(e: Expr): String? =
+        when (e) {
+            is Literal -> if (e.kind == LiteralKind.STRING) e.text else null
+            is Param -> paramValue(e) as? String
+            else -> null
+        }
+
+    private fun paramValue(p: Param): Any? =
+        if (p.name.startsWith(":")) {
+            named[p.name.substring(1)]
+        } else {
+            positional.getOrNull(p.name.substring(1).toInt() - 1)
+        }
 
     private fun ordering(terms: List<OrderingTerm>) {
         terms.forEachIndexed { i, t ->
@@ -459,23 +602,14 @@ class SqlCompiler private constructor(
 
     private fun bindValue(p: Param): Any? {
         val raw =
-            when {
-                p.name.startsWith(":") -> {
-                    val key = p.name.substring(1)
-                    if (!named.containsKey(key)) throw SqlException.invalid("no value for parameter ${p.name}", p.pos)
-                    named[key]
-                }
-
-                else -> {
-                    // SQLite numbering: `?NNN` is explicit; a bare `?` is one
-                    // more than the largest number used so far.
-                    val index = if (p.name.length > 1) p.name.substring(1).toIntOrNull() ?: 0 else nextPositional
-                    if (index < 1 || index > positional.size) {
-                        throw SqlException.invalid("no value for parameter ${if (p.name == "?") "?$index" else p.name}", p.pos)
-                    }
-                    nextPositional = maxOf(nextPositional, index + 1)
-                    positional[index - 1]
-                }
+            if (p.name.startsWith(":")) {
+                val key = p.name.substring(1)
+                if (!named.containsKey(key)) throw SqlException.invalid("no value for parameter ${p.name}", p.pos)
+                named[key]
+            } else {
+                val index = p.name.substring(1).toInt()
+                if (index > positional.size) throw SqlException.invalid("no value for parameter ${p.name}", p.pos)
+                positional[index - 1]
             }
         return when (raw) {
             null, is String, is Long, is Double -> raw

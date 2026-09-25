@@ -87,40 +87,38 @@ class SqlCursorRegistry(
         // Same id replaces the previous cursor, like a REQ.
         cursors.get(cmd.queryId)?.let { finishLocked(it) }
 
-        val compiled =
+        val pageSize = cmd.pageSize ?: defaultPageSize ?: Int.MAX_VALUE
+        val conn =
             try {
-                service.compile(cmd)
-            } catch (e: SqlException) {
-                send(ClosedMessage(cmd.queryId, e.message ?: "invalid: query"))
+                service.acquire()
+            } catch (e: Exception) {
+                send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
                 return
             }
-
-        val pageSize = cmd.pageSize ?: defaultPageSize ?: Int.MAX_VALUE
-        val conn: SQLiteConnection
         val cursor: SqlCursor
         val firstPage: List<List<Any?>>
         try {
-            conn = service.acquire()
-            try {
-                val opened =
-                    withContext(Dispatchers.IO) {
-                        val c = SqlCursor(conn, compiled)
-                        try {
-                            c to c.fetch(pageSize)
-                        } catch (e: Throwable) {
-                            c.close()
-                            throw e
-                        }
+            val opened =
+                withContext(Dispatchers.IO) {
+                    val c = SqlCursor(conn, service.compile(cmd, conn))
+                    try {
+                        c to c.fetch(pageSize)
+                    } catch (e: Throwable) {
+                        c.close()
+                        throw e
                     }
-                cursor = opened.first
-                firstPage = opened.second
-            } catch (e: Throwable) {
-                service.release(conn)
-                throw e
-            }
+                }
+            cursor = opened.first
+            firstPage = opened.second
         } catch (e: CancellationException) {
+            service.release(conn)
             throw e
+        } catch (e: SqlException) {
+            service.release(conn)
+            send(ClosedMessage(cmd.queryId, e.message ?: "invalid: query"))
+            return
         } catch (e: Exception) {
+            service.release(conn)
             send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
             return
         }

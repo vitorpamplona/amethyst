@@ -148,7 +148,7 @@ class Literal(
     override val pos: Int,
 ) : Expr
 
-/** `?`, `?NNN` or `:name`, as written. */
+/** `?N` (bare `?` already numbered by the parser) or `:name`. */
 class Param(
     val name: String,
     override val pos: Int,

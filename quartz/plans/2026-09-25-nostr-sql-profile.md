@@ -33,6 +33,9 @@ tags(event_id, idx, name, value, v2, v3, v4, rest, created_at, kind, pubkey)
   array. `created_at`/`kind`/`pubkey` are copied from the parent so tag
   aggregates need no join.
 - Rows are every event the store holds; `EventStoreTableSources` maps both tables onto `event_headers`.
+- `tags` is expanded from the stored tag JSON (`json_each`), because the store has
+  no text tag table: `event_tags` holds only `hash(tag[0], tag[1])` of single-letter
+  tags. See **Tags pushdown** for how queries still use that index.
 
 ## Grammar (what's in)
 
@@ -72,6 +75,35 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
 - Un-aliased result columns get an explicit alias equal to their source text, which
   is SQLite's own naming rule, so column names match what SQLite would report.
 
+## Tags pushdown
+
+When a query pins a `tags` reference with `name = '<x>'` and `value = '<y>'` (or
+`value IN (…)`), using string literals or string parameters, the compiler asks
+`SqlTableSources.tagsMatching` for a narrower source. Over the event store that
+is the same JSON expansion, restricted to the events that `event_tags` holds a
+matching `tag_hash` for:
+
+```sql
+… FROM event_headers h, json_each(h.tags) j
+WHERE h.row_id IN (SELECT event_header_row_id FROM event_tags WHERE tag_hash IN (?, …))
+```
+
+- **Superset, so it's always correct.** The query's own `name`/`value`
+  predicates still run on top, so a hash collision only adds candidates. It is
+  enabled only for single-letter names under `DefaultIndexingStrategy`, which
+  indexes every such tag with a value, for every kind. The hash uses the
+  database's seed from the `seeds` table.
+- **Where constraints come from:** top-level `AND` conjuncts of `WHERE`, and of
+  `ON` for any join except a `LEFT JOIN` whose preserved (left) side holds the
+  reference. Equality is strict, so a `WHERE` constraint may also narrow the
+  null-extended side of a `LEFT JOIN`. Unqualified `name`/`value` count only
+  when `tags` is the only table in `FROM`.
+- **Parameters:** the parser numbers bare `?` in text order the way SQLite does,
+  so every parameter's value is known at compile time.
+- **Measured** at 50k events (one-off benchmark): one-hashtag count 58.9 → 0.24 ms,
+  events p-tagging a pubkey 79.4 → 0.48 ms, p-tags co-occurring with three hashtags
+  78.3 → 0.61 ms. Results identical.
+
 ## Verification
 
 - `SqlCompilerTest` (commonTest): rejections (writes, PRAGMA/ATTACH, stacked
@@ -83,7 +115,9 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
 - `SqlDifferentialFuzzTest` (jvmTest): 3k random queries per run; the compiled
   statement must return the same columns, rows and errors as SQLite running the
   raw text against equivalent views. One-off runs with 2 more seeds × 40k
-  queries: 0 mismatches.
+  queries: 0 mismatches. The fuzzer compiles **with** the tags pushdown against
+  views **without** it, and includes tag-constrained query shapes (joins, both
+  sides of LEFT JOIN, EXISTS, OR); over 10% of queries must take the pushdown.
 - `SqlRelayTest` (jvmTest): SQL/FETCH/SQL-CLOSE through a real `NostrServer`
   session and the production JSON path. Covers paging, params, value types, error
   prefixes, the default page size, the REQ policy gate, in-memory stores, id
@@ -147,9 +181,9 @@ beyond, and a large join takes as long as the data makes it.
    their own time. A related open item: nested `replace()` can build large
    strings (up to `SQLITE_MAX_LENGTH`).
 2. **Advertising it** in NIP-11 once the NIP has a number.
-3. **Indexed tags.** `tags` is derived from the tag JSON with `json_each`
-   (correct, full scan). Add a text tag table (or columns) so tag-driven queries
-   can use an index; measure the write/storage cost with relayBench.
+3. **Tag queries without an exact name and value** (e.g. `name = 't' AND value LIKE 'nos%'`,
+   or multi-letter names like `imeta`) still expand every event's JSON. A text tag
+   table would cover them; measure its write and storage cost with relayBench first.
 4. **Client side:** `INostrClient.sqlQuery()` in `relay/client/accessories/`,
    and `amy sql`. The frames already parse on the client (`Message.fromJson`).
 5. **NIP draft:** schema, EBNF of the grammar, function list, DQS-off rule,

@@ -40,6 +40,9 @@ class SqlParser private constructor(
     private var p = 0
     private var depth = 0
 
+    /** Largest parameter number so far: SQLite gives a bare `?` this plus one. */
+    private var maxParam = 0
+
     companion object {
         /** Guards the JVM stack against `((((((…` style inputs. */
         const val MAX_DEPTH = 200
@@ -632,7 +635,7 @@ class SqlParser private constructor(
 
             TokenType.PARAM -> {
                 advance()
-                Param(t.text, t.pos)
+                Param(canonicalParam(t), t.pos)
             }
 
             TokenType.SYMBOL -> {
@@ -723,6 +726,28 @@ class SqlParser private constructor(
             return ColumnRef(t.text, col, t.pos)
         }
         return ColumnRef(null, t.text, t.pos)
+    }
+
+    /**
+     * Numbers positional parameters the way SQLite does, in text order: `?NNN`
+     * is explicit and a bare `?` is one more than the largest number so far.
+     * Every positional parameter leaves as `?N`, so its value is known without
+     * depending on the order the compiler emits things in.
+     */
+    private fun canonicalParam(t: SqlToken): String {
+        if (t.text.startsWith(":")) return t.text
+        val n =
+            if (t.text == "?") {
+                maxParam + 1
+            } else {
+                t.text
+                    .substring(1)
+                    .toIntOrNull()
+                    ?.takeIf { it in 1..32766 }
+                    ?: throw SqlException.invalid("parameter number out of range", t.pos)
+            }
+        maxParam = maxOf(maxParam, n)
+        return "?$n"
     }
 
     private fun parseCase(): Expr {

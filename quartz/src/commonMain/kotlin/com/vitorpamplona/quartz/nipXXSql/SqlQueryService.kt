@@ -27,6 +27,7 @@ import androidx.sqlite.driver.bundled.SQLITE_OPEN_READONLY
 import androidx.sqlite.execSQL
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import kotlinx.coroutines.channels.Channel
 import kotlin.concurrent.Volatile
 
@@ -37,13 +38,25 @@ import kotlin.concurrent.Volatile
  */
 class SqlQueryService(
     private val openConnection: () -> SQLiteConnection,
+    /** Builds the table sources, reading whatever it needs (e.g. the hash seed) from a connection. Called once. */
+    private val buildSources: (SQLiteConnection) -> SqlTableSources = { EventStoreTableSources.sources },
 ) : AutoCloseable {
     private val idle = Channel<SQLiteConnection>(Channel.UNLIMITED)
 
     @Volatile
     private var closed = false
 
-    fun compile(cmd: SqlCmd): CompiledQuery = SqlCompiler.compile(cmd.sql, EventStoreTableSources.sources, cmd.params, cmd.named)
+    @Volatile
+    private var sources: SqlTableSources? = null
+
+    /** Compiles [cmd]; [conn] is only read the first time, to build the table sources. */
+    fun compile(
+        cmd: SqlCmd,
+        conn: SQLiteConnection,
+    ): CompiledQuery {
+        val src = sources ?: buildSources(conn).also { sources = it }
+        return SqlCompiler.compile(cmd.sql, src, cmd.params, cmd.named)
+    }
 
     fun acquire(): SQLiteConnection {
         check(!closed) { "SQL service is closed" }
@@ -74,22 +87,27 @@ class SqlQueryService(
             val sqlite = (store as? EventStore)?.store ?: return null
             val dbName = sqlite.dbName ?: return null
             val driver = sqlite.driver
-            return SqlQueryService {
-                val conn =
-                    if (driver is BundledSQLiteDriver) {
-                        driver.open(dbName, SQLITE_OPEN_READONLY or SQLITE_OPEN_FULLMUTEX)
-                    } else {
-                        driver.open(dbName)
+            return SqlQueryService(
+                openConnection = {
+                    val conn =
+                        if (driver is BundledSQLiteDriver) {
+                            driver.open(dbName, SQLITE_OPEN_READONLY or SQLITE_OPEN_FULLMUTEX)
+                        } else {
+                            driver.open(dbName)
+                        }
+                    try {
+                        conn.execSQL("PRAGMA query_only = ON")
+                        conn.execSQL("PRAGMA busy_timeout = 5000")
+                    } catch (e: Throwable) {
+                        conn.close()
+                        throw e
                     }
-                try {
-                    conn.execSQL("PRAGMA query_only = ON")
-                    conn.execSQL("PRAGMA busy_timeout = 5000")
-                } catch (e: Throwable) {
-                    conn.close()
-                    throw e
-                }
-                conn
-            }
+                    conn
+                },
+                buildSources = { conn ->
+                    EventStoreTableSources.forStore(TagNameValueHasher(sqlite.seedModule.getSeed(conn)), sqlite.indexStrategy)
+                },
+            )
         }
     }
 }

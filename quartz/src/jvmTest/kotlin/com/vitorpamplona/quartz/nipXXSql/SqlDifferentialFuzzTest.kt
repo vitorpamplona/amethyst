@@ -26,6 +26,7 @@ import androidx.sqlite.execSQL
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -56,7 +57,11 @@ class SqlDifferentialFuzzTest {
     /** Runs the raw text against TEMP views: the reference. */
     private lateinit var oracleConn: SQLiteConnection
 
+    /** What the reference views are built from: no pushdown. */
     private val sources = EventStoreTableSources.sources
+
+    /** What the profile compiles against: with the `event_tags` pushdown. */
+    private lateinit var pushdownSources: SqlTableSources
 
     @BeforeTest
     fun setup() {
@@ -86,6 +91,7 @@ class SqlDifferentialFuzzTest {
         profileConn = driver.open(dbFile.toAbsolutePath().toString())
         profileConn.execSQL("PRAGMA query_only = ON")
         oracleConn = driver.open(dbFile.toAbsolutePath().toString())
+        pushdownSources = EventStoreTableSources.forStore(TagNameValueHasher(store.store.seedModule.getSeed(profileConn)), store.store.indexStrategy)
         oracleConn.execSQL("CREATE TEMP VIEW events AS ${sources.events.sql}")
         oracleConn.execSQL("CREATE TEMP VIEW tags AS ${sources.tags.sql}")
     }
@@ -127,12 +133,13 @@ class SqlDifferentialFuzzTest {
         var compared = 0
         var engineErrors = 0
         var rejectedBoth = 0
+        var pushedDown = 0
         repeat(3000) { n ->
             val sql = gen.query()
             val expected = runOn(oracleConn, sql, emptyList())
             val compiled =
                 try {
-                    SqlCompiler.compile(sql, sources)
+                    SqlCompiler.compile(sql, pushdownSources)
                 } catch (e: SqlException) {
                     // Refusing what SQLite refuses is fine; refusing what it runs is a parser bug.
                     if (!expected.error) fail("profile rejected a query SQLite runs, #$n: ${e.message}\n$sql")
@@ -144,10 +151,13 @@ class SqlDifferentialFuzzTest {
                 fail("mismatch on #$n\n  query:    $sql\n  compiled: ${compiled.sql}\n  sqlite:   $expected\n  profile:  $actual")
             }
             compared++
+            if (compiled.sql.contains("event_tags")) pushedDown++
             if (expected.error) engineErrors++
         }
         // Keep the generator honest: most queries must actually run.
         assertTrue(engineErrors + rejectedBoth < compared / 5, "too many invalid queries: $engineErrors + $rejectedBoth of $compared")
+        // Keep the pushdown under test: enough queries must actually take it.
+        assertTrue(pushedDown > compared / 10, "only $pushedDown of $compared queries used the tags pushdown")
     }
 
     /**
@@ -227,8 +237,23 @@ class SqlDifferentialFuzzTest {
             return sb.toString()
         }
 
+        private val tagNames = listOf("'t'", "'t'", "'p'", "'d'", "'imeta'", "'T'")
+        private val tagValues = listOf("'nostr'", "'sql'", "'Nostr'", "'relay'", "''", "'slug-3'", "'url x'", "'zap'")
+
+        /** `name = … AND value = …` or `… value IN (…)`, in random order, on columns prefixed by [a]. */
+        private fun tagEq(a: String): String {
+            val name = "${a}name = ${pick(tagNames)}"
+            val value =
+                if (r.nextBoolean()) {
+                    if (r.nextBoolean()) "${a}value = ${pick(tagValues)}" else "${pick(tagValues)} = ${a}value"
+                } else {
+                    "${a}value IN (${List(r.nextInt(1, 4)) { pick(tagValues) }.joinToString(", ")})"
+                }
+            return if (r.nextBoolean()) "$name AND $value" else "$value AND $name"
+        }
+
         fun query(): String =
-            when (r.nextInt(10)) {
+            when (r.nextInt(17)) {
                 0 -> {
                     val w = r.nextInt(1, 3)
                     select(w) + " " + pick(listOf("UNION", "UNION ALL", "INTERSECT", "EXCEPT")) + " " + select(w) +
@@ -256,6 +281,44 @@ class SqlDifferentialFuzzTest {
                 5 -> {
                     // ORDER BY every output column so LIMIT picks a deterministic multiset.
                     select(2) + " ORDER BY 1, 2 LIMIT ${r.nextInt(0, 10)} OFFSET ${r.nextInt(0, 3)}"
+                }
+
+                // ---- tags pushdown shapes; the result must not change ----
+                6 -> {
+                    "SELECT value, count(*) FROM tags WHERE ${tagEq("")}" +
+                        (if (r.nextBoolean()) " AND ${expr(tagsCols, 1)}" else "") + " GROUP BY value"
+                }
+
+                7 -> {
+                    "SELECT e.kind, t.value, t.idx FROM events e JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")} WHERE ${expr(listOf("e.kind", "e.content", "t.v2"), 2)}"
+                }
+
+                8 -> {
+                    // Right side of a LEFT JOIN: the ON constraint may be pushed.
+                    "SELECT e.id, t.value FROM events e LEFT JOIN tags t ON t.event_id = e.id AND ${tagEq("t.")}"
+                }
+
+                9 -> {
+                    // Preserved side of a LEFT JOIN: the ON constraint must NOT be pushed.
+                    "SELECT t.value, t.name, e.kind FROM tags t LEFT JOIN events e ON e.id = t.event_id AND ${tagEq("t.")}"
+                }
+
+                10 -> {
+                    "SELECT count(*) FROM events e WHERE EXISTS (SELECT 1 FROM tags t WHERE t.event_id = e.id AND ${tagEq("t.")})"
+                }
+
+                11 -> {
+                    // A strict WHERE constraint on the null-extended side may be pushed.
+                    "SELECT e.kind, t.idx FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE ${tagEq("t.")}"
+                }
+
+                12 -> {
+                    // Top-level OR: not a conjunct, must not be pushed.
+                    "SELECT count(*) FROM tags WHERE ${tagEq("")} OR kind = ${r.nextInt(0, 8)}"
+                }
+
+                13 -> {
+                    "SELECT a.value, b.value FROM tags a JOIN tags b ON a.event_id = b.event_id AND ${tagEq("a.")} WHERE ${tagEq("b.")}"
                 }
 
                 else -> {

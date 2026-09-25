@@ -26,6 +26,8 @@ import androidx.sqlite.execSQL
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.bindAny
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -219,5 +221,23 @@ class SqlEventStoreQueryTest {
         // Semantic errors are SQLite's to report: a relay maps these to CLOSED "error: …".
         assertFails { run("SELECT * FROM events WHERE count(*) > 1") }
         assertFails { run("SELECT nope FROM events") }
+    }
+
+    @Test
+    fun tagPushdownUsesTheTagIndex() {
+        val pushdown = EventStoreTableSources.forStore(TagNameValueHasher(store.store.seedModule.getSeed(conn)), store.store.indexStrategy)
+        val sql = "SELECT count(*) FROM tags WHERE name = 't' AND value = 'nostr'"
+        val compiled = SqlCompiler.compile(sql, pushdown)
+
+        val plan = ArrayList<String>()
+        conn.prepare("EXPLAIN QUERY PLAN " + compiled.sql).use { stmt ->
+            compiled.args.forEachIndexed { i, v -> stmt.bindAny(i + 1, v!!) }
+            while (stmt.step()) plan.add(stmt.getText(3))
+        }
+        assertTrue(plan.any { it.contains("event_tags") && it.contains("INDEX") }, plan.joinToString("\n"))
+
+        // Same answer as without the pushdown.
+        assertEquals(run(sql), SqlCursor(conn, compiled).use { it.fetch(10) })
+        assertEquals(listOf(listOf(5L)), run(sql))
     }
 }

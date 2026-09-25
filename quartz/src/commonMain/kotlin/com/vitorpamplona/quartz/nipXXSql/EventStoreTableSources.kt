@@ -20,34 +20,69 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
+import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
+
 /**
  * The profile's `events` / `tags` tables over Quartz's SQLite event store
  * (`event_headers`), with no schema change.
  *
- * `tags` is derived from the stored tag JSON with `json_each`, so a query
- * that filters tags scans every event: correct, not fast. A real text tag
- * table would make it indexable without changing the client-facing profile.
+ * `tags` is derived from the stored tag JSON with `json_each`. On its own
+ * that scans every event; [forStore] adds a pushdown so a query that pins
+ * `name` and `value` only expands the events `event_tags` says have that tag.
  */
 object EventStoreTableSources {
-    val sources =
-        SqlTableSources(
-            events = TableSource("SELECT h.id, h.pubkey, h.created_at, h.kind, h.content, h.sig FROM event_headers h"),
-            // json_remove applies its paths left to right, so removing `$[0]`
-            // five times drops tag[0..4] and leaves the tail.
-            tags =
-                TableSource(
-                    """
-                    SELECT h.id AS event_id, j.key AS idx,
-                           json_extract(j.value, '$[0]') AS name,
-                           json_extract(j.value, '$[1]') AS value,
-                           json_extract(j.value, '$[2]') AS v2,
-                           json_extract(j.value, '$[3]') AS v3,
-                           json_extract(j.value, '$[4]') AS v4,
-                           CASE WHEN json_array_length(j.value) > 5
-                                THEN json_remove(j.value, '$[0]', '$[0]', '$[0]', '$[0]', '$[0]') END AS rest,
-                           h.created_at, h.kind, h.pubkey
-                    FROM event_headers h, json_each(h.tags) j
-                    """.trimIndent(),
-                ),
+    private const val EVENTS = "SELECT h.id, h.pubkey, h.created_at, h.kind, h.content, h.sig FROM event_headers h"
+
+    // json_remove applies its paths left to right, so removing `$[0]`
+    // five times drops tag[0..4] and leaves the tail.
+    private val TAGS =
+        """
+        SELECT h.id AS event_id, j.key AS idx,
+               json_extract(j.value, '$[0]') AS name,
+               json_extract(j.value, '$[1]') AS value,
+               json_extract(j.value, '$[2]') AS v2,
+               json_extract(j.value, '$[3]') AS v3,
+               json_extract(j.value, '$[4]') AS v4,
+               CASE WHEN json_array_length(j.value) > 5
+                    THEN json_remove(j.value, '$[0]', '$[0]', '$[0]', '$[0]', '$[0]') END AS rest,
+               h.created_at, h.kind, h.pubkey
+        FROM event_headers h, json_each(h.tags) j
+        """.trimIndent()
+
+    /** Both tables, no pushdown: every `tags` query expands every event. */
+    val sources = SqlTableSources(TableSource(EVENTS), TableSource(TAGS))
+
+    /**
+     * [sources] plus the `event_tags` pushdown. `event_tags` holds
+     * `hasher.hash(tag[0], tag[1])` for every tag [DefaultIndexingStrategy]
+     * indexes, which is every single-letter tag with a value, whatever the
+     * kind. So for a single-letter name, the events with a matching hash are
+     * a superset of the events holding that tag (a collision only adds
+     * candidates, which the query's own `name` / `value` predicates drop).
+     * Any other strategy may skip tags, so it gets no pushdown.
+     */
+    fun forStore(
+        hasher: TagNameValueHasher,
+        indexStrategy: IndexingStrategy,
+    ): SqlTableSources {
+        if (indexStrategy !is DefaultIndexingStrategy) return sources
+        return SqlTableSources(
+            events = TableSource(EVENTS),
+            tags = TableSource(TAGS),
+            tagsMatching = { c ->
+                if (!isIndexableTagName(c.name)) {
+                    null
+                } else {
+                    TableSource(
+                        TAGS + "\nWHERE h.row_id IN (SELECT event_header_row_id FROM event_tags WHERE tag_hash IN (" +
+                            c.values.joinToString(", ") { "?" } + "))",
+                        c.values.map { hasher.hash(c.name, it) },
+                    )
+                }
+            },
         )
+    }
 }
