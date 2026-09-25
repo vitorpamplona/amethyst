@@ -34,11 +34,16 @@ import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
  * `name` and `value` only expands the events `event_tags` says have that tag.
  */
 object EventStoreTableSources {
-    private const val EVENTS = "SELECT h.id, h.pubkey, h.created_at, h.kind, h.content, h.sig FROM event_headers h"
+    /** `events` over a table laid out like `event_headers`. */
+    fun eventsSql(table: String) = "SELECT h.id, h.pubkey, h.created_at, h.kind, h.content, h.sig FROM $table h"
 
-    // json_remove applies its paths left to right, so removing `$[0]`
-    // five times drops tag[0..4] and leaves the tail.
-    private val TAGS =
+    /**
+     * `tags` over a table laid out like `event_headers`: one row per tag,
+     * expanded from the stored tag JSON. `json_remove` applies its paths
+     * left to right, so removing `$[0]` five times drops tag[0..4] and leaves
+     * the tail.
+     */
+    fun tagsSql(table: String) =
         """
         SELECT h.id AS event_id, j.key AS idx,
                json_extract(j.value, '$[0]') AS name,
@@ -49,8 +54,11 @@ object EventStoreTableSources {
                CASE WHEN json_array_length(j.value) > 5
                     THEN json_remove(j.value, '$[0]', '$[0]', '$[0]', '$[0]', '$[0]') END AS rest,
                h.created_at, h.kind, h.pubkey
-        FROM event_headers h, json_each(h.tags) j
+        FROM $table h, json_each(h.tags) j
         """.trimIndent()
+
+    private val EVENTS = eventsSql("event_headers")
+    private val TAGS = tagsSql("event_headers")
 
     /** Both tables, no pushdown: every `tags` query expands every event. */
     val sources = SqlTableSources(TableSource(EVENTS), TableSource(TAGS))

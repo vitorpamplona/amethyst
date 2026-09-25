@@ -27,7 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipXXSql.FilterStoreBackend
 import com.vitorpamplona.quartz.nipXXSql.SqlException
+import com.vitorpamplona.quartz.nipXXSql.SqlPushdown
+import com.vitorpamplona.quartz.nipXXSql.SqlStoreBackend
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -280,15 +283,23 @@ interface IEventStore : AutoCloseable {
     suspend fun liveNegentropySnapshot(maxEntries: Int): IStorage? = null
 
     /**
+     * How this store answers the SQL profile without a SQL engine of its
+     * own: native aggregates and per-reference scans (see [SqlStoreBackend]).
+     * The default scans through [query] and counts through [count]; a store
+     * with a query engine (e.g. Vespa grouping) overrides it.
+     */
+    fun sqlBackend(): SqlStoreBackend = FilterStoreBackend(this)
+
+    /**
      * Runs a read-only query in the Nostr SQL profile (the same language
      * relays serve over `SQL` / `FETCH`) against this store's `events` /
      * `tags` tables. [onColumns] gets the result's column names once, then
      * [onRow] each row (`Long`, `Double`, `String` or `null` values).
      * Positional `?` / `?NNN` bind from [params], `:name` from [named].
      *
-     * Throws [SqlException] for queries outside the profile and the engine's
-     * exception for runtime errors. Stores without SQL throw
-     * `unsupported`, which is the default.
+     * Throws [SqlException] for queries outside the profile (or scans the
+     * store refuses) and the engine's exception for runtime errors. The
+     * default runs through [sqlBackend]; SQLite stores run it directly.
      */
     suspend fun sql(
         query: String,
@@ -296,7 +307,7 @@ interface IEventStore : AutoCloseable {
         named: Map<String, Any?> = emptyMap(),
         onColumns: (List<String>) -> Unit = {},
         onRow: (List<Any?>) -> Unit,
-    ): Unit = throw SqlException.unsupported("this store has no SQL")
+    ): Unit = SqlPushdown.run(query, params, named, sqlBackend(), onColumns, onRow)
 
     /**
      * True when NIP-50 tokenization is deferred and something must drive

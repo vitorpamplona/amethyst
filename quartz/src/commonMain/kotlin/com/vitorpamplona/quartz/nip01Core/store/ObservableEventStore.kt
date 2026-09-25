@@ -205,6 +205,8 @@ class ObservableEventStore(
         onRow: (List<Any?>) -> Unit,
     ) = inner.sql(query, params, named, onColumns, onRow)
 
+    override fun sqlBackend() = inner.sqlBackend()
+
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)
         _changes.emit(StoreChange.DeleteByFilter(listOf(filter)))

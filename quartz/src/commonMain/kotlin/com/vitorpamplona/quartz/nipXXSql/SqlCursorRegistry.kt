@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
-import androidx.sqlite.SQLiteConnection
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -43,25 +42,25 @@ import kotlinx.coroutines.withContext
  * [defaultPageSize] is the relay's default REQ limit; with none, the first
  * page carries every row, as an unlimited REQ would.
  *
- * Stepping runs on [Dispatchers.IO]: SQLite blocks the thread. [clear] can
- * run from another thread during a FETCH, so each cursor has a [Mutex].
+ * Opening and stepping run on [Dispatchers.IO]: engines block the thread
+ * (SQLite) or wait on the store. [clear] can run from another thread during
+ * a FETCH, so each cursor has a [Mutex].
  */
 class SqlCursorRegistry(
-    private val service: SqlQueryService?,
+    private val engine: SqlEngine?,
     private val send: (Message) -> Unit,
     private val defaultPageSize: Int?,
 ) {
     private class OpenCursor(
         val id: String,
-        val cursor: SqlCursor,
-        val conn: SQLiteConnection,
+        val rows: SqlRows,
     ) {
         val lock = Mutex()
 
         /** Set once the cursor must end; a FETCH in flight sees it and finishes. */
         var finished = false
 
-        /** The connection went back to the pool; happens exactly once. */
+        /** The rows were closed (freeing their connection); happens exactly once. */
         var released = false
     }
 
@@ -71,7 +70,7 @@ class SqlCursorRegistry(
         cmd: SqlCmd,
         policy: IRelayPolicy,
     ) {
-        if (service == null) {
+        if (engine == null) {
             send(ClosedMessage(cmd.queryId, "unsupported: this relay does not accept SQL"))
             return
         }
@@ -88,48 +87,38 @@ class SqlCursorRegistry(
         cursors.get(cmd.queryId)?.let { finishLocked(it) }
 
         val pageSize = cmd.pageSize ?: defaultPageSize ?: Int.MAX_VALUE
-        val conn =
-            try {
-                service.acquire()
-            } catch (e: Exception) {
-                send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
-                return
-            }
-        val cursor: SqlCursor
+        val rows: SqlRows
         val firstPage: List<List<Any?>>
         try {
             val opened =
                 withContext(Dispatchers.IO) {
-                    val c = SqlCursor(conn, service.compile(cmd, conn))
+                    val r = engine.open(cmd)
                     try {
-                        c to c.fetch(pageSize)
+                        r to r.fetch(pageSize)
                     } catch (e: Throwable) {
-                        c.close()
+                        r.close()
                         throw e
                     }
                 }
-            cursor = opened.first
+            rows = opened.first
             firstPage = opened.second
         } catch (e: CancellationException) {
-            service.release(conn)
             throw e
         } catch (e: SqlException) {
-            service.release(conn)
             send(ClosedMessage(cmd.queryId, e.message ?: "invalid: query"))
             return
         } catch (e: Exception) {
-            service.release(conn)
             send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
             return
         }
 
-        send(SqlColsMessage(cmd.queryId, cursor.columns))
-        send(SqlRowsMessage(cmd.queryId, firstPage, cursor.isDone))
+        send(SqlColsMessage(cmd.queryId, rows.columns))
+        send(SqlRowsMessage(cmd.queryId, firstPage, rows.isDone))
 
-        if (cursor.isDone) {
-            service.release(conn)
+        if (rows.isDone) {
+            rows.close()
         } else {
-            cursors.put(cmd.queryId, OpenCursor(cmd.queryId, cursor, conn))
+            cursors.put(cmd.queryId, OpenCursor(cmd.queryId, rows))
         }
     }
 
@@ -147,7 +136,7 @@ class SqlCursorRegistry(
             }
             val page =
                 try {
-                    withContext(Dispatchers.IO) { entry.cursor.fetch(cmd.maxRows) }
+                    withContext(Dispatchers.IO) { entry.rows.fetch(cmd.maxRows) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -155,8 +144,8 @@ class SqlCursorRegistry(
                     send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
                     return
                 }
-            send(SqlRowsMessage(cmd.queryId, page, entry.cursor.isDone))
-            if (entry.cursor.isDone || entry.finished) finish(entry)
+            send(SqlRowsMessage(cmd.queryId, page, entry.rows.isDone))
+            if (entry.rows.isDone || entry.finished) finish(entry)
         }
     }
 
@@ -196,7 +185,6 @@ class SqlCursorRegistry(
         cursors.remove(entry.id)
         if (entry.released) return
         entry.released = true
-        entry.cursor.close()
-        service?.release(entry.conn)
+        entry.rows.close()
     }
 }

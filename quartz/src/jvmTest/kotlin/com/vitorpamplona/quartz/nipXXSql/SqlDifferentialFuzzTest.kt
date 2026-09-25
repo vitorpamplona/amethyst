@@ -160,6 +160,140 @@ class SqlDifferentialFuzzTest {
         assertTrue(pushedDown > compared / 10, "only $pushedDown of $compared queries used the tags pushdown")
     }
 
+    private fun runPushdown(
+        sql: String,
+        backend: SqlStoreBackend,
+    ): Outcome =
+        try {
+            runBlocking {
+                SqlPushdown.open(sql, emptyList(), emptyMap(), backend).use { rows ->
+                    Outcome(rows.columns, rows.fetch(100_000).map { it.toString() }.sorted(), false)
+                }
+            }
+        } catch (e: Exception) {
+            if (e is SqlException) throw e
+            Outcome(emptyList(), emptyList(), true)
+        }
+
+    /**
+     * The pushdown executor ([SqlPushdown]) must answer exactly what SQLite
+     * does, both through per-reference scans (the generic backend) and
+     * through native aggregates (a reference backend that computes them in
+     * Kotlin from the plan alone).
+     */
+    @Test
+    fun pushdownMatchesSqlite() {
+        val backends = listOf("scans" to FilterStoreBackend(store), "native" to KotlinAggregateBackend(store))
+        for ((label, backend) in backends) {
+            val gen = QueryGen(Random(43))
+            var compared = 0
+            var native = 0
+            repeat(2000) { n ->
+                val sql = gen.query()
+                val expected = runOn(oracleConn, sql, emptyList())
+                val actual =
+                    try {
+                        runPushdown(sql, backend)
+                    } catch (e: SqlException) {
+                        if (!expected.error) fail("[$label] pushdown rejected a query SQLite runs, #$n: ${e.message}\n$sql")
+                        return@repeat
+                    }
+                if (expected.error != actual.error || expected.columns != actual.columns || expected.rows != actual.rows) {
+                    fail("[$label] mismatch on #$n\n  query:    $sql\n  sqlite:   $expected\n  pushdown: $actual")
+                }
+                compared++
+            }
+            if (backend is KotlinAggregateBackend) native = backend.answered
+            assertTrue(compared > 1500, "[$label] only $compared compared")
+            if (label == "native") assertTrue(native > 100, "only $native queries were answered natively")
+        }
+    }
+
+    /**
+     * Answers [AggregatePlan]s from the plan alone, the way a store's own
+     * engine would: fetch the spec's events, keep the rows the spec
+     * describes, group and aggregate. Declines what it can't reproduce
+     * exactly (JSON `rest`, `sum` over text).
+     */
+    private class KotlinAggregateBackend(
+        store: EventStore,
+    ) : FilterStoreBackend(store) {
+        var answered = 0
+
+        override suspend fun aggregate(plan: AggregatePlan): List<List<Any?>>? {
+            val spec = plan.scan
+            val touched = plan.groupBy + plan.aggregates.mapNotNull { it.column }
+            if ("rest" in touched) return null
+            if (plan.aggregates.any { it.function == "sum" && it.column !in setOf("kind", "created_at", "idx") }) return null
+
+            val rows = ArrayList<Map<String, Any?>>()
+            events(spec) { e ->
+                if (spec.table == SqlProfile.EVENTS) {
+                    rows.add(mapOf("id" to e.id, "pubkey" to e.pubKey, "created_at" to e.createdAt, "kind" to e.kind.toLong(), "content" to e.content, "sig" to e.sig))
+                } else {
+                    e.tags.forEachIndexed { i, t ->
+                        rows.add(
+                            mapOf(
+                                "event_id" to e.id,
+                                "idx" to i.toLong(),
+                                "name" to t.getOrNull(0),
+                                "value" to t.getOrNull(1),
+                                "v2" to t.getOrNull(2),
+                                "v3" to t.getOrNull(3),
+                                "v4" to t.getOrNull(4),
+                                "created_at" to e.createdAt,
+                                "kind" to e.kind.toLong(),
+                                "pubkey" to e.pubKey,
+                            ),
+                        )
+                    }
+                }
+            }
+            val kept =
+                rows.filter { r ->
+                    (spec.ids == null || r[if (spec.table == SqlProfile.EVENTS) "id" else "event_id"] in spec.ids!!) &&
+                        (spec.authors == null || r["pubkey"] in spec.authors!!) &&
+                        (spec.kinds == null || (r["kind"] as Long).toInt() in spec.kinds!!) &&
+                        (spec.since == null || (r["created_at"] as Long) >= spec.since!!) &&
+                        (spec.until == null || (r["created_at"] as Long) <= spec.until!!) &&
+                        (spec.tagName == null || r["name"] == spec.tagName) &&
+                        (spec.tagValues == null || r["value"] in spec.tagValues!!)
+                }
+            val groups = if (plan.groupBy.isEmpty()) mapOf(emptyList<Any?>() to kept) else kept.groupBy { r -> plan.groupBy.map { r[it] } }
+            answered++
+            return groups.map { (key, members) ->
+                key +
+                    plan.aggregates.map { a ->
+                        val values = if (a.column == null) members.map { 1 } else members.mapNotNull { it[a.column] }
+                        when (a.function) {
+                            "count" -> values.size.toLong()
+                            "min" -> values.minWithOrNull(::sqliteCompare)
+                            "max" -> values.maxWithOrNull(::sqliteCompare)
+                            else -> if (values.isEmpty()) null else values.sumOf { (it as Long) }
+                        }
+                    }
+            }
+        }
+
+        /** SQLite's order: integers before text, text by UTF-8 bytes. */
+        private fun sqliteCompare(
+            a: Any?,
+            b: Any?,
+        ): Int =
+            when {
+                a is Long && b is Long -> a.compareTo(b)
+                a is Long -> -1
+                b is Long -> 1
+                else -> {
+                    val x = a.toString().encodeToByteArray()
+                    val y = b.toString().encodeToByteArray()
+                    var i = 0
+                    while (i < x.size && i < y.size && x[i] == y[i]) i++
+                    if (i < x.size && i < y.size) (x[i].toInt() and 0xff) - (y[i].toInt() and 0xff) else x.size - y.size
+                }
+            }
+    }
+
     /**
      * Random profile queries over the virtual schema. Expressions are
      * emitted without parentheses so the parser's precedence is under test.
@@ -238,6 +372,7 @@ class SqlDifferentialFuzzTest {
         }
 
         private val tagNames = listOf("'t'", "'t'", "'p'", "'d'", "'imeta'", "'T'")
+        private val kindList = listOf(0, 1, 1, 3, 7, 20, 30023, 5)
         private val tagValues = listOf("'nostr'", "'sql'", "'Nostr'", "'relay'", "''", "'slug-3'", "'url x'", "'zap'")
 
         /** `name = … AND value = …` or `… value IN (…)`, in random order, on columns prefixed by [a]. */
@@ -253,7 +388,7 @@ class SqlDifferentialFuzzTest {
         }
 
         fun query(): String =
-            when (r.nextInt(17)) {
+            when (r.nextInt(23)) {
                 0 -> {
                     val w = r.nextInt(1, 3)
                     select(w) + " " + pick(listOf("UNION", "UNION ALL", "INTERSECT", "EXCEPT")) + " " + select(w) +
@@ -319,6 +454,39 @@ class SqlDifferentialFuzzTest {
 
                 13 -> {
                     "SELECT a.value, b.value FROM tags a JOIN tags b ON a.event_id = b.event_id AND ${tagEq("a.")} WHERE ${tagEq("b.")}"
+                }
+
+                // ---- store pushdown shapes: limits, native aggregates ----
+                14 -> {
+                    "SELECT id, created_at FROM events WHERE kind = ${pick(kindList)} ORDER BY created_at DESC, id LIMIT ${r.nextInt(0, 8)}" +
+                        (if (r.nextBoolean()) " OFFSET ${r.nextInt(0, 3)}" else "")
+                }
+
+                15 -> {
+                    "SELECT count(*) FROM events WHERE kind IN (${pick(kindList)}, ${pick(kindList)})" +
+                        (if (r.nextBoolean()) " AND created_at >= ${1_700_000_000 + r.nextInt(1000)}" else "")
+                }
+
+                16 -> {
+                    "SELECT pubkey, count(*), max(created_at), min(kind) FROM events WHERE kind IN (1, ${pick(kindList)}) GROUP BY pubkey ORDER BY 2 DESC, 1" +
+                        (if (r.nextBoolean()) " LIMIT ${r.nextInt(1, 4)}" else "")
+                }
+
+                17 -> {
+                    "SELECT DISTINCT value FROM tags WHERE name = ${pick(tagNames)}" + (if (r.nextBoolean()) " AND kind = ${pick(kindList)}" else "")
+                }
+
+                18 -> {
+                    val a = 1_700_000_000 + r.nextInt(500)
+                    "SELECT kind, count(*) AS n FROM events WHERE created_at BETWEEN $a AND ${a + r.nextInt(500)} GROUP BY kind ORDER BY n DESC, kind"
+                }
+
+                19 -> {
+                    "SELECT value, count(*), sum(idx) FROM tags WHERE name = ${pick(tagNames)} AND kind = ${pick(kindList)} GROUP BY value ORDER BY 2 DESC, 1 LIMIT 5"
+                }
+
+                20 -> {
+                    "SELECT count(*), min(created_at), max(created_at) FROM events WHERE kind = ${pick(kindList)} AND pubkey IN (SELECT pubkey FROM events WHERE kind = 0)"
                 }
 
                 else -> {

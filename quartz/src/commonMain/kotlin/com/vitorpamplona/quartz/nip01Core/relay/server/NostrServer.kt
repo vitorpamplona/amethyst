@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
+import com.vitorpamplona.quartz.nipXXSql.SqlEngine
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.SupervisorJob
@@ -62,8 +62,8 @@ import kotlin.coroutines.CoroutineContext
  *   plus the session-level message-size and subscription caps) and advertised
  *   via [RelayLimits.toNip11Limitation]. Null disables limit enforcement.
  *
- * Read-only SQL over websockets (`SQL` / `FETCH` / `SQL-CLOSE`) is always on
- * when [store] is a file-backed SQLite store; see [SqlQueryService.forStore].
+ * Read-only SQL over websockets (`SQL` / `FETCH` / `SQL-CLOSE`) is always on;
+ * see [SqlEngine.forStore] for how each kind of store answers it.
  */
 class NostrServer(
     private val store: IEventStore,
@@ -73,7 +73,7 @@ class NostrServer(
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     listener: RelayServerListener = RelayServerListener.None,
     limits: RelayLimits? = null,
-) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits, SqlQueryService.forStore(store)) {
+) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits, SqlEngine.forStore(store)) {
     /**
      * Wakes the deferred-FTS catch-up worker. Conflated: N batch commits
      * while the worker is mid-drain collapse into one more pass.

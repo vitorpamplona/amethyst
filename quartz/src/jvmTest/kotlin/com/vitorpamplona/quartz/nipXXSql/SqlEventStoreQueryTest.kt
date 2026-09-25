@@ -295,9 +295,11 @@ class SqlEventStoreQueryTest {
         val e = assertFailsWith<SqlException> { storeSql(store, "DELETE FROM events") }
         assertEquals(SqlException.UNSUPPORTED, e.prefix)
         assertFailsWith<SqlException> { storeSql(store, "SELECT * FROM event_headers") }
-        // A store without SQL says so.
-        val none =
+        // A store without its own SQL engine answers through the pushdown path, identically.
+        val generic =
             object : IEventStore by store {
+                override fun sqlBackend() = FilterStoreBackend(this)
+
                 override suspend fun sql(
                     query: String,
                     params: List<Any?>,
@@ -306,6 +308,7 @@ class SqlEventStoreQueryTest {
                     onRow: (List<Any?>) -> Unit,
                 ) = super<IEventStore>.sql(query, params, named, onColumns, onRow)
             }
-        assertEquals(SqlException.UNSUPPORTED, assertFailsWith<SqlException> { storeSql(none, "SELECT 1") }.prefix)
+        val q = "SELECT kind, count(*) FROM events GROUP BY kind ORDER BY kind"
+        assertEquals(storeSql(store, q), storeSql(generic, q))
     }
 }

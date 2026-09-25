@@ -224,11 +224,14 @@ class SqlRelayTest {
         }
 
     @Test
-    fun inMemoryStoresSayUnsupported() =
+    fun inMemoryStoresAnswerThroughPushdown() =
         runBlocking<Unit> {
-            val c = server(backingStore = EventStore(dbName = null, relay = null)).client()
-            c.send("""["SQL","u","SELECT 1"]""")
-            c.expectClosed("u", "unsupported: this relay does not accept SQL")
+            val memory = EventStore(dbName = null, relay = null)
+            memory.insert(alice.sign<Event>(5, 1, arrayOf(arrayOf("t", "x")), "m"))
+            val c = server(backingStore = memory).client()
+            c.send("""["SQL","u","SELECT count(*) FROM tags WHERE name = 't' AND value = 'x'"]""")
+            assertEquals(listOf("count(*)"), assertIs<SqlColsMessage>(c.next()).columns)
+            assertEquals(listOf(listOf(1L)), assertIs<SqlRowsMessage>(c.next()).rows)
         }
 
     @Test

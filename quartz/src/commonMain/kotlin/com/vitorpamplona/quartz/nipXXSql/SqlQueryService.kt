@@ -31,8 +31,32 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import kotlinx.coroutines.channels.Channel
 import kotlin.concurrent.Volatile
 
+/** Opens SQL cursors for a relay. The server that holds one closes it on shutdown. */
+interface SqlEngine : AutoCloseable {
+    /** Parses, checks and starts [cmd]. Throws [SqlException] for queries outside the profile. */
+    suspend fun open(cmd: SqlCmd): SqlRows
+
+    companion object {
+        /**
+         * SQL for [store]: dedicated read-only SQLite connections for a
+         * file-backed SQLite store, else the store's own
+         * [IEventStore.sqlBackend] through [SqlPushdown].
+         */
+        fun forStore(store: IEventStore): SqlEngine = SqlQueryService.forStore(store) ?: StoreSqlEngine(store)
+    }
+}
+
+/** SQL over any [IEventStore], through its [IEventStore.sqlBackend]. */
+class StoreSqlEngine(
+    private val store: IEventStore,
+) : SqlEngine {
+    override suspend fun open(cmd: SqlCmd): SqlRows = SqlPushdown.open(cmd.sql, cmd.params, cmd.named, store.sqlBackend())
+
+    override fun close() {}
+}
+
 /**
- * The relay side of the SQL profile: read-only connections for SQL
+ * SQL over a file-backed SQLite store: read-only connections for SQL
  * cursors, separate from the event store's REQ readers. Each open cursor
  * holds one; closed cursors return it for reuse.
  */
@@ -40,7 +64,7 @@ class SqlQueryService(
     private val openConnection: () -> SQLiteConnection,
     /** Builds the table sources, reading whatever it needs (e.g. the hash seed) from a connection. Called once. */
     private val buildSources: (SQLiteConnection) -> SqlTableSources = { EventStoreTableSources.sources },
-) : AutoCloseable {
+) : SqlEngine {
     private val idle = Channel<SQLiteConnection>(Channel.UNLIMITED)
 
     @Volatile
@@ -56,6 +80,27 @@ class SqlQueryService(
     ): CompiledQuery {
         val src = sources ?: buildSources(conn).also { sources = it }
         return SqlCompiler.compile(cmd.sql, src, cmd.params, cmd.named)
+    }
+
+    override suspend fun open(cmd: SqlCmd): SqlRows {
+        val conn = acquire()
+        try {
+            val cursor = SqlCursor(conn, compile(cmd, conn))
+            return object : SqlRows {
+                override val columns = cursor.columns
+                override val isDone get() = cursor.isDone
+
+                override suspend fun fetch(max: Int) = cursor.fetch(max)
+
+                override fun close() {
+                    cursor.close()
+                    release(conn)
+                }
+            }
+        } catch (e: Throwable) {
+            release(conn)
+            throw e
+        }
     }
 
     fun acquire(): SQLiteConnection {

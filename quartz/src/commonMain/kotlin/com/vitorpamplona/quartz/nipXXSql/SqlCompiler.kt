@@ -47,6 +47,12 @@ class SqlTableSources(
      * rows are fine: the query's own predicates still run on top).
      */
     val tagsMatching: ((TagConstraint) -> TableSource?)? = null,
+    /**
+     * When set, every base `events` / `tags` reference is resolved through
+     * this instead, given what the query asks of that reference. Used to
+     * run a query over rows a non-SQL store fetched per reference.
+     */
+    val perReference: ((ScanSpec) -> TableSource)? = null,
 )
 
 /** Equality constraints found on one `tags` reference: `name = [name]` and `value IN [values]`. */
@@ -79,8 +85,9 @@ class SqlCompiler private constructor(
     /** Innermost last. Each frame maps lowercased CTE name -> generated name. */
     private val cteScopes = ArrayList<HashMap<String, String>>()
 
-    /** `tags` references of the SELECT being emitted that can use [SqlTableSources.tagsMatching]. */
-    private var tagConstraints: Map<TableRef, TagConstraint> = emptyMap()
+    /** Base references of the SELECT being emitted, with what the query asks of each. */
+    private var scanSpecs: Map<TableRef, ScanSpec> = emptyMap()
+    private val analyzer = ScanAnalyzer(::constant)
     private var cteCounter = 0
 
     companion object {
@@ -209,11 +216,11 @@ class SqlCompiler private constructor(
             }
         }
         s.from?.let {
-            val outer = tagConstraints
-            tagConstraints = if (sources.tagsMatching != null) findTagConstraints(s, it) else emptyMap()
+            val outer = scanSpecs
+            scanSpecs = if (sources.tagsMatching != null || sources.perReference != null) findScanSpecs(s, it) else emptyMap()
             sb.append(" FROM ")
             from(it)
-            tagConstraints = outer
+            scanSpecs = outer
         }
         s.where?.let {
             sb.append(" WHERE ")
@@ -264,11 +271,27 @@ class SqlCompiler private constructor(
             sb.append(quoteIdent(generated)).append(" AS ").append(alias)
             return
         }
+        if (key != SqlProfile.EVENTS && key != SqlProfile.TAGS) {
+            throw SqlException.invalid("no such table: ${t.name} (tables are ${SqlProfile.TABLES.keys.joinToString()})", t.pos)
+        }
+        val spec = scanSpecs[t] ?: ScanSpec(key)
+        val perReference = sources.perReference
         val source =
-            when (key) {
-                SqlProfile.EVENTS -> sources.events
-                SqlProfile.TAGS -> tagConstraints[t]?.let { sources.tagsMatching?.invoke(it) } ?: sources.tags
-                else -> throw SqlException.invalid("no such table: ${t.name} (tables are ${SqlProfile.TABLES.keys.joinToString()})", t.pos)
+            when {
+                perReference != null -> {
+                    perReference(spec)
+                }
+
+                key == SqlProfile.EVENTS -> {
+                    sources.events
+                }
+
+                else -> {
+                    val name = spec.tagName
+                    val values = spec.tagValues
+                    val narrowed = if (name != null && values != null) sources.tagsMatching?.invoke(TagConstraint(name, values.toList())) else null
+                    narrowed ?: sources.tags
+                }
             }
         sb
             .append('(')
@@ -278,71 +301,46 @@ class SqlCompiler private constructor(
         args.addAll(source.args)
     }
 
-    // ---- tags pushdown -----------------------------------------------------
+    // ---- scan analysis -----------------------------------------------------
 
     /**
-     * For each `tags` reference in [from] that resolves to the base table,
-     * looks for `name = <string>` and `value = <string>` / `value IN
-     * (<strings>)` among the conjuncts that must hold for its rows: the
+     * For each base `events` / `tags` reference in [from], reads what the
+     * query asks of its rows from the conjuncts that must hold for them: the
      * top-level ANDs of WHERE, and of the ON of any join except a LEFT JOIN
-     * whose preserved (left) side holds the reference. Equality is strict,
-     * so a constraint from WHERE can also be pushed into the null-extended
-     * side of a LEFT JOIN.
+     * whose preserved (left) side holds the reference. The comparisons
+     * understood are strict (NULL never passes), so a WHERE condition may
+     * also narrow the null-extended side of a LEFT JOIN.
      */
-    private fun findTagConstraints(
+    private fun findScanSpecs(
         s: Select,
         from: FromItem,
-    ): Map<TableRef, TagConstraint> {
+    ): Map<TableRef, ScanSpec> {
         val refs = ArrayList<TableRef>()
-        collectBaseTagRefs(from, refs)
+        collectBaseRefs(from, refs)
         if (refs.isEmpty()) return emptyMap()
         val whereConjuncts = conjuncts(s.where)
-        val result = HashMap<TableRef, TagConstraint>()
+        val result = HashMap<TableRef, ScanSpec>()
         for (ref in refs) {
-            val preds = whereConjuncts + onConjunctsFor(ref, from)
-            val alias = (ref.alias ?: ref.name).lowercase()
-            val single = from === ref
-
-            fun isCol(
-                e: Expr,
-                column: String,
-            ) = e is ColumnRef && e.column.equals(column, ignoreCase = true) && (e.table?.lowercase() == alias || (e.table == null && single))
-
-            val name =
-                preds.firstNotNullOfOrNull { p ->
-                    if (p !is Binary || p.op != "=") return@firstNotNullOfOrNull null
-                    when {
-                        isCol(p.left, "name") -> constantString(p.right)
-                        isCol(p.right, "name") -> constantString(p.left)
-                        else -> null
-                    }
-                } ?: continue
-            val values =
-                preds.firstNotNullOfOrNull { p ->
-                    when {
-                        p is Binary && p.op == "=" && isCol(p.left, "value") -> constantString(p.right)?.let { listOf(it) }
-                        p is Binary && p.op == "=" && isCol(p.right, "value") -> constantString(p.left)?.let { listOf(it) }
-                        p is InList && !p.not && isCol(p.expr, "value") && p.items.isNotEmpty() -> {
-                            val strings = p.items.map { constantString(it) }
-                            if (strings.all { it != null }) strings.filterNotNull().distinct() else null
-                        }
-                        else -> null
-                    }
-                } ?: continue
-            result[ref] = TagConstraint(name, values)
+            result[ref] =
+                analyzer.analyze(
+                    table = ref.name.lowercase(),
+                    alias = (ref.alias ?: ref.name).lowercase(),
+                    single = from === ref,
+                    preds = whereConjuncts + onConjunctsFor(ref, from),
+                )
         }
         return result
     }
 
-    private fun collectBaseTagRefs(
+    private fun collectBaseRefs(
         f: FromItem,
         out: MutableList<TableRef>,
     ) {
         when (f) {
-            is TableRef -> if (f.name.equals(SqlProfile.TAGS, ignoreCase = true) && !isCte(f.name)) out.add(f)
+            is TableRef -> if (f.name.lowercase() in SqlProfile.TABLES && !isCte(f.name)) out.add(f)
             is Join -> {
-                collectBaseTagRefs(f.left, out)
-                collectBaseTagRefs(f.right, out)
+                collectBaseRefs(f.left, out)
+                collectBaseRefs(f.right, out)
             }
             is SubqueryRef -> {}
         }
@@ -353,7 +351,7 @@ class SqlCompiler private constructor(
         return cteScopes.any { key in it }
     }
 
-    /** ON conjuncts that restrict [ref]'s rows; see [findTagConstraints]. */
+    /** ON conjuncts that restrict [ref]'s rows; see [findScanSpecs]. */
     private fun onConjunctsFor(
         ref: TableRef,
         f: FromItem,
@@ -388,12 +386,34 @@ class SqlCompiler private constructor(
             else -> listOf(e)
         }
 
-    /** A string known at compile time: a string literal or a string parameter. */
-    private fun constantString(e: Expr): String? =
+    /**
+     * A value known at compile time: a string or number literal, or a
+     * parameter. Integers come back as `Long`, reals as `Double`, the
+     * same storage classes SQLite compares them in; null otherwise.
+     */
+    private fun constant(e: Expr): Any? =
         when (e) {
-            is Literal -> if (e.kind == LiteralKind.STRING) e.text else null
-            is Param -> paramValue(e) as? String
-            else -> null
+            is Literal -> {
+                when (e.kind) {
+                    LiteralKind.STRING -> e.text
+                    LiteralKind.NUMBER -> e.text.toLongOrNull() ?: e.text.toDoubleOrNull()
+                    else -> null
+                }
+            }
+
+            is Param -> {
+                when (val v = paramValue(e)) {
+                    is Int -> v.toLong()
+                    is Short -> v.toLong()
+                    is Byte -> v.toLong()
+                    is Float -> v.toDouble()
+                    else -> v
+                }
+            }
+
+            else -> {
+                null
+            }
         }
 
     private fun paramValue(p: Param): Any? =

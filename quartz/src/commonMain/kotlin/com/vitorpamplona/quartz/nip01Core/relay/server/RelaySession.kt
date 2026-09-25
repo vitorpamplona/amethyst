@@ -50,7 +50,7 @@ import com.vitorpamplona.quartz.nipXXSql.FetchCmd
 import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
 import com.vitorpamplona.quartz.nipXXSql.SqlCmd
 import com.vitorpamplona.quartz.nipXXSql.SqlCursorRegistry
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
+import com.vitorpamplona.quartz.nipXXSql.SqlEngine
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
@@ -83,7 +83,7 @@ class RelaySession(
      */
     val id: Long = nextConnectionId(),
     /** Read-only SQL (`SQL` / `FETCH` / `SQL-CLOSE`); null answers those `unsupported`. */
-    sql: SqlQueryService? = null,
+    sql: SqlEngine? = null,
     /** Rows in a SQL cursor's first page when the client doesn't say; the relay's default REQ limit. */
     sqlPageSize: Int? = null,
 ) : AutoCloseable {

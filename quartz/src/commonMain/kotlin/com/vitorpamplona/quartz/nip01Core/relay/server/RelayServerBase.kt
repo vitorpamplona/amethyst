@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
+import com.vitorpamplona.quartz.nipXXSql.SqlEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -53,7 +53,7 @@ abstract class RelayServerBase(
     listener: RelayServerListener,
     val limits: RelayLimits?,
     /** Read-only SQL service; the server owns it and closes it on [close]. Null disables SQL. */
-    private val sql: SqlQueryService? = null,
+    private val sql: SqlEngine? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     protected val scope = CoroutineScope(parentContext + SupervisorJob())

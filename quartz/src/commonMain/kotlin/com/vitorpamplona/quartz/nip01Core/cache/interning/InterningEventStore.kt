@@ -119,6 +119,8 @@ class InterningEventStore(
         onRow: (List<Any?>) -> Unit,
     ) = inner.sql(query, params, named, onColumns, onRow)
 
+    override fun sqlBackend() = inner.sqlBackend()
+
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
 
     override suspend fun snapshotIdsForNegentropy(

@@ -75,11 +75,53 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
 - Un-aliased result columns get an explicit alias equal to their source text, which
   is SQLite's own naming rule, so column names match what SQLite would report.
 
+## Stores without SQL: the pushdown executor
+
+Stores that can't run SQL (Vespa, the filesystem store, in-memory stores)
+answer the profile through `SqlPushdown` and the `SqlStoreBackend` they
+provide (`IEventStore.sqlBackend()`; the default, `FilterStoreBackend`,
+uses `query` and `count`):
+
+1. **Native first.** A single-table aggregate or DISTINCT whose conditions
+   the store can express exactly becomes an `AggregatePlan` (exact
+   `ScanSpec`, GROUP BY columns, count/min/max/sum), offered to
+   `SqlStoreBackend.aggregate`. The executor applies ORDER BY, LIMIT,
+   OFFSET and column names over the returned groups, in SQLite, so those
+   semantics stay exact. The generic backend answers `count(*)` through
+   `IEventStore.count`.
+2. **Pushed scans otherwise.** The compiler records a `ScanSpec` for every
+   base `events` / `tags` reference: the conditions that must hold for its
+   rows (ids, authors, kinds, time range, tag name/values), under the same
+   safety rules as the tags pushdown (WHERE and ON conjuncts, not the ON of a
+   LEFT JOIN's preserved side). Each reference is fetched with only its own
+   spec into a private in-memory SQLite laid out like `event_headers`, and
+   the compiled query runs there with the same `tags` derivation, so the
+   results are identical by construction.
+3. **Newest-first listings push their LIMIT.** For `… FROM events WHERE
+   <exact> ORDER BY created_at DESC[, …] LIMIT n [OFFSET m]`, the scan asks
+   for the newest n + m events, then for the whole tie group at the oldest
+   timestamp. Stores may break `created_at` ties any way.
+4. **Stores may refuse.** `SqlStoreBackend.acceptsScan` lets a big store
+   refuse references with no selective condition (`ScanSpec.isSelective`: an
+   id, author, kind or single-letter tag), which fails the query `unsupported:`.
+
+`NostrServer` serves SQL for every store: file-backed SQLite through its
+dedicated read-only connections (`SqlQueryService`), everything else through
+`StoreSqlEngine` (the pushdown executor). Clients use
+`INostrClient.sql` / `sqlStream` (`relay/client/accessories/NostrClientSqlExt.kt`).
+
+Verified by `SqlDifferentialFuzzTest.pushdownMatchesSqlite` (2,000 random
+queries per backend: the generic scan backend and a reference backend that
+answers aggregates natively from the plan; both must match SQLite exactly),
+`SqlPushdownTest` (what the store is asked for: specs per reference, the
+pushed LIMIT plus tie group, native plans, refusal, contradictions) and
+`NostrClientSqlTest` (client against an in-process NIP-42 relay).
+
 ## On the event store
 
 `IEventStore.sql(query, params, named, onColumns, onRow)` runs the same profile
 locally, with the same compiler, pushdown and results as the relay. The default
-throws `unsupported`. `EventStore` implements it through `SQLiteEventStore.sql`,
+runs through `sqlBackend()` and the pushdown executor. `EventStore` implements it through `SQLiteEventStore.sql`,
 and `ObservableEventStore` / `InterningEventStore` pass it through.
 - It streams rows inside one reader borrow, with no cursor across calls.
 - It prepares outside the statement cache, so ad hoc queries don't take cache
@@ -196,8 +238,7 @@ beyond, and a large join takes as long as the data makes it.
 3. **Tag queries without an exact name and value** (e.g. `name = 't' AND value LIKE 'nos%'`,
    or multi-letter names like `imeta`) still expand every event's JSON. A text tag
    table would cover them; measure its write and storage cost with relayBench first.
-4. **Client side:** `INostrClient.sqlQuery()` in `relay/client/accessories/`,
-   and `amy sql` (local via `IEventStore.sql`, remote via `SQL` frames). The frames already parse on the client (`Message.fromJson`).
+4. **`amy sql`** (local via `IEventStore.sql`, remote via `INostrClient.sql`). The frames already parse on the client (`Message.fromJson`).
 5. **NIP draft:** schema, EBNF of the grammar, function list, DQS-off rule,
    `invalid:` / `unsupported:` / `error:` prefixes, conformance corpus (the fuzzer's
    events + queries + expected rows).
