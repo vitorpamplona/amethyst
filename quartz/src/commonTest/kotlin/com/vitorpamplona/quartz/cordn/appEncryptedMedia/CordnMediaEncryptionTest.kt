@@ -28,6 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CordnMediaEncryptionTest {
@@ -176,6 +177,49 @@ class CordnMediaEncryptionTest {
 
         assertTrue(tag.any { it == "${CordnMediaTag.VERSION} ${CordnMediaTag.VERSION_V1}" }, "no version field")
         assertFalse(tag.any { it.startsWith("k ") }, "the file key went on the wire")
+    }
+
+    @Test
+    fun `the display hints round-trip, including the waveform`() {
+        // The recorder measures amplitudes and the composer preview already
+        // draws them; without somewhere to put them they were dropped at upload
+        // and the sender's own voice note came back bar-less.
+        val sealed = roundTrip(mime = "audio/mp4a-latm", name = "note.mp4")
+        val tag =
+            CordnMediaTag.build(
+                media = sealed,
+                url = "https://b.example.com/a",
+                dimensions = "800x600",
+                blurhash = "LEHV6n",
+                thumbhash = "1QcSHQ",
+                alt = "a spoken note",
+                waveform = listOf(0.1f, 0.5f, 1.0f),
+            )
+
+        val parsed = CordnMediaTag.parseAll(arrayOf(tag)).single()
+
+        assertEquals("800x600", parsed.dimensions)
+        assertEquals("LEHV6n", parsed.blurhash)
+        assertEquals("1QcSHQ", parsed.thumbhash)
+        assertEquals("a spoken note", parsed.alt)
+        assertEquals(listOf(0.1f, 0.5f, 1.0f), parsed.waveform)
+        assertTrue(parsed.isAudio)
+    }
+
+    @Test
+    fun `a hint that is absent or malformed costs the hint, not the attachment`() {
+        // Every one of these is optional, so a reader that cannot make sense of
+        // one must still be able to fetch and open the file.
+        val tag = CordnMediaTag.build(roundTrip(), url = "https://b.example.com/b")
+        val brokenWave = tag + "${CordnMediaTag.WAVEFORM} not numbers"
+
+        val bare = CordnMediaTag.parseAll(arrayOf(tag)).single()
+        val broken = CordnMediaTag.parseAll(arrayOf(brokenWave)).single()
+
+        assertNull(bare.waveform)
+        assertNull(bare.alt)
+        assertNull(broken.waveform, "a malformed waveform should be dropped, not kept half-parsed")
+        assertEquals("https://b.example.com/b", broken.url)
     }
 
     @Test

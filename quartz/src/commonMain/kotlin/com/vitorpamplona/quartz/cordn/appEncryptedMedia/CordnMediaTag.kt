@@ -65,6 +65,26 @@ object CordnMediaTag {
     const val VERSION_V1 = "cordn-em-v1"
     const val DIMENSIONS = "dim"
     const val BLURHASH = "blurhash"
+    const val THUMBHASH = "thumbhash"
+    const val ALT = "alt"
+
+    /**
+     * Amplitudes for the voice-note bars, space-separated floats in 0..1.
+     *
+     * NOT in `spec/applications/encrypted-media.md` §5, which lists no such
+     * field. It is written as one more of the display hints the spec does
+     * define (`dim`, `blurhash`, `thumbhash`, `alt`) and describes as "passed
+     * through unchanged" — so a client that does not know it ignores it, and a
+     * client that does gets the bars the recorder already measured. The
+     * recorder produces them either way; without somewhere to put them they
+     * were thrown away at upload and the sender's own message came back
+     * bar-less.
+     *
+     * Kept out of the AAD deliberately: it is a hint about the file, not a
+     * claim the ciphertext is bound to, and putting it in the AAD would make
+     * the blob undecryptable to anyone who wrote the floats differently.
+     */
+    const val WAVEFORM = "waveform"
 
     /** Builds the `imeta` tag for an uploaded [media] at [url]. */
     fun build(
@@ -72,6 +92,9 @@ object CordnMediaTag {
         url: String,
         dimensions: String? = null,
         blurhash: String? = null,
+        thumbhash: String? = null,
+        alt: String? = null,
+        waveform: List<Float>? = null,
     ): Array<String> =
         buildList {
             add(TAG_NAME)
@@ -83,6 +106,10 @@ object CordnMediaTag {
             add("$VERSION $VERSION_V1")
             dimensions?.let { add("$DIMENSIONS $it") }
             blurhash?.let { add("$BLURHASH $it") }
+            thumbhash?.let { add("$THUMBHASH $it") }
+            // A newline in alt would split the tag field, so it is flattened.
+            alt?.takeIf { it.isNotBlank() }?.let { add("$ALT ${it.replace('\n', ' ')}") }
+            waveform?.takeIf { it.isNotEmpty() }?.let { add("$WAVEFORM ${it.joinToString(" ")}") }
         }.toTypedArray()
 
     /**
@@ -123,6 +150,15 @@ object CordnMediaTag {
                 nonce = nonce,
                 dimensions = fields[DIMENSIONS],
                 blurhash = fields[BLURHASH],
+                thumbhash = fields[THUMBHASH],
+                alt = fields[ALT],
+                // A malformed number makes the whole hint useless rather than
+                // the message: drop the bars, keep the attachment.
+                waveform =
+                    fields[WAVEFORM]
+                        ?.split(' ')
+                        ?.mapNotNull { it.toFloatOrNull() }
+                        ?.takeIf { it.isNotEmpty() },
             )
         }
 
@@ -139,6 +175,9 @@ data class CordnMediaAttachment(
     val nonce: String,
     val dimensions: String? = null,
     val blurhash: String? = null,
+    val thumbhash: String? = null,
+    val alt: String? = null,
+    val waveform: List<Float>? = null,
 ) {
     val hashBytes: ByteArray get() = plaintextHash.hexToByteArray()
     val nonceBytes: ByteArray get() = nonce.hexToByteArray()

@@ -87,6 +87,18 @@ class CordnMediaService(
         /** The host to put it on. Defaults to the account's, which is what the
          *  upload dialog's server spinner starts on. */
         serverBaseUrl: String = account.settings.defaultFileServer.baseUrl,
+        /**
+         * Display hints for the `imeta`. All optional and none authenticated:
+         * they are the spec's "passed through unchanged" fields, so they cost
+         * nothing to omit and are worth a great deal to include — without
+         * [dimensions] the bubble has no aspect ratio to reserve and the list
+         * jumps when the picture lands, and without [waveform] a voice note the
+         * recorder already measured comes back as bare bars.
+         */
+        dimensions: String? = null,
+        blurhash: String? = null,
+        alt: String? = null,
+        waveform: List<Float>? = null,
     ): Array<String>? =
         withContext(Dispatchers.IO) {
             val server = serverBaseUrl.ifBlank { return@withContext null }
@@ -96,7 +108,14 @@ class CordnMediaService(
             // any cordn client open the blob from group state alone.
             val fileKey = CordnMediaEncryption.mediaKey(group)
             val sealed = CordnMediaEncryption.encrypt(bytes, fileKey, mimeType, filename)
-            CordnMediaTag.build(sealed, put(sealed, server, context))
+            CordnMediaTag.build(
+                media = sealed,
+                url = put(sealed, server, context),
+                dimensions = dimensions,
+                blurhash = blurhash,
+                alt = alt,
+                waveform = waveform,
+            )
         }
 
     /**

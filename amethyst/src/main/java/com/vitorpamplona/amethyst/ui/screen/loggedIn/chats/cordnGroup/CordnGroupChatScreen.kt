@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
@@ -919,15 +920,17 @@ internal fun CordnAttachment(
     // A voice note is audio, and audio has no picture: sent down the video
     // branch below it plays on a blank video surface. The Note-free player is
     // the same one the other chats reach, which cordn cannot get to through a
-    // Note because its messages never enter LocalCache. §4 carries no waveform,
-    // so the bars are absent and the transport is not.
+    // Note because its messages never enter LocalCache.
     if (attachment.isAudio) {
+        // Present when the sender wrote the hint; the player falls back to a
+        // placeholder when nobody did, so the bars are never simply missing.
+        val bars = remember(attachment) { attachment.waveform?.let { WaveformData(it) } }
         Box(Modifier.padding(top = 6.dp)) {
             RenderAudioWaveformPlayer(
                 mediaUrl = attachment.url,
                 title = attachment.filename,
                 mimeType = attachment.mimeType,
-                waveform = null,
+                waveform = bars,
                 authorName = null,
                 callbackUri = null,
                 accountViewModel = accountViewModel,
@@ -1057,7 +1060,17 @@ private suspend fun sendVoiceNote(
         val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
         val tag =
             CordnMediaService(accountViewModel.account)
-                .upload(group, bytes, recording.mimeType, recording.file.name, context)
+                .upload(
+                    group = group,
+                    bytes = bytes,
+                    mimeType = recording.mimeType,
+                    filename = recording.file.name,
+                    context = context,
+                    // The recorder measured these while it was recording; the
+                    // composer's own preview already draws them. Carrying them
+                    // is what makes the bubble match the preview.
+                    waveform = recording.amplitudes,
+                )
                 ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
         // Into the room as well, for the same reason every other send is: an
         // attachment of your own echoes back as an Echo and would otherwise be

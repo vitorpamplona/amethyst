@@ -223,6 +223,29 @@ fun RenderAudioWaveformPlayer(
     }
 }
 
+/**
+ * The bars drawn when a track carries no amplitudes of its own.
+ *
+ * A voice note with no waveform used to render as a play button on an empty
+ * black bar, which reads as a broken video rather than as audio. Every
+ * encrypted format can hit this: MIP-04 and encrypted-media-v2 define no
+ * waveform field at all, and a cordn message only carries one if the sender's
+ * client wrote the hint.
+ *
+ * **It has to vary.** `AudioWaveformReadOnly` normalises the amplitudes onto
+ * the bar height, so a constant list has no range to normalise and every bar
+ * collapses to the minimum — a flat 0.35f placeholder drew a dotted line, not
+ * bars. The shape below is a short pattern tiled across the width: enough
+ * relief to read as audio, regular enough that nobody mistakes it for a
+ * measurement of their recording.
+ *
+ * What it buys beyond looking right is somewhere for the progress fill to run,
+ * so position stays legible while it plays.
+ */
+private val PlaceholderPattern = listOf(0.35f, 0.62f, 0.45f, 0.85f, 0.5f, 0.72f, 0.4f, 0.58f)
+
+private val PlaceholderWaveform = WaveformData(List(48) { PlaceholderPattern[it % PlaceholderPattern.size] })
+
 @Composable
 @OptIn(UnstableApi::class)
 fun RenderVoicePlayer(
@@ -259,7 +282,7 @@ fun RenderVoicePlayer(
 
         Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
             PlayPauseButton(controllerState)
-            waveform?.let { Waveform(it, controllerState, Modifier) }
+            Waveform(waveform ?: PlaceholderWaveform, controllerState, Modifier)
         }
 
         RenderTopButtonsForVoice(
