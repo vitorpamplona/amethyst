@@ -380,14 +380,14 @@ private fun InfoRow(
 /**
  * Who is asking to get in, and the two buttons that answer them.
  *
- * ## Not gated on being an admin, because cordn has no such gate
+ * ## Admins only, because the commit would be refused anyway
  *
- * `spec/01.md` §5.3 makes `admin_pubkeys` presentation metadata, and neither
- * the spec nor the reference coordinator restricts who may commit — see
- * `CordnGroupPolicy`'s "why there is no authorization hook". Any member can
- * add anyone. Hiding this section behind an admin check would invent a
- * boundary the protocol does not have, and worse, imply to everyone else that
- * one is protecting them. The line under the heading says so out loud.
+ * `CordnGroupPolicy.authorizeCommit` rejects an `add` from a non-admin once a
+ * group carries `admin_pubkeys`, in both directions — so a non-admin pressing
+ * accept would build a commit the other members drop on receipt. The manager
+ * matches it: `pendingJoinRequests` only asks the coordinator about groups
+ * this account administers. An empty admin set is egalitarian, which makes
+ * every member an admin and shows this to everyone.
  *
  * ## Fetched on a tap, never polled
  *
@@ -425,7 +425,7 @@ private fun JoinRequests(
 
     Text(stringRes(R.string.cordn_requests_title), style = MaterialTheme.typography.titleSmall)
     Text(
-        text = stringRes(R.string.cordn_requests_any_member),
+        text = stringRes(R.string.cordn_requests_admin_only),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
