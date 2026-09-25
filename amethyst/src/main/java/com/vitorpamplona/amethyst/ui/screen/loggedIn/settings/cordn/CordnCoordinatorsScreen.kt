@@ -508,7 +508,9 @@ private fun DiscoveredCard(
                 Text(
                     // Its own word for itself, and said so: a coordinator cannot
                     // prove a name, which is why this never becomes the label.
-                    text = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
+                    // Passed as the label so the announcement still wins, with
+                    // the profile catching an offer that announced no name.
+                    text = coordinatorDisplayName(offer.pubKey, offer.surface.name, accountViewModel),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )

@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.CHAT_GRO
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
@@ -228,6 +229,7 @@ internal fun CordnMessageRow(
                             message = message,
                             isMine = isMine,
                             coordinatorPubKey = room.coordinatorPubKey,
+                            accountViewModel = accountViewModel,
                             isEdited = isEdited,
                             isPinned = isPinned,
                             showTime = groupPosition.isLastOfGroup,
@@ -605,6 +607,7 @@ private fun CordnMessageFooter(
     message: CordnDeliveredMessage,
     isMine: Boolean,
     coordinatorPubKey: HexKey,
+    accountViewModel: AccountViewModel,
     isEdited: Boolean,
     isPinned: Boolean,
     showTime: Boolean,
@@ -670,6 +673,7 @@ private fun CordnMessageFooter(
             message = message,
             isMine = isMine,
             coordinatorPubKey = coordinatorPubKey,
+            accountViewModel = accountViewModel,
             onDismiss = { showDetails = false },
         )
     }
@@ -688,6 +692,7 @@ private fun CordnMessageDetailsSheet(
     message: CordnDeliveredMessage,
     isMine: Boolean,
     coordinatorPubKey: HexKey,
+    accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
     val sentAt =
@@ -711,7 +716,10 @@ private fun CordnMessageDetailsSheet(
             )
             DetailLine(stringRes(R.string.cordn_message_details_sent_at), sentAt)
             DetailLine(stringRes(R.string.cordn_message_details_cursor), message.cursor.toString())
-            DetailLine(stringRes(R.string.cordn_message_details_coordinator), coordinatorPubKey.take(16))
+            DetailLine(
+                stringRes(R.string.cordn_message_details_coordinator),
+                coordinatorDisplayName(coordinatorPubKey, label = null, accountViewModel = accountViewModel),
+            )
             if (isMine) {
                 Text(
                     text = stringRes(R.string.cordn_delivery_accepted),

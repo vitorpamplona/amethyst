@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -208,7 +209,17 @@ fun CordnLinkScreen(
                     LabelledValue(stringResource(Res.string.cordn_link_group_id), result.ref.gid)
 
                     result.coordinator?.let { coordinator ->
-                        LabelledValue(stringResource(Res.string.cordn_link_coordinator), coordinator.pubKey)
+                        // The screen exists to answer "should I trust this
+                        // link", and the coordinator is the party being
+                        // trusted -- so it is shown as whoever it is, with a
+                        // face, rather than as 64 characters nobody reads.
+                        LabelledCoordinator(
+                            label = stringResource(Res.string.cordn_link_coordinator),
+                            pubKey = coordinator.pubKey,
+                            coordinatorLabel = coordinator.label,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
                         LabelledValue(
                             stringResource(Res.string.cordn_link_relays),
                             coordinator.relays.joinToString("\n") { it.url },
@@ -283,6 +294,38 @@ fun CordnLinkScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A [LabelledValue] whose value is a coordinator, rendered as its profile.
+ *
+ * The pubkey is still reachable -- tapping the avatar opens the profile, which
+ * carries the npub -- so nothing is hidden by not printing it here.
+ */
+@Composable
+private fun LabelledCoordinator(
+    label: String,
+    pubKey: HexKey,
+    coordinatorLabel: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        CoordinatorIdentityRow(
+            pubKey = pubKey,
+            label = coordinatorLabel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            modifier = Modifier.padding(top = 2.dp),
+        ) { name ->
+            Text(text = name, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.model.cordn.CordnInvitations
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 
@@ -201,7 +203,11 @@ fun CordnInvitationsScreen(
                 // invitations when the truth is that nobody asked.
                 loaded.unreachable.forEach {
                     NoticeCard(
-                        title = stringRes(R.string.cordn_invitations_unreachable, it.coordinator.label ?: it.coordinator.pubKey.take(8)),
+                        title =
+                            stringRes(
+                                R.string.cordn_invitations_unreachable,
+                                coordinatorDisplayName(it.coordinator.pubKey, it.coordinator.label, accountViewModel),
+                            ),
                         detail = it.reason,
                         isError = true,
                     )
@@ -304,15 +310,23 @@ private fun InvitationCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text =
-                    stringRes(
-                        R.string.cordn_invitations_via,
-                        invitation.coordinator.label ?: invitation.coordinator.pubKey.take(16),
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Accepting is a decision about the coordinator as much as about
+            // the group -- it is the party that will hold the membership and
+            // serve the messages -- so it is named and pictured rather than
+            // abbreviated to a key.
+            CoordinatorIdentityRow(
+                pubKey = invitation.coordinator.pubKey,
+                label = invitation.coordinator.label,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                size = 20.dp,
+            ) { name ->
+                Text(
+                    text = stringRes(R.string.cordn_invitations_via, name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Row(
                 Modifier.fillMaxWidth().padding(top = 8.dp),

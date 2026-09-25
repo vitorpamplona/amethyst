@@ -32,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,6 +62,9 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_note_linked
 import com.vitorpamplona.amethyst.commons.resources.cordn_note_membership
 import com.vitorpamplona.amethyst.commons.resources.cordn_note_publication
 import com.vitorpamplona.amethyst.commons.resources.cordn_note_sizes
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.utils.Hex
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -139,15 +143,41 @@ fun CordnExposureCard(
             }
 
             Text(
-                // Shortened rather than elided in the middle: the head of a
-                // pubkey is what people compare against an npub they were sent.
-                text = stringResource(Res.string.cordn_exposure_coordinator, exposure.coordinator.take(16)),
+                // An npub, not a hex head. What somebody checks this against is
+                // the npub they were sent, and a hex prefix cannot be compared
+                // with one at all -- different encoding, different alphabet.
+                //
+                // Name and face are deliberately absent: this card is shared
+                // code with no AccountViewModel to read a profile through, and
+                // it is a footnote under a disclosure rather than an identity
+                // surface. Every screen that embeds it names the coordinator
+                // properly nearby.
+                text = stringResource(Res.string.cordn_exposure_coordinator, remember(exposure.coordinator) { shortNpub(exposure.coordinator) }),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
+
+/**
+ * The coordinator key as a short npub.
+ *
+ * Shortened with the same prefix `User.pubkeyDisplayHex` uses, so a coordinator
+ * key reads identically here and on every other screen that prints one.
+ *
+ * Falls back to the hex if the key is not decodable, which no stored exposure
+ * should carry -- a label that is wrong is still better than a card that
+ * crashes on one malformed group.
+ */
+private const val NPUB_PREFIX = 5
+
+private fun shortNpub(pubKeyHex: String): String =
+    try {
+        Hex.decode(pubKeyHex).toNpub().toShortDisplay(NPUB_PREFIX)
+    } catch (e: IllegalArgumentException) {
+        pubKeyHex.take(16)
+    }
 
 @Composable
 private fun ExposureRow(

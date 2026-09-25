@@ -66,8 +66,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -201,10 +203,13 @@ fun CordnCreateGroupScreen(
 
             known.forEach { coordinator ->
                 CoordinatorChoice(
-                    label = coordinator.label ?: coordinator.pubKey.take(16),
+                    label = coordinatorDisplayName(coordinator.pubKey, coordinator.label, accountViewModel),
+                    pubKey = coordinator.pubKey,
                     selected = selected == coordinator.pubKey,
                     onSelect = { selected = coordinator.pubKey },
                     relays = relayLabel(coordinator.relays),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
@@ -216,7 +221,7 @@ fun CordnCreateGroupScreen(
             val cutoff = TimeUtils.now() - TimeUtils.ONE_MONTH
             val live = offers.filter { it.announcedAt >= cutoff }
             val stale = offers.filter { it.announcedAt < cutoff }
-            val names = offers.map { it.displayName() }
+            val names = offers.map { resolvedName(it, accountViewModel) }
 
             // Bounded rather than lazy. The obvious fix for a long list is a
             // LazyColumn, and it is the wrong one here: this screen is a form,
@@ -230,12 +235,15 @@ fun CordnCreateGroupScreen(
                 CoordinatorChoice(
                     // Its own word for itself, and only that: nothing here has
                     // verified the name a coordinator announces.
-                    label = disambiguate(offer.displayName(), offer.pubKey, names),
+                    label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
+                    pubKey = offer.pubKey,
                     selected = selected == offer.pubKey,
                     onSelect = { selected = offer.pubKey },
                     detail = announcedLabel(offer.announcedAt),
                     relays = relayLabel(offer.relays),
                     about = offer.surface.about?.takeIf { it.isNotBlank() },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
@@ -271,21 +279,27 @@ fun CordnCreateGroupScreen(
                 )
                 stale.forEach { offer ->
                     CoordinatorChoice(
-                        label = disambiguate(offer.displayName(), offer.pubKey, names),
+                        label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
+                        pubKey = offer.pubKey,
                         selected = selected == offer.pubKey,
                         onSelect = { selected = offer.pubKey },
                         detail = announcedLabel(offer.announcedAt),
                         relays = relayLabel(offer.relays),
                         about = offer.surface.about?.takeIf { it.isNotBlank() },
                         dimmed = true,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
 
             CoordinatorChoice(
                 label = stringRes(R.string.cordn_create_coordinator_new),
+                pubKey = null,
                 selected = selected == null,
                 onSelect = { selected = null },
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
 
             // Asks relays, never a coordinator: an announcement is an ordinary
@@ -461,8 +475,11 @@ fun CordnCreateGroupScreen(
 @Composable
 private fun CoordinatorChoice(
     label: String,
+    pubKey: HexKey?,
     selected: Boolean,
     onSelect: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     detail: String? = null,
     /** Where it answers. A coordinator has no address beyond its pubkey (§8.5). */
     relays: String? = null,
@@ -477,6 +494,17 @@ private fun CoordinatorChoice(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = onSelect)
+        // Null on the "use a different one" row, which names no coordinator
+        // yet, so there is no identity to show for it.
+        if (pubKey != null) {
+            UserPicture(
+                userHex = pubKey,
+                size = 24.dp,
+                pictureModifier = Modifier.padding(end = 8.dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 text = label,
@@ -517,8 +545,19 @@ private fun CoordinatorChoice(
 /** How many live coordinators a discovery run shows before it asks. */
 private const val LIVE_PREVIEW = 8
 
-/** Its announced name, or the key when it published none. */
-private fun DiscoveredCoordinator.displayName(): String = surface.name?.takeIf { it.isNotBlank() } ?: pubKey.take(16)
+/** Its announced name, or null when it published none. */
+private fun DiscoveredCoordinator.announcedName(): String? = surface.name?.takeIf { it.isNotBlank() }
+
+/**
+ * What to call an offer: its announced name, else its profile, else a short
+ * npub -- never a hex prefix. The announcement still wins, because in a
+ * discovery list the CEP-6 surface is the thing being offered.
+ */
+@Composable
+private fun resolvedName(
+    offer: DiscoveredCoordinator,
+    accountViewModel: AccountViewModel,
+): String = coordinatorDisplayName(offer.pubKey, offer.announcedName(), accountViewModel)
 
 /**
  * How long ago a coordinator last announced, in words that stay words.

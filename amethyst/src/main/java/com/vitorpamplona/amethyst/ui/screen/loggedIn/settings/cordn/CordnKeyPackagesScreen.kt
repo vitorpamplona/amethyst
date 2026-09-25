@@ -150,7 +150,7 @@ fun CordnKeyPackagesScreen(
                         // Between, not after: a rule under the last one drew a
                         // line to nothing.
                         if (index > 0) HorizontalDivider()
-                        CoordinatorKeyPackages(config, runtime)
+                        CoordinatorKeyPackages(config, runtime, accountViewModel, nav)
                     }
                 }
             }
@@ -162,6 +162,8 @@ fun CordnKeyPackagesScreen(
 private fun CoordinatorKeyPackages(
     config: CoordinatorConfig,
     runtime: CordnRuntime,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
     var rows by remember(config.pubKey) { mutableStateOf<List<CordnKeyPackageRow>?>(null) }
@@ -183,10 +185,15 @@ private fun CoordinatorKeyPackages(
 
     LaunchedEffect(config.pubKey) { reload() }
 
-    Text(
-        text = config.label ?: config.pubKey.take(16),
-        style = MaterialTheme.typography.titleSmall,
-    )
+    CoordinatorIdentityRow(
+        pubKey = config.pubKey,
+        label = config.label,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        size = 24.dp,
+    ) { name ->
+        Text(text = name, style = MaterialTheme.typography.titleSmall)
+    }
 
     if (busy) CircularProgressIndicator()
     error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
