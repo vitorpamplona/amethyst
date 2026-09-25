@@ -643,6 +643,26 @@ class CordnRuntime(
         }
     }
 
+    /**
+     * Which identities [coordinatorPubKey] can deliver a Welcome to, or null.
+     *
+     * For annotating people you are *about* to invite. cordn can only add a
+     * member by spending a KeyPackage they published to this coordinator, and
+     * `kp_list` is the only non-destructive way to learn who did -- `kp_take`
+     * by identity consumes one of their single-use packages
+     * (`spec/00.md` §"Coordinator retrieval behavior"), so it can never be
+     * used as a probe. One call answers for everybody, which is why this hands
+     * back the whole set instead of taking a pubkey.
+     *
+     * Null is **not** an empty set. It means the question went unanswered, and
+     * a caller that renders it as "cannot be added" turns a network failure
+     * into a claim about a person. Distinguish them.
+     */
+    suspend fun identitiesWithKeyPackages(coordinatorPubKey: HexKey): Set<HexKey>? {
+        val session = registry.sessionOrNull(coordinatorPubKey) ?: return null
+        return session.keyPackages.identitiesWithKeyPackages()
+    }
+
     /** Publishes one KeyPackage. An attributable act under the account key (§8.4). */
     suspend fun publishKeyPackage(
         coordinatorPubKey: HexKey,
