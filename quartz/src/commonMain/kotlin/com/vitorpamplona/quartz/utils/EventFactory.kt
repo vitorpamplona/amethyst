@@ -124,6 +124,10 @@ import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -842,6 +846,10 @@ class EventFactory {
                 EventTrustedListEvent.KIND -> EventTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableTrustedListEvent.KIND -> AddressableTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdTrustedListEvent.KIND -> ExternalIdTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
+                ListHeaderEvent.KIND -> ListHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                AddressableListHeaderEvent.KIND -> AddressableListHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                ListItemEvent.KIND -> ListItemEvent(id, pubKey, createdAt, tags, content, sig)
+                AddressableListItemEvent.KIND -> AddressableListItemEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayAddMemberEvent.KIND -> RelayAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayRemoveMemberEvent.KIND -> RelayRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMembershipListEvent.KIND -> RelayMembershipListEvent(id, pubKey, createdAt, tags, content, sig)

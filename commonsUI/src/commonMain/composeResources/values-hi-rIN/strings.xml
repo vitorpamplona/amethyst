@@ -81,7 +81,7 @@
     <string name="screen_notifications_title">सूचनाएँ</string>
     <string name="screen_notifications_description">उल्लेख प्रत्युत्तर तथा प्रतिक्रियाएँ यहाँ दिखेंगे।</string>
     <!-- Accessibility -->
-    <string name="accessibility_user_avatar">प्रयोक्ता चित्र</string>
+    <string name="accessibility_user_avatar">प्रयोक्ता परिचायकचित्र</string>
     <string name="accessibility_navigate">मार्गदर्शन</string>
     <!-- Relay history paging (shared feed markers + status card) -->
     <string name="chats_history_loading_label">आवहन चालू :</string>
@@ -506,7 +506,7 @@
     <string name="welcome">स्वागतम उष्ट्रपक्षी!</string>
     <string name="username">उपयोगकर्ता नाम</string>
     <string name="about_me">मेरा परिचय</string>
-    <string name="avatar_url">अवतारचित्र जालपता</string>
+    <string name="avatar_url">परिचायकचित्र जालपता</string>
     <string name="banner_url">ध्वजचित्र जालपता</string>
     <string name="website_url">जालस्थान पता</string>
     <string name="pronouns">सर्वनाम</string>
@@ -1804,7 +1804,7 @@
     <string name="moderators">नियामक</string>
     <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
-    <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों स्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
+    <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों प्रपत्रस्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
     <string name="error_dialog_talk_to_user_name">सूचना %1$s</string>
     <string name="error_dialog_button_ok">ठीक है</string>
@@ -2903,7 +2903,7 @@
     <string name="marmot_disband_group">समूह विघटन करें</string>
     <string name="marmot_disband_group_confirm">क्या %1$s को सभी के लिए विघटित किया जाए। संवाद का अन्त होगा सब के लिए तथा पुनः खोला नहीं जा सकता। एक नया समूह का निर्माण करना पडेगा।</string>
     <string name="marmot_disband_group_action">विघटन</string>
-    <string name="marmot_avatar_url">परिचायक चित्र योजक</string>
+    <string name="marmot_avatar_url">परिचायकचित्र योजक</string>
     <string name="marmot_avatar_url_placeholder">https://example.com/avatar.png</string>
     <string name="marmot_avatar_url_footer">एक एचटीटीपीएस॰ योजक जिसका आवहन सभी सदस्य कर सकते है। इसके स्थान पर आरोहित चित्र का उपयोग करने के लिए इसे रिक्त छोड दें।</string>
     <string name="marmot_legacy_group_no_avatar_url">इस समूह का निर्माण किया गया था परिचायकचित्र योजकों का अवलम्बन पूर्व। इसीलिए यह केवल आरोहित चित्र का उपयोग कर सकता है। विद्यमान समूहों का उन्नतीकरण नहीं हो सकता। एक नया समूह बनाएँ योजकों का उपयोग करने के लिए।</string>
@@ -3066,7 +3066,7 @@
     <string name="buzz_persona_model">प्रतिरूप (विकल्पात्मक)</string>
     <string name="buzz_persona_provider">प्रदाता (विकल्पात्मक)</string>
     <string name="buzz_persona_runtime">चालनपर्यावरण (विकल्पात्मक)</string>
-    <string name="buzz_persona_avatar">चित्र जालपता (वैकल्पिक)</string>
+    <string name="buzz_persona_avatar">परिचायकचित्र जालपता (वैकल्पिक)</string>
     <string name="buzz_persona_publishing">प्रकाशन…</string>
     <string name="buzz_persona_publish">व्यक्तिशैली प्रकाशन</string>
     <string name="profile_card_follows_you">आपका अनुचर</string>
@@ -5244,4 +5244,35 @@
         <item quantity="one">%1$d नया सन्देश</item>
         <item quantity="other">%1$d नए सन्देश</item>
     </plurals>
+    <string name="sno_object_title">त्रिमा वस्तु</string>
+    <string name="sno_object_details">%1$d अस्र। %2$d मुख</string>
+    <string name="sno_object_unreadable">इस त्रिमा वस्तु का पठन असफल। नियम %1$s</string>
+    <string name="sno_avatar_title">यन्त्रलोक परिचायकचित्र</string>
+    <string name="sno_avatar_unpaid">इस परिचायकचित्र ने अपने आकार के लिए भुगतान नहीं किया। इसलिए इसे नहीं दिखाया</string>
+    <string name="sno_light_on">दीप्त। दबाएँ वस्तु को समतल रूप में दिखाने के लिए</string>
+    <string name="sno_light_off">समतल। दबाएँ वस्तु को प्रकाशान्वित करने के लिए</string>
+    <string name="sno_object_scale">एक इकाई तु %1$s</string>
+    <string name="sno_shard_dataspace">तथ्यलोक में छिपाया गया। %1$s</string>
+    <string name="sno_shard_ideaspace">विचारलोक में छिपाया गया। %1$s</string>
+    <string name="sno_avatar_default">मूलविकल्प परिचायकचित्र</string>
+    <string name="sno_avatar_default_details">कोई आकृति प्रकाशित नहीं। इसलिए सबको यह दिखेगा</string>
+    <string name="cyberspace_bag_title">एक स्थल में छिपाया गया</string>
+    <string name="cyberspace_bag_box">छिपाया गया %1$s क्षेत्रों की एक पेटिका में</string>
+    <string name="cyberspace_bag_destination">एक क्षेत्र में छिपाया गया। जिसका नाम सहायक संकेत में उपलब्द यथार्थतः</string>
+    <string name="cyberspace_bag_no_hint">कोई सहायक संकेत नहीं। इसलिए यह यन्त्रलोक में कहीं भी हो सकता है</string>
+    <string name="cyberspace_bag_out_of_reach">अप्राप्य। सहायक संकेत में %1$d घातद्वौ क्षेत्र नामित हैं खोजने के लिए</string>
+    <string name="cyberspace_bag_search">उसके लिए ढूँढें</string>
+    <string name="cyberspace_bag_cancel">रोकें</string>
+    <string name="cyberspace_bag_measuring">खोज का मूल्यांकन इस यन्त्र पर…</string>
+    <string name="cyberspace_bag_progress">खोज सम्पन्न %2$s में से %1$s क्षेत्रों में</string>
+    <string name="cyberspace_bag_too_slow_minutes">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</string>
+    <string name="cyberspace_bag_too_slow_hours">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</string>
+    <string name="cyberspace_bag_not_found">सहायक संकेत में नामित पेटिका में नहीं</string>
+    <string name="cyberspace_bag_damaged">क्षेत्र प्राप्त। पर विषयवस्तु पढने में असफल</string>
+    <string name="cyberspace_bag_dropped">%1$d वस्तु जो यहाँ छिपाया गया था उसके हस्ताक्षर से मेल नहीं तथा परित्यक्त</string>
+    <string name="cyberspace_bag_dropped_many">%1$d वस्तु जो यहाँ छिपाए गए थे उनके हस्ताक्षरों से मेल नहीं तथा परित्यक्त</string>
+    <string name="cyberspace_bag_empty">खोला। पर भीतर कुछ नहीं था</string>
+    <string name="cyberspace_bag_unsigned">हस्ताक्षररहित। इसलिए यह कर्ता केवल एक कथन है</string>
+    <string name="cyberspace_bag_unknown_kind">प्रकार %1$d का वस्तु। जिसे यह ग्राहक चित्रित नहीं करता</string>
+    <string name="cyberspace_bag_opaque">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</string>
 </resources>
