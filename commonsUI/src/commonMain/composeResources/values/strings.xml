@@ -5368,27 +5368,26 @@
          them through Res. -->
     <string name="cordn_link_title">Cordn group link</string>
     <string name="cordn_link_search_keywords">cordn coordinator group link invite mls chat metadata privacy exposure</string>
-    <string name="cordn_coordinators_title">cordn coordinators</string>
+    <string name="cordn_coordinators_title">Cordn coordinators</string>
     <string name="cordn_coordinators_search_keywords">cordn coordinator add remove purge health server mls chat ordering</string>
-    <string name="cordn_keypackages_title">cordn key packages</string>
+    <string name="cordn_keypackages_title">Cordn key packages</string>
     <string name="cordn_keypackages_search_keywords">cordn key package publish invite last resort coordinator mls</string>
-    <string name="cordn_backup_title">cordn backup</string>
+    <string name="cordn_backup_title">Cordn backup</string>
     <string name="cordn_backup_search_keywords">cordn backup restore export import passphrase groups recovery</string>
-    <string name="chat_type_cordn_title">cordn groups</string>
+    <string name="chat_type_cordn_title">Cordn groups</string>
     <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
 
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
          and the new-conversation picker. -->
     <string name="cordn_group_untitled">Group %1$s</string>
     <string name="cordn_group_no_messages_yet">No messages yet</string>
-    <string name="cordn_group_via_coordinator">cordn group, carried by %1$s</string>
+    <string name="cordn_group_via_coordinator">Cordn group, carried by %1$s</string>
     <string name="cordn_preview_deleted">Message deleted</string>
     <string name="cordn_preview_voice_note">Voice note</string>
     <string name="cordn_preview_photo">Photo</string>
     <string name="cordn_preview_video">Video</string>
     <string name="cordn_preview_file">File</string>
-    <string name="cordn_group">cordn</string>
-    <string name="new_conversation_cordn_title">cordn group</string>
+    <string name="new_conversation_cordn_title">Cordn group</string>
     <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>
     <string name="new_conversation_cordn_chip">Coordinated</string>
     <string name="new_conversation_cordn_best">Best for teams that want one reliable ordering of the conversation.</string>
@@ -5402,7 +5401,7 @@
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
-    <string name="cordn_hub_title">cordn</string>
+    <string name="cordn_hub_title">Cordn</string>
     <string name="cordn_hub_search_keywords" translatable="false">cordn coordinator group mls chat migrate backup key package link move device</string>
     <string name="cordn_hub_explainer">Groups delivered by a coordinator you choose, instead of by relays.</string>
     <string name="cordn_hub_link">Inspect a group link</string>

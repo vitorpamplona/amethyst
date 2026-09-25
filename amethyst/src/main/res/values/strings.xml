@@ -385,7 +385,7 @@
     <string name="cordn_create_admin_only_me_on">Only you can invite, remove members or change the group\'s details. You can hand that to someone else later.</string>
     <string name="cordn_create_action">Create group</string>
     <string name="cordn_create_failed">The group could not be created.</string>
-    <string name="cordn_invitations_title">cordn invitations</string>
+    <string name="cordn_invitations_title">Cordn invitations</string>
     <string name="cordn_invitations_explainer">Checked when you open this screen, and at no other time — asking a coordinator whether anyone invited you tells it you are here, so Amethyst does not do it in the background.</string>
     <string name="cordn_invitations_refresh">Check again</string>
     <string name="cordn_invitations_accept">Join</string>
