@@ -211,6 +211,18 @@ private fun CordnGroupInfo(
     val failed = stringRes(R.string.cordn_admin_action_failed)
     val noSession = stringRes(R.string.cordn_send_no_session)
 
+    // Computed, never asserted: hardcoding these made the card look like a
+    // disclosure while reporting the same four values for every group.
+    val exposure by
+        produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
+            value =
+                runtime
+                    ?.sessionOrNull(coordinatorPubKey)
+                    ?.runCatching { exposure(room.gid) }
+                    ?.getOrNull()
+        }
+    var showExposure by remember { mutableStateOf(false) }
+
     /**
      * Runs an admin commit, reporting rather than swallowing what it costs.
      *
@@ -296,6 +308,50 @@ private fun CordnGroupInfo(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+
+            HorizontalDivider(Modifier.padding(vertical = 16.dp))
+
+            // First, because it is the fact that shapes everything below it: one
+            // server carries every message in this group, in order, and which one
+            // that is matters more than any of the group's own settings. It used
+            // to sit below Members, Share and Requests, where a reader met the
+            // people before the machine that sees all of them.
+            //
+            // A coordinator is a Nostr identity, not an opaque service address:
+            // ContextVM addresses it with ordinary p-tags, so it has a kind 0 like
+            // anyone else and the app can already resolve it to a name, an avatar
+            // and a profile to tap through to.
+            Text(stringRes(R.string.cordn_info_coordinator), style = MaterialTheme.typography.titleMedium)
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CoordinatorIdentityRow(
+                    pubKey = coordinatorPubKey,
+                    label = coordinatorLabel,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.weight(1f),
+                ) { name ->
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                // What it can see is a paragraph, and one nobody reads twice. As a
+                // card it took a screenful on every visit; behind an (i) it is one
+                // tap away the once it is wanted.
+                IconButton(onClick = { showExposure = true }, enabled = exposure != null) {
+                    Icon(
+                        symbol = MaterialSymbols.Info,
+                        contentDescription = stringRes(R.string.cordn_exposure_open),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
@@ -446,47 +502,19 @@ private fun CordnGroupInfo(
                 JoinRequests(room, coordinatorPubKey, accountViewModel, nav)
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-            Text(stringRes(R.string.cordn_info_coordinator), style = MaterialTheme.typography.titleMedium)
-
-            // A coordinator is a Nostr identity, not an opaque service address:
-            // ContextVM addresses it with ordinary p-tags, so it has a kind 0
-            // like anyone else and the app can already resolve it. Rendering it
-            // as the 64 hex characters it happens to be stored as told the user
-            // nothing, and threw away a name, an avatar and a profile to tap
-            // through to -- all of which this screen was already drawing, ten
-            // lines up, for every member.
-            // The label first when the user set one, then the profile, then the
-            // key's first characters -- see CoordinatorIdentityRow for why a
-            // name the user chose outranks one the coordinator published.
-            CoordinatorIdentityRow(
-                pubKey = coordinatorPubKey,
-                label = coordinatorLabel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) { name ->
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            // Computed, never asserted. Hardcoding these made the card look like a
-            // disclosure while reporting the same four values for every group --
-            // which is exactly the regression §7 risk 4 of the plan warns about.
-            val exposure by
-                produceState<GroupExposure?>(null, runtime, coordinatorPubKey, room.gid) {
-                    value =
-                        runtime
-                            ?.sessionOrNull(coordinatorPubKey)
-                            ?.runCatching { exposure(room.gid) }
-                            ?.getOrNull()
+            if (showExposure) {
+                exposure?.let {
+                    AlertDialog(
+                        onDismissRequest = { showExposure = false },
+                        text = { CordnExposureCard(it) },
+                        confirmButton = {
+                            TextButton(onClick = { showExposure = false }) {
+                                Text(stringRes(R.string.cordn_exposure_close))
+                            }
+                        },
+                    )
                 }
-
-            exposure?.let { CordnExposureCard(it) }
+            }
 
             // The exact values, for filing a bug or telling two devices apart.
             // The key stays here as well as above because the two answer

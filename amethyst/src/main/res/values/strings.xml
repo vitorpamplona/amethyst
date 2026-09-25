@@ -407,6 +407,8 @@
     <string name="cordn_info_add_member">Add someone</string>
     <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
     <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
+    <string name="cordn_exposure_open">What this coordinator can see</string>
+    <string name="cordn_exposure_close">Got it</string>
     <string name="cordn_admin_someone">That person</string>
     <string name="cordn_admin_no_key_package">%1$s has not published a key package to this coordinator, so they cannot be added yet. Ask them to open cordn on this coordinator first.</string>
     <string name="cordn_admin_wrong_key_package">This coordinator served a key package that belongs to someone else, so %1$s was not added. Nothing was changed.</string>
