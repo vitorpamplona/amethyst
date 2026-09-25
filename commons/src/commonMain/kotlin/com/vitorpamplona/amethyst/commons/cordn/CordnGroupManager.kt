@@ -264,6 +264,83 @@ class CordnGroupManager(
     }
 
     /**
+     * Removes [targetPubKey] from [gid].
+     *
+     * Admin-gated, and not by this function: [CordnGroupPolicy.authorizeCommit]
+     * refuses to build the Remove commit when the local member is not named in
+     * `admin_pubkeys`, so the check cannot be forgotten here or bypassed by
+     * another call site. A group in egalitarian mode lets any member do it.
+     *
+     * Refuses to remove YOU, as the reference client does. cordn has no
+     * self-removal: MLS wants a SelfRemove proposal an admin then commits, and
+     * committing your own Remove would advance the group into an epoch whose
+     * keys you no longer hold — you would be the only member unable to read
+     * what happened next.
+     *
+     * Sealed under the PRE-commit epoch key like every other commit here
+     * (`spec/03.md` §5), which is also what lets the person being removed read
+     * the commit that removes them: they still hold that epoch.
+     */
+    suspend fun removeMember(
+        gid: String,
+        targetPubKey: HexKey,
+    ): RemovalResult {
+        val group = requireGroup(gid)
+
+        require(targetPubKey != accountPubKey) {
+            "cordn has no self-removal: committing your own Remove would leave you unable to read the group"
+        }
+
+        val leafIndex =
+            CordnCredential
+                .membersOf(group)
+                .entries
+                .firstOrNull { it.value == targetPubKey }
+                ?.key
+                ?: throw CordnGroupException("$targetPubKey is not a member of $gid")
+
+        val result = group.removeMember(leafIndex)
+        val posted =
+            call { sync.postCommit(gid, SealedPayload.seal(result.framedCommitBytes, result.preCommitExporterSecret)) }
+
+        persist(gid)
+        return RemovalResult(gid, targetPubKey, posted.cursor)
+    }
+
+    /**
+     * Replaces [gid]'s `cordn_group_metadata` — its name, description, icon,
+     * image and admin list — with [metadata].
+     *
+     * Admin-gated the same way [removeMember] is, and through the same hook:
+     * changing metadata is a GroupContextExtensions commit, which is the third
+     * proposal type `admin_pubkeys` covers. Which means this is also how the
+     * admin list itself changes, and why an egalitarian group can be given
+     * admins by any member while an administered one cannot.
+     *
+     * A GroupContextExtensions proposal replaces the WHOLE extension list, so
+     * every other extension the group carries is kept and only `0xC04D` is
+     * swapped. Sending the metadata alone would silently drop
+     * `required_capabilities` and the app-data dictionary, and a group whose
+     * required capabilities vanished is one whose next commit peers reject.
+     */
+    suspend fun updateGroupMetadata(
+        gid: String,
+        metadata: CordnGroupMetadata,
+    ): MetadataUpdateResult {
+        val group = requireGroup(gid)
+
+        val kept = group.extensions.filterNot { it.extensionType == CordnGroupMetadata.EXTENSION_TYPE }
+        group.proposeGroupContextExtensions(kept + metadata.toExtension())
+
+        val result = group.commit()
+        val posted =
+            call { sync.postCommit(gid, SealedPayload.seal(result.framedCommitBytes, result.preCommitExporterSecret)) }
+
+        persist(gid)
+        return MetadataUpdateResult(gid, posted.cursor)
+    }
+
+    /**
      * Opens every pending Welcome without joining anything.
      *
      * Splitting "open" from "join" is what makes an accept/decline surface
@@ -469,8 +546,14 @@ class CordnGroupManager(
      * not have.
      */
     suspend fun pendingJoinRequests(): List<JoinRequest> {
-        if (groups.isEmpty()) return emptyList()
-        return call { coordinator.takeJoinRequests(groups.keys.toList(), drainRequestRetirements()) }
+        // Only groups this account can actually admit someone to, as both
+        // reference clients do. Accepting a request is an Add commit, so in a
+        // group that names admins a non-admin asking for the list would be
+        // shown people it can only fail to let in. Egalitarian groups name no
+        // admins and so are all still here.
+        val administered = groups.filterValues { CordnGroupPolicy.isLocalAdmin(it.view()) }.keys.toList()
+        if (administered.isEmpty()) return emptyList()
+        return call { coordinator.takeJoinRequests(administered, drainRequestRetirements()) }
     }
 
     /**
@@ -926,4 +1009,19 @@ data class InviteResult(
     val keyPackageRef: String,
     val commitCursor: Long,
     val welcomeAt: Long,
+)
+
+/** What [CordnGroupManager.removeMember] did. */
+data class RemovalResult(
+    val gid: String,
+    val removed: HexKey,
+    /** Where the coordinator filed the Remove commit. */
+    val cursor: Long,
+)
+
+/** What [CordnGroupManager.updateGroupMetadata] did. */
+data class MetadataUpdateResult(
+    val gid: String,
+    /** Where the coordinator filed the metadata commit. */
+    val cursor: Long,
 )

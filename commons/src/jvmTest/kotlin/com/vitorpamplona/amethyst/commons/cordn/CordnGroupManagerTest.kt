@@ -187,6 +187,142 @@ class CordnGroupManagerTest {
         }
 
     @Test
+    fun `an admin removes a member and the group advances past them`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Removal", adminPubkeys = listOf(alice)))
+            aliceManager.invite(gid, bob)
+            val epochAfterInvite = aliceManager.group(gid)!!.epoch
+
+            val removal = aliceManager.removeMember(gid, bob)
+
+            assertEquals(bob, removal.removed)
+            assertEquals(epochAfterInvite + 1, aliceManager.group(gid)!!.epoch, "a Remove is its own epoch")
+            assertTrue(
+                bob !in CordnCredential.membersOf(aliceManager.group(gid)!!).values,
+                "bob must be gone from the tree, not merely marked",
+            )
+        }
+
+    @Test
+    fun `removing yourself is refused`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Self", adminPubkeys = listOf(alice)))
+
+            // Committing your own Remove advances the group into an epoch whose
+            // keys you no longer hold, so the reference client refuses it too.
+            assertFailsWith<IllegalArgumentException> { aliceManager.removeMember(gid, alice) }
+        }
+
+    @Test
+    fun `removing someone who is not a member fails loudly`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Absent", adminPubkeys = listOf(alice)))
+
+            assertFailsWith<CordnGroupException> { aliceManager.removeMember(gid, bob) }
+        }
+
+    @Test
+    fun `a non-admin cannot remove anyone`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            // Egalitarian first, so alice can invite; then she hands admin to
+            // bob alone, which is a real sequence and the only one that leaves
+            // her a member who may not remove anyone. Creating the group with
+            // admins = [bob] would have failed at the invite instead — the gate
+            // firing there is correct, but it tests the wrong call.
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Handover"))
+            aliceManager.invite(gid, bob)
+            aliceManager.updateGroupMetadata(gid, CordnGroupMetadata(name = "Handover", adminPubkeys = listOf(bob)))
+
+            assertFailsWith<IllegalStateException> { aliceManager.removeMember(gid, bob) }
+        }
+
+    @Test
+    fun `updating metadata keeps every other extension`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Before", adminPubkeys = listOf(alice)))
+
+            val before =
+                aliceManager
+                    .group(gid)!!
+                    .extensions
+                    .map { it.extensionType }
+                    .toSet()
+
+            aliceManager.updateGroupMetadata(gid, CordnGroupMetadata(name = "After", adminPubkeys = listOf(alice, bob)))
+
+            val group = aliceManager.group(gid)!!
+            val metadata = CordnGroupMetadata.fromExtensions(group.extensions)
+            assertEquals("After", metadata?.name)
+            assertEquals(listOf(alice, bob), metadata?.adminPubkeys, "the admin list travels with the metadata")
+
+            // A GroupContextExtensions proposal replaces the WHOLE list, so
+            // required_capabilities would vanish if only the metadata were sent
+            // — and a group that lost it is one whose next commit peers reject.
+            assertEquals(before, group.extensions.map { it.extensionType }.toSet())
+        }
+
+    @Test
+    fun `a non-admin cannot rewrite metadata`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Gated", adminPubkeys = listOf(bob)))
+
+            assertFailsWith<IllegalStateException> {
+                aliceManager.updateGroupMetadata(gid, CordnGroupMetadata(name = "Hijacked", adminPubkeys = listOf(alice)))
+            }
+        }
+
+    @Test
+    fun `an egalitarian group lets any member do both`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, stored) = bobsPublication()
+            coordinator.seedKeyPackage(stored)
+
+            // No admins named: spec/01.md §5.3 egalitarian mode, where the gate
+            // opens rather than closes.
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Flat"))
+            aliceManager.invite(gid, bob)
+
+            aliceManager.updateGroupMetadata(gid, CordnGroupMetadata(name = "Still flat"))
+            aliceManager.removeMember(gid, bob)
+
+            assertEquals("Still flat", CordnGroupMetadata.fromExtensions(aliceManager.group(gid)!!.extensions)?.name)
+        }
+
+    @Test
+    fun `join requests are only asked for where they could be accepted`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+
+            // Alice is a member but not an admin, so accepting a request here
+            // would be an Add commit the policy refuses. Asking for the list at
+            // all would only offer her something that cannot work.
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Someone else's", adminPubkeys = listOf(bob)))
+
+            assertTrue(aliceManager.pendingJoinRequests().isEmpty())
+        }
+
+    @Test
     fun `the welcome cursor keeps bob from replaying epochs he cannot read`() =
         runTest {
             // Without `after`, catch-up starts at 0 and hands Bob the Commit
