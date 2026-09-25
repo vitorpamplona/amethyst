@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
@@ -106,7 +107,7 @@ fun ChatroomView(
 
     if (replyToNote != null) {
         LaunchedEffect(key1 = replyToNote, newPostModel, accountViewModel) {
-            val replyNote = accountViewModel.checkGetOrCreateNote(replyToNote)
+            val replyNote = LocalCache.checkGetOrCreateNote(replyToNote)
             if (replyNote != null) {
                 newPostModel.reply(replyNote)
             }
@@ -114,7 +115,7 @@ fun ChatroomView(
     }
     if (editFromDraft != null) {
         LaunchedEffect(editFromDraft, newPostModel, accountViewModel) {
-            val draftNote = accountViewModel.checkGetOrCreateNote(editFromDraft)
+            val draftNote = LocalCache.checkGetOrCreateNote(editFromDraft)
             if (draftNote != null) {
                 newPostModel.editFromDraft(draftNote)
             }
@@ -130,7 +131,6 @@ fun ChatroomView(
     for (userHex in room.users) {
         LoadAddressableNote(
             ChatMessageRelayListEvent.createAddress(userHex),
-            accountViewModel,
         ) { note ->
             if (note != null) {
                 EventFinderFilterAssemblerSubscription(note, accountViewModel)

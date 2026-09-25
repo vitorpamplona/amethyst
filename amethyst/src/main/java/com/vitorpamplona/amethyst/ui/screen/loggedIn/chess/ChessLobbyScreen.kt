@@ -60,6 +60,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ActiveGameCard
@@ -306,7 +307,7 @@ fun ChessLobbyContent(
     val userPubkey = accountViewModel.account.userProfile().pubkeyHex
     val currentUser =
         remember(userPubkey) {
-            accountViewModel.checkGetOrCreateUser(userPubkey)
+            LocalCache.checkGetOrCreateUser(userPubkey)
         }
 
     val hasContent =
@@ -375,7 +376,7 @@ fun ChessLobbyContent(
             items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
                 val opponent =
                     remember(state.opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(state.opponentPubkey)
+                        LocalCache.checkGetOrCreateUser(state.opponentPubkey)
                     }
                 val displayName = opponent?.toBestDisplayName() ?: state.opponentPubkey.take(8)
                 ActiveGameCard(
@@ -411,7 +412,7 @@ fun ChessLobbyContent(
             items(outgoingChallenges, key = { "outgoing-${it.eventId}" }) { challenge ->
                 val opponentUser =
                     remember(challenge.opponentPubkey) {
-                        challenge.opponentPubkey?.let { accountViewModel.checkGetOrCreateUser(it) }
+                        challenge.opponentPubkey?.let { LocalCache.checkGetOrCreateUser(it) }
                     }
                 val opponentName =
                     opponentUser?.toBestDisplayName()
@@ -476,7 +477,7 @@ fun ChessLobbyContent(
                 val displayName =
                     remember(challenge.challengerPubkey, challenge.challengerDisplayName) {
                         challenge.challengerDisplayName
-                            ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
+                            ?: LocalCache.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
                 ChallengeCard(
@@ -513,7 +514,7 @@ fun ChessLobbyContent(
                 val displayName =
                     remember(challenge.challengerPubkey, challenge.challengerDisplayName) {
                         challenge.challengerDisplayName
-                            ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
+                            ?: LocalCache.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
                 ChallengeCard(
@@ -587,7 +588,7 @@ fun ChessLobbyContent(
                     if (game.whitePubkey == userPubkey) game.blackPubkey else game.whitePubkey
                 val opponentUser =
                     remember(opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(opponentPubkey)
+                        LocalCache.checkGetOrCreateUser(opponentPubkey)
                     }
                 val opponentName =
                     opponentUser?.toBestDisplayName()

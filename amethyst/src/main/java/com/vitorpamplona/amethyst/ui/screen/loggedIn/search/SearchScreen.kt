@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
@@ -822,8 +823,8 @@ private fun DisplaySearchResults(
         ) { _, relayInfo ->
             BasicRelaySetupInfoClickableRow(
                 item = relayInfo,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
                 onDelete = null,
                 nip11CachedRetriever = Amethyst.instance.nip11Cache,
@@ -849,8 +850,8 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()
@@ -882,8 +883,8 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = stringRes(Res.string.ephemeral_relay_chat),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()
@@ -913,8 +914,8 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 autoPlayGif =
                     accountViewModel.settings.autoPlayVideosFlow
                         .collectAsStateWithLifecycle()

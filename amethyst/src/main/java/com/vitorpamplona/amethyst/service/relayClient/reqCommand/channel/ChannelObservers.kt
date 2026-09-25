@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.ChannelState
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -102,7 +103,7 @@ private fun channelToParticipatingUsers(
         val pKeys = channel.info?.participantKeys() ?: emptyList()
 
         pKeys.forEach {
-            val u = accountViewModel.checkGetOrCreateUser(it)
+            val u = LocalCache.checkGetOrCreateUser(it)
             if (u != null) {
                 users.add(u)
             }

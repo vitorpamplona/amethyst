@@ -340,7 +340,6 @@ private fun ParentMeetingSpaceLink(
 
     com.vitorpamplona.amethyst.ui.note.LoadAddressableNote(
         address = spaceAddress,
-        accountViewModel = accountViewModel,
     ) { spaceNote ->
         spaceNote ?: return@LoadAddressableNote
         val spaceEvent = spaceNote.event as? MeetingSpaceEvent

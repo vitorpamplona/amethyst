@@ -89,7 +89,7 @@ fun LoadRedirectScreen(
         ) {
             CircularProgressIndicator()
 
-            LoadNote(eventId, accountViewModel) { note ->
+            LoadNote(eventId) { note ->
                 Text(
                     // A private id is not something to show a user, and it must not be
                     // copyable off the screen either.

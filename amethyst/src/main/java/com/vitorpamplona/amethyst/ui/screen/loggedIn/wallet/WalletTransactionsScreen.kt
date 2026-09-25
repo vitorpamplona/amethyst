@@ -403,7 +403,7 @@ private fun TransactionUserName(
     fallbackName: String?,
     accountViewModel: AccountViewModel,
 ) {
-    LoadUser(baseUserHex = pubkeyHex, accountViewModel = accountViewModel) { user ->
+    LoadUser(baseUserHex = pubkeyHex) { user ->
         if (user != null) {
             UsernameDisplay(
                 baseUser = user,

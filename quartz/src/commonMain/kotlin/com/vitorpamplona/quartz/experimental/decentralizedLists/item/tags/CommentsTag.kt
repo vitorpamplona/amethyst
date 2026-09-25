@@ -18,14 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags
 
-import androidx.compose.runtime.Immutable
-import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Immutable
-class ResourceToastMsg(
-    val titleResId: StringResource,
-    val resourceId: StringResource,
-    val params: Array<out String>? = null,
-) : ToastMsg()
+/** `["comments", <text>]`. Free-text commentary from the contributor about the item. */
+class CommentsTag {
+    companion object {
+        const val TAG_NAME = "comments"
+
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(value: String) = arrayOf(TAG_NAME, value)
+    }
+}

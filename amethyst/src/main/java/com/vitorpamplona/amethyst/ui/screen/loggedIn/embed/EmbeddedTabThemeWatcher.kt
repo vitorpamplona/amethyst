@@ -30,7 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.commons.model.ThemeType
 
 /**
  * Keeps the warm embedded tabs in sync with the app's DARK/LIGHT theme. An embed WebView resolves its

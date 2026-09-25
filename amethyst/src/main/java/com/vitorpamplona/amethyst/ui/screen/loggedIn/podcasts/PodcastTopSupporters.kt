@@ -136,7 +136,7 @@ private fun SupporterRow(
                 modifier = Modifier.weight(1f),
             )
         } else {
-            LoadUser(entry.bucketKey, accountViewModel) { user ->
+            LoadUser(entry.bucketKey) { user ->
                 if (user != null) {
                     ClickableUserPicture(user, Size35dp, accountViewModel, onClick = { nav.nav(routeFor(it)) })
                     UsernameDisplay(user, Modifier.weight(1f), accountViewModel = accountViewModel)

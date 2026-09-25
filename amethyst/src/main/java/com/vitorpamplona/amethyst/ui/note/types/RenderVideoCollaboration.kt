@@ -82,7 +82,7 @@ fun RenderVideoCollaboration(
         // quotesLeft guards the recursion: the embedded video can itself credit other work, and
         // NoteCompose is what decrements it on the way down.
         if (video != null && quotesLeft > 0) {
-            LoadAddressableNote(video, accountViewModel) { videoNote ->
+            LoadAddressableNote(video) { videoNote ->
                 videoNote?.let {
                     NoteCompose(
                         baseNote = it,

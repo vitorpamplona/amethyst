@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_admin_added
 import com.vitorpamplona.amethyst.commons.resources.marmot_system_admin_added_passive
@@ -167,7 +168,7 @@ class MarmotSystemRowRenderer(
     /** A known display name, or a short key when the account is a stranger. */
     @Composable
     private fun displayName(pubkeyHex: String): String {
-        val user = accountViewModel.getUserIfExists(pubkeyHex)
+        val user = LocalCache.getUserIfExists(pubkeyHex)
         return user?.toBestDisplayName() ?: pubkeyHex.take(8)
     }
 }

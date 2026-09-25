@@ -86,8 +86,8 @@ fun ProfileBadgesScreen(
     // historic awards land in cache while this screen is open.
     ProfileBadgesFilterAssemblerSubscription(accountViewModel)
 
-    val newNote = accountViewModel.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
-    val oldNote = accountViewModel.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
+    val newNote = LocalCache.getOrCreateAddressableNote(ProfileBadgesEvent.createAddress(myPubkey))
+    val oldNote = LocalCache.getOrCreateAddressableNote(AcceptedBadgeSetEvent.createAddress(myPubkey))
 
     val newState by newNote
         .flow()
@@ -208,7 +208,7 @@ private fun AwardRow(
         return
     }
 
-    LoadAddressableNote(defAddr, accountViewModel) { defNote ->
+    LoadAddressableNote(defAddr) { defNote ->
         if (defNote == null) {
             StaticAwardRow(
                 definition = null,

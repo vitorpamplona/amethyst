@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_archived
@@ -219,10 +220,10 @@ fun observeUserNameByHex(
 ): String {
     if (pubkey == null) return ""
 
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    var user by remember(pubkey) { mutableStateOf(LocalCache.getUserIfExists(pubkey)) }
 
     if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+        LaunchedEffect(pubkey) { user = LocalCache.checkGetOrCreateUser(pubkey) }
     }
 
     val loaded = user ?: return remember(pubkey) { pubkey.take(8) }

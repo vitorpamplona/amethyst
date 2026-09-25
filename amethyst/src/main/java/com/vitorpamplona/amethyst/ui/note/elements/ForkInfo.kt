@@ -49,13 +49,13 @@ fun ShowForkInformation(
     val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
     val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
     if (forkedAddress != null) {
-        LoadAddressableNote(forkedAddress, accountViewModel) { addressableNote ->
+        LoadAddressableNote(forkedAddress) { addressableNote ->
             if (addressableNote != null) {
                 ForkMark(addressableNote, modifier, accountViewModel, nav)
             }
         }
     } else if (forkedEvent != null) {
-        LoadNote(forkedEvent, accountViewModel) { event ->
+        LoadNote(forkedEvent) { event ->
             if (event != null) {
                 ForkMark(event, modifier, accountViewModel, nav)
             }

@@ -591,7 +591,7 @@ private fun ExerciseRow(
 
     // Resolve the kind-33401 template to show its real title; falls back to the slug
     // until the template is fetched (the workout event's relay hints drive the fetch).
-    LoadAddressableNote(address, accountViewModel) { templateNote ->
+    LoadAddressableNote(address) { templateNote ->
         val name =
             if (templateNote != null) {
                 val templateEvent by observeNoteEvent<ExerciseTemplateEvent>(templateNote, accountViewModel)

@@ -213,7 +213,7 @@ private fun WikiArticleRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { articleNote ->
+    LoadAddressableNote(address) { articleNote ->
         if (articleNote != null) {
             val article by observeNoteEvent<WikiNoteEvent>(articleNote, accountViewModel)
 
@@ -238,7 +238,7 @@ private fun WikiVersionRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(eventId, accountViewModel) { versionNote ->
+    LoadNote(eventId) { versionNote ->
         if (versionNote != null) {
             val article by observeNoteEvent<WikiNoteEvent>(versionNote, accountViewModel)
 

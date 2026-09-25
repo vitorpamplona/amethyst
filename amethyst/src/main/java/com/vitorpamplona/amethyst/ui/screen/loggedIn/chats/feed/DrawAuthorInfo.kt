@@ -103,7 +103,6 @@ private fun WatchAndDisplayUser(
                 userName = displayName,
                 size = Size20dp,
                 modifier = Modifier,
-                accountViewModel = accountViewModel,
             )
 
             WatchUserFollows(author.pubkeyHex, accountViewModel) { newFollowingState ->

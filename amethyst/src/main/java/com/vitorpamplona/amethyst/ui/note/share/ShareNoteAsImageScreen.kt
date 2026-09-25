@@ -123,7 +123,7 @@ fun ShareNoteAsImageScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(id, accountViewModel) { note ->
+    LoadNote(id) { note ->
         if (note != null) {
             ShareNoteAsImageScreen(note, accountViewModel, nav)
         }
@@ -142,7 +142,7 @@ fun ShareNoteAsImageFileScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadNote(id, accountViewModel) { note ->
+    LoadNote(id) { note ->
         if (note != null) {
             ShareNoteAsImageFileScreen(note, accountViewModel, nav)
         }

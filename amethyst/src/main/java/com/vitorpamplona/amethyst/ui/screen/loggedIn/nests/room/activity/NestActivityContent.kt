@@ -101,7 +101,7 @@ internal fun NestActivityContent(
         return
     }
 
-    LoadAddressableNote(parsedAddress, accountViewModel) { addressableNote ->
+    LoadAddressableNote(parsedAddress) { addressableNote ->
         if (addressableNote == null) {
             // Note hasn't resolved yet — relay subscription is in
             // flight. Render a centered spinner so the user sees that

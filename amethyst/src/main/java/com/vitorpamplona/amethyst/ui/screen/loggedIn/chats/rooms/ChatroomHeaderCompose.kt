@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
@@ -310,14 +311,14 @@ private fun ChatroomEntry(
         // ChannelHideMessageEvent/ChannelMuteUserEvent keep falling through to `else`.
         is ChannelMessageEvent, is ChannelMetadataEvent -> {
             baseNoteEvent.channelId()?.let {
-                LoadPublicChatChannel(it, accountViewModel) { channel ->
+                LoadPublicChatChannel(it) { channel ->
                     ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
                 }
             }
         }
 
         is ChannelCreateEvent -> {
-            LoadPublicChatChannel(baseNoteEvent.id, accountViewModel) { channel ->
+            LoadPublicChatChannel(baseNoteEvent.id) { channel ->
                 ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
             }
         }
@@ -329,7 +330,7 @@ private fun ChatroomEntry(
 
         is EphemeralChatEvent -> {
             baseNoteEvent.roomId()?.let {
-                LoadEphemeralChatChannel(it, accountViewModel) { channel ->
+                LoadEphemeralChatChannel(it) { channel ->
                     ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
                 }
             }
@@ -396,8 +397,8 @@ private fun ChannelRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = hasNewMessages,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -456,8 +457,8 @@ private fun ChannelRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -491,8 +492,8 @@ private fun GeohashRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -545,8 +546,8 @@ private fun MarmotGroupRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -780,8 +781,8 @@ fun RelayGroupRow(
             channelLastTime = lastTime,
             channelLastContent = lastContent,
             hasNewMessages = (lastTime ?: Long.MIN_VALUE) > lastReadTime,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif =
                 accountViewModel.settings.autoPlayVideosFlow
                     .collectAsStateWithLifecycle()
@@ -945,8 +946,8 @@ private fun ConcordRoomCompose(
             channelLastTime = lastMessage.createdAt(),
             channelLastContent = lastContent,
             hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             autoPlayGif =
                 accountViewModel.settings.autoPlayVideosFlow
                     .collectAsStateWithLifecycle()
@@ -1002,8 +1003,8 @@ private fun RelayGroupServerRoomCompose(
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = hasNewMessages,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -1053,8 +1054,8 @@ private fun ConcordServerRoomCompose(
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = hasNewMessages,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
@@ -1164,7 +1165,7 @@ private fun UserRoomCompose(
             if (counterpartHex != null) {
                 // 1:1 room: resolve the counterpart once and share it between the name and the
                 // report-warning icon below, instead of each doing its own LoadUser.
-                LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { counterpart ->
+                LoadUser(baseUserHex = counterpartHex) { counterpart ->
                     RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = counterpart)
                     RoomReportWarningIcon(counterpart, accountViewModel)
                 }
@@ -1271,15 +1272,14 @@ private fun RowScope.LastMessagePreview(
 @Composable
 fun LoadUser(
     baseUserHex: String,
-    accountViewModel: AccountViewModel,
     content: @Composable (User?) -> Unit,
 ) {
     var user by
-        remember(baseUserHex) { mutableStateOf(accountViewModel.getUserIfExists(baseUserHex)) }
+        remember(baseUserHex) { mutableStateOf(LocalCache.getUserIfExists(baseUserHex)) }
 
     if (user == null) {
         LaunchedEffect(key1 = baseUserHex) {
-            user = accountViewModel.checkGetOrCreateUser(baseUserHex)
+            user = LocalCache.checkGetOrCreateUser(baseUserHex)
         }
     }
 

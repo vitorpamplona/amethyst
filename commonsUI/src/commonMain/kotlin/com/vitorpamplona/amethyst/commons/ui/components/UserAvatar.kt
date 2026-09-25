@@ -30,6 +30,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 
 /**
  * Wrapper class for profile picture URLs that signals Coil to use the thumbnail
@@ -58,7 +59,8 @@ val LocalProfilePictureCache = staticCompositionLocalOf { false }
  * @param size Size of the avatar (both width and height)
  * @param modifier Additional modifiers to apply
  * @param contentDescription Accessibility description
- * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
+ * @param loadProfilePicture Whether to load the profile picture (false = show robohash only).
+ *   Defaults to the user's display settings ([LocalDisplaySettings]), as do the next two.
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
  * @param autoPlayGif Whether animated (GIF/AVIF) pictures play. Only Android can animate them;
  *   desktop shows their first frame either way.
@@ -74,9 +76,9 @@ fun UserAvatar(
     size: Dp,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    loadProfilePicture: Boolean = true,
-    loadRobohash: Boolean = true,
-    autoPlayGif: Boolean = true,
+    loadProfilePicture: Boolean = LocalDisplaySettings.current.showProfilePictures,
+    loadRobohash: Boolean = LocalDisplaySettings.current.loadRobohash,
+    autoPlayGif: Boolean = LocalDisplaySettings.current.autoPlayVideos,
     badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
     if (badge != null) {

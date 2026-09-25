@@ -128,7 +128,7 @@ fun DisplayPaymentRailChips(
             Bolt12OfferListEvent.createAddress(baseUser.pubkeyHex)
         }
 
-    LoadAddressableNote(targetsAddress, accountViewModel) { targetsNote ->
+    LoadAddressableNote(targetsAddress) { targetsNote ->
         val targets =
             if (targetsNote != null) {
                 EventFinderFilterAssemblerSubscription(targetsNote, accountViewModel)
@@ -138,7 +138,7 @@ fun DisplayPaymentRailChips(
                 emptyList()
             }
 
-        LoadAddressableNote(bolt12Address, accountViewModel) { bolt12Note ->
+        LoadAddressableNote(bolt12Address) { bolt12Note ->
             val bolt12Offers =
                 if (bolt12Note != null) {
                     EventFinderFilterAssemblerSubscription(bolt12Note, accountViewModel)

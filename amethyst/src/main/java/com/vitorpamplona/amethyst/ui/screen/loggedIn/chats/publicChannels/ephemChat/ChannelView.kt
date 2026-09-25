@@ -53,7 +53,7 @@ fun EphemeralChatChannelView(
 ) {
     if (channelId == null) return
 
-    LoadEphemeralChatChannel(channelId, accountViewModel) { ephem ->
+    LoadEphemeralChatChannel(channelId) { ephem ->
         PrepareChannelViewModels(
             baseChannel = ephem,
             draft = draft,

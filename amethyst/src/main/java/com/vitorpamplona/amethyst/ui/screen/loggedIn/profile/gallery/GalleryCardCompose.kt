@@ -68,7 +68,7 @@ fun GalleryCardCompose(
                 }
 
             if (redirectToEventId != null) {
-                LoadNote(baseNoteHex = redirectToEventId, accountViewModel = accountViewModel) { baseSourceNote ->
+                LoadNote(baseNoteHex = redirectToEventId) { baseSourceNote ->
                     if (baseSourceNote != null) {
                         val sourceNote by observeNote(baseSourceNote, accountViewModel)
                         RedirectableGalleryCard(

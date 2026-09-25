@@ -373,7 +373,7 @@ private fun ParticipantsRow(
                     size = Size30dp,
                     accountViewModel = accountViewModel,
                 )
-                LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
+                LoadUser(baseUserHex = pubKey) { user ->
                     if (user != null) {
                         UsernameDisplay(
                             baseUser = user,

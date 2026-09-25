@@ -127,7 +127,7 @@ fun NestLobbyScreen(
     nav: INav,
 ) {
     val address = remember(addressValue) { Address.parse(addressValue) } ?: return
-    LoadAddressableNote(address, accountViewModel) { addressableNote ->
+    LoadAddressableNote(address) { addressableNote ->
         addressableNote ?: return@LoadAddressableNote
         val event = addressableNote.event as? MeetingSpaceEvent ?: return@LoadAddressableNote
         NestLobbyContent(event, addressableNote, accountViewModel, nav)

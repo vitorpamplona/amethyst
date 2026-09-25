@@ -1193,7 +1193,7 @@ private fun HistoryUserName(
     pubkeyHex: String,
     accountViewModel: AccountViewModel,
 ) {
-    LoadUser(baseUserHex = pubkeyHex, accountViewModel = accountViewModel) { user ->
+    LoadUser(baseUserHex = pubkeyHex) { user ->
         if (user != null) {
             UsernameDisplay(
                 baseUser = user,

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_change_photo
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_icon
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_photo
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -99,8 +100,8 @@ fun MarmotGroupIconEditor(
                     .size(96.dp)
                     .clip(CircleShape)
                     .let { if (enabled) it.clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } else it },
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
         )
 
         Row(

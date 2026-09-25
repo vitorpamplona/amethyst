@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_my_inbox
@@ -38,7 +39,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_read_outb
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_read_venue
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_send_dm
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_purpose_thread
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import org.jetbrains.compose.resources.StringResource
 
@@ -50,12 +50,11 @@ import org.jetbrains.compose.resources.StringResource
 @Composable
 internal fun LoadRelayAuthUser(
     pubkey: HexKey,
-    accountViewModel: AccountViewModel,
     content: @Composable (User?) -> Unit,
 ) {
-    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    var user by remember(pubkey) { mutableStateOf(LocalCache.getUserIfExists(pubkey)) }
     if (user == null) {
-        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+        LaunchedEffect(pubkey) { user = LocalCache.checkGetOrCreateUser(pubkey) }
     }
     content(user)
 }

@@ -215,7 +215,7 @@ private fun AccountParticipationRow(
         // resolves (and lazily creates) the User behind each npub off the main thread,
         // then the shared UserPicture / UsernameDisplay observe its live metadata.
         if (pubkeyHex != null) {
-            LoadUser(pubkeyHex, accountViewModel) { user ->
+            LoadUser(pubkeyHex) { user ->
                 if (user != null) {
                     ClickableUserPicture(
                         baseUser = user,

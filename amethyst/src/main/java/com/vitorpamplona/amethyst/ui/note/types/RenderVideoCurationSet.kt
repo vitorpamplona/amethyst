@@ -169,12 +169,12 @@ private fun VideoListMemberPoster(
 ) {
     when (item) {
         is AddressBookmark ->
-            LoadAddressableNote(item.address, accountViewModel) { note ->
+            LoadAddressableNote(item.address) { note ->
                 note?.let { VideoPoster(it, accountViewModel) { nav.nav(Route.Note(addressTag(item.address))) } }
             }
 
         is EventBookmark ->
-            LoadNote(item.eventId, accountViewModel) { note ->
+            LoadNote(item.eventId) { note ->
                 note?.let { VideoPoster(it, accountViewModel) { nav.nav(Route.Note(item.eventId)) } }
             }
     }

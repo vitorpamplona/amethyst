@@ -260,7 +260,7 @@ fun MusicPlaylistHeader(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                                 )
                             }
-                            LoadAddressableNote(address, accountViewModel) { trackNote ->
+                            LoadAddressableNote(address) { trackNote ->
                                 if (trackNote != null) {
                                     PlaylistTrackRow(
                                         position = index + 1,
@@ -678,7 +678,7 @@ private fun RenderMusicPlaylistPreview() {
     }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let {
                 RenderMusicPlaylist(
                     note = it,
@@ -710,7 +710,7 @@ private fun RenderMusicPlaylistCollaborativePrivatePreview() {
     remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let {
                 RenderMusicPlaylist(
                     note = it,
@@ -740,7 +740,7 @@ private fun MusicPlaylistCoverPreview() {
     remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
-        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+        LoadNote(baseNoteHex = event.address().toValue()) { note ->
             note?.let {
                 MusicPlaylistCover(
                     image = null,

@@ -81,7 +81,7 @@ fun RenderPublicChatChannelThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadPublicChatChannel(baseNote.idHex, accountViewModel) {
+    LoadPublicChatChannel(baseNote.idHex) {
         RenderPublicChatChannelThumb(baseNote = baseNote, channel = it, accountViewModel, nav)
     }
 }

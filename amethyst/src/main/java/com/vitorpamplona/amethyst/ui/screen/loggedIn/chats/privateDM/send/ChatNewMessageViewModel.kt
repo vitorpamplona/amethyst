@@ -407,7 +407,7 @@ class ChatNewMessageViewModel :
                 }
 
             if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
+                replyTo.value = LocalCache.checkGetOrCreateNote(replyId)
             }
         } else if (draftEvent is PrivateDmEvent) {
             val recipientNPub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
@@ -415,7 +415,7 @@ class ChatNewMessageViewModel :
 
             val replyId = draftEvent.replyTo()
             if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
+                replyTo.value = LocalCache.checkGetOrCreateNote(replyId)
             }
         }
 

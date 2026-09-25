@@ -175,7 +175,7 @@ fun RelayGroupEditScreen(
     val groupId = remember(id, relay) { GroupId(id, relay) }
     val viewModel: RelayGroupMetadataViewModel = viewModel(key = "RelayGroupEdit:${groupId.toKey()}")
 
-    LoadRelayGroupChannel(groupId, accountViewModel) { channel ->
+    LoadRelayGroupChannel(groupId) { channel ->
         // Keep the relay-signed metadata fresh while editing so a late load prefills.
         RelayGroupCardWarmupSubscription(channel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel)
 

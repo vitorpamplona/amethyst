@@ -217,7 +217,7 @@ private fun GeocacheHuntStop(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { cacheNote ->
+    LoadAddressableNote(address) { cacheNote ->
         // A hunt is a list of caches the reader has most likely never fetched, so the note comes
         // back empty and `cacheNote.event` would stay null forever. observeNoteEvent asks the
         // relays for it and recomposes this stop when it lands.

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
@@ -76,7 +77,7 @@ fun RelayGroupPinnedBar(
     val safeIndex = index.coerceIn(0, pinnedIds.lastIndex)
     val currentId = pinnedIds[safeIndex]
 
-    val note = remember(currentId) { accountViewModel.checkGetOrCreateNote(currentId) } ?: return
+    val note = remember(currentId) { LocalCache.checkGetOrCreateNote(currentId) } ?: return
 
     // Fetch + observe the pinned message so its author and content fill in once it loads.
     val noteState by observeNote(note, accountViewModel)

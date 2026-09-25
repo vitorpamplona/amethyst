@@ -292,7 +292,7 @@ private fun RecipientDeliveryRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        LoadUser(baseUserHex = recipient.recipient, accountViewModel = accountViewModel) { user ->
+        LoadUser(baseUserHex = recipient.recipient) { user ->
             if (user != null) {
                 UserPicture(user, Size20dp, Modifier, accountViewModel, nav)
                 Row(modifier = Modifier.weight(1f)) {

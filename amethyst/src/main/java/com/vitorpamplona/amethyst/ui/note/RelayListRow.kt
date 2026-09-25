@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
@@ -161,9 +162,9 @@ fun RenderRelay(
         RenderRelayIcon(
             displayUrl = relayInfo.id ?: relay.url,
             iconUrl = relayInfo.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
             pingInMs = 0,
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
             iconModifier = iconModifier,
         )
     }

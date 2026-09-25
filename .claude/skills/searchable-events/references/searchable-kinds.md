@@ -4,7 +4,7 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-09-17.
 
-Counts: 133 concrete classes covering 136 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 137 concrete classes covering 140 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 has a collision — see the footnote). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -65,6 +65,8 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 9736 | Bolt12ZapEvent | nipB1Bolt12Zaps/zap | `content` |
 | 9737 | Bolt12ZapIntentEvent | nipB1Bolt12Zaps/intent | `content` |
 | 9802 | HighlightEvent | nip84Highlights | `listOfNotNull(comment(), context(), content)` NL |
+| 9998 | ListHeaderEvent | experimental/decentralizedLists/header | `tags.searchableListContent()` NL — `names` (singular, plural), `titles` (singular, plural), `name`, `title`, `description`, `comments`, then every `t` value; ids/pubkeys/coordinates are left to tag filters |
+| 9999 | ListItemEvent | experimental/decentralizedLists/item | same as 9998 |
 | 10003 | BookmarkListEvent | nip51Lists/bookmarkList | `listOfNotNull(title())` NL |
 | 10100 | AgentProfileEvent | buzz/agentProfiles | `profileOrNull()?.let { listOfNotNull(it.name, it.displayName).joinToString("\n") } ?: ""` |
 | 10154 | PodcastMetadataEvent | nipF4Podcasts/metadata | `listOfNotNull(title(), description())` NL |
@@ -140,6 +142,8 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 39092 | MediaStarterPackEvent | nip51Lists/mediaStarterPack | `listOfNotNull(title(), description())` NL |
 | 39307 | TextTrackEvent | nip71Video/textTrack | `content` (the WebVTT cue text) |
 | 39701 | WebBookmarkEvent | nipB0WebBookmarks | `listOfNotNull(title(), description())` NL |
+| 39998 | AddressableListHeaderEvent | experimental/decentralizedLists/header | same as 9998 |
+| 39999 | AddressableListItemEvent | experimental/decentralizedLists/item | same as 9998 |
 | 40002 | StreamMessageV2Event | buzz/stream | `content` |
 | 40100 | CanvasEvent | buzz/stream | `content` |
 | 45001 | ForumPostEvent | buzz/forum | `content` |

@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -573,8 +574,8 @@ private fun RelaysSection(
             Column {
                 BasicRelaySetupInfoClickableRow(
                     item = info,
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+                    loadRobohash = LocalDisplaySettings.current.loadRobohash,
                     onClick = {},
                     onDelete = { model.removeRelay(entry) },
                     nip11CachedRetriever = Amethyst.instance.nip11Cache,

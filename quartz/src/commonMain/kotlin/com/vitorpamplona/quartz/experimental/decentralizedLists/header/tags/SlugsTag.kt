@@ -18,36 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts.multiline
+package com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.ui.components.toasts.ToastMsg
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import org.jetbrains.compose.resources.StringResource
+/** `["slugs", <singular>, <plural>]`. Optional URL-friendly identifier in singular and plural form. */
+class SlugsTag {
+    companion object {
+        const val TAG_NAME = "slugs"
 
-@Immutable
-class MultiErrorToastMsg(
-    val titleResId: StringResource,
-) : ToastMsg() {
-    val errors = MutableStateFlow<List<UserBasedErrorMessage>>(emptyList())
+        fun isTag(tag: Array<String>) = SingularPlural.isTag(tag, TAG_NAME)
 
-    fun add(
-        message: String,
-        user: User?,
-    ) {
-        add(UserBasedErrorMessage(message, user))
-    }
+        fun parse(tag: Array<String>) = SingularPlural.parse(tag, TAG_NAME)
 
-    fun add(newError: UserBasedErrorMessage) {
-        errors.update {
-            it + newError
-        }
+        fun assemble(
+            singular: String,
+            plural: String,
+        ) = SingularPlural.assemble(TAG_NAME, singular, plural)
+
+        fun assemble(value: SingularPlural) = assemble(value.singular, value.plural)
     }
 }
-
-class UserBasedErrorMessage(
-    val error: String,
-    val user: User?,
-)

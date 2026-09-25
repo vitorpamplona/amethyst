@@ -182,7 +182,7 @@ fun NewGeocacheHuntScreen(
             }
 
             model.caches.forEachIndexed { index, address ->
-                LoadAddressableNote(address, accountViewModel) { cacheNote ->
+                LoadAddressableNote(address) { cacheNote ->
                     // Same reason as the hunt screen's stops: a cache added by naddr has no event
                     // in the cache yet, so this has to ask the relays and watch rather than read.
                     val listing = cacheNote?.let { observeNoteEvent<GeocacheListingEvent>(it, accountViewModel).value }

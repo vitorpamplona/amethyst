@@ -76,7 +76,7 @@ fun WithSnoPalette(
         is NEvent -> LoadPaletteNote(entity.hex, accountViewModel, content)
         is NNote -> LoadPaletteNote(entity.hex, accountViewModel, content)
         is NAddress ->
-            LoadAddressableNote(entity.address(), accountViewModel) { note ->
+            LoadAddressableNote(entity.address()) { note ->
                 content(remember(note?.event) { note?.event?.let { SnoPaletteEventReader.read(it) } })
             }
         // A reference the parser accepted as well-formed but that names nothing
@@ -91,7 +91,7 @@ private fun LoadPaletteNote(
     accountViewModel: AccountViewModel,
     content: @Composable (SnoPalette?) -> Unit,
 ) {
-    LoadNote(hex, accountViewModel) { note ->
+    LoadNote(hex) { note ->
         // The kind is deliberately not checked: §1.3b says this format "does
         // not define a palette kind and does not want one", and a reader that
         // accepts the shape reads whatever convention wins. An event that is

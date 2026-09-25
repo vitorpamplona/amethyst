@@ -110,7 +110,7 @@ fun SoftwareAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(address, accountViewModel) { note ->
+    LoadAddressableNote(address) { note ->
         note?.let {
             SoftwareAppDetailScreenContent(
                 note = it,

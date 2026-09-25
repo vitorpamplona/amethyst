@@ -450,7 +450,7 @@ private fun Person(
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Text(prefix, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         UserPicture(userHex = hex, size = Size20dp, accountViewModel = accountViewModel, nav = nav)
-        LoadUser(baseUserHex = hex, accountViewModel = accountViewModel) { user ->
+        LoadUser(baseUserHex = hex) { user ->
             if (user != null) UsernameDisplay(baseUser = user, fontWeight = FontWeight.Medium, accountViewModel = accountViewModel)
         }
     }
