@@ -322,6 +322,15 @@
     <string name="cordn_action_edit">Edit</string>
     <string name="cordn_action_delete">Delete</string>
     <string name="cordn_action_pin">Pin</string>
+    <string name="cordn_pinned_previous">Previous pinned message</string>
+    <string name="cordn_pinned_next">Next pinned message</string>
+    <string name="cordn_pinned_show_all">Show all pinned messages</string>
+    <string name="cordn_pinned_title">Pinned messages</string>
+    <string name="cordn_pinned_by">Pinned by %1$s</string>
+    <plurals name="cordn_pinned_count">
+        <item quantity="one">%1$d pinned message in this group</item>
+        <item quantity="other">%1$d pinned messages in this group</item>
+    </plurals>
     <string name="cordn_action_unpin">Unpin</string>
     <string name="cordn_action_editing">Editing your message</string>
     <string name="cordn_media_upload_failed">Could not send that file.</string>
