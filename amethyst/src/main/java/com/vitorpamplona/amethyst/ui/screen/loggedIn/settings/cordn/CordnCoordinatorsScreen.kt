@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -145,7 +146,7 @@ fun CordnCoordinatorsScreen(
             SettingsSection(Res.string.cordn_coordinators_section_yours) {
                 SettingsFormBlock {
                     coordinators.forEach { config ->
-                        CoordinatorCard(config, runtime)
+                        CoordinatorCard(config, runtime, accountViewModel, nav)
                     }
 
                     if (coordinators.isEmpty()) {
@@ -160,7 +161,7 @@ fun CordnCoordinatorsScreen(
 
             SettingsSection(Res.string.cordn_coordinators_section_discover) {
                 SettingsFormBlock {
-                    DiscoverCoordinators(runtime, accountViewModel, coordinators.map { it.pubKey }.toSet())
+                    DiscoverCoordinators(runtime, accountViewModel, nav, coordinators.map { it.pubKey }.toSet())
                 }
             }
 
@@ -180,6 +181,8 @@ fun CordnCoordinatorsScreen(
 private fun CoordinatorCard(
     config: CoordinatorConfig,
     runtime: CordnRuntime,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
     var info by remember(config.pubKey) { mutableStateOf<CoordinatorServerInfo?>(null) }
@@ -190,10 +193,27 @@ private fun CoordinatorCard(
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = config.label ?: stringRes(R.string.cordn_coordinators_unnamed),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            // "Unnamed" was only ever true of the *label*. A coordinator that
+            // published a kind 0 has had a name all along (CEP-23), and the app
+            // could already resolve it -- so this now falls back to the profile
+            // before it gives up and says nothing.
+            CoordinatorIdentityRow(
+                pubKey = config.pubKey,
+                label = config.label,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            ) { name ->
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            // The key stays in full, and selectable: this is the screen where
+            // you verify that the coordinator you were told to use is the one
+            // you added, and a name -- from a label or a profile -- cannot
+            // settle that.
             SelectionContainer {
                 Text(config.pubKey, style = MaterialTheme.typography.bodySmall)
             }
@@ -317,6 +337,7 @@ private fun HealthLine(state: CoordinatorHealth.State) {
 private fun DiscoverCoordinators(
     runtime: CordnRuntime,
     accountViewModel: AccountViewModel,
+    nav: INav,
     known: Set<String>,
 ) {
     val scope = rememberCoroutineScope()
@@ -384,7 +405,7 @@ private fun DiscoverCoordinators(
                 )
             }
 
-            offers.forEach { offer -> DiscoveredCard(offer, runtime) }
+            offers.forEach { offer -> DiscoveredCard(offer, runtime, accountViewModel, nav) }
         }
     }
 }
@@ -393,18 +414,32 @@ private fun DiscoverCoordinators(
 private fun DiscoveredCard(
     offer: DiscoveredCoordinator,
     runtime: CordnRuntime,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                // Its own word for itself, and said so: a coordinator cannot
-                // prove a name, which is why this never becomes the label.
-                text = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
-                style = MaterialTheme.typography.titleSmall,
-            )
+            // The announcement's name, not the profile's: in a discovery list
+            // the CEP-6 surface is the thing being offered, and both are the
+            // server's own word for itself anyway. The avatar is worth having
+            // regardless -- it is the only part of this card that is hard to
+            // impersonate at a glance.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                UserPicture(userHex = offer.pubKey, size = 24.dp, accountViewModel = accountViewModel, nav = nav)
+                Text(
+                    // Its own word for itself, and said so: a coordinator cannot
+                    // prove a name, which is why this never becomes the label.
+                    text = offer.surface.name?.takeIf { it.isNotBlank() } ?: offer.pubKey.take(16),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             offer.surface.about?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
