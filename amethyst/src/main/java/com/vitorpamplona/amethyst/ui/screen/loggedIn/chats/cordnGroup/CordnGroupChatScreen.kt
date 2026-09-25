@@ -34,11 +34,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -50,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -89,10 +95,12 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.AutoScrollToNewest
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -322,7 +330,13 @@ private fun CordnGroupChat(
             // A pin is a claim about a message's importance, not a message, and
             // leaving it only in place means the thing someone pinned scrolls
             // away exactly like everything else.
-            PinnedRibbon(annotations, scope) { message ->
+            PinnedRibbon(
+                annotations = annotations,
+                scope = scope,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onJumpTo = jumpTo,
+            ) { message ->
                 trySend {
                     it.post(
                         gid = room.gid,
@@ -635,10 +649,27 @@ private fun CordnDeliveredMessage.target() =
         tags = envelope.tags,
     )
 
+/**
+ * The pinned messages, one line tall however many there are.
+ *
+ * Stacking them was the obvious shape and the wrong one: the ribbon sits above a
+ * `weight(1f)` conversation, so an unweighted Column of one row per pin is
+ * measured at its full height first and takes that space off the conversation --
+ * eight pins and there is little chat left, with no way to scroll or collapse
+ * the strip. cordn-web's shape fixes the height by construction instead: one pin
+ * shown, a position counter, and arrows to step through the rest.
+ *
+ * Stepping wraps, and the index is clamped on read rather than corrected in an
+ * effect -- the list shrinks under it whenever anybody unpins, and a clamp that
+ * happens at read time cannot lag behind the data the way a correction does.
+ */
 @Composable
 private fun PinnedRibbon(
     annotations: CordnAnnotationIndex,
     scope: CoroutineScope,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onJumpTo: (HexKey) -> Unit,
     // Hoisted rather than handed a manager: unpinning has to go through the
     // caller's trySend so it reports a failure and lands in the room, and a
     // ribbon that posted for itself could do neither.
@@ -647,36 +678,227 @@ private fun PinnedRibbon(
     val pinned = annotations.pinnedIds().mapNotNull { annotations.byId[it] }
     if (pinned.isEmpty()) return
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
-        pinned.forEach { message ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Icon(MaterialSymbols.PushPin, contentDescription = null, modifier = Modifier.size(14.dp))
+    var index by remember { mutableIntStateOf(0) }
+    var showingAll by remember { mutableStateOf(false) }
+
+    val at = index.coerceIn(0, pinned.lastIndex)
+    val current = pinned[at]
+
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.PushPin,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            PinnedLine(
+                message = current,
+                annotations = annotations,
+                accountViewModel = accountViewModel,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clickable { onJumpTo(current.envelope.id) }
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+
+            // Only when there is somewhere to step to.
+            if (pinned.size > 1) {
+                IconButton(onClick = { index = (at - 1 + pinned.size) % pinned.size }, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.KeyboardArrowLeft,
+                        contentDescription = stringRes(R.string.cordn_pinned_previous),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 Text(
-                    // A deleted message that is still pinned shows as deleted,
-                    // not as its old text: a pin must not outlive the
-                    // withdrawal of what it points at.
-                    text =
-                        if (annotations.isDeleted(message.envelope.id)) {
-                            stringRes(R.string.cordn_message_deleted)
-                        } else {
-                            annotations.contentOf(message.envelope.id).orEmpty()
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(start = 6.dp),
+                    text = "${at + 1}/${pinned.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = {
-                    scope.launch {
-                        onUnpin(message)
-                    }
-                }) {
-                    Text(stringRes(R.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
+                IconButton(onClick = { index = (at + 1) % pinned.size }, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
+                        contentDescription = stringRes(R.string.cordn_pinned_next),
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
+
+            IconButton(onClick = { showingAll = true }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.List,
+                    contentDescription = stringRes(R.string.cordn_pinned_show_all),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
-        HorizontalDivider(Modifier.padding(top = 6.dp))
+
+        HorizontalDivider()
     }
+
+    if (showingAll) {
+        AllPinnedDialog(
+            pinned = pinned,
+            annotations = annotations,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onDismiss = { showingAll = false },
+            onJumpTo = {
+                showingAll = false
+                onJumpTo(it)
+            },
+            onUnpin = { scope.launch { onUnpin(it) } },
+        )
+    }
+}
+
+/**
+ * Who said it and what it said, on one line.
+ *
+ * The author is half of what makes a pin worth reading -- a line of text with no
+ * name on it says nothing about why it was kept.
+ */
+@Composable
+private fun PinnedLine(
+    message: CordnDeliveredMessage,
+    annotations: CordnAnnotationIndex,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 120.dp),
+        )
+        Text(
+            // A deleted message that is still pinned shows as deleted, not as
+            // its old text: a pin must not outlive the withdrawal of what it
+            // points at.
+            text =
+                if (annotations.isDeleted(message.envelope.id)) {
+                    stringRes(R.string.cordn_message_deleted)
+                } else {
+                    annotations.contentOf(message.envelope.id).orEmpty()
+                },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 6.dp),
+        )
+    }
+}
+
+/**
+ * Every pinned message, for when the strip's one line is not enough.
+ *
+ * The only place `pinnedBy` is shown. The fold has always carried it and
+ * nothing ever displayed it, yet in a group where any member may pin (spec/01.md
+ * section 5.1) who did the pinning is often the point.
+ */
+@Composable
+private fun AllPinnedDialog(
+    pinned: List<CordnDeliveredMessage>,
+    annotations: CordnAnnotationIndex,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDismiss: () -> Unit,
+    onJumpTo: (HexKey) -> Unit,
+    onUnpin: (CordnDeliveredMessage) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.PushPin, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(
+                    text = stringRes(R.string.cordn_pinned_title),
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = pluralStringRes(LocalContext.current, R.plurals.cordn_pinned_count, pinned.size, pinned.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                // Bounded and scrollable: this list is as long as the group made
+                // it, and a dialog that grows past the screen cannot be dismissed.
+                LazyColumn(Modifier.heightIn(max = 360.dp).padding(top = 8.dp)) {
+                    items(pinned, key = { it.envelope.id }) { message ->
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onJumpTo(message.envelope.id) }
+                                .padding(vertical = 8.dp),
+                        ) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                UserPicture(
+                                    userHex = message.envelope.pubKey,
+                                    size = 24.dp,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                                Text(
+                                    text = observeUserNameByHex(message.envelope.pubKey, accountViewModel),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).padding(start = 8.dp),
+                                )
+                                TextButton(onClick = { onUnpin(message) }) {
+                                    Text(stringRes(R.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+
+                            annotations.pins[message.envelope.id]?.pinnedBy?.let { pinnedBy ->
+                                Text(
+                                    text =
+                                        stringRes(
+                                            R.string.cordn_pinned_by,
+                                            observeUserNameByHex(pinnedBy, accountViewModel),
+                                        ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            Text(
+                                text =
+                                    if (annotations.isDeleted(message.envelope.id)) {
+                                        stringRes(R.string.cordn_message_deleted)
+                                    } else {
+                                        annotations.contentOf(message.envelope.id).orEmpty()
+                                    },
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
+        },
+    )
 }
 
 @Composable
