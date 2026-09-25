@@ -572,13 +572,16 @@ class AccountViewModel(
                 if (!minesReactions && settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
+                        // Consume first: trackBroadcast suspends until every relay answers
+                        // or times out, and the like button only lights up once the
+                        // reaction is in the cache.
+                        account.consumeReactionEvent(event)
+
                         broadcastTracker.trackBroadcast(
                             event = event,
                             relays = relays,
                             client = account.client,
                         )
-
-                        account.consumeReactionEvent(event)
                     }
                 } else {
                     // Fire-and-forget (original behavior). When PoW mining is
@@ -1626,12 +1629,14 @@ class AccountViewModel(
     ) = launchSigner {
         if (settings.useTrackedBroadcasts()) {
             createTracked()?.let { (event, relays) ->
+                // Consume first so the UI reflects the action right away: trackBroadcast
+                // suspends until every relay answers or times out.
+                consumeTracked(event)
                 broadcastTracker.trackBroadcast(
                     event = event,
                     relays = relays,
                     client = account.client,
                 )
-                consumeTracked(event)
             }
         } else {
             direct()
