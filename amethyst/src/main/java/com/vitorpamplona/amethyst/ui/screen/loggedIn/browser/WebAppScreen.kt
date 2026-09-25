@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -110,7 +109,8 @@ private fun EmbeddedWebAppTab(
     // can opt one out and it must stick). Only meaningful when Tor is actually available.
     var torOn by remember { mutableStateOf(proxyAvailable && WebAppNetworkRegistry.useTor(url)) }
 
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
@@ -147,10 +147,10 @@ private fun EmbeddedWebAppTab(
                 isFavorite = isFavorite,
                 onFavorite = {
                     val favId = "url:$currentUrl"
-                    if (FavoriteAppsRegistry.isFavorite(favId)) {
-                        FavoriteAppsRegistry.remove(favId)
+                    if (Amethyst.instance.favoriteApps.isFavorite(favId)) {
+                        Amethyst.instance.favoriteApps.remove(favId)
                     } else {
-                        FavoriteAppsRegistry.add(FavoriteApp.WebApp(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
+                        Amethyst.instance.favoriteApps.add(FavoriteApp.WebApp(currentUrl, hostLabel(currentUrl), System.currentTimeMillis()))
                     }
                 },
                 // NIP-07 grants for a plain web client are keyed per visited origin as `browser:<origin>`

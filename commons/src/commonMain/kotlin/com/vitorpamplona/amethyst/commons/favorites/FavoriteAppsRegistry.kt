@@ -18,89 +18,77 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.favorites
+package com.vitorpamplona.amethyst.commons.favorites
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import java.util.concurrent.ConcurrentHashMap
-
-/**
- * The favorite-apps file, on the app-wide holder rather than a `Context` delegate.
- * Same path the delegate resolved to, so nothing migrates.
- *
- * Main process only: [Amethyst.instance] is deliberately unset in the
- * `:napplet` sandbox.
- */
-private val favoriteAppsDataStore: DataStore<Preferences>
-    get() = Amethyst.instance.appStores.getDataStore("favorite_apps")
+import kotlin.concurrent.Volatile
 
 /**
  * The user's device-local list of [FavoriteApp]s — the single source of truth shared by the bottom
  * bar, the Favorite Apps grid, and the browser launcher. Ordered (the user can reorder); de-duplicated
  * by [FavoriteApp.id].
  *
- * Lives only in the **main process** (the launcher/UI consume it); the keyless `:napplet` sandbox never
- * touches it. An in-memory [StateFlow] is authoritative for the session so Compose can observe it
- * synchronously, with write-through persistence to a DataStore on a background scope. The list is
- * stored as a single JSON array under one key (small, bounded, hand-curated data — no need for one key
- * per entry).
+ * An in-memory [StateFlow] is authoritative for the session so Compose can observe it synchronously,
+ * with write-through persistence to [store] on [scope]. The list is stored as a single JSON array
+ * under one key (small, bounded, hand-curated data — no need for one key per entry).
+ *
+ * Takes its [DataStore] rather than reaching for one, for the same reason
+ * `DataStoreSearchHistoryStorage` does: DataStore refuses a second live instance on a path that
+ * already has one, so the caller's store holder stays the single registry. That is also what keeps
+ * this class off any one front end — the Android app builds it in `AppModules` from
+ * `appStores.getDataStore(FILE_NAME)`, and nothing here knows about `Context` or the app singleton.
+ *
+ * One instance per process. On Android the launcher/UI in the **main** process own it; the keyless
+ * `:napplet` sandbox never builds one.
  */
-object FavoriteAppsRegistry {
-    private val KEY = stringPreferencesKey("favorites")
-
-    // Raw manifest event JSON for each favorited [FavoriteApp.NostrApp], keyed by its addressable
-    // coordinate. Cached so a pinned nsite/napplet resolves instantly on the next cold start — and
-    // offline — instead of waiting on a relay round-trip the way a [FavoriteApp.WebApp]'s URL never
-    // has to. The relay subscription that warms these favorites keeps the cache fresh.
-    private val MANIFESTS_KEY = stringPreferencesKey("manifests")
-
+class FavoriteAppsRegistry(
+    private val store: DataStore<Preferences>,
+    private val scope: CoroutineScope,
+) {
     private val _favorites = MutableStateFlow<List<FavoriteApp>>(emptyList())
     val favorites: StateFlow<List<FavoriteApp>> = _favorites.asStateFlow()
 
     private val manifestCache = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Gates persistence until init() has been called: writing before hydration has been scheduled
+    // would flush a partial list over the stored one. Set synchronously in init(), so the merge it
+    // launches still persists whatever the session added in the meantime.
+    @Volatile private var started = false
 
-    @Volatile private var appContext: Context? = null
-
-    // Hydration runs async on a background scope, so the user can add/remove before the disk list
-    // merges in. [removedBeforeHydration] tombstones any id removed in that window, so the merge can't
+    // Hydration runs async on [scope], so the user can add/remove before the disk list merges in.
+    // [removedBeforeHydration] tombstones any id removed in that window, so the merge can't
     // resurrect a just-deleted favorite from disk.
     @Volatile private var hydrated = false
-    private val removedBeforeHydration = ConcurrentHashMap.newKeySet<String>()
+    private val removedBeforeHydration = ConcurrentSet<String>()
 
-    /** Binds the app context and hydrates the on-disk list into [favorites]. Idempotent. */
-    fun init(context: Context) {
-        if (appContext != null) return
-        val ctx = context.applicationContext
-        appContext = ctx
+    /** Hydrates the on-disk list into [favorites]. Idempotent. */
+    fun init() {
+        if (started) return
+        started = true
         scope.launch {
-            val prefs = favoriteAppsDataStore.data.first()
+            val prefs = store.data.first()
             val loaded = prefs[KEY]?.let { decode(it) } ?: emptyList()
             // Don't clobber adds made in this session before hydration finished, and don't resurrect
             // anything the user removed in that same window.
-            update { current -> (loaded.filterNot { it.id in removedBeforeHydration } + current).distinctBy { it.id } }
+            update { current -> (loaded.filterNot { removedBeforeHydration.contains(it.id) } + current).distinctBy { it.id } }
 
             // Same race rules for the manifest cache: a cacheManifest() in this session wins over the
             // disk copy, and a manifest whose favorite was removed pre-hydration must not come back.
             val loadedManifests = prefs[MANIFESTS_KEY]?.let { decodeManifests(it) } ?: emptyMap()
-            updateManifests { current -> loadedManifests.filterKeys { "nostr:$it" !in removedBeforeHydration } + current }
+            updateManifests { current -> loadedManifests.filterKeys { !removedBeforeHydration.contains("nostr:$it") } + current }
 
             hydrated = true
             removedBeforeHydration.clear()
@@ -138,27 +126,23 @@ object FavoriteAppsRegistry {
         val next = transform(_favorites.value)
         if (next == _favorites.value) return
         _favorites.value = next
-        persist(encode(next))
+        persist(KEY, encode(next))
     }
 
     private inline fun updateManifests(transform: (Map<String, String>) -> Map<String, String>) {
         val next = transform(manifestCache.value)
         if (next == manifestCache.value) return
         manifestCache.value = next
-        persistManifests(encodeManifests(next))
+        persist(MANIFESTS_KEY, encodeManifests(next))
     }
 
-    private fun persist(json: String) {
-        appContext ?: return
+    private fun persist(
+        key: Preferences.Key<String>,
+        json: String,
+    ) {
+        if (!started) return
         scope.launch {
-            favoriteAppsDataStore.edit { it[KEY] = json }
-        }
-    }
-
-    private fun persistManifests(json: String) {
-        appContext ?: return
-        scope.launch {
-            favoriteAppsDataStore.edit { it[MANIFESTS_KEY] = json }
+            store.edit { it[key] = json }
         }
     }
 
@@ -199,9 +183,6 @@ object FavoriteAppsRegistry {
             emptyList()
         }
 
-    private const val TYPE_NOSTR = "nostr"
-    private const val TYPE_URL = "url"
-
     // --- Manifest cache persistence -------------------------------------------------------------
     // Stored as a flat list of (coordinate, json) records under one key — same single-key, hand-curated
     // shape as the favorites list, so we never serialize a raw polymorphic map.
@@ -221,4 +202,20 @@ object FavoriteAppsRegistry {
             Log.w("FavoriteAppsRegistry", "Failed to decode favorite manifests", e)
             emptyMap()
         }
+
+    companion object {
+        /** Same file the `Context.preferencesDataStore("favorite_apps")` delegate resolved to. */
+        const val FILE_NAME = "favorite_apps"
+
+        private val KEY = stringPreferencesKey("favorites")
+
+        // Raw manifest event JSON for each favorited [FavoriteApp.NostrApp], keyed by its addressable
+        // coordinate. Cached so a pinned nsite/napplet resolves instantly on the next cold start — and
+        // offline — instead of waiting on a relay round-trip the way a [FavoriteApp.WebApp]'s URL never
+        // has to. The relay subscription that warms these favorites keeps the cache fresh.
+        private val MANIFESTS_KEY = stringPreferencesKey("manifests")
+
+        private const val TYPE_NOSTR = "nostr"
+        private const val TYPE_URL = "url"
+    }
 }

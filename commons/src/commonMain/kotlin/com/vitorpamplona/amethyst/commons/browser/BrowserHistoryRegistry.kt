@@ -18,36 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.favorites
+package com.vitorpamplona.amethyst.commons.browser
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-
-/**
- * The browser-history file, on the app-wide holder rather than a `Context` delegate.
- * Same path the delegate resolved to, so nothing migrates.
- *
- * Main process only: [Amethyst.instance] is deliberately unset in the
- * `:napplet` sandbox.
- */
-private val browserHistoryDataStore: DataStore<Preferences>
-    get() = Amethyst.instance.appStores.getDataStore("browser_history")
+import kotlin.concurrent.Volatile
 
 /**
  * One device-local visited site, keyed by full [url]. [visitCount]/[lastVisitedAt] drive frecency ranking
@@ -65,39 +52,40 @@ data class BrowserHistoryEntry(
 /**
  * The browser's visit history — the data behind the omnibox suggestions, alongside the user's favorites.
  *
- * **Only pages that actually loaded land here.** [record] is called from the `:napplet` browser host
- * (relayed over IPC through `NappletBrokerService`) on a *successful* main-frame page-finish — never from
- * the address bar as the user types — so misspelled/never-resolved hosts never pollute the list. Bounded
- * to [MAX_ENTRIES] most-recent entries.
+ * **Only pages that actually loaded land here.** [record] is meant to be called on a *successful*
+ * main-frame page-finish — never from the address bar as the user types — so misspelled/never-resolved
+ * hosts never pollute the list. Bounded to [MAX_ENTRIES] most-recent entries. On Android the call is
+ * relayed from the `:napplet` browser host over IPC through `NappletBrokerService`.
  *
- * Lives only in the **main process** (the launcher/omnibox consume it; the keyless `:napplet` sandbox
- * never reads it). Same shape as [FavoriteAppsRegistry]: an authoritative in-memory [StateFlow] for
- * synchronous Compose reads, with write-through persistence to a DataStore on a background scope.
+ * Same shape as [com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry]: an authoritative
+ * in-memory [StateFlow] for synchronous Compose reads, write-through persistence to [store] on [scope],
+ * and the [DataStore] handed in rather than reached for, so the caller's store holder stays the single
+ * registry and nothing here depends on a front end.
+ *
+ * One instance per process. On Android the launcher/omnibox in the **main** process own it; the keyless
+ * `:napplet` sandbox never builds one.
  */
-object BrowserHistoryRegistry {
-    private val KEY = stringPreferencesKey("history")
-    private const val MAX_ENTRIES = 500
-
+class BrowserHistoryRegistry(
+    private val store: DataStore<Preferences>,
+    private val scope: CoroutineScope,
+) {
     private val _history = MutableStateFlow<List<BrowserHistoryEntry>>(emptyList())
     val history: StateFlow<List<BrowserHistoryEntry>> = _history.asStateFlow()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Gates persistence until init() has been called: writing before hydration has been scheduled
+    // would flush a partial list over the stored one. Set synchronously in init(), so the merge it
+    // launches still persists whatever the session recorded in the meantime.
+    @Volatile private var started = false
 
-    @Volatile private var appContext: Context? = null
-
-    @Volatile private var hydrated = false
-
-    /** Binds the app context and hydrates the on-disk list into [history]. Idempotent. */
-    fun init(context: Context) {
-        if (appContext != null) return
-        val ctx = context.applicationContext
-        appContext = ctx
+    /** Hydrates the on-disk list into [history]. Idempotent. */
+    fun init() {
+        if (started) return
+        started = true
         scope.launch {
-            val json = browserHistoryDataStore.data.first()[KEY]
+            val json = store.data.first()[KEY]
             val loaded = if (json != null) decode(json) else emptyList()
             // Merge disk under anything already recorded this session (session wins, newest-first).
             update { current -> dedupeNewestFirst(current + loaded) }
-            hydrated = true
         }
     }
 
@@ -110,7 +98,7 @@ object BrowserHistoryRegistry {
         title: String,
     ) {
         val host = OmniboxInput.hostOf(url) ?: url
-        val now = System.currentTimeMillis()
+        val now = TimeUtils.nowMillis()
         update { current ->
             val existing = current.firstOrNull { it.url == url }
             val entry =
@@ -146,9 +134,9 @@ object BrowserHistoryRegistry {
     }
 
     private fun persist(json: String) {
-        appContext ?: return
+        if (!started) return
         scope.launch {
-            browserHistoryDataStore.edit { it[KEY] = json }
+            store.edit { it[KEY] = json }
         }
     }
 
@@ -161,4 +149,12 @@ object BrowserHistoryRegistry {
             Log.w("BrowserHistoryRegistry", "Failed to decode history", e)
             emptyList()
         }
+
+    companion object {
+        /** Same file the `Context.preferencesDataStore("browser_history")` delegate resolved to. */
+        const val FILE_NAME = "browser_history"
+
+        private val KEY = stringPreferencesKey("history")
+        private const val MAX_ENTRIES = 500
+    }
 }

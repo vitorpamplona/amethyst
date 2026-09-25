@@ -27,8 +27,10 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -886,6 +888,16 @@ class AppModules(
 
     // Display + relay info for connected NIP-46 remote-signer clients.
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
+
+    // The device-local favorite-apps list behind the bottom bar, the Favorite Apps grid and the
+    // browser launcher, plus the browser's visit history behind the omnibox suggestions. Both live in
+    // commons and take their store and scope from here — that is the whole of their Android binding.
+    //
+    // Main process only: the keyless `:napplet` sandbox never builds AppModules, so it never builds
+    // these either. One instance each, so DataStore only ever sees one live reader per file.
+    val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope) }
+
+    val browserHistory by lazy { BrowserHistoryRegistry(appStores.getDataStore(BrowserHistoryRegistry.FILE_NAME), applicationIOScope) }
 
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)

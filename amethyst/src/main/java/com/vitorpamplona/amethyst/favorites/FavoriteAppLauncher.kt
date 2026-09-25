@@ -97,7 +97,7 @@ object FavoriteAppLauncher {
                     if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                 }
             }
-        val isFavorite = FavoriteAppsRegistry.isFavorite("url:$url")
+        val isFavorite = Amethyst.instance.favoriteApps.isFavorite("url:$url")
         val intent =
             NappletBrowserActivity
                 .intent(

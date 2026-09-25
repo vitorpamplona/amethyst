@@ -54,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -147,7 +147,8 @@ private fun EmbeddedNostrAppTab(
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
 
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
 
     val controller =
@@ -182,10 +183,10 @@ private fun EmbeddedNostrAppTab(
                 isFavorite = isFavorite,
                 onFavorite = {
                     val favId = "nostr:$coordinate"
-                    if (FavoriteAppsRegistry.isFavorite(favId)) {
-                        FavoriteAppsRegistry.remove(favId)
+                    if (Amethyst.instance.favoriteApps.isFavorite(favId)) {
+                        Amethyst.instance.favoriteApps.remove(favId)
                     } else {
-                        FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                        Amethyst.instance.favoriteApps.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
                     }
                 },
             )

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import kotlinx.coroutines.CoroutineScope
@@ -113,7 +113,9 @@ object EmbeddedTabPreloadSweeper {
         NappletNetworkRegistry.awaitReady()
         var attempt = 0
         while (isActive) {
-            val byId = FavoriteAppsRegistry.favorites.value.associateBy { it.id }
+            val byId =
+                Amethyst.instance.favoriteApps.favorites.value
+                    .associateBy { it.id }
             var stillPending = false
             for (id in favoriteIds) {
                 val app = byId[id] ?: continue

@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size27Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -112,7 +112,8 @@ fun AppBottomBar(
     // Favorite entries in the unified list resolve to a live favorite for their icon/label and to an
     // embedded-tab route. Both kinds embed in-process (WebApp → browser surface, NostrApp → napplet
     // surface), so such a tab swaps in place rather than launching an activity from the bottom row.
-    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val favorites by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
 
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {

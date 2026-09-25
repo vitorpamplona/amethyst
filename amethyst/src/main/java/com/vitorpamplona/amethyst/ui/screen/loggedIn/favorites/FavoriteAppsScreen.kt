@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -74,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -94,7 +94,8 @@ fun FavoriteAppsScreen(
 ) {
     val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so a tap launches immediately instead of showing
     // "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
@@ -126,7 +127,7 @@ fun FavoriteAppsScreen(
             FavoriteAppsGrid(
                 apps = apps,
                 onOpen = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
-                onRemove = { FavoriteAppsRegistry.remove(it.id) },
+                onRemove = { Amethyst.instance.favoriteApps.remove(it.id) },
                 modifier =
                     Modifier
                         .fillMaxSize()

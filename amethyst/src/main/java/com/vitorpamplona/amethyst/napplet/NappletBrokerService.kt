@@ -42,9 +42,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
@@ -203,8 +201,9 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_RECORD_HISTORY) {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_HISTORY_URL)?.takeIf { it.isNotBlank() } ?: return true
-            BrowserHistoryRegistry.init(applicationContext)
-            BrowserHistoryRegistry.record(url, data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty())
+            val history = Amethyst.instance.browserHistory
+            history.init()
+            history.record(url, data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty())
             return true
         }
 
@@ -223,12 +222,13 @@ class NappletBrokerService : Service() {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
             val label = data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty().ifBlank { url }
-            FavoriteAppsRegistry.init(applicationContext)
+            val favorites = Amethyst.instance.favoriteApps
+            favorites.init()
             val id = "url:$url"
-            if (FavoriteAppsRegistry.isFavorite(id)) {
-                FavoriteAppsRegistry.remove(id)
+            if (favorites.isFavorite(id)) {
+                favorites.remove(id)
             } else {
-                FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
+                favorites.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
             }
             return true
         }
