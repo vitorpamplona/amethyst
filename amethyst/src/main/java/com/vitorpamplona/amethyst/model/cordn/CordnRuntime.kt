@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
-import com.vitorpamplona.amethyst.commons.cordn.announcedServerName
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
@@ -65,12 +64,9 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -172,23 +168,6 @@ class CordnRuntime(
 
     val coordinators = registry.coordinators
 
-    private val _announcedNames = MutableStateFlow<Map<HexKey, String>>(emptyMap())
-
-    /**
-     * What each coordinator calls itself, per its CEP-6 announcement.
-     *
-     * Read by the screens as the fallback between the user's own label and the
-     * kind 0 -- a coordinator added from discovery was picked by this name, so
-     * showing it keeps the two places agreeing. Filled by the same one-shot
-     * fetch that collects the profile and the relay list when a coordinator is
-     * opened, because an announcement is a raw event with no registered class
-     * and nothing else caches one per coordinator.
-     *
-     * Absent rather than blank when a coordinator announces no name, so the
-     * display can fall through instead of rendering an empty line.
-     */
-    val announcedNames: StateFlow<Map<HexKey, String>> = _announcedNames.asStateFlow()
-
     /**
      * The session for [config], opening and starting it if it is new.
      *
@@ -226,6 +205,15 @@ class CordnRuntime(
                 // own relays are where those live, so they are fetched here,
                 // from the relays this account already talks to for cordn.
                 //
+                // All three are ordinary public events about this pubkey, and now
+                // all three are typed, so the global cache connector files them and
+                // the cache does the keeping: newest-wins per (kind, pubkey) for the
+                // replaceable ones, and verification before anything trusts them.
+                // Nothing is parsed or stored by hand here any more. The fetch
+                // remains only to aim the request at the coordinator's OWN relays,
+                // which is where its announcement lives and is the one thing the
+                // generic data sources cannot know until its relay list is cached.
+                //
                 // Not a nicety -- it is what keeps the *outbox discovery* for
                 // this pubkey off this account's home relays. Rendering a
                 // coordinator with UserPicture/observeUserNameByHex puts it in
@@ -255,31 +243,22 @@ class CordnRuntime(
                 val prefetch =
                     scope.launch {
                         runCatching {
-                            val answered =
-                                client.fetchAll(
-                                    filters =
-                                        config.relays.associateWith {
-                                            listOf(
-                                                Filter(
-                                                    kinds =
-                                                        listOf(
-                                                            MetadataEvent.KIND,
-                                                            AdvertisedRelayListEvent.KIND,
-                                                            CvmKinds.SERVER_ANNOUNCEMENT,
-                                                        ),
-                                                    authors = listOf(config.pubKey),
-                                                ),
-                                            )
-                                        },
-                                )
-
-                            // The announcement is the one of the three the cache
-                            // cannot keep: no registered event class, so it would be
-                            // parsed by nobody and dropped. Read here, from the
-                            // events this fetch returned, and kept for the screens.
-                            announcedServerName(answered, config.pubKey)?.let { name ->
-                                _announcedNames.update { it + (config.pubKey to name) }
-                            }
+                            client.fetchAll(
+                                filters =
+                                    config.relays.associateWith {
+                                        listOf(
+                                            Filter(
+                                                kinds =
+                                                    listOf(
+                                                        MetadataEvent.KIND,
+                                                        AdvertisedRelayListEvent.KIND,
+                                                        CvmKinds.SERVER_ANNOUNCEMENT,
+                                                    ),
+                                                authors = listOf(config.pubKey),
+                                            ),
+                                        )
+                                    },
+                            )
                         }
                     }
                 // A coordinator that stops answering is otherwise invisible:
@@ -602,7 +581,6 @@ class CordnRuntime(
         }
         registry.close()
         groups.clear()
-        _announcedNames.value = emptyMap()
     }
 
     /** Drops one coordinator, leaving its stored groups on disk. */
@@ -615,10 +593,6 @@ class CordnRuntime(
             }
         }
         registry.forget(coordinatorPubKey)
-        // A name learned about a coordinator this account no longer holds is
-        // nobody's to show, and keeping it would resurrect it on a re-add before
-        // the fresh announcement arrives.
-        _announcedNames.update { it - coordinatorPubKey }
         remember()
     }
 
@@ -640,7 +614,6 @@ class CordnRuntime(
     suspend fun purge(coordinatorPubKey: HexKey) {
         forget(coordinatorPubKey)
         groups.forgetCoordinator(coordinatorPubKey)
-        _announcedNames.update { it - coordinatorPubKey }
         withContext(Dispatchers.IO) {
             CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey).deleteRecursively()
         }

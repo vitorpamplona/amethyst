@@ -36,39 +36,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
 /**
- * The name a coordinator announces for itself, or null if it announces none.
- *
- * The same rule [CordnCoordinatorDiscovery] applies when it builds a
- * [DiscoveredCoordinator]: the CEP-6 announcement kinds are replaceable, so the
- * newest per kind wins, and the name lives on the server announcement's
- * discovery surface. Shared rather than re-derived, because "newest wins" is
- * the part that is easy to get subtly wrong when a lagging relay answers late.
- *
- * Its own function because a coordinator this account already uses never goes
- * through discovery again, and until this existed there was nowhere for its
- * announced name to come from: the announcement is a raw [Event] with no
- * registered event class, so nothing caches one per coordinator.
- *
- * ## [pubKey] is required, not optional
- *
- * A REQ's `authors` is what was asked for, never a guarantee of what came back:
- * a relay may answer with anything. Discovery is safe from that because it
- * groups by author before it reads a surface; a caller handing over a flat fetch
- * result has done no such thing, and one relay in a coordinator's own list could
- * otherwise choose the name shown for it. So the filter lives here rather than
- * in each caller, where it is one line to forget.
- */
-fun announcedServerName(
-    events: List<Event>,
-    pubKey: HexKey,
-): String? =
-    ServerAnnouncement
-        .latestPerKind(events.filter { it.pubKey == pubKey })[CvmKinds.SERVER_ANNOUNCEMENT]
-        ?.discovery
-        ?.name
-        ?.takeIf { it.isNotBlank() }
-
-/**
  * A coordinator found by listening for CEP-6 announcements.
  *
  * ## Everything here except [pubKey] and [relays] is a claim

@@ -70,14 +70,17 @@ import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -176,18 +179,11 @@ private fun CordnGroupInfo(
     val runtime = accountViewModel.account.cordnRuntime
     val manager = runtime?.sessionOrNull(coordinatorPubKey)?.manager
 
-    // What to call this coordinator, cheapest source first. The label and the
-    // announced name are both already in hand -- neither costs a call to the
-    // coordinator, which matters because serverInfo() is a live MCP request over
-    // kind 25910 and a screen that fired one on open would tell the coordinator
-    // every time somebody glanced at a group (spec/00.md §8).
-    val announcedNames =
-        runtime
-            ?.announcedNames
-            ?.collectAsStateWithLifecycle()
-            ?.value
-            .orEmpty()
-
+    // The user's own name for it, when they gave it one. Read from the stored
+    // config, never from the coordinator: serverInfo() is a live MCP request over
+    // kind 25910, and a screen that fired one on open would tell the coordinator
+    // every time somebody glanced at a group (spec/00.md §8). The announced name
+    // and the profile are read from the cache by CoordinatorIdentityRow itself.
     val coordinatorLabel =
         runtime
             ?.coordinators
@@ -467,7 +463,6 @@ private fun CordnGroupInfo(
             CoordinatorIdentityRow(
                 pubKey = coordinatorPubKey,
                 label = coordinatorLabel,
-                announced = announcedNames[coordinatorPubKey],
                 accountViewModel = accountViewModel,
                 nav = nav,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -660,11 +655,78 @@ private fun TechnicalDetails(
     }
 
     AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
-        SelectionContainer {
-            Column {
-                InfoRow(stringRes(R.string.cordn_info_coordinator_key), coordinatorPubKey)
-                InfoRow(stringRes(R.string.cordn_info_gid), gid)
-                InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
+        Column {
+            // Through the User, in the encodings the rest of the app uses for a
+            // person's key. A profile screen shows a short npub with a button that
+            // copies the full one, then does the same for the nprofile
+            // (DrawAdditionalInfo); nothing user-facing anywhere shows raw hex,
+            // and there was no reason for a coordinator to be the exception. The
+            // nprofile earns its place here more than on a profile, because it
+            // carries the relay hints that are how a coordinator is reached at all.
+            val coordinator = remember(coordinatorPubKey) { LocalCache.getOrCreateUser(coordinatorPubKey) }
+
+            CopyableKeyRow(
+                label = stringRes(R.string.cordn_info_coordinator_key),
+                shown = coordinator.pubkeyDisplayHex(),
+                copied = coordinator.pubkeyNpub(),
+                copyDescription = stringRes(Res.string.copy_npub_to_clipboard),
+            )
+            CopyableKeyRow(
+                label = stringRes(R.string.cordn_info_coordinator_nprofile),
+                shown = coordinator.toNProfile().toShortDisplay(6),
+                copied = coordinator.toNProfile(),
+                copyDescription = stringRes(R.string.cordn_info_copy_nprofile),
+            )
+
+            SelectionContainer {
+                Column {
+                    InfoRow(stringRes(R.string.cordn_info_gid), gid)
+                    InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A key, short enough to read, with a button that copies the whole thing.
+ *
+ * The shape a profile uses for the same job: nobody reads a bech32 string off a
+ * screen, they copy it, so the visible half is there to confirm which key it is
+ * and the button is there to do the actual work.
+ */
+@Composable
+private fun CopyableKeyRow(
+    label: String,
+    shown: String,
+    copied: String,
+    copyDescription: String,
+) {
+    val clipboard = LocalClipboardManager.current
+
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = shown,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            IconButton(
+                onClick = { clipboard.setText(AnnotatedString(copied)) },
+                modifier = Modifier.size(24.dp).padding(start = 4.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.ContentCopy,
+                    contentDescription = copyDescription,
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

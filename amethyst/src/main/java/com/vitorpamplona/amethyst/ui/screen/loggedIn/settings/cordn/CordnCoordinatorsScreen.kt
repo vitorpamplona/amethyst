@@ -194,7 +194,6 @@ private fun CoordinatorCard(
     var renaming by remember(config.pubKey) { mutableStateOf(false) }
 
     val health = runtime.health(config.pubKey)?.collectAsStateWithLifecycle()?.value
-    val announced by runtime.announcedNames.collectAsStateWithLifecycle()
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -205,7 +204,6 @@ private fun CoordinatorCard(
             CoordinatorIdentityRow(
                 pubKey = config.pubKey,
                 label = config.label,
-                announced = announced[config.pubKey],
                 accountViewModel = accountViewModel,
                 nav = nav,
                 trailing = {
