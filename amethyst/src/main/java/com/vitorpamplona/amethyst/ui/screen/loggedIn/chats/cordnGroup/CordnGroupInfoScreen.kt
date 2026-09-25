@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SectionCollapse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SectionExpand
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
@@ -155,6 +156,18 @@ private fun CordnGroupInfo(
     val members by room.members.collectAsStateWithLifecycle()
     val admins by room.adminPubkeys.collectAsStateWithLifecycle()
     val epoch by room.epoch.collectAsStateWithLifecycle()
+
+    // The user's own name for this coordinator, if they gave it one. Read from
+    // the stored config, never from the coordinator: serverInfo() is a live MCP
+    // call over kind 25910, and a screen that fired one on open would tell the
+    // coordinator every time someone glanced at a group (spec/00.md §8).
+    val coordinatorLabel =
+        accountViewModel.account.cordnRuntime
+            ?.coordinators
+            ?.collectAsStateWithLifecycle()
+            ?.value
+            ?.firstOrNull { it.pubKey == coordinatorPubKey }
+            ?.label
 
     val me = accountViewModel.account.signer.pubKey
     // The same rule the policy enforces, asked here so the screen offers only
@@ -383,14 +396,18 @@ private fun CordnGroupInfo(
             // nothing, and threw away a name, an avatar and a profile to tap
             // through to -- all of which this screen was already drawing, ten
             // lines up, for every member.
-            Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                UserPicture(userHex = coordinatorPubKey, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+            // The label first when the user set one, then the profile, then the
+            // key's first characters -- see CoordinatorIdentityRow for why a
+            // name the user chose outranks one the coordinator published.
+            CoordinatorIdentityRow(
+                pubKey = coordinatorPubKey,
+                label = coordinatorLabel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) { name ->
                 Text(
-                    text = observeUserNameByHex(coordinatorPubKey, accountViewModel),
+                    text = name,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )

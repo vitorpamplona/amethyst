@@ -418,7 +418,6 @@
     <string name="cordn_share_copied">Copied</string>
     <string name="cordn_coordinators_explainer">A coordinator orders one group\'s messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>
     <string name="cordn_coordinators_none">No coordinators yet.</string>
-    <string name="cordn_coordinators_unnamed">Unnamed coordinator</string>
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
     <string name="cordn_coordinators_label">A name for it (yours, optional)</string>
