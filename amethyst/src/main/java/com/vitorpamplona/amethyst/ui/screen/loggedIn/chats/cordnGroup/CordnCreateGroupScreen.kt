@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -65,18 +65,14 @@ import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.model.cordn.CordnCoverage
 import com.vitorpamplona.amethyst.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -154,23 +150,14 @@ fun CordnCreateGroupScreen(
 
         val me = accountViewModel.account.signer.pubKey
 
-        var selected by remember { mutableStateOf<String?>(null) }
+        // The draft outlives this screen: picking people is its own
+        // destination now, and a Navigation destination is disposed when you
+        // leave it, so `remember` here would lose a half-typed name on the way
+        // back from the draft.roster.
+        val draft = rememberCordnGroupDraft(accountViewModel)
 
-        // Who the group is FOR, named before the coordinator is chosen: the
-        // roster is what turns "which coordinator do I trust" into "which one
-        // can reach these people", which is a question with an answer.
-        var roster by remember { mutableStateOf<List<HexKey>>(emptyList()) }
-        var coAdmins by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
-        var egalitarian by remember { mutableStateOf(false) }
         var coordinatorOpen by remember { mutableStateOf(false) }
-        var userPicked by remember { mutableStateOf(false) }
         var creation by remember { mutableStateOf<CordnGroupCreation?>(null) }
-        var memberSearch by remember { mutableStateOf("") }
-        val userSuggestions = remember { UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder()) }
-        var pubKeyInput by remember { mutableStateOf("") }
-        var relaysInput by remember { mutableStateOf("") }
-        var name by remember { mutableStateOf("") }
-        var description by remember { mutableStateOf("") }
         var error by remember { mutableStateOf<String?>(null) }
         val failureFallback = stringRes(R.string.cordn_create_failed)
         var busy by remember { mutableStateOf(false) }
@@ -197,40 +184,28 @@ fun CordnCreateGroupScreen(
 
         // A re-discovery can drop the coordinator that was picked -- it stopped
         // announcing, or it is now in `known` and therefore not an offer. Left
-        // alone, `selected` would name a coordinator no row shows: no radio
+        // alone, `draft.selected` would name a coordinator no row shows: no radio
         // checked, no exposure card, Create disabled, and nothing saying why.
         // Falling back to the manual entry is the one state that explains itself,
         // because its fields appear.
         LaunchedEffect(choices) {
-            if (selected != null && choices.none { it.pubKey == selected }) selected = null
+            if (draft.selected != null && choices.none { it.pubKey == draft.selected }) draft.selected = null
         }
 
-        val config = remember(selected, pubKeyInput, relaysInput, choices) { resolve(choices, selected, pubKeyInput, relaysInput) }
+        val config = remember(draft.selected, draft.pubKeyInput, draft.relaysInput, choices) { resolve(choices, draft.selected, draft.pubKeyInput, draft.relaysInput) }
 
-        // Asked only of coordinators this account already has a session with.
-        // Probing a discovery offer would mean opening one, and opening one is
-        // what commits to it -- so an offer stays uncovered until it is picked.
-        val coverage by
-            produceState<Map<HexKey, CordnCoverage>>(emptyMap(), runtime, known, roster) {
-                value =
-                    if (roster.isEmpty()) {
-                        emptyMap()
-                    } else {
-                        val target = roster.toSet()
-                        known.associate { it.pubKey to runtime.coverage(it.pubKey, target) }
-                    }
-            }
+        val coverage by rememberCordnCoverage(runtime, draft.roster)
 
         // The best-covering coordinator is offered, not imposed: the moment the
         // user picks one themselves it stops moving under them, even if the
         // roster later changes and a different one would now reach more people.
-        LaunchedEffect(coverage, userPicked) {
-            if (userPicked || coverage.isEmpty()) return@LaunchedEffect
+        LaunchedEffect(coverage, draft.userPicked) {
+            if (draft.userPicked || coverage.isEmpty()) return@LaunchedEffect
             val best = coverage.values.filter { it.answered }.maxByOrNull { it.reachable.size }
-            if (best != null && best.reachable.isNotEmpty()) selected = best.coordinatorPubKey
+            if (best != null && best.reachable.isNotEmpty()) draft.selected = best.coordinatorPubKey
         }
 
-        val chosenCoverage = selected?.let { coverage[it] }
+        val chosenCoverage = draft.selected?.let { coverage[it] }
 
         Column(
             modifier =
@@ -250,15 +225,15 @@ fun CordnCreateGroupScreen(
             StepHeading(1, stringRes(R.string.cordn_create_step_name))
 
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
+                value = draft.name,
+                onValueChange = { draft.name = it },
                 label = { Text(stringRes(R.string.cordn_create_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
+                value = draft.description,
+                onValueChange = { draft.description = it },
                 label = { Text(stringRes(R.string.cordn_create_description)) },
                 singleLine = false,
                 modifier = Modifier.fillMaxWidth(),
@@ -266,30 +241,10 @@ fun CordnCreateGroupScreen(
 
             StepHeading(2, stringRes(R.string.cordn_create_step_people))
 
-            CordnRoster(
-                roster = roster,
-                coAdmins = coAdmins,
-                egalitarian = egalitarian,
+            RosterSummary(
+                roster = draft.roster,
                 coverage = coverage,
-                userSuggestions = userSuggestions,
-                search = memberSearch,
-                onSearchChange = {
-                    memberSearch = it
-                    if (it.length > 2) userSuggestions.processCurrentWord(it) else userSuggestions.reset()
-                },
-                onAdd = { user ->
-                    memberSearch = ""
-                    userSuggestions.reset()
-                    if (user.pubkeyHex != me && user.pubkeyHex !in roster) roster = roster + user.pubkeyHex
-                },
-                onRemove = { pubKey ->
-                    roster = roster - pubKey
-                    coAdmins = coAdmins - pubKey
-                },
-                onToggleAdmin = { pubKey ->
-                    coAdmins = if (pubKey in coAdmins) coAdmins - pubKey else coAdmins + pubKey
-                },
-                busy = busy,
+                onOpen = { nav.nav(Route.CordnCreateGroupMembers) },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -297,12 +252,12 @@ fun CordnCreateGroupScreen(
             StepHeading(3, stringRes(R.string.cordn_create_step_where))
 
             // Collapsed to the one coordinator that will be used, because with a
-            // roster in hand there is usually nothing left to decide. The whole
+            // draft.roster in hand there is usually nothing left to decide. The whole
             // list is still one tap away for the times there is.
             CoordinatorSummary(
                 config = config,
                 coverage = chosenCoverage,
-                rosterSize = roster.size,
+                rosterSize = draft.roster.size,
                 expanded = coordinatorOpen,
                 onToggle = { coordinatorOpen = !coordinatorOpen },
                 accountViewModel = accountViewModel,
@@ -314,10 +269,10 @@ fun CordnCreateGroupScreen(
                     CoordinatorChoice(
                         label = coordinatorDisplayName(coordinator.pubKey, coordinator.label, accountViewModel),
                         pubKey = coordinator.pubKey,
-                        selected = selected == coordinator.pubKey,
+                        selected = draft.selected == coordinator.pubKey,
                         onSelect = {
-                            selected = coordinator.pubKey
-                            userPicked = true
+                            draft.selected = coordinator.pubKey
+                            draft.userPicked = true
                         },
                         relays = relayLabel(coordinator.relays),
                         accountViewModel = accountViewModel,
@@ -349,10 +304,10 @@ fun CordnCreateGroupScreen(
                         // verified the name a coordinator announces.
                         label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
                         pubKey = offer.pubKey,
-                        selected = selected == offer.pubKey,
+                        selected = draft.selected == offer.pubKey,
                         onSelect = {
-                            selected = offer.pubKey
-                            userPicked = true
+                            draft.selected = offer.pubKey
+                            draft.userPicked = true
                         },
                         detail = announcedLabel(offer.announcedAt),
                         relays = relayLabel(offer.relays),
@@ -396,10 +351,10 @@ fun CordnCreateGroupScreen(
                         CoordinatorChoice(
                             label = disambiguate(resolvedName(offer, accountViewModel), offer.pubKey, names),
                             pubKey = offer.pubKey,
-                            selected = selected == offer.pubKey,
+                            selected = draft.selected == offer.pubKey,
                             onSelect = {
-                                selected = offer.pubKey
-                                userPicked = true
+                                draft.selected = offer.pubKey
+                                draft.userPicked = true
                             },
                             detail = announcedLabel(offer.announcedAt),
                             relays = relayLabel(offer.relays),
@@ -414,10 +369,10 @@ fun CordnCreateGroupScreen(
                 CoordinatorChoice(
                     label = stringRes(R.string.cordn_create_coordinator_new),
                     pubKey = null,
-                    selected = selected == null,
+                    selected = draft.selected == null,
                     onSelect = {
-                        selected = null
-                        userPicked = true
+                        draft.selected = null
+                        draft.userPicked = true
                     },
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -462,11 +417,11 @@ fun CordnCreateGroupScreen(
                     )
                 }
 
-                if (selected == null) {
+                if (draft.selected == null) {
                     OutlinedTextField(
-                        value = pubKeyInput,
+                        value = draft.pubKeyInput,
                         onValueChange = {
-                            pubKeyInput = it
+                            draft.pubKeyInput = it
                             error = null
                         },
                         label = { Text(stringRes(R.string.cordn_create_coordinator_pubkey)) },
@@ -474,9 +429,9 @@ fun CordnCreateGroupScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = relaysInput,
+                        value = draft.relaysInput,
                         onValueChange = {
-                            relaysInput = it
+                            draft.relaysInput = it
                             error = null
                         },
                         label = { Text(stringRes(R.string.cordn_create_coordinator_relays)) },
@@ -494,10 +449,10 @@ fun CordnCreateGroupScreen(
             StepHeading(4, stringRes(R.string.cordn_create_step_admins))
 
             // spec/01.md §5.3: leaving the admin list empty is not "set it up
-            // later", it is choosing egalitarian permanently -- so it is offered
+            // later", it is choosing draft.egalitarian permanently -- so it is offered
             // as a decision here rather than described as one.
             //
-            // With a roster in hand the choice is the real one the web client
+            // With a draft.roster in hand the choice is the real one the web client
             // makes: which of the people being added can add and remove others.
             // Choosing anybody at all must include yourself, or the group is
             // born unadministrable, so "you" is never one of the toggles.
@@ -510,18 +465,18 @@ fun CordnCreateGroupScreen(
                     Text(stringRes(R.string.cordn_create_egalitarian), style = MaterialTheme.typography.bodyMedium)
                     Text(
                         text =
-                            if (egalitarian) {
+                            if (draft.egalitarian) {
                                 stringRes(R.string.cordn_create_egalitarian_note)
-                            } else if (coAdmins.isEmpty()) {
+                            } else if (draft.coAdmins.isEmpty()) {
                                 stringRes(R.string.cordn_create_admin_only_me_on)
                             } else {
-                                pluralStringRes(LocalContext.current, R.plurals.cordn_create_admin_count, coAdmins.size + 1, coAdmins.size + 1)
+                                pluralStringRes(LocalContext.current, R.plurals.cordn_create_admin_count, draft.coAdmins.size + 1, draft.coAdmins.size + 1)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(checked = egalitarian, onCheckedChange = { egalitarian = it })
+                Switch(checked = draft.egalitarian, onCheckedChange = { draft.egalitarian = it })
             }
 
             config?.let {
@@ -558,25 +513,26 @@ fun CordnCreateGroupScreen(
                             // attempted. An invitation is a Welcome left against
                             // a KeyPackage the invitee published *here*, so
                             // asking for one it does not hold is a call that can
-                            // only fail -- and the roster keeps them either way,
+                            // only fail -- and the draft.roster keeps them either way,
                             // for the link the outcome offers.
                             val reachable = chosenCoverage?.reachable
-                            val invitees = roster.filter { reachable == null || it in reachable }
+                            val invitees = draft.roster.filter { reachable == null || it in reachable }
                             val result =
                                 runtime.createGroupAndInvite(
                                     config = target,
                                     metadata =
                                         CordnGroupMetadata(
-                                            name = name.trim(),
-                                            description = description.trim(),
-                                            adminPubkeys = if (egalitarian) emptyList() else listOf(me) + coAdmins.toList(),
+                                            name = draft.name.trim(),
+                                            description = draft.description.trim(),
+                                            adminPubkeys = draft.adminPubKeys(me),
                                         ),
                                     invitees = invitees,
                                 )
                             // Straight through when there is nothing to report:
                             // a dialog that only ever says "all five went out"
                             // is one nobody reads the sixth time.
-                            if (result.failed.isEmpty() && invitees.size == roster.size) {
+                            if (result.failed.isEmpty() && invitees.size == draft.roster.size) {
+                                draft.clear()
                                 nav.nav(Route.CordnGroupChat(target.pubKey, result.gid))
                             } else {
                                 creation = result
@@ -588,14 +544,14 @@ fun CordnCreateGroupScreen(
                         }
                     }
                 },
-                enabled = !busy && config != null && name.isNotBlank(),
+                enabled = !busy && config != null && draft.name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    if (roster.isEmpty()) {
+                    if (draft.roster.isEmpty()) {
                         stringRes(R.string.cordn_create_action)
                     } else {
-                        pluralStringRes(LocalContext.current, R.plurals.cordn_create_action_invite, roster.size, roster.size)
+                        pluralStringRes(LocalContext.current, R.plurals.cordn_create_action_invite, draft.roster.size, draft.roster.size)
                     },
                 )
             }
@@ -604,11 +560,17 @@ fun CordnCreateGroupScreen(
         creation?.let { done ->
             CordnCreationOutcome(
                 creation = done,
-                roster = roster,
+                roster = draft.roster,
                 coordinatorPubKey = config?.pubKey,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onDismiss = { creation = null },
+                // The draft is spent either way: the group exists, so a
+                // dismissal must not leave this roster behind to seed the next
+                // new group with the last one's people.
+                onDismiss = {
+                    creation = null
+                    draft.clear()
+                },
             )
         }
     }
@@ -791,144 +753,66 @@ private fun StepHeading(
 }
 
 /**
- * Who the group is for, named before the coordinator is chosen.
+ * Who is in the group, as a row that opens the screen for choosing them.
  *
- * The order is the point. cordn can only add somebody by spending a KeyPackage
- * they published to the coordinator being used, so a roster turns an
- * unanswerable question ("which coordinator do I trust?") into a countable one
- * ("which one can reach these five?"). Everything below this section is ranked
- * on what is entered here.
- *
- * Reachability is per person and across every coordinator this account already
- * uses, not the one currently selected: somebody reachable nowhere cannot be
- * helped by changing the choice below, and the caption says which case it is.
+ * A count and a few faces rather than the roster itself: the roster is where
+ * every later step's answer comes from, so it earns its own destination, and
+ * repeating it here would put two editors of the same list on screen at once.
  */
 @Composable
-private fun CordnRoster(
+private fun RosterSummary(
     roster: List<HexKey>,
-    coAdmins: Set<HexKey>,
-    egalitarian: Boolean,
     coverage: Map<HexKey, CordnCoverage>,
-    userSuggestions: UserSuggestionState,
-    search: String,
-    onSearchChange: (String) -> Unit,
-    onAdd: (User) -> Unit,
-    onRemove: (HexKey) -> Unit,
-    onToggleAdmin: (HexKey) -> Unit,
-    busy: Boolean,
+    onOpen: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = search,
-            onValueChange = onSearchChange,
-            label = { Text(stringRes(R.string.cordn_create_add_member)) },
-            placeholder = { Text(stringRes(R.string.cordn_info_add_member_placeholder)) },
-            singleLine = true,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Text(
-            text = stringRes(R.string.cordn_create_people_note),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        if (!busy && search.length > 2) {
-            ShowUserSuggestionList(
-                userSuggestions = userSuggestions,
-                onSelect = onAdd,
-                accountViewModel = accountViewModel,
-                modifier = SuggestionListDefaultHeightChat,
-                onEmpty = {
-                    Text(
-                        text = stringRes(R.string.cordn_info_add_member_none),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                },
-                trailingContent = { user ->
-                    IconButton(onClick = { onAdd(user) }) {
-                        Icon(
-                            symbol = MaterialSymbols.PersonAdd,
-                            contentDescription = stringRes(R.string.cordn_create_add_member),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                },
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (roster.isEmpty()) {
+            Text(
+                text = stringRes(R.string.cordn_create_people_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
             )
-        }
-
-        roster.forEach { member ->
-            // Counted across every coordinator that answered. An unanswered one
-            // contributes nothing rather than a zero, so an unreachable
-            // coordinator never reads as "this person has no key anywhere".
-            val answered = coverage.values.count { it.answered }
-            val reaching = coverage.values.count { it.answered && member in it.reachable }
-
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                UserPicture(userHex = member, size = 32.dp, accountViewModel = accountViewModel, nav = nav)
-                Column(Modifier.weight(1f)) {
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                roster.take(FACES).forEach {
+                    UserPicture(userHex = it, size = 28.dp, accountViewModel = accountViewModel, nav = nav)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, roster.size + 1, roster.size + 1),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                // Counted over coordinators that answered, so an unreachable one
+                // never turns into "nobody can be reached".
+                val unreachable = roster.count { member -> coverage.values.none { it.answered && member in it.reachable } }
+                if (unreachable > 0 && coverage.values.any { it.answered }) {
                     Text(
-                        text = observeUserNameByHex(member, accountViewModel),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text =
-                            when {
-                                answered == 0 -> stringRes(R.string.cordn_create_reach_unknown)
-                                reaching > 0 ->
-                                    pluralStringRes(LocalContext.current, R.plurals.cordn_create_reach_count, reaching, reaching)
-                                else -> stringRes(R.string.cordn_create_reach_none)
-                            },
+                        text = pluralStringRes(LocalContext.current, R.plurals.cordn_create_unreachable_count, unreachable, unreachable),
                         style = MaterialTheme.typography.labelSmall,
-                        color =
-                            if (answered > 0 && reaching == 0) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                    )
-                }
-
-                // Hidden in egalitarian mode: there the admin list is empty by
-                // definition, so a per-person toggle would offer a choice that
-                // cannot be recorded.
-                if (!egalitarian) {
-                    val isAdmin = member in coAdmins
-                    TextButton(onClick = { onToggleAdmin(member) }, enabled = !busy) {
-                        Text(
-                            text = stringRes(R.string.cordn_create_admin),
-                            style = MaterialTheme.typography.labelMedium,
-                            color =
-                                if (isAdmin) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                        )
-                    }
-                }
-
-                IconButton(onClick = { onRemove(member) }, enabled = !busy) {
-                    Icon(
-                        symbol = MaterialSymbols.PersonRemove,
-                        contentDescription = stringRes(R.string.cordn_info_remove_member),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
         }
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
+
+/** How many faces the summary row shows before it just counts. */
+private const val FACES = 5
 
 /**
  * The coordinator that will be used, and why, in one row.

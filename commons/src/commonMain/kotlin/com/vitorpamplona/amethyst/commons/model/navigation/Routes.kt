@@ -655,6 +655,8 @@ sealed class Route {
 
     @Serializable object CordnCreateGroup : Route()
 
+    @Serializable object CordnCreateGroupMembers : Route()
+
     @Serializable object CordnInvitations : Route()
 
     @Serializable object CordnCoordinators : Route()

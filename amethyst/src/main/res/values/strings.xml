@@ -367,6 +367,10 @@
     <string name="cordn_info_technical">Technical details</string>
     <string name="cordn_create_title">New Cordn group</string>
     <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
+    <string name="cordn_create_people_none">Nobody yet &#8212; tap to add people</string>
+    <string name="cordn_create_people_empty">Nobody added yet. A group can be created empty and invitations sent later, but naming people now is what shows which coordinator can reach them.</string>
+    <string name="cordn_create_people_done">Done</string>
+    <string name="cordn_create_you">You, always an admin</string>
     <string name="cordn_create_step_name">Name it</string>
     <string name="cordn_create_step_people">Who is in it</string>
     <string name="cordn_create_step_where">Where it lives</string>
@@ -493,6 +497,10 @@
     <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
     <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
     <string name="cordn_keypackages_explainer">Others can only add you to a cordn group by taking a key package you published to that coordinator. cordn has no other place to keep one, so with none published nobody can invite you — and nothing tells them why.</string>
+    <plurals name="cordn_create_unreachable_count">
+        <item quantity="one">%1$d person cannot be reached by any coordinator you use</item>
+        <item quantity="other">%1$d people cannot be reached by any coordinator you use</item>
+    </plurals>
     <plurals name="cordn_create_reach_count">
         <item quantity="one">Reachable on %1$d coordinator</item>
         <item quantity="other">Reachable on %1$d coordinators</item>

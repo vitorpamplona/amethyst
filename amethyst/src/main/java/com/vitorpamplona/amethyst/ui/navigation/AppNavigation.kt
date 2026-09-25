@@ -129,6 +129,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalenda
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
@@ -730,6 +731,7 @@ fun BuildNavigation(
             CordnGroupInfoScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
         }
         composableFromBottom<Route.CordnCreateGroup> { CordnCreateGroupScreen(accountViewModel, nav) }
+        composableFromBottom<Route.CordnCreateGroupMembers> { CordnCreateMembersScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnInvitations> { CordnInvitationsScreen(accountViewModel, nav) }
 
         composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
