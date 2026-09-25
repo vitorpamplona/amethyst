@@ -100,6 +100,29 @@ class ScanSpec(
     /** Equalities tying this reference to another in the same FROM, for [SqlPushdown]'s join-key propagation. */
     internal var links: List<ScanLink> = emptyList()
 
+    /** The alias the query names this reference by. */
+    internal var alias: String? = null
+
+    /**
+     * The predicates this spec holds exactly (`kind IN …`, `pubkey = …`, time bounds, ids): every
+     * row a store returns for the spec satisfies them.
+     */
+    internal var captured: List<Expr> = emptyList()
+
+    /**
+     * The columns the query reads from this reference outside [captured] (see [ColumnUsage]), or
+     * null for all of them.
+     */
+    internal var columns: Set<String>? = null
+
+    /**
+     * An `events` reference the query reads nothing of but `id` / `created_at` (and what [captured]
+     * checks): a store's id walk answers it, no documents needed. The rows it gets carry a member
+     * of [kinds] / [authors] for those columns, which satisfies [captured] and is read by nothing else.
+     */
+    val needsOnlyIdsAndTimes: Boolean
+        get() = table == SqlProfile.EVENTS && columns?.all { it == "id" || it == "created_at" } == true
+
     /**
      * This spec further restricted to rows whose [column] is one of [values],
      * or null when [column] isn't one a store can look up by (`id`/`event_id`,
@@ -158,6 +181,7 @@ internal class ScanAnalyzer(
         var values: Set<String>? = null
         var valueNonEmpty = false
         var exact = true
+        val captured = ArrayList<Expr>()
 
         fun column(e: Expr): String? {
             if (e !is ColumnRef) return null
@@ -272,7 +296,7 @@ internal class ScanAnalyzer(
                     }
                 }
             }
-            if (!used) exact = false
+            if (used) captured.add(p) else exact = false
         }
 
         // Two different names can't both hold for one tag row: nothing matches.
@@ -290,7 +314,10 @@ internal class ScanAnalyzer(
             valueNonEmpty = valueNonEmpty,
             // Several candidate names (`name IN ('a','b')`) aren't expressible.
             exact = exact && (names == null || name != null),
-        )
+        ).also {
+            it.alias = alias
+            it.captured = captured
+        }
     }
 
     private fun Long.toIntOrNull(): Int? = if (this in Int.MIN_VALUE..Int.MAX_VALUE) toInt() else null

@@ -184,7 +184,9 @@ class SqlDifferentialFuzzTest {
     @Test
     fun pushdownMatchesSqlite() {
         val selective = SelectiveBackend(store)
-        val backends = listOf("scans" to FilterStoreBackend(store), "native" to KotlinAggregateBackend(store), "selective" to selective)
+        val walks = IdWalkBackend(store)
+        val backends =
+            listOf("scans" to FilterStoreBackend(store), "native" to KotlinAggregateBackend(store), "selective" to selective, "idWalks" to walks)
         for ((label, backend) in backends) {
             val gen = QueryGen(Random(43))
             var compared = 0
@@ -212,13 +214,31 @@ class SqlDifferentialFuzzTest {
             }
             if (backend is KotlinAggregateBackend) native = backend.answered
             if (backend === selective) {
-                println("selective: compared=$compared refused=$refused joinNarrowed=${selective.narrowed}")
+                println("selective: compared=$compared refused=$refused joinNarrowed=${selective.narrowed} idWalks=${selective.idWalks}")
+                assertTrue(selective.idWalks > 20, "only ${selective.idWalks} id walks")
                 assertTrue(compared > 500, "[$label] only $compared compared")
                 assertTrue(selective.narrowed > 10, "join keys narrowed only ${selective.narrowed} scans")
                 continue
             }
             assertTrue(compared > 1500, "[$label] only $compared compared")
+            if (backend === walks) assertTrue(walks.walks > 200, "only ${walks.walks} id walks")
             if (label == "native") assertTrue(native > 100, "only $native queries were answered natively")
+        }
+    }
+
+    /** Accepts every scan and walks ids wherever the query allows, so every header-only reference takes that path. */
+    private class IdWalkBackend(
+        store: EventStore,
+    ) : FilterStoreBackend(store) {
+        var walks = 0
+
+        override suspend fun idsAndTimes(
+            spec: ScanSpec,
+            onEach: (id: String, createdAt: Long) -> Unit,
+        ): Boolean {
+            walks++
+            events(spec) { onEach(it.id, it.createdAt) }
+            return true
         }
     }
 
@@ -228,6 +248,8 @@ class SqlDifferentialFuzzTest {
     ) : FilterStoreBackend(store) {
         var narrowed = 0
 
+        var idWalks = 0
+
         override fun acceptsScan(spec: ScanSpec) = spec.isSelective
 
         override suspend fun events(
@@ -236,6 +258,16 @@ class SqlDifferentialFuzzTest {
         ) {
             if (!spec.exact && spec.ids != null) narrowed++
             super.events(spec, onEvent)
+        }
+
+        /** An id walk: if a query that reads more than ids and times ever lands here, its rows go wrong and the diff shows it. */
+        override suspend fun idsAndTimes(
+            spec: ScanSpec,
+            onEach: (id: String, createdAt: Long) -> Unit,
+        ): Boolean {
+            idWalks++
+            super.events(spec) { onEach(it.id, it.createdAt) }
+            return true
         }
     }
 

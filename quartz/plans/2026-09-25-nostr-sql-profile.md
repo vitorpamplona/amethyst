@@ -112,6 +112,14 @@ uses `query` and `count`):
    call. So `tags d ON d.event_id = l.event_id AND d.name = 'd'` reads only
    `l`'s events, and `JOIN events n ON n.id = t.value` only the referenced
    notes. Only when no link applies does the query fail `unsupported:`.
+6. **Id walks for id listings.** The compiler records what the whole query
+   reads of each reference (`ColumnUsage`), leaving out the predicates the
+   reference's spec holds exactly. An `events` reference read for nothing
+   but `id` / `created_at` goes to `SqlStoreBackend.idsAndTimes` (an index
+   walk, no documents) when the store has one; its rows carry a member of the
+   spec's kinds / authors, which passes those captured predicates and is read
+   by nothing else. That is the shape of `FilterSql.ids`, so NIP-77 snapshots
+   and id listings over SQL cost what the store's own id walk costs.
 
 `NostrServer` serves SQL for every store: file-backed SQLite through its
 dedicated read-only connections (`SqlQueryService`), everything else through
@@ -136,8 +144,8 @@ repeat them.
 Verified by `SqlDifferentialFuzzTest.pushdownMatchesSqlite` (2,000 random
 queries per backend: the generic scan backend, a reference backend that
 answers aggregates natively from the plan, and one that refuses unselective
-scans, which may refuse but never answer differently; all must match SQLite
-exactly), `FilterSqlTest` (300 random filters, against `query`/`count`, both
+scans, which may refuse but never answer differently, and one that walks ids
+wherever the query allows; all must match SQLite exactly), `FilterSqlTest` (300 random filters, against `query`/`count`, both
 on SQLite and through the pushdown),
 `SqlPushdownTest` (what the store is asked for: specs per reference, the
 pushed LIMIT plus tie group, native plans, refusal, contradictions) and

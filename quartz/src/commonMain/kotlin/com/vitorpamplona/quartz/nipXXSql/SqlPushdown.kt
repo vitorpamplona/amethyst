@@ -83,6 +83,18 @@ interface SqlStoreBackend {
 
     /** A native answer for [plan], or null to fall back to scans. */
     suspend fun aggregate(plan: AggregatePlan): List<List<Any?>>? = null
+
+    /**
+     * `(id, created_at)` of every event covering [spec], for an `events`
+     * reference the query reads nothing else of ([ScanSpec.needsOnlyIdsAndTimes]):
+     * an id walk instead of whole documents. Same coverage and [ScanSpec.limit]
+     * rules as [events]. Returns false, having emitted nothing, when the store
+     * has no cheaper way than [events].
+     */
+    suspend fun idsAndTimes(
+        spec: ScanSpec,
+        onEach: (id: String, createdAt: Long) -> Unit,
+    ): Boolean = false
 }
 
 /**
@@ -165,8 +177,9 @@ object SqlPushdown {
                 if (spec.matchesNothing) {
                     loaded[i] = true
                 } else if (backend.acceptsScan(spec)) {
-                    val limited = newestFirstLimit != null && spec.exact && spec.table == SqlProfile.EVENTS
-                    load(conn, i) { sink -> if (limited) loadNewest(backend, spec.withLimit(newestFirstLimit), sink) else backend.events(spec, sink) }
+                    val fetch = fetcher(backend, spec)
+                    val limit = if (spec.exact && spec.table == SqlProfile.EVENTS) newestFirstLimit else null
+                    load(conn, i) { sink -> if (limit != null) loadNewest(fetch, spec.withLimit(limit), sink) else fetch(spec, sink) }
                     loaded[i] = true
                 }
             }
@@ -184,8 +197,9 @@ object SqlPushdown {
                         if (!narrowed.matchesNothing) {
                             if (!backend.acceptsScan(narrowed)) continue
                             val keys = if (link.column == "pubkey") narrowed.authors!! else narrowed.ids!!
+                            val fetch = fetcher(backend, specs[i])
                             load(conn, i) { sink ->
-                                for (chunk in keys.chunked(JOIN_KEY_CHUNK)) backend.events(specs[i].narrowedTo(link.column, chunk.toSet())!!, sink)
+                                for (chunk in keys.chunked(JOIN_KEY_CHUNK)) fetch(specs[i].narrowedTo(link.column, chunk.toSet())!!, sink)
                             }
                         }
                         loaded[i] = true
@@ -217,6 +231,26 @@ object SqlPushdown {
             throw e
         }
     }
+
+    /**
+     * How reference [spec] is fetched: an id walk when the query reads only its
+     * `id` / `created_at` and the store has one, whole events otherwise. The
+     * walk's rows carry nothing else; nothing reads anything else of them.
+     */
+    private fun fetcher(
+        backend: SqlStoreBackend,
+        spec: ScanSpec,
+    ): suspend (ScanSpec, (Event) -> Unit) -> Unit =
+        if (spec.needsOnlyIdsAndTimes) {
+            { s, sink ->
+                // `pubkey` / `kind` only feed the spec's own predicates here: any member of its sets passes them.
+                val pubkey = s.authors?.firstOrNull() ?: ""
+                val kind = s.kinds?.firstOrNull() ?: 0
+                if (!backend.idsAndTimes(s) { id, createdAt -> sink(Event(id, pubkey, createdAt, kind, emptyArray(), "", "")) }) backend.events(s, sink)
+            }
+        } else {
+            { s, sink -> backend.events(s, sink) }
+        }
 
     /** Inserts what [fetch] hands over into scratch table `s[i]`. */
     private suspend fun load(
@@ -270,20 +304,20 @@ object SqlPushdown {
      * whole boundary group is fetched and the query's ORDER BY picks.
      */
     private suspend fun loadNewest(
-        backend: SqlStoreBackend,
+        fetch: suspend (ScanSpec, (Event) -> Unit) -> Unit,
         spec: ScanSpec,
         load: (Event) -> Unit,
     ) {
-        val limit = spec.limit ?: return backend.events(spec, load)
+        val limit = spec.limit ?: return fetch(spec, load)
         var count = 0
         var oldest = Long.MAX_VALUE
-        backend.events(spec) {
+        fetch(spec) {
             count++
             if (it.createdAt < oldest) oldest = it.createdAt
             load(it)
         }
         if (count >= limit && limit > 0) {
-            backend.events(spec.withTimeRange(oldest, oldest), load)
+            fetch(spec.withTimeRange(oldest, oldest), load)
         }
     }
 

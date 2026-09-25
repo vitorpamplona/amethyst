@@ -88,6 +88,19 @@ class SqlCompiler private constructor(
     /** Base references of the SELECT being emitted, with what the query asks of each. */
     private var scanSpecs: Map<TableRef, ScanSpec> = emptyMap()
     private val analyzer = ScanAnalyzer(::constant)
+
+    /** Every spec handed out, for [assignColumns]. */
+    private val allSpecs = ArrayList<ScanSpec>()
+
+    /**
+     * Once the whole query is compiled: what it reads of each reference outside the predicates the
+     * references' specs capture exactly, for [ScanSpec.columns].
+     */
+    private fun assignColumns(query: Query) {
+        val usage = ColumnUsage.of(query, allSpecs.flatMapTo(HashSet()) { it.captured })
+        for (spec in allSpecs) spec.columns = usage.columnsFor(spec.alias ?: continue, spec.table)
+    }
+
     private var cteCounter = 0
 
     companion object {
@@ -108,6 +121,7 @@ class SqlCompiler private constructor(
         ): CompiledQuery {
             val c = SqlCompiler(sources, positional, named)
             c.query(query)
+            if (sources.perReference != null) c.assignColumns(query)
             return CompiledQuery(c.sb.toString(), c.args)
         }
 
@@ -333,6 +347,7 @@ class SqlCompiler private constructor(
                 )
             spec.ref = ref
             spec.links = links(alias, preds, byAlias)
+            allSpecs.add(spec)
             result[ref] = spec
         }
         return result

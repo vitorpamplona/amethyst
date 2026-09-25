@@ -55,9 +55,21 @@ class SqlPushdownTest {
     private inner class Recording(
         private val native: Boolean = false,
         private val refuseBroad: Boolean = false,
+        private val walksIds: Boolean = false,
     ) : FilterStoreBackend(store) {
         val scans = ArrayList<ScanSpec>()
         val plans = ArrayList<AggregatePlan>()
+        val idWalks = ArrayList<ScanSpec>()
+
+        override suspend fun idsAndTimes(
+            spec: ScanSpec,
+            onEach: (id: String, createdAt: Long) -> Unit,
+        ): Boolean {
+            if (!walksIds) return false
+            idWalks.add(spec)
+            store.query<Event>(spec.toFilter()).forEach { onEach(it.id, it.createdAt) }
+            return true
+        }
 
         override suspend fun events(
             spec: ScanSpec,
@@ -194,6 +206,28 @@ class SqlPushdownTest {
         assertFailsWith<SqlException> { rows("SELECT e.id FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.kind = 7", backend) }
         val q = "SELECT e.content, t.name FROM events e LEFT JOIN tags t ON t.event_id = e.id WHERE e.kind = 1 ORDER BY e.content, t.idx"
         assertEquals(sqlite(q), rows(q, Recording(refuseBroad = true)))
+    }
+
+    @Test
+    fun aReferenceReadOnlyForIdsAndTimesIsAnIdWalk() {
+        val filter = Filter(kinds = listOf(1), since = 9)
+        val backend = Recording(walksIds = true)
+        val ids = FilterSql.ids(filter)
+        assertEquals(sqlite(ids.sql, *ids.params.toTypedArray()), rows(ids.sql, backend, *ids.params.toTypedArray()))
+        assertEquals(1, backend.idWalks.size)
+        assertTrue(backend.scans.isEmpty(), "no documents for an id listing: ${backend.scans}")
+
+        // Anything else read of the reference needs the documents.
+        val withContent = "SELECT id, content FROM events WHERE kind = 1 ORDER BY id"
+        val second = Recording(walksIds = true)
+        assertEquals(sqlite(withContent), rows(withContent, second))
+        assertTrue(second.idWalks.isEmpty())
+        // A star, or a qualifier used anywhere in the query, counts too.
+        for (q in listOf("SELECT * FROM events WHERE kind = 1 ORDER BY id", "SELECT e.id FROM events e WHERE e.kind = 1 AND e.pubkey <> '' ORDER BY 1")) {
+            val b = Recording(walksIds = true)
+            assertEquals(sqlite(q), rows(q, b))
+            assertTrue(b.idWalks.isEmpty(), q)
+        }
     }
 
     @Test
