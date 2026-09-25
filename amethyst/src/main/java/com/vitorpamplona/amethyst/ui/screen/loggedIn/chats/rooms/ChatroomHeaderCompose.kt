@@ -79,9 +79,9 @@ import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_server_label
-import com.vitorpamplona.amethyst.commons.resources.cordn_group
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_via_coordinator
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_deleted
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_file
 import com.vitorpamplona.amethyst.commons.resources.cordn_preview_photo
@@ -150,6 +150,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -165,6 +166,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.StringResource
 
@@ -590,6 +592,21 @@ private fun CordnGroupRoomCompose(
 
     val groupName = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, chatroom.gid.take(8))
 
+    // Who carries this conversation. "cordn" was the same word on every cordn
+    // row and told a reader nothing they could act on; the coordinator is the
+    // one server that sees every message in the group, so naming it is the
+    // thing worth the space.
+    val runtime = accountViewModel.account.cordnRuntime
+    val coordinators by (runtime?.coordinators ?: MutableStateFlow(emptyList())).collectAsStateWithLifecycle()
+    val announced by (runtime?.announcedNames ?: MutableStateFlow(emptyMap())).collectAsStateWithLifecycle()
+    val coordinatorName =
+        coordinatorDisplayName(
+            pubKey = chatroom.coordinatorPubKey,
+            label = coordinators.firstOrNull { it.pubKey == chatroom.coordinatorPubKey }?.label,
+            announced = announced[chatroom.coordinatorPubKey],
+            accountViewModel = accountViewModel,
+        )
+
     val lastContent =
         newest?.let { message ->
             val authorName by observeUserName(LocalCache.getOrCreateUser(message.envelope.pubKey), accountViewModel)
@@ -613,7 +630,17 @@ private fun CordnGroupRoomCompose(
     ChannelName(
         channelIdHex = chatroom.gid,
         channelPicture = null,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Dns, Res.string.cordn_group, modifier) },
+        channelTitle = { modifier ->
+            ChannelTitleWithLabelInfo(
+                channelName = groupName,
+                labelIcon = MaterialSymbols.Dns,
+                labelText = coordinatorName,
+                modifier = modifier,
+                // The pill no longer says "cordn", so the kind of room has to
+                // reach a screen reader some other way.
+                labelContentDescription = stringRes(Res.string.cordn_group_via_coordinator, coordinatorName),
+            )
+        },
         channelLastTime = newest?.envelope?.createdAt,
         channelLastContent = lastContent,
         // Counted against the read position the room persists, on the
@@ -1048,6 +1075,23 @@ private fun ChannelTitleWithLabelInfo(
     label: StringResource,
     modifier: Modifier,
     labelContentDescription: String? = null,
+) = ChannelTitleWithLabelInfo(channelName, labelIcon, stringRes(id = label), modifier, labelContentDescription)
+
+/**
+ * As above, for a pill whose text is a name rather than a fixed word.
+ *
+ * A cordn room's pill carries its coordinator, which is a value and not a
+ * string resource: the coordinator is the one server that carries every message
+ * in that group, so which one it is tells a reader more than being told twice
+ * that this is a cordn chat.
+ */
+@Composable
+private fun ChannelTitleWithLabelInfo(
+    channelName: String,
+    labelIcon: MaterialSymbol,
+    labelText: String,
+    modifier: Modifier,
+    labelContentDescription: String? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Text(
@@ -1061,7 +1105,7 @@ private fun ChannelTitleWithLabelInfo(
         Spacer(Modifier.width(6.dp))
         HeaderPill(
             symbol = labelIcon,
-            text = stringRes(id = label),
+            text = labelText,
             modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
             contentDescription = labelContentDescription,
         )
