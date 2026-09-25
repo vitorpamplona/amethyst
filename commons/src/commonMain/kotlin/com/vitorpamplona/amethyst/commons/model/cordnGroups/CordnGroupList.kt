@@ -58,6 +58,25 @@ class CordnGroupList(
     /** Every room, for the inbox and the group list. */
     val all: StateFlow<List<CordnGroupChatroom>> = _all.asStateFlow()
 
+    private val _revision = MutableStateFlow(0L)
+
+    /**
+     * Bumps on every change the inbox cares about: a room added or dropped,
+     * **and** every message filed into one.
+     *
+     * [all] cannot serve that second purpose, which is the trap this exists to
+     * close. It re-emits only when the room *set* changes -- a message for a
+     * room that already exists returns early from [getOrCreate] and never
+     * reassigns it -- so a feed rebuilt off `all` alone rebuilds when a room is
+     * joined and never again. The rows then keep whatever order that first
+     * build gave them no matter what arrives, which is invisible until the
+     * inbox is sorted by recency.
+     *
+     * The Concord control plane exposes its own `revision` for the same reason;
+     * both are meant to be `sample()`d, since a re-sync files a burst.
+     */
+    val revision: StateFlow<Long> = _revision.asStateFlow()
+
     fun getOrCreate(
         coordinatorPubKey: HexKey,
         gid: String,
@@ -67,6 +86,7 @@ class CordnGroupList(
         val room = CordnGroupChatroom(gid, coordinatorPubKey, accountPubKey)
         rooms[key] = room
         _all.value = rooms.values.toList()
+        _revision.value++
         return room
     }
 
@@ -85,7 +105,13 @@ class CordnGroupList(
         coordinatorPubKey: HexKey,
         gid: String,
         delivered: CordnDeliveredMessage,
-    ): Boolean = getOrCreate(coordinatorPubKey, gid).add(delivered)
+    ): Boolean =
+        getOrCreate(coordinatorPubKey, gid).add(delivered).also {
+            // Only a message the room did not already hold. A re-sync
+            // re-delivers, and rebuilding the inbox for an echo would be a
+            // rebuild per message per sync for no visible change.
+            if (it) _revision.value++
+        }
 
     /** Drops a room. The caller decides whether the stored state goes too. */
     fun forget(
@@ -94,6 +120,7 @@ class CordnGroupList(
     ) {
         if (rooms.remove(RoomKey(coordinatorPubKey, gid)) != null) {
             _all.value = rooms.values.toList()
+            _revision.value++
         }
     }
 
@@ -101,10 +128,12 @@ class CordnGroupList(
     fun forgetCoordinator(coordinatorPubKey: HexKey) {
         rooms.keys.filter { it.coordinatorPubKey == coordinatorPubKey }.forEach { rooms.remove(it) }
         _all.value = rooms.values.toList()
+        _revision.value++
     }
 
     fun clear() {
         rooms.clear()
         _all.value = emptyList()
+        _revision.value++
     }
 }

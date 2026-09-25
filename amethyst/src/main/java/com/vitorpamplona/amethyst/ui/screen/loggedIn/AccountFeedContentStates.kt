@@ -193,10 +193,15 @@ class AccountFeedContentStates(
         // room list is the only way back into a room, a group became
         // unreachable the moment its screen was closed.
         //
-        // `all` carries the rooms themselves, so it bumps on create, join,
-        // restore and every message that moves a room's preview; sample() keeps
-        // the restore burst, when every coordinator's groups arrive at once,
-        // from rebuilding the feed once per room.
+        // `revision` and not `all`: `all` re-emits only when the room *set*
+        // changes, so a message arriving for a room the inbox already lists
+        // never reached this collector. The rows therefore kept whatever order
+        // the build that first saw them gave — and since a cordn row sorts on
+        // its newest message, that meant the inbox ordered cordn rooms by when
+        // they were joined and never moved them again. `revision` bumps on the
+        // set *and* on every message filed into a room. sample() keeps the
+        // restore burst, when every coordinator's groups arrive at once, from
+        // rebuilding the feed once per room.
         //
         // No drop(1), unlike the collectors around it. Those drop the replay
         // because the feed's first build already saw their state; cordn's
@@ -209,7 +214,7 @@ class AccountFeedContentStates(
         account.cordnRuntime?.let { runtime ->
             scope.launch(Dispatchers.IO) {
                 @OptIn(FlowPreview::class)
-                runtime.groups.all
+                runtime.groups.revision
                     .sample(500)
                     .collect {
                         dmKnown.invalidateData()

@@ -266,7 +266,7 @@ class CordnGroupChatroom(
      * indistinguishable from an event that was actually published somewhere.
      */
     fun inboxRow(): Note =
-        cachedRow ?: Note(rowIdHex(coordinatorPubKey, gid)).also {
+        cachedRow ?: CordnInboxRowNote(this).also {
             it.addGatherer(this)
             cachedRow = it
         }
