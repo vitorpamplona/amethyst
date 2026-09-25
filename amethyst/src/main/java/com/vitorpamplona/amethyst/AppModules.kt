@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
-import com.vitorpamplona.amethyst.commons.relays.nip11.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
@@ -71,9 +71,9 @@ import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFact
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
-import com.vitorpamplona.amethyst.commons.service.pow.PowJobStore
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -983,7 +983,7 @@ class AppModules(
     // and every enqueue raises the shortService shield so backgrounding
     // doesn't freeze a miner.
     val powJobStore by lazy {
-        PowJobStore(File(appContext.filesDir, PowJobStore.FILE_NAME), applicationIOScope)
+        PoWJobStore(File(appContext.filesDir, PoWJobStore.FILE_NAME), applicationIOScope)
     }
 
     val powPublishQueue by lazy {

@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  *
  * Uses the Android 14+ `shortService` type — no special permission, but a
  * hard ~3 minute budget. On `onTimeout` the service exits cleanly; every
- * persistable job is already checkpointed by [com.vitorpamplona.amethyst.commons.service.pow.PowJobStore], so anything still
+ * persistable job is already checkpointed by [com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore], so anything still
  * unmined resumes on the next app launch. Started on every enqueue (the app
  * is necessarily in the foreground then), stops itself when the queue drains.
  *

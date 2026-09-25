@@ -39,7 +39,7 @@ import java.io.File
  * [save]/[remove] are the queue-facing fire-and-forget hooks; they serialize
  * onto a single-lane dispatcher so writes land in call order.
  */
-class PowJobStore(
+class PoWJobStore(
     private val storageFile: File,
     scope: CoroutineScope,
 ) : PoWJobPersistence {
@@ -109,7 +109,7 @@ class PowJobStore(
         jobs =
             try {
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    json.decodeFromString<PowJobsFile>(storageFile.readText()).jobs.toMutableList()
+                    json.decodeFromString<PoWJobsFile>(storageFile.readText()).jobs.toMutableList()
                 } else {
                     mutableListOf()
                 }
@@ -126,7 +126,7 @@ class PowJobStore(
         storageFile.parentFile?.mkdirs()
         val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
         try {
-            tmp.writeText(json.encodeToString(PowJobsFile(version = 1, jobs = jobs.toList())))
+            tmp.writeText(json.encodeToString(PoWJobsFile(version = 1, jobs = jobs.toList())))
             if (!tmp.renameTo(storageFile)) {
                 if (!storageFile.delete() || !tmp.renameTo(storageFile)) {
                     Log.e(TAG) { "Failed to rename $tmp to $storageFile" }
@@ -144,7 +144,7 @@ class PowJobStore(
     }
 
     companion object {
-        private const val TAG = "PowJobStore"
+        private const val TAG = "PoWJobStore"
         const val FILE_NAME = "pending_pow_jobs.json"
 
         // a job this stale is a post the user has long forgotten; publishing
@@ -154,7 +154,7 @@ class PowJobStore(
 }
 
 @Serializable
-data class PowJobsFile(
+data class PoWJobsFile(
     val version: Int = 1,
     val jobs: List<PersistedPoWJob> = emptyList(),
 )
