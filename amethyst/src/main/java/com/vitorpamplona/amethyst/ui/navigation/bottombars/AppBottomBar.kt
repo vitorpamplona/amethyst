@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size27Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -132,9 +131,10 @@ internal fun rememberFavoriteIconModel(fav: FavoriteApp): Any? =
     when (fav) {
         is FavoriteApp.WebApp -> {
             // Captured favicons, keyed so the icon appears once the site's capture lands.
-            val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+            val iconKeys by Amethyst.instance.browserIcons.keys
+                .collectAsStateWithLifecycle()
             remember(fav, iconKeys) {
-                OmniboxInput.hostOf(fav.url)?.let(BrowserIconRegistry::iconModelFor)
+                OmniboxInput.hostOf(fav.url)?.let(Amethyst.instance.browserIcons::iconModelFor)
             }
         }
 

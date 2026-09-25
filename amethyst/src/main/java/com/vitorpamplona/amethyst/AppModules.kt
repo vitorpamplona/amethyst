@@ -28,6 +28,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
+import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
@@ -898,6 +899,12 @@ class AppModules(
     val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope) }
 
     val browserHistory by lazy { BrowserHistoryRegistry(appStores.getDataStore(BrowserHistoryRegistry.FILE_NAME), applicationIOScope) }
+
+    // Favicons captured by the browser host, one PNG per host. Not a DataStore — it takes the directory
+    // to keep them in, the same way AppPreferenceStores takes rootFilesDir.
+    val browserIcons by lazy {
+        BrowserIconRegistry({ appContext.filesDir.toOkioPath() / BrowserIconRegistry.DIR }, applicationIOScope)
+    }
 
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)

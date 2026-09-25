@@ -73,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
@@ -190,12 +189,13 @@ internal fun FavoriteAppCell(
     // For a plain web favorite, prefer the favicon captured when its site was opened; an nsite/napplet uses
     // the verified icon blob bundled in its own content. Observing the key set recomputes the model as a
     // captured favicon arrives.
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val iconKeys by Amethyst.instance.browserIcons.keys
+        .collectAsStateWithLifecycle()
     val faviconModel =
         when (app) {
             is FavoriteApp.WebApp ->
                 remember(app, iconKeys) {
-                    OmniboxInput.hostOf(app.url)?.let(BrowserIconRegistry::iconModelFor)
+                    OmniboxInput.hostOf(app.url)?.let(Amethyst.instance.browserIcons::iconModelFor)
                 }
             is FavoriteApp.NostrApp -> rememberNappletIconModel(app.coordinate)
         }

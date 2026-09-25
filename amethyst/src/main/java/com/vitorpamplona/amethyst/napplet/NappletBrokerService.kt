@@ -42,7 +42,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
@@ -212,8 +211,9 @@ class NappletBrokerService : Service() {
             val data = msg.data ?: return true
             val host = data.getString(NappletIpc.KEY_ICON_HOST)?.takeIf { it.isNotBlank() } ?: return true
             val bytes = data.getByteArray(NappletIpc.KEY_ICON_BYTES) ?: return true
-            BrowserIconRegistry.init(applicationContext)
-            BrowserIconRegistry.record(host, bytes)
+            val icons = Amethyst.instance.browserIcons
+            icons.init()
+            icons.record(host, bytes)
             return true
         }
 

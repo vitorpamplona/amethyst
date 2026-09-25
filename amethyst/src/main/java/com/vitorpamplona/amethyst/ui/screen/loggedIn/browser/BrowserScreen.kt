@@ -102,7 +102,6 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
@@ -156,7 +155,8 @@ private fun BrowserLauncher(
         .collectAsStateWithLifecycle()
     val history by Amethyst.instance.browserHistory.history
         .collectAsStateWithLifecycle()
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val iconKeys by Amethyst.instance.browserIcons.keys
+        .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so tapping one launches immediately instead of
     // showing "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
@@ -571,7 +571,7 @@ private fun SuggestedRow(
     onClick: () -> Unit,
     onAddFavorite: () -> Unit,
 ) {
-    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(BrowserIconRegistry::iconModelFor) }
+    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(Amethyst.instance.browserIcons::iconModelFor) }
     Row(
         modifier =
             Modifier
@@ -798,7 +798,7 @@ private fun SiteIcon(
     iconKeys: Set<String>,
     modifier: Modifier = Modifier,
 ) {
-    val model = remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
+    val model = remember(host, iconKeys) { Amethyst.instance.browserIcons.iconModelFor(host) }
     val symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.Public
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     if (model == null) {

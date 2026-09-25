@@ -25,7 +25,6 @@ import android.content.ComponentCallbacks2
 import android.os.Build
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
@@ -147,7 +146,7 @@ class Amethyst : Application() {
         instance.browserHistory.init()
 
         // Index device-local captured favicons (main process only; decorates favorites + suggestions).
-        BrowserIconRegistry.init(this)
+        instance.browserIcons.init()
 
         // Warm the global-settings prefs off-main so the first (deliberately synchronous) read of
         // them does not hit disk on the main thread. See LocalPreferences.warmGlobalSettings.
