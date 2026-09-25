@@ -44,6 +44,9 @@ import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
+import com.vitorpamplona.quartz.nipXXSql.EventStoreTableSources
+import com.vitorpamplona.quartz.nipXXSql.SqlCompiler
+import com.vitorpamplona.quartz.nipXXSql.SqlCursor
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -62,6 +65,9 @@ class SQLiteEventStore(
     val extraPragmas: List<String> = emptyList(),
 ) {
     companion object {
+        /** Rows stepped per batch by [sql]. */
+        private const val PAGE = 500
+
         /** SQLite's message for the unique index on `event_headers (id)`. */
         private const val DUPLICATE_ID_CONSTRAINT = "UNIQUE constraint failed: event_headers.id"
 
@@ -735,6 +741,27 @@ class SQLiteEventStore(
                 fullTextSearchModule.reindexBatch(db, resumeFrom?.toLongOrNull() ?: 0L, batchSize)
             }
         }
+
+    /**
+     * [IEventStore.sql] over this store: compiles through the SQL profile
+     * (with the `event_tags` pushdown) and streams rows inside one reader
+     * borrow, preparing outside the statement cache. On an in-memory store
+     * the reader is the writer, so writes wait for the query to finish.
+     */
+    suspend fun sql(
+        query: String,
+        params: List<Any?>,
+        named: Map<String, Any?>,
+        onColumns: (List<String>) -> Unit,
+        onRow: (List<Any?>) -> Unit,
+    ) = pool.useReader { conn ->
+        val sources = EventStoreTableSources.forStore(seedModule.hasher(conn), indexStrategy)
+        val compiled = SqlCompiler.compile(query, sources, params, named)
+        SqlCursor((conn as? StatementCachingConnection)?.uncached ?: conn, compiled).use { cursor ->
+            onColumns(cursor.columns)
+            while (!cursor.isDone) cursor.fetch(PAGE).forEach(onRow)
+        }
+    }
 
     fun close() = pool.close()
 }

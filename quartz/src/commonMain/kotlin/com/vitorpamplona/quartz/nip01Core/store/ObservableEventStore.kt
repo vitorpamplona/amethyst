@@ -197,6 +197,14 @@ class ObservableEventStore(
 
     override suspend fun liveNegentropySnapshot(maxEntries: Int) = inner.liveNegentropySnapshot(maxEntries)
 
+    override suspend fun sql(
+        query: String,
+        params: List<Any?>,
+        named: Map<String, Any?>,
+        onColumns: (List<String>) -> Unit,
+        onRow: (List<Any?>) -> Unit,
+    ) = inner.sql(query, params, named, onColumns, onRow)
+
     override suspend fun delete(filter: Filter) {
         inner.delete(filter)
         _changes.emit(StoreChange.DeleteByFilter(listOf(filter)))

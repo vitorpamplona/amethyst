@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipXXSql.SqlException
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -277,6 +278,25 @@ interface IEventStore : AutoCloseable {
      * path either way.
      */
     suspend fun liveNegentropySnapshot(maxEntries: Int): IStorage? = null
+
+    /**
+     * Runs a read-only query in the Nostr SQL profile (the same language
+     * relays serve over `SQL` / `FETCH`) against this store's `events` /
+     * `tags` tables. [onColumns] gets the result's column names once, then
+     * [onRow] each row (`Long`, `Double`, `String` or `null` values).
+     * Positional `?` / `?NNN` bind from [params], `:name` from [named].
+     *
+     * Throws [SqlException] for queries outside the profile and the engine's
+     * exception for runtime errors. Stores without SQL throw
+     * `unsupported`, which is the default.
+     */
+    suspend fun sql(
+        query: String,
+        params: List<Any?> = emptyList(),
+        named: Map<String, Any?> = emptyMap(),
+        onColumns: (List<String>) -> Unit = {},
+        onRow: (List<Any?>) -> Unit,
+    ): Unit = throw SqlException.unsupported("this store has no SQL")
 
     /**
      * True when NIP-50 tokenization is deferred and something must drive

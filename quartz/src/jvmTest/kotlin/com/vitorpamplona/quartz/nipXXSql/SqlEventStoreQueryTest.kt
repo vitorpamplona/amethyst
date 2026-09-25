@@ -23,8 +23,11 @@ package com.vitorpamplona.quartz.nipXXSql
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import com.vitorpamplona.quartz.nip01Core.cache.interning.EventInterner
+import com.vitorpamplona.quartz.nip01Core.cache.interning.InterningEventStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.bindAny
@@ -37,6 +40,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -239,5 +243,69 @@ class SqlEventStoreQueryTest {
         // Same answer as without the pushdown.
         assertEquals(run(sql), SqlCursor(conn, compiled).use { it.fetch(10) })
         assertEquals(listOf(listOf(5L)), run(sql))
+    }
+
+    // ---- IEventStore.sql -----------------------------------------------------
+
+    private fun storeSql(
+        target: IEventStore,
+        query: String,
+        params: List<Any?> = emptyList(),
+        named: Map<String, Any?> = emptyMap(),
+    ): Pair<List<String>, List<List<Any?>>> {
+        var columns = emptyList<String>()
+        val rows = ArrayList<List<Any?>>()
+        runBlocking { target.sql(query, params, named, { columns = it }) { rows.add(it) } }
+        return columns to rows
+    }
+
+    @Test
+    fun storeSqlMatchesTheRelayPath() {
+        val q = "SELECT lower(value) AS tag, count(*) AS n FROM tags WHERE name = 't' GROUP BY 1 ORDER BY n DESC, tag"
+        val (columns, rows) = storeSql(store, q)
+        assertEquals(listOf("tag", "n"), columns)
+        assertEquals(run(q), rows)
+    }
+
+    @Test
+    fun storeSqlBindsParamsAndStreamsLargeResults() {
+        val (_, byAuthor) = storeSql(store, "SELECT count(*) FROM events WHERE pubkey = :who", named = mapOf("who" to alice.pubKey))
+        assertEquals(listOf(listOf(5L)), byAuthor)
+        // More rows than one internal batch.
+        val (_, many) = storeSql(store, "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?) SELECT i FROM n", listOf(1234L))
+        assertEquals(1234, many.size)
+        assertEquals(listOf(1234L), many.last())
+    }
+
+    @Test
+    fun storeSqlPassesThroughWrappersAndWorksInMemory() {
+        assertEquals(listOf(listOf(eventCount.toLong())), storeSql(InterningEventStore(store, EventInterner()), "SELECT count(*) FROM events").second)
+
+        val memory = EventStore(dbName = null, relay = null)
+        try {
+            runBlocking { memory.insert(alice.sign<Event>(1, 1, arrayOf(arrayOf("t", "x")), "m")) }
+            assertEquals(listOf(listOf("x")), storeSql(memory, "SELECT value FROM tags WHERE name = 't' AND value = 'x'").second)
+        } finally {
+            memory.close()
+        }
+    }
+
+    @Test
+    fun storeSqlRejectsLikeTheRelay() {
+        val e = assertFailsWith<SqlException> { storeSql(store, "DELETE FROM events") }
+        assertEquals(SqlException.UNSUPPORTED, e.prefix)
+        assertFailsWith<SqlException> { storeSql(store, "SELECT * FROM event_headers") }
+        // A store without SQL says so.
+        val none =
+            object : IEventStore by store {
+                override suspend fun sql(
+                    query: String,
+                    params: List<Any?>,
+                    named: Map<String, Any?>,
+                    onColumns: (List<String>) -> Unit,
+                    onRow: (List<Any?>) -> Unit,
+                ) = super<IEventStore>.sql(query, params, named, onColumns, onRow)
+            }
+        assertEquals(SqlException.UNSUPPORTED, assertFailsWith<SqlException> { storeSql(none, "SELECT 1") }.prefix)
     }
 }

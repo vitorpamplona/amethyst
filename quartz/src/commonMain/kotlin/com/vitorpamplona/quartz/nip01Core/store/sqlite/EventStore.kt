@@ -87,6 +87,14 @@ class EventStore(
 
     override suspend fun liveNegentropySnapshot(maxEntries: Int) = store.liveNegentropySnapshot(maxEntries)
 
+    override suspend fun sql(
+        query: String,
+        params: List<Any?>,
+        named: Map<String, Any?>,
+        onColumns: (List<String>) -> Unit,
+        onRow: (List<Any?>) -> Unit,
+    ) = store.sql(query, params, named, onColumns, onRow)
+
     override val needsFtsCatchUp: Boolean get() = store.needsFtsCatchUp
 
     override suspend fun ftsCatchUp(batchSize: Int) = store.ftsCatchUp(batchSize)

@@ -111,6 +111,14 @@ class InterningEventStore(
 
     override suspend fun count(filter: Filter): Int = inner.count(filter)
 
+    override suspend fun sql(
+        query: String,
+        params: List<Any?>,
+        named: Map<String, Any?>,
+        onColumns: (List<String>) -> Unit,
+        onRow: (List<Any?>) -> Unit,
+    ) = inner.sql(query, params, named, onColumns, onRow)
+
     override suspend fun count(filters: List<Filter>): Int = inner.count(filters)
 
     override suspend fun snapshotIdsForNegentropy(

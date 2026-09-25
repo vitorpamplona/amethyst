@@ -96,6 +96,13 @@ class StatementCachingConnection(
         }
     }
 
+    /**
+     * This connection without the cache, for one-off SQL (e.g. the SQL
+     * profile's ad hoc queries) that would otherwise take cache slots the
+     * recurring filter shapes need and never give them back.
+     */
+    val uncached: SQLiteConnection get() = delegate
+
     override fun close() {
         cache.values.forEach { pool -> pool.forEach { runCatching { it.finalizeStatement() } } }
         cache.clear()

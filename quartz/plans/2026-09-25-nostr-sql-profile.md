@@ -75,6 +75,18 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
 - Un-aliased result columns get an explicit alias equal to their source text, which
   is SQLite's own naming rule, so column names match what SQLite would report.
 
+## On the event store
+
+`IEventStore.sql(query, params, named, onColumns, onRow)` runs the same profile
+locally, with the same compiler, pushdown and results as the relay. The default
+throws `unsupported`. `EventStore` implements it through `SQLiteEventStore.sql`,
+and `ObservableEventStore` / `InterningEventStore` pass it through.
+- It streams rows inside one reader borrow, with no cursor across calls.
+- It prepares outside the statement cache, so ad hoc queries don't take cache
+  slots the recurring filter shapes need.
+- It works on in-memory stores too. The reader there is the writer, so writes
+  wait for the query to finish.
+
 ## Tags pushdown
 
 When a query pins a `tags` reference with `name = '<x>'` and `value = '<y>'` (or
@@ -185,7 +197,7 @@ beyond, and a large join takes as long as the data makes it.
    or multi-letter names like `imeta`) still expand every event's JSON. A text tag
    table would cover them; measure its write and storage cost with relayBench first.
 4. **Client side:** `INostrClient.sqlQuery()` in `relay/client/accessories/`,
-   and `amy sql`. The frames already parse on the client (`Message.fromJson`).
+   and `amy sql` (local via `IEventStore.sql`, remote via `SQL` frames). The frames already parse on the client (`Message.fromJson`).
 5. **NIP draft:** schema, EBNF of the grammar, function list, DQS-off rule,
    `invalid:` / `unsupported:` / `error:` prefixes, conformance corpus (the fuzzer's
    events + queries + expected rows).
