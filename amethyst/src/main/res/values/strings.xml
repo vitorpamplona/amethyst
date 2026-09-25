@@ -408,7 +408,7 @@
     <string name="cordn_requests_none">Nobody is waiting to join.</string>
     <string name="cordn_requests_accept">Add</string>
     <string name="cordn_requests_decline">Dismiss</string>
-    <string name="cordn_requests_any_member">Any member of a cordn group can add someone. The admin list is a label, not a lock.</string>
+    <string name="cordn_requests_admin_only">Only an admin can accept. In a group with no admins, that is everyone.</string>
     <string name="cordn_requests_failed">Could not read the requests.</string>
     <string name="cordn_link_scan">Scan</string>
     <string name="cordn_share_title">Share this group</string>
