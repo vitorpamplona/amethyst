@@ -235,14 +235,20 @@ class CordnGroupManager(
         // theirs would spend a package they meant for someone else.
         val taken =
             call { coordinator.takeKeyPackage(keyPackageRef ?: targetPubKey) }
-                ?: throw CordnGroupException("the coordinator holds no KeyPackage for $targetPubKey")
+                ?: throw CordnGroupException(
+                    "the coordinator holds no KeyPackage for $targetPubKey",
+                    CordnGroupException.Reason.NO_KEY_PACKAGE,
+                )
         val verified = KeyPackagePublication.verify(taken.publicationEvent)
         if (verified.pubKey != targetPubKey) {
-            throw CordnGroupException("the KeyPackage served for $targetPubKey belongs to ${verified.pubKey}")
+            throw CordnGroupException(
+                "the KeyPackage served for $targetPubKey belongs to ${verified.pubKey}",
+                CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER,
+            )
         }
 
         val result = group.addMember(verified.bytes)
-        val welcome = result.welcomeBytes ?: throw CordnGroupException("adding a member produced no Welcome")
+        val welcome = result.welcomeBytes ?: throw CordnGroupException("adding a member produced no Welcome", CordnGroupException.Reason.NO_WELCOME)
 
         // framedCommitBytes, not commitBytes: the latter is the bare RFC 9420
         // Commit struct with no MLSMessage around it, which no receiver can
@@ -297,7 +303,10 @@ class CordnGroupManager(
                 .entries
                 .firstOrNull { it.value == targetPubKey }
                 ?.key
-                ?: throw CordnGroupException("$targetPubKey is not a member of $gid")
+                ?: throw CordnGroupException(
+                    "$targetPubKey is not a member of $gid",
+                    CordnGroupException.Reason.NOT_A_MEMBER,
+                )
 
         val result = group.removeMember(leafIndex)
         val posted =
@@ -946,10 +955,37 @@ class CordnGroupManager(
     }
 }
 
-/** Something went wrong that is this manager's to explain, not MLS's. */
+/**
+ * Something went wrong that is this manager's to explain, not MLS's.
+ *
+ * [reason] exists so a screen can say what happened in its own words. The
+ * [message] is written for a log — it names pubkeys and gids in full, which is
+ * what you want when reading one and never what you want in a chat — so a UI
+ * that rendered `e.message` showed a person who had just tapped a face a
+ * 64-character hex string. Branching on the reason lets it name the person
+ * instead, without matching on English that is free to change.
+ */
 class CordnGroupException(
     message: String,
-) : IllegalStateException(message)
+    val reason: Reason = Reason.OTHER,
+) : IllegalStateException(message) {
+    enum class Reason {
+        /** Nobody has published a KeyPackage for this person to this coordinator. */
+        NO_KEY_PACKAGE,
+
+        /** The coordinator served a KeyPackage belonging to somebody else. */
+        WRONG_KEY_PACKAGE_OWNER,
+
+        /** The add produced no Welcome, so the invitee could never open the group. */
+        NO_WELCOME,
+
+        /** The person named is not in this group. */
+        NOT_A_MEMBER,
+
+        /** Anything with no better wording than the message itself. */
+        OTHER,
+    }
+}
 
 /**
  * A Welcome that has been opened but not joined.

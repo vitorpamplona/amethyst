@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.cordn.CordnGroupException
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -90,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 
 /**
@@ -224,7 +228,12 @@ private fun CordnGroupInfo(
      * roster, and a rename stayed the old name. The runtime's own methods pair
      * each commit with that refresh.
      */
-    fun runAdmin(block: suspend (CordnRuntime) -> Unit) {
+    val context = LocalContext.current
+
+    fun runAdmin(
+        who: String? = null,
+        block: suspend (CordnRuntime) -> Unit,
+    ) {
         val target = runtime
         if (target == null || manager == null) {
             adminError = noSession
@@ -236,7 +245,11 @@ private fun CordnGroupInfo(
             try {
                 block(target)
             } catch (e: Exception) {
-                adminError = e.message ?: failed
+                // Not e.message. Those are written for a log and name pubkeys
+                // and gids in full, so the screen that had just shown a face
+                // answered with 64 hex characters.
+                Log.w("CordnGroupInfo", "admin action failed in ${room.gid}: ${e.message}", e)
+                adminError = adminFailureText(context, e, who, failed)
             } finally {
                 busy = false
             }
@@ -359,7 +372,7 @@ private fun CordnGroupInfo(
                     onInvite = { user ->
                         memberSearch = ""
                         userSuggestions.reset()
-                        runAdmin { it.invite(coordinatorPubKey, room.gid, user.pubkeyHex) }
+                        runAdmin(user.toBestDisplayName()) { it.invite(coordinatorPubKey, room.gid, user.pubkeyHex) }
                     },
                 )
             }
@@ -395,6 +408,8 @@ private fun CordnGroupInfo(
             }
 
             removing?.let { target ->
+                val removingName = observeUserNameByHex(target, accountViewModel)
+
                 // A plain confirm rather than the shared quick-action dialog: that
                 // one offers "don't ask again", which for an irreversible removal
                 // would be a setting nobody should be nudged into.
@@ -402,17 +417,12 @@ private fun CordnGroupInfo(
                     onDismissRequest = { removing = null },
                     title = { Text(stringRes(R.string.cordn_info_remove_confirm_title)) },
                     text = {
-                        Text(
-                            stringRes(
-                                R.string.cordn_info_remove_confirm_body,
-                                observeUserNameByHex(target, accountViewModel),
-                            ),
-                        )
+                        Text(stringRes(R.string.cordn_info_remove_confirm_body, removingName))
                     },
                     confirmButton = {
                         TextButton(onClick = {
                             removing = null
-                            runAdmin { it.removeMember(coordinatorPubKey, room.gid, target) }
+                            runAdmin(removingName) { it.removeMember(coordinatorPubKey, room.gid, target) }
                         }) {
                             Text(
                                 text = stringRes(R.string.cordn_info_remove_member),
@@ -564,6 +574,52 @@ private fun CordnAddMember(
                 },
             )
         }
+    }
+}
+
+/**
+ * What to tell somebody when an admin action failed.
+ *
+ * `CordnGroupException` carries a [CordnGroupException.Reason] precisely so this
+ * can be a `when` rather than a search for substrings in English. [who] is the
+ * display name already on screen; the exception only knows the pubkey, and a
+ * person who just tapped a face should not be answered with 64 hex characters.
+ *
+ * Anything with no better wording falls back to the message, which is still
+ * better than silence — and the caller has logged the throwable in full either
+ * way.
+ */
+private fun adminFailureText(
+    context: Context,
+    e: Throwable,
+    who: String?,
+    fallback: String,
+): String {
+    val name = who ?: stringRes(context, R.string.cordn_admin_someone)
+    return when (e) {
+        is CordnGroupException ->
+            when (e.reason) {
+                CordnGroupException.Reason.NO_KEY_PACKAGE -> stringRes(context, R.string.cordn_admin_no_key_package, name)
+                CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER -> stringRes(context, R.string.cordn_admin_wrong_key_package, name)
+                CordnGroupException.Reason.NO_WELCOME -> stringRes(context, R.string.cordn_admin_no_welcome, name)
+                CordnGroupException.Reason.NOT_A_MEMBER -> stringRes(context, R.string.cordn_admin_not_a_member, name)
+                CordnGroupException.Reason.OTHER -> e.message ?: fallback
+            }
+
+        // The UI hides Remove against yourself, so reaching this means the
+        // roster and the button disagreed rather than that anyone tried.
+        is IllegalArgumentException ->
+            if (e.message?.contains("self-removal") == true) {
+                stringRes(context, R.string.cordn_admin_no_self_remove)
+            } else {
+                e.message ?: fallback
+            }
+
+        // A coordinator that does not answer is the single commonest failure
+        // here and says nothing useful in its own words.
+        is TimeoutCancellationException -> stringRes(context, R.string.cordn_admin_coordinator_silent)
+
+        else -> e.message ?: fallback
     }
 }
 
