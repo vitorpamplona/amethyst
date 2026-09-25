@@ -45,10 +45,6 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.NdjsonImportExport
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import com.vitorpamplona.quartz.nipXXSql.EventStoreTableSources
-import com.vitorpamplona.quartz.nipXXSql.SqlAccessPolicy
-import com.vitorpamplona.quartz.nipXXSql.SqlLimits
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -59,8 +55,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Standalone entry point. The first argument may be a verb:
@@ -320,8 +314,6 @@ private fun serve(args: Array<String>) {
         composePolicy(config, advertisedUrl, requireAuth, optionalAuth, verifySigs, parallelVerify)
     }
 
-    val sqlService = if (config.sql.enabled) sqlServiceFor(config.sql, store) else null
-
     // Static [authorization] feeds the runtime BanStore only when no
     // state file exists yet. As soon as the operator's first admin RPC
     // writes the file, BanListPolicy consults the persisted lists
@@ -354,7 +346,6 @@ private fun serve(args: Array<String>) {
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
             adminPubkeys = config.admin.pubkeys.toSet(),
-            sql = sqlService,
         )
     val server =
         KtorRelay(
@@ -552,41 +543,9 @@ private fun composePolicy(
         pieces += if (parallelVerify) VerifyAuthOnlyPolicy else VerifyPolicy
     }
 
-    if (config.sql.enabled && (config.sql.require_auth || config.sql.allowed_pubkeys.isNotEmpty())) {
-        pieces += SqlAccessPolicy(config.sql.require_auth, config.sql.allowed_pubkeys.toSet())
-    }
-
     return pieces.fold<IRelayPolicy, IRelayPolicy>(EmptyPolicy) { acc, p ->
         if (acc === EmptyPolicy) p else acc + p
     }
-}
-
-/**
- * `[sql] enabled = true` over the relay's SQLite store. Fails the boot when
- * the store can't serve it (in-memory or non-SQLite) instead of silently
- * answering every SQL frame `unsupported`.
- */
-private fun sqlServiceFor(
-    sql: StaticConfig.SqlSection,
-    store: IEventStore,
-): SqlQueryService {
-    val sqlite =
-        (store as? EventStore)?.store?.takeIf { it.dbName != null }
-            ?: error("[sql] enabled needs a file-backed SQLite database: set [database] in_memory = false and a file")
-    val limits =
-        SqlLimits(
-            maxOpenCursors = sql.max_open_cursors,
-            maxCursorsPerSession = sql.max_cursors_per_connection,
-            defaultPageRows = sql.default_page_rows,
-            maxPageRows = sql.max_page_rows,
-            pageTimeBudget = sql.page_time_budget_ms.milliseconds,
-            idleTimeout = sql.idle_timeout_seconds.seconds,
-            maxLifetime = sql.max_lifetime_seconds.seconds,
-            maxRecursiveRows = sql.max_recursive_rows,
-            maxQueryLength = sql.max_query_length,
-        )
-    val sources = EventStoreTableSources.build(sql.hidden_kinds.toSet())
-    return SqlQueryService.forStore(sqlite, limits) { sources }
 }
 
 private class Args(

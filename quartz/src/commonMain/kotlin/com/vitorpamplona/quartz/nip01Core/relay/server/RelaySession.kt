@@ -84,6 +84,8 @@ class RelaySession(
     val id: Long = nextConnectionId(),
     /** Read-only SQL (`SQL` / `FETCH` / `SQL-CLOSE`); null answers those `unsupported`. */
     sql: SqlQueryService? = null,
+    /** Rows in a SQL cursor's first page when the client doesn't say; the relay's default REQ limit. */
+    sqlPageSize: Int? = null,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
@@ -122,7 +124,7 @@ class RelaySession(
     private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
 
     /** Open SQL cursors for this connection. */
-    private val sqlCursors = SqlCursorRegistry(sql, requestContext, ::send, scope)
+    private val sqlCursors = SqlCursorRegistry(sql, ::send, sqlPageSize)
 
     private fun addSubscription(
         subId: String,

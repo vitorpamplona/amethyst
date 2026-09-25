@@ -92,6 +92,7 @@ abstract class RelayServerBase(
                 onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
                 sql = sql,
+                sqlPageSize = limits?.defaultLimit,
             ),
         )
 

@@ -45,7 +45,6 @@ data class StaticConfig(
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
-    val sql: SqlSection = SqlSection(),
     /** `[[mirror]]` entries — upstream relays this relay streams from. */
     val mirror: List<MirrorSection> = emptyList(),
 ) {
@@ -222,36 +221,6 @@ data class StaticConfig(
          * answers NEG-ERR from a capped scan instead).
          */
         val live_index: Boolean = true,
-    )
-
-    /**
-     * Read-only SQL over websockets (`SQL` / `FETCH` / `SQL-CLOSE`; see
-     * `quartz/plans/2026-09-25-nostr-sql-profile.md`). Off by default, and
-     * needs a file-backed SQLite `[database]`.
-     *
-     *  - [hidden_kinds]: kinds removed from the `events` / `tags` tables for
-     *    every SQL session. SQL does not go through REQ policies, so what
-     *    those hide must be listed here; gift wraps (1059) are hidden by default.
-     *  - [require_auth] / [allowed_pubkeys]: NIP-42 gate for opening cursors.
-     *  - [max_open_cursors]: relay-wide; each holds one dedicated read-only
-     *    connection, so a slow query can stall other SQL, never REQs.
-     *  - [max_recursive_rows]: every recursive CTE must end with `LIMIT n`,
-     *    n ≤ this. Recursion is the only way a SELECT can run forever.
-     */
-    data class SqlSection(
-        val enabled: Boolean = false,
-        val require_auth: Boolean = false,
-        val allowed_pubkeys: List<String> = emptyList(),
-        val hidden_kinds: List<Int> = listOf(1059),
-        val max_open_cursors: Int = 4,
-        val max_cursors_per_connection: Int = 2,
-        val default_page_rows: Int = 500,
-        val max_page_rows: Int = 5_000,
-        val page_time_budget_ms: Long = 250,
-        val idle_timeout_seconds: Long = 30,
-        val max_lifetime_seconds: Long = 300,
-        val max_recursive_rows: Long = 100_000,
-        val max_query_length: Int = 16 * 1024,
     )
 
     data class AuthorizationSection(

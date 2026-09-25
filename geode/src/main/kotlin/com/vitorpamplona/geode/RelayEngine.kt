@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
 import kotlinx.coroutines.SupervisorJob
 import kotlin.coroutines.CoroutineContext
 
@@ -104,12 +103,6 @@ class RelayEngine(
      * owns *who* is admin; the transport owns *how* admins authenticate.
      */
     adminPubkeys: Set<HexKey> = emptySet(),
-    /**
-     * Read-only SQL service (`SQL` / `FETCH` / `SQL-CLOSE`), e.g.
-     * [SqlQueryService.forStore] over [store]. The server takes ownership.
-     * Null (the default) answers SQL frames `unsupported`.
-     */
-    sql: SqlQueryService? = null,
 ) : AutoCloseable {
     private val boot: RuntimeConfigData = runtimeConfig.effective()
 
@@ -186,7 +179,6 @@ class RelayEngine(
             parentContext = parentContext,
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
-            sql = sql,
         )
 
     override fun close() = server.close()

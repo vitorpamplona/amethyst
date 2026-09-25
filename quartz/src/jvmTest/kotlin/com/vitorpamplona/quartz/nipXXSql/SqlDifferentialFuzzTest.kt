@@ -56,7 +56,7 @@ class SqlDifferentialFuzzTest {
     /** Runs the raw text against TEMP views: the reference. */
     private lateinit var oracleConn: SQLiteConnection
 
-    private val sources = EventStoreTableSources.build()
+    private val sources = EventStoreTableSources.sources
 
     @BeforeTest
     fun setup() {

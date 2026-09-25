@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
 
 class PolicyStack(
     vararg policies: IRelayPolicy,
@@ -63,8 +62,6 @@ class PolicyStack(
         subId: String,
         openSubscriptions: Int,
     ): String? = policies.firstNotNullOfOrNull { it.acceptSubscription(subId, openSubscriptions) }
-
-    override fun acceptSql(cmd: SqlCmd): String? = policies.firstNotNullOfOrNull { it.acceptSql(cmd) }
 
     private inline fun <T : Command> runPolicies(
         initialCmd: T,

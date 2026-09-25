@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
 
 /**
  * Defines custom behavior for this relay.
@@ -127,20 +126,6 @@ interface IRelayPolicy {
         subId: String,
         openSubscriptions: Int,
     ): String? = null
-
-    /**
-     * Decides whether this connection may open a read-only SQL cursor.
-     * Return a reason string (with its NIP-01 prefix, e.g. `auth-required:`)
-     * to reject it, or null to allow it.
-     *
-     * This is a gate only: SQL never goes through filter rewriting or
-     * [canSendToSession]. What the query can *see* is set by the relay's
-     * [com.vitorpamplona.quartz.nipXXSql.SqlQueryService] table sources, so
-     * a relay that hides events from REQs must hide them there too.
-     *
-     * Only consulted when the server was given a SQL service. Default: allow.
-     */
-    fun acceptSql(cmd: SqlCmd): String? = null
 
     /**
      * Filters a live event before it is forwarded to a subscriber.

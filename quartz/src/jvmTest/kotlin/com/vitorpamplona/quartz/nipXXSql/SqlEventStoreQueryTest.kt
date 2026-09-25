@@ -102,7 +102,7 @@ class SqlEventStoreQueryTest {
     private fun run(
         sql: String,
         vararg params: Any?,
-        sources: SqlTableSources = EventStoreTableSources.build(),
+        sources: SqlTableSources = EventStoreTableSources.sources,
     ): List<List<Any?>> = SqlCursor(conn, SqlCompiler.compile(sql, sources, params.toList())).use { it.fetch(Int.MAX_VALUE) }
 
     @Test
@@ -171,24 +171,10 @@ class SqlEventStoreQueryTest {
                 JOIN events n ON n.id = t.value
                 WHERE r.kind = 7 AND n.pubkey = :author
                 """.trimIndent(),
-                EventStoreTableSources.build(),
+                EventStoreTableSources.sources,
                 named = mapOf("author" to alice.pubKey),
             )
         assertEquals(listOf(listOf(1L)), SqlCursor(conn, c).use { it.fetch(10) })
-    }
-
-    @Test
-    fun hiddenKindsVanishFromBothTables() {
-        val open = EventStoreTableSources.build()
-        val closed = EventStoreTableSources.build(hiddenKinds = setOf(1059))
-        val q = "SELECT (SELECT count(*) FROM events WHERE kind = 1059), (SELECT count(*) FROM tags WHERE kind = 1059)"
-        assertEquals(listOf(listOf(1L, 1L)), run(q, sources = open))
-        assertEquals(listOf(listOf(0L, 0L)), run(q, sources = closed))
-        // A CTE can't be used to get around the substitution either.
-        assertEquals(
-            listOf(listOf(0L)),
-            run("WITH x AS (SELECT * FROM events) SELECT count(*) FROM x WHERE kind = 1059", sources = closed),
-        )
     }
 
     @Test
@@ -203,7 +189,7 @@ class SqlEventStoreQueryTest {
 
     @Test
     fun cursorPagesThroughEverything() {
-        SqlCursor(conn, SqlCompiler.compile("SELECT id FROM events ORDER BY created_at", EventStoreTableSources.build())).use { cursor ->
+        SqlCursor(conn, SqlCompiler.compile("SELECT id FROM events ORDER BY created_at", EventStoreTableSources.sources)).use { cursor ->
             assertEquals(listOf("id"), cursor.columns)
             val all = ArrayList<List<Any?>>()
             var pages = 0
@@ -222,7 +208,7 @@ class SqlEventStoreQueryTest {
     fun columnNamesAreSqlites() {
         SqlCursor(
             conn,
-            SqlCompiler.compile("SELECT count(*), kind, max( created_at ), e.pubkey AS who FROM events e GROUP BY kind", EventStoreTableSources.build()),
+            SqlCompiler.compile("SELECT count(*), kind, max( created_at ), e.pubkey AS who FROM events e GROUP BY kind", EventStoreTableSources.sources),
         ).use {
             assertEquals(listOf("count(*)", "kind", "max( created_at )", "who"), it.columns)
         }

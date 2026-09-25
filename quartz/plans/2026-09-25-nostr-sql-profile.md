@@ -1,6 +1,6 @@
 # Nostr SQL profile: read-only SQL over websockets
 
-Status: **prototype, wired into the relay.** Parser, compiler and cursor are in `quartz/…/nipXXSql/`. `SQL` / `FETCH` / `SQL-CLOSE` run through `NostrServer`, and geode has an opt-in `[sql]` section. No NIP text yet.
+Status: **prototype, wired into the relay.** Parser, compiler and cursor are in `quartz/…/nipXXSql/`. `SQL` / `FETCH` / `SQL-CLOSE` are always on in `NostrServer` over a file-backed SQLite store (so geode too), with no settings. No NIP text yet.
 
 ## Goal
 
@@ -32,10 +32,7 @@ tags(event_id, idx, name, value, v2, v3, v4, rest, created_at, kind, pubkey)
   JSON array of `tag[5..]` (NULL if none); `idx` = position in the event's tag
   array. `created_at`/`kind`/`pubkey` are copied from the parent so tag
   aggregates need no join.
-- Rows are what a no-filter REQ would return to *this session*: the relay
-  supplies per-session `TableSource`s, and every `events`/`tags` reference is
-  replaced with them. This is where access control (e.g. hiding kind 1059)
-  lives: `EventStoreTableSources.build(hiddenKinds = …)`.
+- Rows are every event the store holds; `EventStoreTableSources` maps both tables onto `event_headers`.
 
 ## Grammar (what's in)
 
@@ -82,17 +79,16 @@ clauses, `EXCLUDE` frames, `MATCH`/`REGEXP`, row values.
   pathological nesting) and emitted SQL shape.
 - `SqlEventStoreQueryTest` (jvmTest): end to end on a real `EventStore`: group
   by, hashtag counts from `tags`, latest-per-author via window, follows-of-follows
-  via recursive CTE, joins, hidden kinds, long tags, cursor paging, column names.
+  via recursive CTE, joins, long tags, cursor paging, column names.
 - `SqlDifferentialFuzzTest` (jvmTest): 3k random queries per run; the compiled
   statement must return the same columns, rows and errors as SQLite running the
   raw text against equivalent views. One-off runs with 2 more seeds × 40k
   queries: 0 mismatches.
 - `SqlRelayTest` (jvmTest): SQL/FETCH/SQL-CLOSE through a real `NostrServer`
   session and the production JSON path. Covers paging, params, value types, error
-  prefixes, the recursion bound, hidden kinds, the policy gate, relays without
-  SQL, pool sharing and release on disconnect, the per-connection cap and id
-  replacement, idle expiry, and round trips through both serializers.
-- geode `NipXXSqlTest`: over a real `ws://` connection, plus `[sql]` config parsing.
+  prefixes, the default page size, the REQ policy gate, in-memory stores, id
+  replacement, close/disconnect, and round trips through both serializers.
+- geode `NipXXSqlTest`: over a real `ws://` connection.
 
 ## Wire protocol
 
@@ -105,7 +101,9 @@ C→R  ["SQL-CLOSE", <id>]
 R→C  ["CLOSED", <id>, "<prefix>: <reason>"]
 ```
 
-- The first page is sent right after `SQL-COLS`, with no round trip. After `done`
+- The first page is sent right after `SQL-COLS`, with no round trip. Its size is
+  the client's `page`, else the relay's default REQ limit (`RelayLimits.defaultLimit`),
+  else every row. After `done`
   the relay has already released the cursor. After `more`, the client either
   `FETCH`es or sends `SQL-CLOSE`.
 - A value is a JSON string, a number (integers stay integers), or null.
@@ -114,48 +112,33 @@ R→C  ["CLOSED", <id>, "<prefix>: <reason>"]
 - `CLOSED` prefixes:
   - `invalid:` the query doesn't parse, or names a table or column that doesn't exist.
   - `unsupported:` outside the profile, or the relay has no SQL.
-  - `blocked:` a pool or per-connection cap was hit.
   - `error:` the engine failed, or the cursor id is unknown.
   - `closed: cursor expired`.
-  - The policy may also return its own reason (e.g. `auth-required:`).
+  - Whatever the relay's REQ policy answers (e.g. `auth-required:`).
 - Reusing an id replaces the previous cursor, as REQ does.
 
 ## Relay wiring
 
-- `NostrServer(sql = SqlQueryService.forStore(store))` enables it. Leaving `sql`
-  as null answers every SQL frame `unsupported`.
-- `SqlQueryService` holds a separate pool of **read-only** connections
-  (`SQLITE_OPEN_READONLY` plus `PRAGMA query_only`). Each open cursor owns one
-  connection. A slow query can therefore block other SQL cursors, but never REQs.
+- Always on, no settings. `NostrServer` builds `SqlQueryService.forStore(store)`
+  itself; it serves SQL when the store is a file-backed SQLite `EventStore` and
+  answers `unsupported` otherwise (an in-memory database can't be opened by a
+  second connection).
+- `SqlQueryService` hands out **read-only** connections (`SQLITE_OPEN_READONLY`
+  plus `PRAGMA query_only`), separate from the store's REQ readers, and reuses
+  them when cursors end. Each open cursor owns one.
 - `SqlCursorRegistry` is per connection, alongside `NegSessionRegistry`. It steps
-  cursors on `Dispatchers.IO`, cuts a page short when its time budget runs out,
-  and expires cursors that sit idle or live too long. Each cursor has its own
-  mutex, because the expiry timer can race a `FETCH`.
-- `IRelayPolicy.acceptSql` is only a gate on opening a cursor. What a query can
-  see comes from the service's per-session `SqlTableSources`. REQ policies do
-  **not** apply to SQL, so anything they hide has to be hidden in the table
-  sources too. `SqlAccessPolicy` gates SQL on NIP-42 auth or a pubkey allowlist.
-- geode's `[sql]` section: `enabled` (default false), `require_auth`,
-  `allowed_pubkeys`, `hidden_kinds` (default `[1059]`), plus the cursor and page
-  limits. It fails at boot if the database isn't a SQLite file.
-
-## Bounding work (there is no interrupt)
+  cursors on `Dispatchers.IO`; each cursor has a mutex because a disconnect can
+  race a `FETCH`.
+- Access follows the relay's normal config: a `SQL` frame goes through the same
+  `policy.accept(ReqCmd)` gate a REQ does (as NEG-OPEN already does), so
+  `require_auth`, allow/deny lists and id limits apply unchanged.
+## No interrupt
 
 androidx.sqlite 2.7.1 does **not** expose `sqlite3_interrupt` or a progress
 handler. Checked against the jar: `BundledSQLiteConnection` has only `prepare`,
-`inTransaction` and `close`. So nothing can stop a statement that is running.
-What bounds the work instead:
-
-- **Recursion.** This is the only way a SELECT can run forever. Every recursive
-  CTE must end with `LIMIT <integer literal> ≤ maxRecursiveRows`. SQLite stops
-  adding rows to a recursive table when it reaches its LIMIT (verified). The
-  compiler detects self-references and enforces the rule.
-- **Everything else finishes**, but it can take as long as the data is large
-  (e.g. a 3-way cross join). What limits it: a dedicated pool (it can't starve
-  REQs), a per-connection cursor cap, the page time budget (applied between rows
-  only), the idle and lifetime timeouts, and the policy gate. A truly
-  interruptible engine needs a driver patch; see open items.
-
+`inTransaction` and `close`. A statement that is running can't be stopped: a
+recursive CTE without a stop condition runs until the client disconnects and
+beyond, and a large join takes as long as the data makes it.
 ## Open items (in order)
 
 1. **Stopping a running statement.** This needs a driver that exposes
@@ -163,8 +146,7 @@ What bounds the work instead:
    driver, or ask upstream. Until then, large joins and aggregates finish in
    their own time. A related open item: nested `replace()` can build large
    strings (up to `SQLITE_MAX_LENGTH`).
-2. **Advertising it:** a NIP-11 `limitation.sql` block (page and cursor limits,
-   `max_recursive_rows`) once the NIP has a number.
+2. **Advertising it** in NIP-11 once the NIP has a number.
 3. **Indexed tags.** `tags` is derived from the tag JSON with `json_each`
    (correct, full scan). Add a text tag table (or columns) so tag-driven queries
    can use an index; measure the write/storage cost with relayBench.

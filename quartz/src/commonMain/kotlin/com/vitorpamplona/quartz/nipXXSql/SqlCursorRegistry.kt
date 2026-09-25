@@ -23,37 +23,33 @@ package com.vitorpamplona.quartz.nipXXSql
 import androidx.sqlite.SQLiteConnection
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
-import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 /**
  * One connection's SQL cursors: `SQL` opens one and sends its first page,
  * `FETCH` pulls the next, `SQL-CLOSE` drops it. A cursor ends when its
- * rows run out (`"done"`), on close, on disconnect, or when it sits idle
- * or outlives [SqlLimits.maxLifetime] (`CLOSED "closed: cursor expired"`).
+ * rows run out (`"done"`), on close, or on disconnect.
  *
- * Stepping runs on [Dispatchers.IO]: SQLite blocks the thread. An expiry
- * timer can race a FETCH, so each cursor has its own [Mutex]; commands on
- * one connection already arrive one at a time.
+ * [defaultPageSize] is the relay's default REQ limit; with none, the first
+ * page carries every row, as an unlimited REQ would.
+ *
+ * Stepping runs on [Dispatchers.IO]: SQLite blocks the thread. [clear] can
+ * run from another thread during a FETCH, so each cursor has a [Mutex].
  */
 class SqlCursorRegistry(
     private val service: SqlQueryService?,
-    private val ctx: RequestContext,
     private val send: (Message) -> Unit,
-    private val scope: CoroutineScope,
+    private val defaultPageSize: Int?,
 ) {
     private class OpenCursor(
         val id: String,
@@ -61,9 +57,6 @@ class SqlCursorRegistry(
         val conn: SQLiteConnection,
     ) {
         val lock = Mutex()
-        val born: TimeMark = TimeSource.Monotonic.markNow()
-        var lastUsed: TimeMark = born
-        var timer: Job? = null
 
         /** Set once the cursor must end; a FETCH in flight sees it and finishes. */
         var finished = false
@@ -74,8 +67,6 @@ class SqlCursorRegistry(
 
     private val cursors = LargeCache<String, OpenCursor>()
 
-    val openCount: Int get() = cursors.size()
-
     suspend fun open(
         cmd: SqlCmd,
         policy: IRelayPolicy,
@@ -84,91 +75,81 @@ class SqlCursorRegistry(
             send(ClosedMessage(cmd.queryId, "unsupported: this relay does not accept SQL"))
             return
         }
-        policy.acceptSql(cmd)?.let { reason ->
-            send(ClosedMessage(cmd.queryId, reason))
+
+        // Same gate as a REQ for everything: auth requirements, allow/deny
+        // lists and id limits all apply to SQL the way they apply to REQs.
+        val gate = policy.accept(ReqCmd(cmd.queryId, listOf(Filter())))
+        if (gate is PolicyResult.Rejected) {
+            send(ClosedMessage(cmd.queryId, gate.reason))
             return
         }
 
         // Same id replaces the previous cursor, like a REQ.
-        cursors.remove(cmd.queryId)?.let { finishLocked(it) }
-
-        val limits = service.limits
-        if (cursors.size() >= limits.maxCursorsPerSession) {
-            send(ClosedMessage(cmd.queryId, "blocked: too many open cursors on this connection"))
-            return
-        }
+        cursors.get(cmd.queryId)?.let { finishLocked(it) }
 
         val compiled =
             try {
-                service.compile(ctx, cmd)
+                service.compile(cmd)
             } catch (e: SqlException) {
                 send(ClosedMessage(cmd.queryId, e.message ?: "invalid: query"))
                 return
             }
 
-        val conn =
+        val pageSize = cmd.pageSize ?: defaultPageSize ?: Int.MAX_VALUE
+        val conn: SQLiteConnection
+        val cursor: SqlCursor
+        val firstPage: List<List<Any?>>
+        try {
+            conn = service.acquire()
             try {
-                service.tryAcquire()
-            } catch (e: Exception) {
-                send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
-                return
+                val opened =
+                    withContext(Dispatchers.IO) {
+                        val c = SqlCursor(conn, compiled)
+                        try {
+                            c to c.fetch(pageSize)
+                        } catch (e: Throwable) {
+                            c.close()
+                            throw e
+                        }
+                    }
+                cursor = opened.first
+                firstPage = opened.second
+            } catch (e: Throwable) {
+                service.release(conn)
+                throw e
             }
-        if (conn == null) {
-            send(ClosedMessage(cmd.queryId, "blocked: all SQL cursors are busy, try again later"))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
             return
         }
 
-        val pageSize = (cmd.pageSize ?: limits.defaultPageRows).coerceIn(1, limits.maxPageRows)
-        val opened =
-            try {
-                withContext(Dispatchers.IO) {
-                    val cursor = SqlCursor(conn, compiled)
-                    try {
-                        cursor to cursor.fetch(pageSize, limits.pageTimeBudget)
-                    } catch (e: Throwable) {
-                        cursor.close()
-                        throw e
-                    }
-                }
-            } catch (e: CancellationException) {
-                service.release(conn)
-                throw e
-            } catch (e: Exception) {
-                service.release(conn)
-                send(ClosedMessage(cmd.queryId, "error: ${e.message}"))
-                return
-            }
-
-        val (cursor, firstPage) = opened
         send(SqlColsMessage(cmd.queryId, cursor.columns))
         send(SqlRowsMessage(cmd.queryId, firstPage, cursor.isDone))
 
         if (cursor.isDone) {
             service.release(conn)
         } else {
-            val entry = OpenCursor(cmd.queryId, cursor, conn)
-            cursors.put(cmd.queryId, entry)
-            arm(entry)
+            cursors.put(cmd.queryId, OpenCursor(cmd.queryId, cursor, conn))
         }
     }
 
     suspend fun fetch(cmd: FetchCmd) {
         val entry = cursors.get(cmd.queryId)
-        if (entry == null || service == null) {
+        if (entry == null) {
             send(ClosedMessage(cmd.queryId, "error: no such cursor"))
             return
         }
-        val limits = service.limits
         entry.lock.withLock {
             if (entry.finished) {
                 finish(entry)
                 send(ClosedMessage(cmd.queryId, "error: no such cursor"))
                 return
             }
-            entry.lastUsed = TimeSource.Monotonic.markNow()
             val page =
                 try {
-                    withContext(Dispatchers.IO) { entry.cursor.fetch(cmd.maxRows.coerceAtMost(limits.maxPageRows), limits.pageTimeBudget) }
+                    withContext(Dispatchers.IO) { entry.cursor.fetch(cmd.maxRows) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -177,7 +158,7 @@ class SqlCursorRegistry(
                     return
                 }
             send(SqlRowsMessage(cmd.queryId, page, entry.cursor.isDone))
-            if (entry.cursor.isDone || entry.finished) finish(entry) else arm(entry)
+            if (entry.cursor.isDone || entry.finished) finish(entry)
         }
     }
 
@@ -194,13 +175,12 @@ class SqlCursorRegistry(
     }
 
     /**
-     * Finishes a cursor from outside its lock. If a FETCH holds the lock
-     * right now, its statement is mid-step on another thread and must not
-     * be closed under it: mark it and let that FETCH's own finish run.
+     * Finishes a cursor from outside its lock. If a FETCH holds the lock,
+     * its statement is mid-step on another thread and must not be closed
+     * under it: mark it, and that FETCH finishes it after its page.
      */
     private fun finishLocked(entry: OpenCursor) {
         cursors.remove(entry.id)
-        entry.timer?.cancel()
         if (entry.lock.tryLock()) {
             try {
                 finish(entry)
@@ -208,7 +188,6 @@ class SqlCursorRegistry(
                 entry.lock.unlock()
             }
         } else {
-            // The FETCH in flight checks this after its page and finishes.
             entry.finished = true
         }
     }
@@ -217,40 +196,9 @@ class SqlCursorRegistry(
     private fun finish(entry: OpenCursor) {
         entry.finished = true
         cursors.remove(entry.id)
-        entry.timer?.cancel()
         if (entry.released) return
         entry.released = true
         entry.cursor.close()
         service?.release(entry.conn)
-    }
-
-    /** (Re)schedules expiry at the earlier of the idle and lifetime deadlines. Caller holds the lock. */
-    private fun arm(entry: OpenCursor) {
-        val limits = service?.limits ?: return
-        if (entry.finished) {
-            // clear() marked it while the lock was held elsewhere.
-            finish(entry)
-            return
-        }
-        entry.timer?.cancel()
-        val wait = minOf(limits.idleTimeout - entry.lastUsed.elapsedNow(), limits.maxLifetime - entry.born.elapsedNow())
-        entry.timer =
-            scope.launch {
-                delay(wait)
-                entry.lock.withLock {
-                    if (entry.finished) {
-                        finish(entry)
-                        return@launch
-                    }
-                    val idleLeft = limits.idleTimeout - entry.lastUsed.elapsedNow()
-                    val lifeLeft = limits.maxLifetime - entry.born.elapsedNow()
-                    if (idleLeft.isPositive() && lifeLeft.isPositive()) {
-                        arm(entry)
-                    } else {
-                        finish(entry)
-                        send(ClosedMessage(entry.id, "closed: cursor expired"))
-                    }
-                }
-            }
     }
 }

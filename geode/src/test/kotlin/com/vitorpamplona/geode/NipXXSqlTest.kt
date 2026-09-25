@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.geode
 
-import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -30,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nipXXSql.FetchCmd
 import com.vitorpamplona.quartz.nipXXSql.SqlCmd
 import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
-import com.vitorpamplona.quartz.nipXXSql.SqlQueryService
 import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
@@ -73,7 +71,7 @@ class NipXXSqlTest {
         runBlocking {
             repeat(7) { i -> store.insert(alice.sign<Event>(1000L + i, 1, arrayOf(arrayOf("t", if (i % 2 == 0) "even" else "odd")), "note $i")) }
         }
-        relay = RelayEngine(url = url, store = store, sql = SqlQueryService.forStore(store.store))
+        relay = RelayEngine(url = url, store = store)
         server = KtorRelay(relay, host = "127.0.0.1", port = 0).start()
         ws =
             http.newWebSocket(
@@ -137,31 +135,4 @@ class NipXXSqlTest {
             assertEquals("bad", closed.subId)
             assertTrue(closed.message.startsWith("invalid: no such table"), closed.message)
         }
-
-    @Test
-    fun sqlSectionParsesAndDefaultsOff() {
-        val defaults = StaticConfig.fromToml("").sql
-        assertEquals(false, defaults.enabled)
-        assertEquals(listOf(1059), defaults.hidden_kinds)
-
-        val c =
-            StaticConfig
-                .fromToml(
-                    """
-                    [sql]
-                    enabled = true
-                    require_auth = true
-                    hidden_kinds = [1059, 4]
-                    max_open_cursors = 8
-                    idle_timeout_seconds = 10
-                    max_recursive_rows = 5000
-                    """.trimIndent(),
-                ).sql
-        assertEquals(true, c.enabled)
-        assertEquals(true, c.require_auth)
-        assertEquals(listOf(1059, 4), c.hidden_kinds)
-        assertEquals(8, c.max_open_cursors)
-        assertEquals(10L, c.idle_timeout_seconds)
-        assertEquals(5000L, c.max_recursive_rows)
-    }
 }

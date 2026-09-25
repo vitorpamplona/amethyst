@@ -61,9 +61,9 @@ import kotlin.coroutines.CoroutineContext
  *   via a composed [com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy],
  *   plus the session-level message-size and subscription caps) and advertised
  *   via [RelayLimits.toNip11Limitation]. Null disables limit enforcement.
- * @param sql Read-only SQL over websockets (`SQL` / `FETCH` / `SQL-CLOSE`), e.g.
- *   [SqlQueryService.forStore]. The server takes ownership. Null (the default)
- *   answers SQL frames `unsupported`.
+ *
+ * Read-only SQL over websockets (`SQL` / `FETCH` / `SQL-CLOSE`) is always on
+ * when [store] is a file-backed SQLite store; see [SqlQueryService.forStore].
  */
 class NostrServer(
     private val store: IEventStore,
@@ -73,8 +73,7 @@ class NostrServer(
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     listener: RelayServerListener = RelayServerListener.None,
     limits: RelayLimits? = null,
-    sql: SqlQueryService? = null,
-) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits, sql) {
+) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits, SqlQueryService.forStore(store)) {
     /**
      * Wakes the deferred-FTS catch-up worker. Conflated: N batch commits
      * while the worker is mid-drain collapse into one more pass.

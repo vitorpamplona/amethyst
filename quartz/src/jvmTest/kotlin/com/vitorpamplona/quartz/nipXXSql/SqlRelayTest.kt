@@ -23,14 +23,19 @@ package com.vitorpamplona.quartz.nipXXSql
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.CommandKSerializer
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.MessageKSerializer
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
@@ -45,7 +50,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * SQL / FETCH / SQL-CLOSE through a real [NostrServer] session: every
@@ -94,16 +98,10 @@ class SqlRelayTest {
     }
 
     private fun server(
-        limits: SqlLimits = SqlLimits(),
-        hiddenKinds: Set<Int> = emptySet(),
         policy: () -> IRelayPolicy = { EmptyPolicy },
-        withSql: Boolean = true,
-    ): NostrServer =
-        NostrServer(
-            store = store,
-            policyBuilder = policy,
-            sql = if (withSql) SqlQueryService.forStore(store.store, limits) { EventStoreTableSources.build(hiddenKinds) } else null,
-        ).also { servers.add(it) }
+        limits: RelayLimits? = null,
+        backingStore: IEventStore = store,
+    ): NostrServer = NostrServer(store = backingStore, policyBuilder = policy, limits = limits).also { servers.add(it) }
 
     private fun NostrServer.client(): Client {
         val frames = Channel<String>(Channel.UNLIMITED)
@@ -190,106 +188,80 @@ class SqlRelayTest {
         }
 
     @Test
-    fun recursionMustBeBounded() =
+    fun firstPageDefaultsToTheRelayDefaultLimit() =
         runBlocking<Unit> {
-            val c = server(SqlLimits(maxRecursiveRows = 1000)).client()
-            c.send("""["SQL","r1","WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n) SELECT count(*) FROM n"]""")
-            c.expectClosed("r1", "unsupported: recursive CTE n must end with LIMIT")
-            c.send("""["SQL","r2","WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n LIMIT 100000) SELECT count(*) FROM n"]""")
-            c.expectClosed("r2", "unsupported: recursive CTE")
-            c.send("""["SQL","r3","WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n LIMIT 1000) SELECT count(*) FROM n"]""")
+            val c = server(limits = RelayLimits(defaultLimit = 3)).client()
+            c.send("""["SQL","d","SELECT id FROM events"]""")
             c.next()
-            assertEquals(listOf(listOf(1000L)), assertIs<SqlRowsMessage>(c.next()).rows)
-            // Non-recursive CTEs need no LIMIT.
-            c.send("""["SQL","r4","WITH x AS (SELECT kind FROM events) SELECT count(*) FROM x"]""")
+            val page = assertIs<SqlRowsMessage>(c.next())
+            assertEquals(3, page.rows.size)
+            assertEquals(false, page.done)
+
+            // An explicit page size wins over the default.
+            c.send("""["SQL","e","SELECT id FROM events",{"page":5}]""")
             c.next()
-            assertEquals(listOf(listOf(14L)), assertIs<SqlRowsMessage>(c.next()).rows)
+            assertEquals(5, assertIs<SqlRowsMessage>(c.next()).rows.size)
         }
 
     @Test
-    fun tableSourcesHideEventsPerSession() =
+    fun withoutADefaultLimitTheFirstPageHasEverything() =
         runBlocking<Unit> {
-            val c = server(hiddenKinds = setOf(1059)).client()
-            c.send("""["SQL","h","SELECT (SELECT count(*) FROM events WHERE kind = 1059), (SELECT count(*) FROM tags WHERE kind = 1059)"]""")
+            val c = server().client()
+            c.send("""["SQL","all","SELECT id FROM events"]""")
             c.next()
-            assertEquals(listOf(listOf(0L, 0L)), assertIs<SqlRowsMessage>(c.next()).rows)
+            val page = assertIs<SqlRowsMessage>(c.next())
+            assertEquals(14, page.rows.size)
+            assertTrue(page.done)
         }
 
     @Test
-    fun policyCanRefuseSql() =
+    fun sqlFollowsTheSamePolicyAsReq() =
         runBlocking<Unit> {
-            val gate =
-                object : IRelayPolicy by EmptyPolicy {
-                    override fun acceptSql(cmd: SqlCmd) = "auth-required: SQL is for members"
-                }
-            val c = server(policy = { gate }).client()
+            val c = server(policy = { FullAuthPolicy("wss://sql.test/".normalizeRelayUrl()) }).client()
+            assertIs<AuthMessage>(c.next())
             c.send("""["SQL","p","SELECT 1"]""")
-            c.expectClosed("p", "auth-required: SQL is for members")
+            c.expectClosed("p", "auth-required:")
         }
 
     @Test
-    fun relaysWithoutSqlSayUnsupported() =
+    fun inMemoryStoresSayUnsupported() =
         runBlocking<Unit> {
-            val c = server(withSql = false).client()
+            val c = server(backingStore = EventStore(dbName = null, relay = null)).client()
             c.send("""["SQL","u","SELECT 1"]""")
             c.expectClosed("u", "unsupported: this relay does not accept SQL")
         }
 
     @Test
-    fun poolIsSharedAndReleased() =
+    fun reusingAnIdReplacesTheCursor() =
         runBlocking<Unit> {
-            val relay = server(SqlLimits(maxOpenCursors = 1))
-            val a = relay.client()
-            val b = relay.client()
-            val big = "SELECT id FROM events"
-
-            a.send("""["SQL","a1","$big",{"page":1}]""")
-            a.next()
-            assertEquals(false, assertIs<SqlRowsMessage>(a.next()).done)
-
-            // The only connection is held by a1.
-            b.send("""["SQL","b1","$big",{"page":1}]""")
-            b.expectClosed("b1", "blocked: all SQL cursors are busy")
-
-            // Closing it frees the connection for the other session.
-            a.send("""["SQL-CLOSE","a1"]""")
-            b.send("""["SQL","b2","$big",{"page":1}]""")
-            b.next()
-            assertEquals(false, assertIs<SqlRowsMessage>(b.next()).done)
-
-            // A disconnect frees it too.
-            b.session.close()
-            a.send("""["SQL","a2","SELECT 1"]""")
-            a.next()
-            assertTrue(assertIs<SqlRowsMessage>(a.next()).done)
-        }
-
-    @Test
-    fun perSessionCapAndReplacement() =
-        runBlocking<Unit> {
-            val c = server(SqlLimits(maxCursorsPerSession = 1)).client()
+            val c = server().client()
             c.send("""["SQL","x","SELECT id FROM events",{"page":1}]""")
             c.next()
-            c.next()
-            c.send("""["SQL","y","SELECT id FROM events",{"page":1}]""")
-            c.expectClosed("y", "blocked: too many open cursors")
+            assertEquals(false, assertIs<SqlRowsMessage>(c.next()).done)
 
-            // Reusing an id replaces the cursor instead of counting against the cap.
-            c.send("""["SQL","x","SELECT 42",{"page":1}]""")
+            c.send("""["SQL","x","SELECT 42"]""")
             c.next()
             assertEquals(listOf(listOf(42L)), assertIs<SqlRowsMessage>(c.next()).rows)
+            c.send("""["FETCH","x",1]""")
+            c.expectClosed("x", "error: no such cursor")
         }
 
     @Test
-    fun idleCursorsExpire() =
+    fun closeAndDisconnectReleaseCursors() =
         runBlocking<Unit> {
-            val c = server(SqlLimits(idleTimeout = 150.milliseconds)).client()
-            c.send("""["SQL","slow","SELECT id FROM events",{"page":1}]""")
+            val c = server().client()
+            c.send("""["SQL","a","SELECT id FROM events",{"page":1}]""")
             c.next()
             c.next()
-            c.expectClosed("slow", "closed: cursor expired")
-            c.send("""["FETCH","slow",1]""")
-            c.expectClosed("slow", "error: no such cursor")
+            c.send("""["SQL-CLOSE","a"]""")
+            c.send("""["FETCH","a",1]""")
+            c.expectClosed("a", "error: no such cursor")
+
+            c.send("""["SQL","b","SELECT id FROM events",{"page":1}]""")
+            c.next()
+            c.next()
+            c.session.close()
+            assertEquals(0, c.pending())
         }
 
     @Test
