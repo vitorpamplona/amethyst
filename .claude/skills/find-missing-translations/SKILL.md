@@ -26,6 +26,13 @@ There are two separate `strings.xml` trees, each with its own default `values/` 
 | **amethyst** (Android app) | `amethyst/src/main/res/values/strings.xml` | `amethyst/src/main/res/values-<locale>/strings.xml` |
 | **commonsUI** (KMP Compose resources, shared by Android + Desktop) | `commonsUI/src/commonMain/composeResources/values/strings.xml` | `commonsUI/src/commonMain/composeResources/values-<locale>/strings.xml` |
 
+**New keys go in the `commonsUI` tree, always.** The amethyst tree is frozen at
+the small synchronous-platform tier (foreground-service and notification-channel
+text, PiP actions, napplet capability labels, manifest references). If you find
+a new feature key in it, it belongs in `commonsUI`. Move it with
+`tools/strings-migrate/migrate.py` rather than translating it where it is. See
+"Strings" in `.claude/CLAUDE.md`.
+
 The `commonsUI` tree appeared when shared event-renderer composables were extracted out of `amethyst/` into `commons/` — now `commonsUI/` since the UI split (Compose Multiplatform `stringResource`). It is **not** a copy of the amethyst tree — the vast majority of its keys are commons-only; only a small handful overlap. Every diff/count/translate command below works on either tree by swapping the base path — **run the whole technique once per tree** and report them separately (each maps to its own Crowdin file, so the counts should reconcile against two different Crowdin UI numbers).
 
 **Locale-qualifier caveat:** `commons` uses the same region-qualified locale dirs as amethyst for our four targets (`values-cs`, `values-de-rDE`, `values-sv-rSE`, `values-pt-rBR`), but the *full* set of locale dirs differs between trees. Enumerate `values-*` under each tree's own base rather than assuming they match.

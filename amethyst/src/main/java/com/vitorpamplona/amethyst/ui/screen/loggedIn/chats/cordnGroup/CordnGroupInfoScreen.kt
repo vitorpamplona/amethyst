@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -58,12 +57,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupException
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
@@ -76,8 +73,58 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_action_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_coordinator_silent
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_no_key_package
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_no_self_remove
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_no_welcome
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_not_a_member
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_someone
+import com.vitorpamplona.amethyst.commons.resources.cordn_admin_wrong_key_package
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_description
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_name
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_close
+import com.vitorpamplona.amethyst.commons.resources.cordn_exposure_open
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_info
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member_note
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member_placeholder
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_admin_badge
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_admins_kept
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_coordinator
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_coordinator_key
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_coordinator_nprofile
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_copy_nprofile
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_edit_details
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_egalitarian
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_epoch
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_gid
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_has_key_package
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_members
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_remove_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_remove_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_remove_member
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_save
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_technical
+import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_accept
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_admin_only
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_check
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_decline
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_requests_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_send_no_session
+import com.vitorpamplona.amethyst.commons.resources.cordn_share_copied
+import com.vitorpamplona.amethyst.commons.resources.cordn_share_copy
+import com.vitorpamplona.amethyst.commons.resources.cordn_share_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_share_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
@@ -124,8 +171,8 @@ fun CordnGroupInfoScreen(
             // The app's own empty state, centred and titled, rather than a
             // sentence stranded in the top-left corner.
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
         }
@@ -151,7 +198,7 @@ private fun InfoTopBar(
                 Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
             }
         },
-        title = { Text(stringRes(R.string.cordn_group_info)) },
+        title = { Text(stringRes(Res.string.cordn_group_info)) },
         actions = actions,
     )
 }
@@ -208,8 +255,8 @@ private fun CordnGroupInfo(
     DisposableEffect(Unit) {
         onDispose { userSuggestions.reset() }
     }
-    val failed = stringRes(R.string.cordn_admin_action_failed)
-    val noSession = stringRes(R.string.cordn_send_no_session)
+    val failed = stringRes(Res.string.cordn_admin_action_failed)
+    val noSession = stringRes(Res.string.cordn_send_no_session)
 
     // Computed, never asserted: hardcoding these made the card look like a
     // disclosure while reporting the same four values for every group.
@@ -236,7 +283,6 @@ private fun CordnGroupInfo(
      * roster, and a rename stayed the old name. The runtime's own methods pair
      * each commit with that refresh.
      */
-    val context = LocalContext.current
 
     fun runAdmin(
         who: String? = null,
@@ -257,7 +303,7 @@ private fun CordnGroupInfo(
                 // and gids in full, so the screen that had just shown a face
                 // answered with 64 hex characters.
                 Log.w("CordnGroupInfo", "admin action failed in ${room.gid}: ${e.message}", e)
-                adminError = adminFailureText(context, e, who, failed)
+                adminError = adminFailureText(e, who, failed)
             } finally {
                 busy = false
             }
@@ -274,7 +320,7 @@ private fun CordnGroupInfo(
                     IconButton(onClick = { renaming = true }, enabled = !busy) {
                         Icon(
                             symbol = MaterialSymbols.Edit,
-                            contentDescription = stringRes(R.string.cordn_info_edit_details),
+                            contentDescription = stringRes(Res.string.cordn_info_edit_details),
                         )
                     }
                 }
@@ -303,7 +349,7 @@ private fun CordnGroupInfo(
             }
             // A subtitle, not a labelled row above a list that is itself the count.
             Text(
-                text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, members.size, members.size),
+                text = pluralStringRes(Res.plurals.cordn_member_count, members.size, members.size),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -321,7 +367,7 @@ private fun CordnGroupInfo(
             // ContextVM addresses it with ordinary p-tags, so it has a kind 0 like
             // anyone else and the app can already resolve it to a name, an avatar
             // and a profile to tap through to.
-            Text(stringRes(R.string.cordn_info_coordinator), style = MaterialTheme.typography.titleMedium)
+            Text(stringRes(Res.string.cordn_info_coordinator), style = MaterialTheme.typography.titleMedium)
 
             Row(
                 Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -347,7 +393,7 @@ private fun CordnGroupInfo(
                 IconButton(onClick = { showExposure = true }, enabled = exposure != null) {
                     Icon(
                         symbol = MaterialSymbols.Info,
-                        contentDescription = stringRes(R.string.cordn_exposure_open),
+                        contentDescription = stringRes(Res.string.cordn_exposure_open),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -355,7 +401,7 @@ private fun CordnGroupInfo(
 
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
-            Text(stringRes(R.string.cordn_info_members), style = MaterialTheme.typography.titleMedium)
+            Text(stringRes(Res.string.cordn_info_members), style = MaterialTheme.typography.titleMedium)
 
             // Said once, and only when it is true. An empty admin set is not "none
             // configured" -- spec/01.md makes it permanently egalitarian, so the
@@ -364,7 +410,7 @@ private fun CordnGroupInfo(
             // a count of them adds nothing.
             if (admins.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.cordn_info_egalitarian),
+                    text = stringRes(Res.string.cordn_info_egalitarian),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
@@ -385,7 +431,7 @@ private fun CordnGroupInfo(
                     )
                     if (member in admins) {
                         Text(
-                            text = stringRes(R.string.cordn_info_admin_badge),
+                            text = stringRes(Res.string.cordn_info_admin_badge),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -398,7 +444,7 @@ private fun CordnGroupInfo(
                         IconButton(onClick = { removing = member }, enabled = !busy) {
                             Icon(
                                 symbol = MaterialSymbols.PersonRemove,
-                                contentDescription = stringRes(R.string.cordn_info_remove_member),
+                                contentDescription = stringRes(Res.string.cordn_info_remove_member),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.error,
                             )
@@ -476,9 +522,9 @@ private fun CordnGroupInfo(
                 // would be a setting nobody should be nudged into.
                 AlertDialog(
                     onDismissRequest = { removing = null },
-                    title = { Text(stringRes(R.string.cordn_info_remove_confirm_title)) },
+                    title = { Text(stringRes(Res.string.cordn_info_remove_confirm_title)) },
                     text = {
-                        Text(stringRes(R.string.cordn_info_remove_confirm_body, removingName))
+                        Text(stringRes(Res.string.cordn_info_remove_confirm_body, removingName))
                     },
                     confirmButton = {
                         TextButton(onClick = {
@@ -486,7 +532,7 @@ private fun CordnGroupInfo(
                             runAdmin(removingName) { it.removeMember(coordinatorPubKey, room.gid, target) }
                         }) {
                             Text(
-                                text = stringRes(R.string.cordn_info_remove_member),
+                                text = stringRes(Res.string.cordn_info_remove_member),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -518,7 +564,7 @@ private fun CordnGroupInfo(
                         text = { CordnExposureCard(it) },
                         confirmButton = {
                             TextButton(onClick = { showExposure = false }) {
-                                Text(stringRes(R.string.cordn_exposure_close))
+                                Text(stringRes(Res.string.cordn_exposure_close))
                             }
                         },
                     )
@@ -577,15 +623,15 @@ private fun CordnAddMember(
         OutlinedTextField(
             value = search,
             onValueChange = onSearchChange,
-            label = { Text(stringRes(R.string.cordn_info_add_member)) },
-            placeholder = { Text(stringRes(R.string.cordn_info_add_member_placeholder)) },
+            label = { Text(stringRes(Res.string.cordn_info_add_member)) },
+            placeholder = { Text(stringRes(Res.string.cordn_info_add_member_placeholder)) },
             singleLine = true,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Text(
-            text = stringRes(R.string.cordn_info_add_member_note),
+            text = stringRes(Res.string.cordn_info_add_member_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
@@ -601,7 +647,7 @@ private fun CordnAddMember(
                 modifier = SuggestionListDefaultHeightChat,
                 onEmpty = {
                     Text(
-                        text = stringRes(R.string.cordn_info_add_member_none),
+                        text = stringRes(Res.string.cordn_info_add_member_none),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -612,7 +658,7 @@ private fun CordnAddMember(
                         if (reachable?.contains(user.pubkeyHex) == true) {
                             Icon(
                                 symbol = MaterialSymbols.Key,
-                                contentDescription = stringRes(R.string.cordn_info_has_key_package),
+                                contentDescription = stringRes(Res.string.cordn_info_has_key_package),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -620,7 +666,7 @@ private fun CordnAddMember(
                         IconButton(onClick = { onInvite(user) }) {
                             Icon(
                                 symbol = MaterialSymbols.PersonAdd,
-                                contentDescription = stringRes(R.string.cordn_info_add_member),
+                                contentDescription = stringRes(Res.string.cordn_info_add_member),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -643,20 +689,19 @@ private fun CordnAddMember(
  * better than silence — and the caller has logged the throwable in full either
  * way.
  */
-private fun adminFailureText(
-    context: Context,
+private suspend fun adminFailureText(
     e: Throwable,
     who: String?,
     fallback: String,
 ): String {
-    val name = who ?: stringRes(context, R.string.cordn_admin_someone)
+    val name = who ?: loadStringRes(Res.string.cordn_admin_someone)
     return when (e) {
         is CordnGroupException ->
             when (e.reason) {
-                CordnGroupException.Reason.NO_KEY_PACKAGE -> stringRes(context, R.string.cordn_admin_no_key_package, name)
-                CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER -> stringRes(context, R.string.cordn_admin_wrong_key_package, name)
-                CordnGroupException.Reason.NO_WELCOME -> stringRes(context, R.string.cordn_admin_no_welcome, name)
-                CordnGroupException.Reason.NOT_A_MEMBER -> stringRes(context, R.string.cordn_admin_not_a_member, name)
+                CordnGroupException.Reason.NO_KEY_PACKAGE -> loadStringRes(Res.string.cordn_admin_no_key_package, name)
+                CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER -> loadStringRes(Res.string.cordn_admin_wrong_key_package, name)
+                CordnGroupException.Reason.NO_WELCOME -> loadStringRes(Res.string.cordn_admin_no_welcome, name)
+                CordnGroupException.Reason.NOT_A_MEMBER -> loadStringRes(Res.string.cordn_admin_not_a_member, name)
                 CordnGroupException.Reason.OTHER -> e.message ?: fallback
             }
 
@@ -664,14 +709,14 @@ private fun adminFailureText(
         // roster and the button disagreed rather than that anyone tried.
         is IllegalArgumentException ->
             if (e.message?.contains("self-removal") == true) {
-                stringRes(context, R.string.cordn_admin_no_self_remove)
+                loadStringRes(Res.string.cordn_admin_no_self_remove)
             } else {
                 e.message ?: fallback
             }
 
         // A coordinator that does not answer is the single commonest failure
         // here and says nothing useful in its own words.
-        is TimeoutCancellationException -> stringRes(context, R.string.cordn_admin_coordinator_silent)
+        is TimeoutCancellationException -> loadStringRes(Res.string.cordn_admin_coordinator_silent)
 
         else -> e.message ?: fallback
     }
@@ -701,7 +746,7 @@ private fun TechnicalDetails(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringRes(R.string.cordn_info_technical),
+            text = stringRes(Res.string.cordn_info_technical),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
@@ -725,22 +770,22 @@ private fun TechnicalDetails(
             val coordinator = remember(coordinatorPubKey) { LocalCache.getOrCreateUser(coordinatorPubKey) }
 
             CopyableKeyRow(
-                label = stringRes(R.string.cordn_info_coordinator_key),
+                label = stringRes(Res.string.cordn_info_coordinator_key),
                 shown = coordinator.pubkeyDisplayHex(),
                 copied = coordinator.pubkeyNpub(),
                 copyDescription = stringRes(Res.string.copy_npub_to_clipboard),
             )
             CopyableKeyRow(
-                label = stringRes(R.string.cordn_info_coordinator_nprofile),
+                label = stringRes(Res.string.cordn_info_coordinator_nprofile),
                 shown = coordinator.toNProfile().toShortDisplay(6),
                 copied = coordinator.toNProfile(),
-                copyDescription = stringRes(R.string.cordn_info_copy_nprofile),
+                copyDescription = stringRes(Res.string.cordn_info_copy_nprofile),
             )
 
             SelectionContainer {
                 Column {
-                    InfoRow(stringRes(R.string.cordn_info_gid), gid)
-                    InfoRow(stringRes(R.string.cordn_info_epoch), epoch.toString())
+                    InfoRow(stringRes(Res.string.cordn_info_gid), gid)
+                    InfoRow(stringRes(Res.string.cordn_info_epoch), epoch.toString())
                 }
             }
         }
@@ -835,7 +880,7 @@ private fun JoinRequests(
 ) {
     val runtime = accountViewModel.account.cordnRuntime ?: return
     val scope = rememberCoroutineScope()
-    val failed = stringRes(R.string.cordn_requests_failed)
+    val failed = stringRes(Res.string.cordn_requests_failed)
 
     var requests by remember { mutableStateOf<List<JoinRequest>?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -853,15 +898,15 @@ private fun JoinRequests(
         }
     }
 
-    Text(stringRes(R.string.cordn_requests_title), style = MaterialTheme.typography.titleMedium)
+    Text(stringRes(Res.string.cordn_requests_title), style = MaterialTheme.typography.titleMedium)
     Text(
-        text = stringRes(R.string.cordn_requests_admin_only),
+        text = stringRes(Res.string.cordn_requests_admin_only),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
     OutlinedButton(onClick = { scope.launch { reload() } }, enabled = !busy) {
-        Text(stringRes(R.string.cordn_requests_check))
+        Text(stringRes(Res.string.cordn_requests_check))
     }
 
     error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
@@ -870,7 +915,7 @@ private fun JoinRequests(
     if (loaded != null && !busy) {
         if (loaded.isEmpty()) {
             Text(
-                text = stringRes(R.string.cordn_requests_none),
+                text = stringRes(Res.string.cordn_requests_none),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -899,7 +944,7 @@ private fun JoinRequests(
                         reload()
                     }
                 }) {
-                    Text(stringRes(R.string.cordn_requests_accept))
+                    Text(stringRes(Res.string.cordn_requests_accept))
                 }
                 TextButton(onClick = {
                     scope.launch {
@@ -911,7 +956,7 @@ private fun JoinRequests(
                         reload()
                     }
                 }) {
-                    Text(stringRes(R.string.cordn_requests_decline))
+                    Text(stringRes(Res.string.cordn_requests_decline))
                 }
             }
         }
@@ -949,9 +994,9 @@ private fun ShareGroup(
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
 
-    Text(stringRes(R.string.cordn_share_title), style = MaterialTheme.typography.titleMedium)
+    Text(stringRes(Res.string.cordn_share_title), style = MaterialTheme.typography.titleMedium)
     Text(
-        text = stringRes(R.string.cordn_share_explainer),
+        text = stringRes(Res.string.cordn_share_explainer),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -968,7 +1013,7 @@ private fun ShareGroup(
         },
         modifier = Modifier.padding(top = 8.dp),
     ) {
-        Text(stringRes(if (copied) R.string.cordn_share_copied else R.string.cordn_share_copy))
+        Text(stringRes(if (copied) Res.string.cordn_share_copied else Res.string.cordn_share_copy))
     }
 }
 
@@ -993,26 +1038,26 @@ private fun EditGroupDetailsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cordn_info_edit_details)) },
+        title = { Text(stringRes(Res.string.cordn_info_edit_details)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = draftName,
                     onValueChange = { draftName = it },
-                    label = { Text(stringRes(R.string.cordn_create_name)) },
+                    label = { Text(stringRes(Res.string.cordn_create_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = draftDescription,
                     onValueChange = { draftDescription = it },
-                    label = { Text(stringRes(R.string.cordn_create_description)) },
+                    label = { Text(stringRes(Res.string.cordn_create_description)) },
                     singleLine = false,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (admins.isNotEmpty()) {
                     Text(
-                        text = pluralStringRes(LocalContext.current, R.plurals.cordn_info_admins_kept, admins.size, admins.size),
+                        text = pluralStringRes(Res.plurals.cordn_info_admins_kept, admins.size, admins.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1024,7 +1069,7 @@ private fun EditGroupDetailsDialog(
                 onClick = { onSave(draftName.trim(), draftDescription.trim()) },
                 enabled = draftName.isNotBlank(),
             ) {
-                Text(stringRes(R.string.cordn_info_save))
+                Text(stringRes(Res.string.cordn_info_save))
             }
         },
         dismissButton = {

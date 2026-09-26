@@ -47,14 +47,28 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_disclosure
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_last_resort_no
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_last_resort_yes
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_orphans
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_orphans_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_publish
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_publish_last_resort
 import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_section
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_summary
 import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_topup_note
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_withdraw_all
+import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_withdraw_orphans
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -106,8 +120,8 @@ fun CordnKeyPackagesScreen(
     ) { padding ->
         if (runtime == null) {
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -125,7 +139,7 @@ fun CordnKeyPackagesScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                text = stringRes(R.string.cordn_keypackages_explainer),
+                text = stringRes(Res.string.cordn_keypackages_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -140,7 +154,7 @@ fun CordnKeyPackagesScreen(
                 SettingsFormBlock {
                     if (coordinators.isEmpty()) {
                         Text(
-                            text = stringRes(R.string.cordn_coordinators_none),
+                            text = stringRes(Res.string.cordn_coordinators_none),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -169,7 +183,7 @@ private fun CoordinatorKeyPackages(
     var rows by remember(config.pubKey) { mutableStateOf<List<CordnKeyPackageRow>?>(null) }
     var busy by remember(config.pubKey) { mutableStateOf(false) }
     var error by remember(config.pubKey) { mutableStateOf<String?>(null) }
-    val failed = stringRes(R.string.cordn_keypackages_failed)
+    val failed = stringRes(Res.string.cordn_keypackages_failed)
 
     suspend fun reload() {
         busy = true
@@ -204,15 +218,15 @@ private fun CoordinatorKeyPackages(
         val hasLastResort = loaded.any { it.lastResort }
 
         Text(
-            text = pluralStringRes(LocalContext.current, R.plurals.cordn_keypackages_summary, single, single),
+            text = pluralStringRes(Res.plurals.cordn_keypackages_summary, single, single),
             style = MaterialTheme.typography.bodyMedium,
         )
         Text(
             text =
                 if (hasLastResort) {
-                    stringRes(R.string.cordn_keypackages_last_resort_yes)
+                    stringRes(Res.string.cordn_keypackages_last_resort_yes)
                 } else {
-                    stringRes(R.string.cordn_keypackages_last_resort_no)
+                    stringRes(Res.string.cordn_keypackages_last_resort_no)
                 },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -225,11 +239,11 @@ private fun CoordinatorKeyPackages(
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
-                        text = pluralStringRes(LocalContext.current, R.plurals.cordn_keypackages_orphans, orphans.size, orphans.size),
+                        text = pluralStringRes(Res.plurals.cordn_keypackages_orphans, orphans.size, orphans.size),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringRes(R.string.cordn_keypackages_orphans_body),
+                        text = stringRes(Res.string.cordn_keypackages_orphans_body),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     TextButton(onClick = {
@@ -242,7 +256,7 @@ private fun CoordinatorKeyPackages(
                             reload()
                         }
                     }) {
-                        Text(stringRes(R.string.cordn_keypackages_withdraw_orphans))
+                        Text(stringRes(Res.string.cordn_keypackages_withdraw_orphans))
                     }
                 }
             }
@@ -251,7 +265,7 @@ private fun CoordinatorKeyPackages(
         Text(
             // Above the buttons, because it is the part that cannot be taken
             // back: §8.4 makes publishing an attributable, permanent record.
-            text = stringRes(R.string.cordn_keypackages_disclosure),
+            text = stringRes(Res.string.cordn_keypackages_disclosure),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -274,7 +288,7 @@ private fun CoordinatorKeyPackages(
                 },
                 enabled = !busy,
             ) {
-                Text(stringRes(R.string.cordn_keypackages_publish))
+                Text(stringRes(Res.string.cordn_keypackages_publish))
             }
             OutlinedButton(
                 onClick = {
@@ -289,7 +303,7 @@ private fun CoordinatorKeyPackages(
                 },
                 enabled = !busy && !hasLastResort,
             ) {
-                Text(stringRes(R.string.cordn_keypackages_publish_last_resort))
+                Text(stringRes(Res.string.cordn_keypackages_publish_last_resort))
             }
             if (loaded.isNotEmpty()) {
                 TextButton(
@@ -305,7 +319,7 @@ private fun CoordinatorKeyPackages(
                     },
                     enabled = !busy,
                 ) {
-                    Text(stringRes(R.string.cordn_keypackages_withdraw_all), color = MaterialTheme.colorScheme.error)
+                    Text(stringRes(Res.string.cordn_keypackages_withdraw_all), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -313,7 +327,7 @@ private fun CoordinatorKeyPackages(
         Text(
             // The rule CordnRuntime.maintainKeyPackages implements, said where
             // someone can see that it applies to them.
-            text = stringRes(R.string.cordn_keypackages_topup_note),
+            text = stringRes(Res.string.cordn_keypackages_topup_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

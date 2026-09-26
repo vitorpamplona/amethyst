@@ -42,12 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_composer_hint
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
@@ -233,7 +234,7 @@ internal fun CordnComposer(
             shape = EditFieldBorder,
             placeholder = {
                 Text(
-                    text = stringRes(R.string.cordn_composer_hint),
+                    text = stringRes(Res.string.cordn_composer_hint),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

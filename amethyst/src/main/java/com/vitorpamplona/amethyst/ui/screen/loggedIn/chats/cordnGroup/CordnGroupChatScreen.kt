@@ -69,7 +69,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -78,10 +77,33 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_editing
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_unpin
+import com.vitorpamplona.amethyst.commons.resources.cordn_chat_empty_description
+import com.vitorpamplona.amethyst.commons.resources.cordn_chat_empty_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_info
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_media_download_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_media_no_server
+import com.vitorpamplona.amethyst.commons.resources.cordn_media_unreadable
+import com.vitorpamplona.amethyst.commons.resources.cordn_media_upload_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_deleted
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_by
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_count
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_next
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_previous
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_show_all
+import com.vitorpamplona.amethyst.commons.resources.cordn_pinned_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_send_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_send_no_session
+import com.vitorpamplona.amethyst.commons.resources.cordn_voice_record
+import com.vitorpamplona.amethyst.commons.resources.cordn_voice_stop
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -152,7 +174,7 @@ fun CordnGroupChatScreen(
         // (it was forgotten, or never opened) and not an error to throw at the
         // user as a blank screen.
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-            Text(stringRes(R.string.cordn_group_unavailable), style = MaterialTheme.typography.bodyLarge)
+            Text(stringRes(Res.string.cordn_group_unavailable), style = MaterialTheme.typography.bodyLarge)
         }
         return
     }
@@ -209,9 +231,9 @@ private fun CordnGroupChat(
     // and simply never arrived.
     var sendError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
-    val uploadFailed = stringRes(R.string.cordn_media_upload_failed)
-    val sendFailed = stringRes(R.string.cordn_send_failed)
-    val noSession = stringRes(R.string.cordn_send_no_session)
+    val uploadFailed = stringRes(Res.string.cordn_media_upload_failed)
+    val sendFailed = stringRes(Res.string.cordn_send_failed)
+    val noSession = stringRes(Res.string.cordn_send_no_session)
 
     fun manager() =
         accountViewModel.account.cordnRuntime
@@ -359,8 +381,8 @@ private fun CordnGroupChat(
             // action that actually needed it.
             if (rows.isEmpty()) {
                 EmptyState(
-                    title = stringRes(R.string.cordn_chat_empty_title),
-                    description = stringRes(R.string.cordn_chat_empty_description),
+                    title = stringRes(Res.string.cordn_chat_empty_title),
+                    description = stringRes(Res.string.cordn_chat_empty_description),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -548,7 +570,7 @@ private fun CordnGroupChat(
             }
             if (editing != null) {
                 ComposerBanner(
-                    label = stringRes(R.string.cordn_action_editing),
+                    label = stringRes(Res.string.cordn_action_editing),
                     onCancel = {
                         editing = null
                         room.draft.value = ""
@@ -712,7 +734,7 @@ private fun PinnedRibbon(
                 IconButton(onClick = { index = (at - 1 + pinned.size) % pinned.size }, modifier = Modifier.size(28.dp)) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.KeyboardArrowLeft,
-                        contentDescription = stringRes(R.string.cordn_pinned_previous),
+                        contentDescription = stringRes(Res.string.cordn_pinned_previous),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -724,7 +746,7 @@ private fun PinnedRibbon(
                 IconButton(onClick = { index = (at + 1) % pinned.size }, modifier = Modifier.size(28.dp)) {
                     Icon(
                         symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
-                        contentDescription = stringRes(R.string.cordn_pinned_next),
+                        contentDescription = stringRes(Res.string.cordn_pinned_next),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -733,7 +755,7 @@ private fun PinnedRibbon(
             IconButton(onClick = { showingAll = true }, modifier = Modifier.size(28.dp)) {
                 Icon(
                     symbol = MaterialSymbols.AutoMirrored.List,
-                    contentDescription = stringRes(R.string.cordn_pinned_show_all),
+                    contentDescription = stringRes(Res.string.cordn_pinned_show_all),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -786,7 +808,7 @@ private fun PinnedLine(
             // points at.
             text =
                 if (annotations.isDeleted(message.envelope.id)) {
-                    stringRes(R.string.cordn_message_deleted)
+                    stringRes(Res.string.cordn_message_deleted)
                 } else {
                     annotations.contentOf(message.envelope.id).orEmpty()
                 },
@@ -822,7 +844,7 @@ private fun AllPinnedDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(MaterialSymbols.PushPin, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(
-                    text = stringRes(R.string.cordn_pinned_title),
+                    text = stringRes(Res.string.cordn_pinned_title),
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
@@ -830,7 +852,7 @@ private fun AllPinnedDialog(
         text = {
             Column {
                 Text(
-                    text = pluralStringRes(LocalContext.current, R.plurals.cordn_pinned_count, pinned.size, pinned.size),
+                    text = pluralStringRes(Res.plurals.cordn_pinned_count, pinned.size, pinned.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -861,7 +883,7 @@ private fun AllPinnedDialog(
                                     modifier = Modifier.weight(1f).padding(start = 8.dp),
                                 )
                                 TextButton(onClick = { onUnpin(message) }) {
-                                    Text(stringRes(R.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
+                                    Text(stringRes(Res.string.cordn_action_unpin), style = MaterialTheme.typography.labelSmall)
                                 }
                             }
 
@@ -869,7 +891,7 @@ private fun AllPinnedDialog(
                                 Text(
                                     text =
                                         stringRes(
-                                            R.string.cordn_pinned_by,
+                                            Res.string.cordn_pinned_by,
                                             observeUserNameByHex(pinnedBy, accountViewModel),
                                         ),
                                     style = MaterialTheme.typography.labelSmall,
@@ -880,7 +902,7 @@ private fun AllPinnedDialog(
                             Text(
                                 text =
                                     if (annotations.isDeleted(message.envelope.id)) {
-                                        stringRes(R.string.cordn_message_deleted)
+                                        stringRes(Res.string.cordn_message_deleted)
                                     } else {
                                         annotations.contentOf(message.envelope.id).orEmpty()
                                     },
@@ -944,7 +966,7 @@ private fun CordnChatTopBar(
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (members.isNotEmpty()) {
                         Text(
-                            text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, members.size, members.size),
+                            text = pluralStringRes(Res.plurals.cordn_member_count, members.size, members.size),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -963,7 +985,7 @@ private fun CordnChatTopBar(
             // GroupAdd rather than Info, as in Marmot: the same screen, and the thing
             // people come to it for is adding someone.
             IconButton(onClick = onInfo) {
-                Icon(MaterialSymbols.GroupAdd, contentDescription = stringRes(R.string.cordn_group_info))
+                Icon(MaterialSymbols.GroupAdd, contentDescription = stringRes(Res.string.cordn_group_info))
             }
         },
     )
@@ -995,10 +1017,10 @@ private suspend fun sendAttachment(
     // a reason a person can act on.
     val session =
         accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+            ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
     val group =
         session.manager.group(room.gid)
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+            ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
 
     // The gallery inside the dialog can delete what was picked, which leaves an empty
     // orchestrator rather than a null one. canPost() now refuses that, but indexing it
@@ -1052,14 +1074,14 @@ private suspend fun sendAttachment(
             val name = withContext(Dispatchers.IO) { resolveDisplayName(context, uri) }
             val bytes =
                 withContext(Dispatchers.IO) { context.contentResolver.openInputStream(finalUri)?.use { it.readBytes() } }
-                    ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
+                    ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_unreadable))
 
             // Null means the chosen host has no base URL, which is a setting the person can
             // change — the one failure here that is entirely actionable.
             val tag =
                 CordnMediaService(accountViewModel.account)
                     .upload(group, bytes, mime, name, context, state.selectedServer.baseUrl)
-                    ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
+                    ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
 
             // Into the room as well, for the same reason every other send is: an
             // attachment of your own echoes back as an Echo and would otherwise be
@@ -1140,7 +1162,7 @@ internal fun CordnAttachment(
 
     if (mediaKey == null) {
         Text(
-            text = stringRes(R.string.cordn_media_download_failed),
+            text = stringRes(Res.string.cordn_media_download_failed),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -1254,7 +1276,7 @@ internal fun VoiceNoteButton(
     ) {
         Icon(
             symbol = if (recording) MaterialSymbols.Stop else MaterialSymbols.Mic,
-            contentDescription = stringRes(if (recording) R.string.cordn_voice_stop else R.string.cordn_voice_record),
+            contentDescription = stringRes(if (recording) Res.string.cordn_voice_stop else Res.string.cordn_voice_record),
             // Matches the attach icon beside it; red only while recording,
             // which is the one state worth pulling the eye.
             tint = if (recording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.placeholderText,
@@ -1284,10 +1306,10 @@ private suspend fun sendVoiceNote(
     // note that goes nowhere and says nothing is the same bug twice.
     val session =
         accountViewModel.account.cordnRuntime?.sessionOrNull(room.coordinatorPubKey)
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+            ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
     val group =
         session.manager.group(room.gid)
-            ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_send_no_session))
+            ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
 
     try {
         val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
@@ -1304,7 +1326,7 @@ private suspend fun sendVoiceNote(
                     // is what makes the bubble match the preview.
                     waveform = recording.amplitudes,
                 )
-                ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_no_server))
+                ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
         // Into the room as well, for the same reason every other send is: an
         // attachment of your own echoes back as an Echo and would otherwise be
         // invisible to the person who sent it.
