@@ -396,9 +396,10 @@ class CordnRuntime(
      * of one thrown exception, because "three of five went out" is the state
      * the user has to be shown, not an error to report.
      *
-     * Sequential on purpose. Each Add is a commit that advances the group's
-     * epoch, so two in flight at once would build on the same epoch and the
-     * coordinator would reject the loser.
+     * One commit for the whole roster, via [CordnGroupManager.inviteAll]. A
+     * loop of single invites was not just N epochs and N round trips: an Add is
+     * applied locally before it is posted, so one failed post left the group
+     * forked and every later invite in the loop building on the fork.
      */
     suspend fun createGroupAndInvite(
         config: CoordinatorConfig,
@@ -409,16 +410,30 @@ class CordnRuntime(
         val session = requireSession(config.pubKey)
 
         val outcomes =
-            invitees.map { target ->
-                try {
-                    session.manager.invite(gid, target)
-                    CordnInviteOutcome(target, failure = null)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "could not invite ${target.take(8)}\u2026 to $gid: ${e.message}", e)
-                    CordnInviteOutcome(target, failure = e)
+            try {
+                val batch = session.manager.inviteAll(gid, invitees)
+                // Order follows the roster, not the batch: this is what the
+                // screen lists, and a list that reshuffles by outcome is harder
+                // to read than one that matches what was asked for.
+                invitees.map { target ->
+                    val undelivered = batch.undelivered[target]
+                    CordnInviteOutcome(
+                        pubKey = target,
+                        failure = batch.refused[target] ?: undelivered,
+                        // Added, but with no Welcome to join by. Kept apart from
+                        // a refusal because the two need opposite answers: this
+                        // one is already a member and needs the Welcome resent,
+                        // where a refusal never reached the group at all.
+                        joinedWithoutWelcome = undelivered != null,
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The commit itself failed, so nobody was added. One failure
+                // for everyone rather than a made-up per-person story.
+                Log.w(TAG, "could not invite into $gid: ${e.message}", e)
+                invitees.map { CordnInviteOutcome(it, failure = e) }
             }
 
         refresh(session, gid)
@@ -1076,10 +1091,19 @@ data class CordnCoverage(
     val answered: Boolean,
 )
 
-/** One invitation attempt. [failure] null means the coordinator took the Welcome. */
+/**
+ * One invitation attempt, in one of three states.
+ *
+ * [sent] is done. A failure with [joinedWithoutWelcome] means the commit that
+ * added them went through and only the Welcome did not, so they are a member
+ * who cannot join yet -- resending reaches them. A failure without it never
+ * touched the group, so there is nothing to resend and a share link is the
+ * only way to them.
+ */
 data class CordnInviteOutcome(
     val pubKey: HexKey,
     val failure: Throwable?,
+    val joinedWithoutWelcome: Boolean = false,
 ) {
     val sent: Boolean get() = failure == null
 }

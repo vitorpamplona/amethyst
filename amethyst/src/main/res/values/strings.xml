@@ -389,6 +389,7 @@
     <string name="cordn_create_coverage_partial">Reaches %1$d of %2$d &#8212; the rest would be left out</string>
     <string name="cordn_create_outcome_title">The group exists</string>
     <string name="cordn_create_outcome_explainer">Each invitation is a Welcome left on the coordinator, so they can fail one at a time. Nobody has been notified: they see it next time they open their app.</string>
+    <string name="cordn_create_outcome_no_welcome">Added to the group, but the invitation did not reach them &#8212; try again from the group screen</string>
     <string name="cordn_create_outcome_waiting">Waiting for them</string>
     <string name="cordn_create_outcome_failed">The coordinator refused the invitation</string>
     <string name="cordn_create_outcome_skipped">No key here, so no Welcome could be left</string>

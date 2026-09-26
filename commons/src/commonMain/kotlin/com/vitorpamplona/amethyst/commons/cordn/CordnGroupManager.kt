@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedWelcomeRef
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.KeyPackagePublication
+import com.vitorpamplona.quartz.cordn.spec00Coordinator.TakenKeyPackage
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnApplicationMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -267,6 +269,107 @@ class CordnGroupManager(
 
         persist(gid)
         return InviteResult(gid, targetPubKey, taken.keyPackageRef, posted.cursor, welcomeAt)
+    }
+
+    /**
+     * Invites several people in ONE commit.
+     *
+     * Not a loop over [invite], and not an optimisation either -- the loop was
+     * unsafe. [MlsGroup.addMember] *applies* its Commit locally before anything
+     * is posted, so an invite whose `postCommit` fails leaves this group an
+     * epoch ahead of both the coordinator and disk; the next invite in a loop
+     * then builds on that forked state and cannot succeed. Batching collapses N
+     * such windows into one. It does not remove the last one -- the engine has
+     * no rollback, so a failed post still leaves the local group ahead -- but
+     * the failure can no longer cascade.
+     *
+     * It is also what the reference client does, and one epoch rather than N is
+     * the observable difference. See [MlsGroup.addMembers].
+     *
+     * Every KeyPackage is taken and verified BEFORE the commit, so a target the
+     * coordinator holds nothing for fails while nothing has changed; those come
+     * back in [BatchInviteResult.refused]. A Welcome that fails to store after
+     * the commit is per-target and harmless to the group, and comes back in
+     * [BatchInviteResult.undelivered].
+     */
+    suspend fun inviteAll(
+        gid: String,
+        targetPubKeys: List<HexKey>,
+    ): BatchInviteResult {
+        if (targetPubKeys.isEmpty()) return BatchInviteResult(gid, emptyList(), emptyMap(), emptyMap())
+        val group = requireGroup(gid)
+
+        // Phase 1, before anything is committed: take and verify every
+        // KeyPackage. A failure here spends a KeyPackage for the targets
+        // already taken and nothing else -- the group has not moved.
+        val taken = mutableMapOf<HexKey, TakenKeyPackage>()
+        val verified = mutableMapOf<HexKey, ByteArray>()
+        val refused = mutableMapOf<HexKey, CordnGroupException>()
+
+        targetPubKeys.distinct().forEach { target ->
+            val held = call { coordinator.takeKeyPackage(target) }
+            if (held == null) {
+                refused[target] =
+                    CordnGroupException(
+                        "the coordinator holds no KeyPackage for $target",
+                        CordnGroupException.Reason.NO_KEY_PACKAGE,
+                    )
+                return@forEach
+            }
+            val owner = KeyPackagePublication.verify(held.publicationEvent)
+            if (owner.pubKey != target) {
+                refused[target] =
+                    CordnGroupException(
+                        "the KeyPackage served for $target belongs to ${owner.pubKey}",
+                        CordnGroupException.Reason.WRONG_KEY_PACKAGE_OWNER,
+                    )
+                return@forEach
+            }
+            taken[target] = held
+            verified[target] = owner.bytes
+        }
+
+        if (verified.isEmpty()) return BatchInviteResult(gid, emptyList(), emptyMap(), refused)
+
+        // Phase 2: one commit, one post. Past this line the group has moved.
+        val result = group.addMembers(verified.values.toList())
+        val welcome =
+            result.welcomeBytes
+                ?: throw CordnGroupException("adding members produced no Welcome", CordnGroupException.Reason.NO_WELCOME)
+        val posted =
+            call { sync.postCommit(gid, SealedPayload.seal(result.framedCommitBytes, result.preCommitExporterSecret)) }
+
+        // Phase 3: the same Welcome, addressed once per joiner. RFC 9420
+        // §12.4.3.1 puts a separate EncryptedGroupSecrets per added member
+        // inside it, keyed by KeyPackage reference, so each one finds its own.
+        val invited = mutableListOf<InviteResult>()
+        val undelivered = mutableMapOf<HexKey, Throwable>()
+
+        verified.keys.forEach { target ->
+            val ref = taken.getValue(target).keyPackageRef
+            try {
+                val at =
+                    call {
+                        coordinator.storeWelcome(
+                            targetPubKey = target,
+                            keyPackageRef = ref,
+                            welcomeBase64 = Base64.encode(welcome),
+                            after = posted.cursor,
+                        )
+                    }
+                invited += InviteResult(gid, target, ref, posted.cursor, at)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The commit is posted, so the group already counts them a
+                // member -- they simply have no Welcome to join with. Reported
+                // rather than thrown, because the others succeeded.
+                undelivered[target] = e
+            }
+        }
+
+        persist(gid)
+        return BatchInviteResult(gid, invited, undelivered, refused)
     }
 
     /**
@@ -1060,4 +1163,19 @@ data class MetadataUpdateResult(
     val gid: String,
     /** Where the coordinator filed the metadata commit. */
     val cursor: Long,
+)
+
+/**
+ * What one [CordnGroupManager.inviteAll] did, per person.
+ *
+ * Three outcomes rather than success-or-throw, because each needs a different
+ * answer: [refused] never reached the group and can be retried or replaced with
+ * a share link; [undelivered] are in the group already and need only the Welcome
+ * resent; [invited] are done.
+ */
+data class BatchInviteResult(
+    val gid: String,
+    val invited: List<InviteResult>,
+    val undelivered: Map<HexKey, Throwable>,
+    val refused: Map<HexKey, CordnGroupException>,
 )
