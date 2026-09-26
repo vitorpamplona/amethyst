@@ -152,6 +152,41 @@ class Nip85TagValuesProto {
         println("PROTO paged walk + covering, strict CAST: ${r.first} rows in ${r.second} ms")
         r = walk(page("CAST(r.t1 AS INTEGER)"))
         println("PROTO paged walk + covering, plain CAST: ${r.first} rows in ${r.second} ms")
+
+        // 3. Instead of the dictionary: the author's first 16 bytes on each tag row.
+        println(
+            "PROTO sqlite ${db { c ->
+                c.prepare("SELECT sqlite_version()").use {
+                    it.step()
+                    it.getText(0)
+                }
+            }}",
+        )
+        val beforePrefix = bytes()
+        t =
+            ms {
+                exec("ALTER TABLE event_tag_values ADD COLUMN pubkey_prefix BLOB")
+                exec("UPDATE event_tag_values SET pubkey_prefix = (SELECT unhex(substr(h.pubkey, 1, 32)) FROM event_headers h WHERE h.row_id = event_tag_values.event_header_row_id)")
+            }
+        val afterPrefixCol = bytes()
+        println("PROTO prefix column backfill: $t ms, +${(afterPrefixCol - beforePrefix) / 1_000_000} MB")
+        t = ms { exec("CREATE INDEX event_tag_values_by_author_prefix ON event_tag_values (t0, kind, pubkey_prefix, t1, event_header_row_id)") }
+        println("PROTO prefix author index: $t ms, +${(bytes() - afterPrefixCol) / 1_000_000} MB")
+        exec("ANALYZE")
+
+        fun prefixPage(rank: String) =
+            "SELECT d.t1, $rank FROM event_tag_values d JOIN event_tag_values r ON r.event_header_row_id = d.event_header_row_id AND r.t0 = 'rank' " +
+                "WHERE d.t0 = 'd' AND d.kind = 30382 AND d.pubkey_prefix = unhex(substr(?1, 1, 32)) AND d.t1 > ?2 ORDER BY d.t1 LIMIT 1000"
+        plan(prefixPage(guard)).forEach { println("PROTO   prefix plan: $it") }
+        walk(prefixPage(guard))
+        r = walk(prefixPage(guard))
+        println("PROTO prefix walk + covering, strict CAST: ${r.first} rows in ${r.second} ms")
+        r = walk(prefixPage("CAST(r.t1 AS INTEGER)"))
+        println("PROTO prefix walk + covering, plain CAST: ${r.first} rows in ${r.second} ms")
+        // The dictionary again, same warm state, for a fair comparison.
+        walk(page(guard))
+        r = walk(page(guard))
+        println("PROTO dictionary walk again, strict CAST: ${r.first} rows in ${r.second} ms")
         store.close()
     }
 }
