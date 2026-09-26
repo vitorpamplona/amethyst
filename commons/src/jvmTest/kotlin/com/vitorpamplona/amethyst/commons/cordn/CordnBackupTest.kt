@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlin.test.Test
@@ -55,6 +57,7 @@ class CordnBackupTest {
                         state = byteArrayOf(1, 2, 3, 4),
                         cursor = GroupCursor(fetchCursor = 7, lastCursor = 9),
                         joinedViaRequest = true,
+                        messages = listOf(delivered("hello", 7), delivered("again", 8)),
                     ),
                     CordnBackup.Archive.Group(
                         coordinatorPubKey = coordinator,
@@ -160,6 +163,38 @@ class CordnBackupTest {
     @Test
     fun `an unreasonable cost is refused instead of hanging the device`() {
         assertFailsWith<IllegalArgumentException> { CordnBackup.seal(archive, "pw", logN = 40) }
+    }
+
+    /**
+     * The id has to hash the contents: `CordnEnvelope.fromJsonObject` checks
+     * it, so an envelope with a made-up id decodes to null and the archive
+     * appears to have lost the message.
+     */
+    private fun delivered(
+        content: String,
+        cursor: Long,
+    ): CordnDeliveredMessage {
+        val unsigned =
+            CordnEnvelope(
+                id = "",
+                pubKey = account,
+                createdAt = 1_700_000_000L + cursor,
+                kind = 9,
+                tags = arrayOf(arrayOf("h", "room-1")),
+                content = content,
+            )
+        return CordnDeliveredMessage(unsigned.copy(id = unsigned.computedId()), cursor)
+    }
+
+    @Test
+    fun `messages survive the round trip`() {
+        val opened = CordnBackup.open(CordnBackup.seal(archive, "pw", cheap), "pw")
+
+        val room1 = opened.groups.first { it.gid == "room-1" }
+        assertEquals(listOf("hello", "again"), room1.messages.map { it.envelope.content })
+        assertEquals(listOf(7L, 8L), room1.messages.map { it.cursor })
+        // The group carrying none still round-trips as none.
+        assertEquals(emptyList(), opened.groups.first { it.gid == "room-2" }.messages)
     }
 
     private companion object {

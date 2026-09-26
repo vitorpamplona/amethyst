@@ -794,6 +794,7 @@ class CordnRuntime(
                             state = state,
                             cursor = groupStore.loadCursor(gid),
                             joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
+                            messages = groupStore.loadMessages(gid),
                         )
                 }
 
@@ -847,6 +848,10 @@ class CordnRuntime(
                 store.saveGroup(group.gid, group.state)
                 group.cursor?.let { store.saveCursor(group.gid, it) }
                 if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
+                // Before the cursor is trusted again. The cursor says the
+                // stream has been read to here, so nothing will re-deliver
+                // these -- if they are not written back now they are gone.
+                group.messages.forEach { store.appendMessage(group.gid, it) }
             }
 
             archive.keyPackages.forEach { keyPackage ->

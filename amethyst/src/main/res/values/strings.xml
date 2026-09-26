@@ -350,7 +350,7 @@
     <string name="cordn_backup_explainer">Your nsec cannot bring cordn groups back. A cordn group lives as encryption state on this device and an ordered stream on a coordinator that cannot read it — lose the device without a backup and the group is gone, including everything already said in it.</string>
     <string name="cordn_backup_passphrase">Passphrase</string>
     <string name="cordn_backup_contents_title">What is in the file</string>
-    <string name="cordn_backup_contents_body">Your group encryption keys, your reading positions, and your key packages. Anyone who opens it can read those groups. The passphrase is the only thing protecting it once it leaves Amethyst.</string>
+    <string name="cordn_backup_contents_body">Your group encryption keys, your key packages, and every message in those groups. Anyone who opens it can read the conversations. The passphrase is the only thing protecting it once it leaves Amethyst.</string>
     <string name="cordn_backup_export">Export</string>
     <string name="cordn_backup_exported">Backup saved.</string>
     <string name="cordn_backup_restore_title">Restore</string>

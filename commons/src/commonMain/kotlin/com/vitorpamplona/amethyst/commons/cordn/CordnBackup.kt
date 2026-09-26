@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
@@ -83,7 +85,25 @@ import com.vitorpamplona.quartz.utils.RandomInstance
  * that is expected rather than a gap.
  */
 object CordnBackup {
-    const val VERSION = 1
+    /**
+     * Version 2 adds the delivered messages to each group.
+     *
+     * Version 1 carried the MLS state, the cursor and the key packages but not
+     * a single message, and restoring it handed back the groups with an empty
+     * history: the messages were not in the file, and the cursor that *was*
+     * in the file told the sync loop it had already read to the end, so the
+     * coordinator was never asked to resend them. A backup that loses the
+     * conversation is not the thing the screen promises.
+     *
+     * The history could instead be re-pulled by resetting the cursor, since
+     * the coordinator holds it, but only for epochs the restored state can
+     * still open. Carrying the plaintext is what makes the restore whole
+     * regardless of how many times the group has rotated since.
+     */
+    const val VERSION = 2
+
+    /** The last version that carried no messages; still readable. */
+    private const val VERSION_WITHOUT_MESSAGES = 1
 
     /**
      * scrypt cost, as `log2(N)`.
@@ -115,6 +135,14 @@ object CordnBackup {
             val state: ByteArray,
             val cursor: GroupCursor?,
             val joinedViaRequest: Boolean,
+            /**
+             * The group's delivered messages, in cursor order.
+             *
+             * Empty when the archive was written by version 1, which carried
+             * none — a v1 restore still yields an empty conversation, and
+             * there is nothing in the file to do better with.
+             */
+            val messages: List<CordnDeliveredMessage> = emptyList(),
         ) {
             override fun equals(other: Any?): Boolean =
                 this === other ||
@@ -125,7 +153,8 @@ object CordnBackup {
                             state.contentEquals(other.state) &&
                             cursor?.fetchCursor == other.cursor?.fetchCursor &&
                             cursor?.lastCursor == other.cursor?.lastCursor &&
-                            joinedViaRequest == other.joinedViaRequest
+                            joinedViaRequest == other.joinedViaRequest &&
+                            messages == other.messages
                     )
 
             override fun hashCode(): Int {
@@ -134,6 +163,7 @@ object CordnBackup {
                 result = 31 * result + state.contentHashCode()
                 result = 31 * result + (cursor?.fetchCursor?.hashCode() ?: 0)
                 result = 31 * result + joinedViaRequest.hashCode()
+                result = 31 * result + messages.hashCode()
                 return result
             }
         }
@@ -188,7 +218,7 @@ object CordnBackup {
 
         val reader = TlsReader(sealed.copyOfRange(MAGIC.size, HEADER_LENGTH))
         val version = reader.readUint16()
-        require(version == VERSION) { "unknown cordn backup version $version" }
+        require(version == VERSION || version == VERSION_WITHOUT_MESSAGES) { "unknown cordn backup version $version" }
 
         val logN = reader.readUint8()
         val salt = reader.readBytes(SALT_LENGTH)
@@ -198,7 +228,7 @@ object CordnBackup {
         val header = sealed.copyOfRange(0, HEADER_LENGTH)
         val plaintext = ChaCha20Poly1305.decrypt(sealed.copyOfRange(HEADER_LENGTH, sealed.size), header, nonce, key)
 
-        return decode(plaintext)
+        return decode(plaintext, version)
     }
 
     private fun header(
@@ -242,6 +272,13 @@ object CordnBackup {
                 writer.putUint64(cursor.lastCursor)
             }
             writer.putUint8(if (it.joinedViaRequest) 1 else 0)
+            // uint32: a long-running group's log is not bounded by 65535.
+            // Each entry is the same JSON the on-disk message log stores, so
+            // the archive and the store cannot drift out of step.
+            writer.putUint32(it.messages.size.toLong())
+            it.messages.forEach { message ->
+                writer.putOpaque4(CordnDeliveredMessageCodec.encode(message).encodeToByteArray())
+            }
         }
 
         writer.putUint16(archive.keyPackages.size)
@@ -253,7 +290,10 @@ object CordnBackup {
         return writer.toByteArray()
     }
 
-    private fun decode(bytes: ByteArray): Archive {
+    private fun decode(
+        bytes: ByteArray,
+        version: Int,
+    ): Archive {
         val reader = TlsReader(bytes)
         val accountPubKey = reader.readOpaque2().decodeToString()
         val coordinators = CoordinatorListCodec.decode(reader.readOpaque4())
@@ -264,7 +304,19 @@ object CordnBackup {
                 val gid = reader.readOpaque2().decodeToString()
                 val state = reader.readOpaque4()
                 val cursor = if (reader.readUint8() == 1) GroupCursor(reader.readUint64(), reader.readUint64()) else null
-                Archive.Group(coordinator, gid, state, cursor, reader.readUint8() == 1)
+                val joinedViaRequest = reader.readUint8() == 1
+                val messages =
+                    if (version == VERSION_WITHOUT_MESSAGES) {
+                        emptyList()
+                    } else {
+                        // A message that will not parse is dropped rather than
+                        // failing the whole restore: losing one row beats
+                        // refusing to bring the account back at all.
+                        (0 until reader.readUint32()).mapNotNull {
+                            CordnDeliveredMessageCodec.decodeOrNull(reader.readOpaque4().decodeToString())
+                        }
+                    }
+                Archive.Group(coordinator, gid, state, cursor, joinedViaRequest, messages)
             }
 
         val keyPackages =
