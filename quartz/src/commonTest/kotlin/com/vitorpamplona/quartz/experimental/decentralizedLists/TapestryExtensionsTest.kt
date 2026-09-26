@@ -247,7 +247,9 @@ class TapestryExtensionsTest {
 
         assertEquals(
             listOf(
-                listOf("d", "event-tag-awesome-tag-cccccccc-aaaaaaaa"),
+                // 4d7a80b1 is sha256("39999:${"c".repeat(64)}:good-tag").take(8) — the whole
+                // coordinate, so two of the assistant's tags cannot share this `d`.
+                listOf("d", "event-tag-awesome-tag-4d7a80b1-aaaaaaaa"),
                 listOf("z", "39998:$ta:nostr-event-tag"),
                 listOf("z", "39999:$bob:tagging:awesome-tag-tagging"),
                 listOf("a", "39999:$assistant:good-tag"),
