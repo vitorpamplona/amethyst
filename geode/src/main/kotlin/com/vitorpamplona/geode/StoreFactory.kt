@@ -72,7 +72,7 @@ object StoreFactory {
         dbOverride: String? = null,
         extraPragmas: List<String> = emptyList(),
     ): IEventStore {
-        val strategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index)
+        val strategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index, config.database.nql_tag_values)
         val key =
             config.database.backend
                 .trim()

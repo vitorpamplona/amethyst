@@ -71,6 +71,12 @@ file = "/var/lib/geode/events.db"
 # skip the pread syscall. Off by default (SQLite default).
 # mmap_size = 268435456
 
+# Index every tag's first five elements for NIP-FF (NQL) queries over `tags`:
+# tag groupings and joins read an index instead of each event's tag JSON
+# (hundreds of ms -> a few at 60k events) for ~15% slower ingest. On by
+# default; false drops the table.
+# nql_tag_values = true
+
 # PRAGMA temp_store = MEMORY — RAM instead of temp files for large
 # sorts. Off by default.
 # temp_store_memory = true

@@ -46,10 +46,14 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
  *   ~340 ms per cold open at 50k events). Costs ~140 B/event of JVM heap
  *   (hex-string ids) and one indexed pre-SELECT per replaceable insert.
  *   `[negentropy].live_index = false` turns it off.
+ * @param nqlTagValues keep `event_tag_values`, the indexed tag table NIP-FF
+ *   (NQL) queries over `tags` read, instead of unpacking tag JSON per event.
+ *   `[database].nql_tag_values = false` turns it off.
  */
 fun relayIndexingStrategy(
     fullTextSearch: Boolean = true,
     liveNegentropyIndex: Boolean = true,
+    nqlTagValues: Boolean = true,
 ) = DefaultIndexingStrategy(
     indexEventsByCreatedAtAlone = true,
     // Authors-only filters (no kinds) are relay-common — archives,
@@ -71,6 +75,7 @@ fun relayIndexingStrategy(
     // exactly as fresh while publishes stop paying for it.
     deferFullTextSearchIndexing = fullTextSearch,
     maintainLiveNegentropyIndex = liveNegentropyIndex,
+    indexTagValues = nqlTagValues,
 )
 
 /** Stock relay strategy — everything on, matching geode's defaults. */

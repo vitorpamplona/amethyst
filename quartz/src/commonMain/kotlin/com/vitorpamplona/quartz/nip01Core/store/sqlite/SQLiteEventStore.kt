@@ -180,6 +180,7 @@ class SQLiteEventStore(
                 // existing DB gets the index built here (idempotent,
                 // one-time cost), with no user_version bump involved.
                 eventIndexModule.ensureOptionalIndexes(db)
+                db.transaction { eventIndexModule.ensureTagValues(this) }
             },
         )
     }
@@ -764,7 +765,7 @@ class SQLiteEventStore(
             val tagHash: ((String, String) -> Long)? = hasher?.let { h -> { name, value -> h.hash(name, value) } }
             db.execSQL("PRAGMA case_sensitive_like = ON")
             try {
-                runNql(db, NqlSqliteCompiler(values, tagHash).compile(checked), maxRows)
+                runNql(db, NqlSqliteCompiler(values, tagHash, indexStrategy.indexTagValues).compile(checked), maxRows)
             } catch (e: SQLiteException) {
                 null
             } finally {

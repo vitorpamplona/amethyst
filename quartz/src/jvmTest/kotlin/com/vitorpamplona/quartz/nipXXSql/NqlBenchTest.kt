@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
@@ -31,7 +32,8 @@ class NqlBenchTest {
     @Test
     fun bench() {
         if (System.getenv("NQL_BENCH") == null) return
-        val store = EventStore(dbName = null, relay = null)
+        val tagValues = System.getenv("NQL_BENCH") == "tagvalues"
+        val store = EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = tagValues))
         val rnd = Random(1)
         val authors = List(200) { NostrSignerSync() }
         val notes = ArrayList<String>()
@@ -50,7 +52,9 @@ class NqlBenchTest {
                 store.insert(a.sign<Event>(1_700_100_000L + i, 7, arrayOf(arrayOf("e", target), arrayOf("p", authors[0].pubKey)), "+"))
             }
         }
-        println("BENCH load ${System.currentTimeMillis() - t0} ms")
+        println("BENCH load ${System.currentTimeMillis() - t0} ms (tag values: $tagValues)")
+        // Planner statistics, as a running relay has them.
+        runBlocking { store.store.analyse() }
         val author = authors[3].pubKey
         val queries =
             listOf(

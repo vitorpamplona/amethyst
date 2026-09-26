@@ -144,6 +144,14 @@ data class StaticConfig(
          */
         val mmap_size: Long? = null,
         /**
+         * Keep every tag's first five elements in an indexed table so NIP-FF
+         * (NQL) queries over `tags` read an index instead of unpacking each
+         * event's tag JSON: tag groupings and tag joins go from hundreds of
+         * milliseconds to a few at 60k events, for roughly 15% slower ingest.
+         * SQLite only; turning it off drops the table.
+         */
+        val nql_tag_values: Boolean = true,
+        /**
          * `PRAGMA temp_store = MEMORY` — keeps sort/temp b-trees for
          * large queries in RAM instead of temp files.
          */

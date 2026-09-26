@@ -136,6 +136,7 @@ class EventIndexesModule(
     }
 
     override fun drop(db: SQLiteConnection) {
+        db.execSQL("DROP TABLE IF EXISTS $TAG_VALUES")
         db.execSQL("DROP TABLE IF EXISTS event_tags")
         db.execSQL("DROP TABLE IF EXISTS event_headers")
     }
@@ -187,6 +188,53 @@ class EventIndexesModule(
             (id, pubkey, created_at, kind, tags, content, sig, d_tag, pubkey_owner_hash, etag_hash, atag_hash)
         VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+
+    /**
+     * Creates and backfills `event_tag_values` when [IndexingStrategy.indexTagValues]
+     * is on and the table isn't there yet, and drops it when the flag is off. Runs
+     * on every open, like [ensureOptionalIndexes].
+     */
+    fun ensureTagValues(db: SQLiteConnection) {
+        val exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '$TAG_VALUES'").use { it.step() }
+        if (!indexStrategy.indexTagValues) {
+            if (exists) db.execSQL("DROP TABLE $TAG_VALUES")
+            return
+        }
+        if (exists) return
+        db.execSQL(
+            """
+            CREATE TABLE $TAG_VALUES (
+                event_header_row_id INTEGER NOT NULL,
+                idx INTEGER NOT NULL,
+                t0 TEXT NOT NULL,
+                t1 TEXT,
+                t2 TEXT,
+                t3 TEXT,
+                t4 TEXT,
+                kind INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            "INSERT INTO $TAG_VALUES (event_header_row_id, idx, t0, t1, t2, t3, t4, kind, created_at) " +
+                "SELECT h.row_id, j.key, json_extract(j.value, '$[0]'), json_extract(j.value, '$[1]'), json_extract(j.value, '$[2]'), " +
+                "json_extract(j.value, '$[3]'), json_extract(j.value, '$[4]'), h.kind, h.created_at " +
+                "FROM event_headers AS h, json_each(h.tags) AS j WHERE json_type(j.value, '$[0]') IS NOT NULL",
+        )
+        // Indexes after the backfill: one sort instead of a rebalance per row.
+        db.execSQL("CREATE INDEX ${TAG_VALUES}_by_name_value ON $TAG_VALUES (t0, t1, kind)")
+        db.execSQL("CREATE INDEX ${TAG_VALUES}_by_event ON $TAG_VALUES (event_header_row_id)")
+    }
+
+    val sqlInsertTagValues =
+        """
+        INSERT INTO $TAG_VALUES
+            (event_header_row_id, idx, t0, t1, t2, t3, t4, kind, created_at)
+        VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
 
     val sqlInsertTags =
@@ -257,11 +305,32 @@ class EventIndexesModule(
             }
         }
 
+        if (indexStrategy.indexTagValues) {
+            db.prepare(sqlInsertTagValues).use { stmt ->
+                event.tags.forEachIndexed { idx, tag ->
+                    if (tag.isEmpty()) return@forEachIndexed
+                    stmt.bindLong(1, headerId)
+                    stmt.bindLong(2, idx.toLong())
+                    for (i in 0..4) if (i < tag.size) stmt.bindText(3 + i, tag[i]) else stmt.bindNull(3 + i)
+                    stmt.bindLong(8, kindLong)
+                    stmt.bindLong(9, event.createdAt)
+                    stmt.step()
+                    stmt.reset()
+                }
+            }
+        }
+
         return headerId
     }
 
     override fun deleteAll(db: SQLiteConnection) {
+        if (indexStrategy.indexTagValues) db.execSQL("DELETE FROM $TAG_VALUES")
         db.execSQL("DELETE FROM event_tags")
         db.execSQL("DELETE FROM event_headers")
+    }
+
+    companion object {
+        /** The NQL tag-values table ([IndexingStrategy.indexTagValues]). */
+        const val TAG_VALUES = "event_tag_values"
     }
 }

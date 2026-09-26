@@ -144,6 +144,18 @@ interface IndexingStrategy {
      */
     val maintainLiveNegentropyIndex: Boolean get() = false
 
+    /**
+     * Keep every tag's first five elements as rows of `event_tag_values`,
+     * indexed by name and value, so NIP-FF (NQL) queries over `tags` read an
+     * index instead of unpacking each event's tag JSON: grouping by a tag value
+     * or joining reactions to notes goes from hundreds of milliseconds to a few
+     * on 60k events. Costs a row and two index entries per tag on insert, and
+     * the storage for them, which only pays off on a relay serving NQL, so the
+     * default is **off**. Turning it on backfills the table on the next open;
+     * turning it off drops it (a table not kept current can't be trusted).
+     */
+    val indexTagValues: Boolean get() = false
+
     fun shouldIndex(
         kind: Int,
         tag: Tag,
@@ -162,6 +174,7 @@ class DefaultIndexingStrategy(
     override val indexFullTextSearch: Boolean = true,
     override val deferFullTextSearchIndexing: Boolean = false,
     override val maintainLiveNegentropyIndex: Boolean = false,
+    override val indexTagValues: Boolean = false,
 ) : IndexingStrategy {
     override fun shouldIndex(
         kind: Int,

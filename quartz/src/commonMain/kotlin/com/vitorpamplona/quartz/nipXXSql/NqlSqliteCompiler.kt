@@ -55,13 +55,21 @@ class NqlSqliteQuery(
  * A guarded value used several times is bound once through a one-row
  * subquery (`let`), unless it's cheap to repeat or holds an aggregate.
  *
- * [tagHash] enables the `event_tags` pushdown: a `tags` source whose conditions
- * pin `t0` to a single-letter name and `t1` to constants only expands the
- * events that index says hold such a tag.
+ * `tags` comes from `event_tag_values` when the store keeps it ([tagValues]):
+ * rows indexed by name and value, with the event's `row_id` in place of its id
+ * and pubkey, which are looked up only where read. An equality or `IN` on a
+ * tag's `event_id` becomes one on `row_id`, so joins between tags and their
+ * events (and lookups of one event's tags) walk the indexes. Otherwise `tags`
+ * is unpacked from each event's tag JSON, and [tagHash] enables the
+ * `event_tags` pushdown: a `tags` source whose conditions pin `t0` to a
+ * single-letter name and `t1` to constants only expands the events that index
+ * says hold such a tag.
  */
 class NqlSqliteCompiler(
     private val params: List<Any?>,
     private val tagHash: ((name: String, value: String) -> Long)?,
+    /** The store keeps `event_tag_values` ([com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy.indexTagValues]). */
+    private val tagValues: Boolean = false,
 ) {
     private val binds = ArrayList<Any?>()
     private val queryIds = HashMap<NqlQuery, Int>()
@@ -95,10 +103,10 @@ class NqlSqliteCompiler(
             q.from.forEachIndexed { i, src ->
                 if (i > 0) sb.append(if (src.join == NqlJoin.LEFT) " LEFT JOIN " else " JOIN ")
                 sb.append(source(q, i, local[i]))
-                if (i > 0) sb.append(" ON ").append(value(src.on!!))
+                if (i > 0) sb.append(" ON ").append(condition(src.on!!))
             }
         }
-        q.where?.let { sb.append(" WHERE ").append(value(it)) }
+        q.where?.let { sb.append(" WHERE ").append(condition(it)) }
         if (q.groupBy.isNotEmpty()) {
             sb.append(" GROUP BY ")
             sb.append(q.groupBy.joinToString(", ") { value(if (it is NqlColumnRef && it.output >= 0) q.outputs[it.output].expr else it) })
@@ -126,6 +134,11 @@ class NqlSqliteCompiler(
         val alias = alias(q, i)
         if (src.subquery != null) return "(${query(src.subquery)}) AS $alias"
         if (src.table == SqlProfile.EVENTS) return "event_headers AS $alias"
+        if (tagValues) {
+            val lookup = { column: String -> "(SELECT h.$column FROM event_headers AS h WHERE h.row_id = v.event_header_row_id)" }
+            return "(SELECT v.event_header_row_id AS row_id, ${lookup("id")} AS event_id, v.idx AS idx, v.t0 AS t0, v.t1 AS t1, v.t2 AS t2, " +
+                "v.t3 AS t3, v.t4 AS t4, v.created_at AS created_at, v.kind AS kind, ${lookup("pubkey")} AS pubkey FROM event_tag_values AS v) AS $alias"
+        }
 
         // tags: one row per non-empty tag, from the stored tag JSON, over only the
         // events the source's own conditions can match.
@@ -157,6 +170,59 @@ class NqlSqliteCompiler(
             "json_extract(j.value, '$[2]') AS t2, json_extract(j.value, '$[3]') AS t3, json_extract(j.value, '$[4]') AS t4, " +
             "h.created_at AS created_at, h.kind AS kind, h.pubkey AS pubkey " +
             "FROM event_headers AS h, json_each(h.tags) AS j WHERE ${where.joinToString(" AND ")}) AS $alias"
+    }
+
+    // ---- Conditions ---------------------------------------------------------
+
+    /**
+     * A WHERE / ON condition. Where it is a conjunct, FALSE and NULL filter alike,
+     * which lets an `event_id` test run on the events' `row_id` (see [rowTest]).
+     */
+    private fun condition(e: NqlExpr): String = conjuncts(e).joinToString(" AND ") { rowTest(it) ?: value(it) }
+
+    /** `row_id` of the event a `tags.event_id` / `events.id` reference names, when the store has one; else null. */
+    private fun rowOf(e: NqlExpr): String? {
+        if (!tagValues || e !is NqlColumnRef || e.output >= 0) return null
+        val src = e.owner!!.from[e.source]
+        val column = src.columns[e.index].first
+        val isId = (src.table == SqlProfile.TAGS && column == "event_id") || (src.table == SqlProfile.EVENTS && column == "id")
+        return if (isId) "${alias(e.owner!!, e.source)}.row_id" else null
+    }
+
+    private fun isTagEventId(e: NqlExpr) = rowOf(e) != null && e is NqlColumnRef && e.owner!!.from[e.source].table == SqlProfile.TAGS
+
+    /**
+     * An equality or `IN` on a tag's `event_id` as one on `row_id`: between two
+     * id columns directly (ids and row ids are one to one), against anything else
+     * through the unique index on `event_headers.id`. Only in conjunct position:
+     * an id no event has gives NULL here where the original gives FALSE.
+     */
+    private fun rowTest(e: NqlExpr): String? {
+        if (!tagValues) return null
+        return when {
+            e is NqlBinary && e.op == "=" -> {
+                val l = rowOf(e.left)
+                val r = rowOf(e.right)
+                when {
+                    l != null && r != null -> "($l = $r)"
+                    isTagEventId(e.left) -> "($l = (SELECT row_id FROM event_headers WHERE id = ${value(e.right)}))"
+                    isTagEventId(e.right) -> "($r = (SELECT row_id FROM event_headers WHERE id = ${value(e.left)}))"
+                    else -> null
+                }
+            }
+
+            e is NqlInList && !e.not && isTagEventId(e.expr) -> {
+                "(${rowOf(e.expr)} IN (SELECT row_id FROM event_headers WHERE id IN (" + e.items.joinToString(", ") { value(it) } + ")))"
+            }
+
+            e is NqlInQuery && !e.not && isTagEventId(e.expr) -> {
+                "(${rowOf(e.expr)} IN (SELECT row_id FROM event_headers WHERE id IN (SELECT c0 FROM (${query(e.query)}))))"
+            }
+
+            else -> {
+                null
+            }
+        }
     }
 
     // ---- Expressions --------------------------------------------------------
@@ -404,7 +470,12 @@ class NqlSqliteCompiler(
         if (e.aggregateSlot >= 0) {
             return when (e.name) {
                 "count" -> {
-                    if (e.star) "count(*)" else "count(${if (e.distinct) "DISTINCT " else ""}${value(a[0])})"
+                    when {
+                        e.star -> "count(*)"
+                        // Ids and row ids are one to one: count the ones that need no lookup.
+                        e.distinct && isTagEventId(a[0]) -> "count(DISTINCT ${rowOf(a[0])})"
+                        else -> "count(${if (e.distinct) "DISTINCT " else ""}${value(a[0])})"
+                    }
                 }
 
                 "sum" -> {

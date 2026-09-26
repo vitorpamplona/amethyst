@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
@@ -51,11 +52,14 @@ class NqlConformanceTest {
     private val vectors = Json.parseToJsonElement(javaClass.getResource("/nql/FF-conformance.json")!!.readText()).jsonObject
     private val store = EventStore(dbName = null, relay = null)
 
+    /** The same events in a store that keeps `event_tag_values`, which the compiled path reads `tags` from. */
+    private val tagValuesStore = EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = true))
+
     init {
         runBlocking {
             vectors["events"]!!.jsonArray.forEach { e ->
                 val o = e.jsonObject
-                store.insert(
+                val event =
                     EventFactory.create<Event>(
                         o["id"]!!.jsonPrimitive.content,
                         o["pubkey"]!!.jsonPrimitive.content,
@@ -64,20 +68,29 @@ class NqlConformanceTest {
                         o["tags"]!!.jsonArray.map { t -> t.jsonArray.map { it.jsonPrimitive.content }.toTypedArray() }.toTypedArray(),
                         o["content"]!!.jsonPrimitive.content,
                         o["sig"]!!.jsonPrimitive.content,
-                    ),
-                )
+                    )
+                store.insert(event)
+                tagValuesStore.insert(event)
             }
         }
     }
 
     @AfterTest
-    fun close() = store.close()
+    fun close() {
+        store.close()
+        tagValuesStore.close()
+    }
 
     private val cases = vectors["cases"]!!.jsonArray.map { it.jsonObject }
 
     @Test
     fun compiledToSqliteByTheStore() {
         check(unsupportedAllowed = false) { q, p -> runBlocking { store.nql(q, p) } }
+    }
+
+    @Test
+    fun compiledOverTagValues() {
+        check(unsupportedAllowed = false) { q, p -> runBlocking { tagValuesStore.nql(q, p) } }
     }
 
     @Test

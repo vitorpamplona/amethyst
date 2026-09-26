@@ -1,9 +1,72 @@
 # NQL engine: NIP-FF in Quartz
 
-Status: **implemented.** `quartz/…/nipXXSql/` implements NIP-FF (Nostr Query
+Status: **implemented**, with two engines: SQLite stores run the query natively, and every other store uses the interpreter. `quartz/…/nipXXSql/` implements NIP-FF (Nostr Query
 Language) end to end: the `NQL` command in `NostrServer` (so geode too), the client
 extensions, and `IEventStore.nql`. It passes all 272 of the NIP's conformance
 vectors over every backend in the tests.
+
+## Two engines
+
+- **SQLite stores** compile the checked query to one SQLite statement
+  (`NqlSqliteCompiler`). SQLite runs it next to its indexes and never builds an
+  event.
+- **Every other store** (Vespa, the filesystem store) runs through the
+  interpreter below, over rows its scans return.
+
+Both run the NIP's vectors, and the fuzz test compares them with each other and
+with SQLite over plain tables.
+
+### The compiled path
+
+SQLite already follows most of NQL. The rest is rewritten:
+- **Errors** raise through a `CASE` whose failing branch is
+  `abs(-9223372036854775808)`, which SQLite refuses. `CASE` evaluates only the
+  branch it takes, so an error happens only where NQL has one.
+- **INTEGER overflow:** SQLite turns an overflowing INTEGER `+ - * /` into a
+  REAL, which stays REAL up the chain. One `typeof` check at the top of each
+  chain catches it.
+- **Plain SQL rewrites** give `CAST` from text, ties-to-even `round`, `substr`,
+  `ceil`/`floor`/`trunc` and NULL placement their NQL definitions. `LIKE` runs
+  with `case_sensitive_like`.
+- **Reruns:** a statement that fails reruns in the interpreter. That names the
+  exact error, since SQLite says `integer overflow` for all of them, and it
+  answers an INTEGER `sum` whose partial sums overflow in SQLite but whose total
+  fits.
+
+### Where `tags` comes from
+
+`tags` is the expensive source: tag values live inside each event's JSON.
+
+- **With `IndexingStrategy.indexTagValues`** (geode: `[database].nql_tag_values`,
+  on by default), the store keeps `event_tag_values`: one row per non-empty tag,
+  holding `row_id`, `idx`, `t0`–`t4`, `kind` and `created_at`.
+  - It is indexed on `(t0, t1, kind)` and on `row_id`.
+  - It is backfilled when the flag is turned on, and dropped when it is turned
+    off.
+  - It stores no ids or pubkeys. Those are looked up by `row_id` only where the
+    query reads them.
+  - An equality or `IN` on a tag's `event_id` compiles to one on `row_id`, so
+    joins between tags and events stay on indexes.
+- **Otherwise** `tags` is unpacked from the JSON with `json_each`, with the
+  `event_tags` hash index narrowing it when a single-letter name and values are
+  pinned.
+
+Benchmark on 60k events (40k notes, 20k reactions), median ms. Old is the
+prototype, which ran SQLite's dialect; the compiled columns use the JSON tag view
+or `event_tag_values`:
+
+| Query | Old | Interpreter | Compiled, JSON tags | Compiled, `event_tag_values` |
+|---|---|---|---|---|
+| `GROUP BY kind` over everything | 2 | 279 | 3 | 3 |
+| top hashtags | 106 | 298 | 198 | **8** |
+| count of one hashtag | 2 | 8 | 3 | **0** |
+| reactions per note of an author (LEFT JOIN) | 347 | 115 | 457 | **1** |
+| most-reacted notes | 39 | 119 | 65 | **5** |
+| counts, newest 50, one author's notes | 0–1 | 0–1 | 0–1 | 0–1 |
+
+Loading the 60k events, signing included, took 11.9 s without the table and
+13.6 s with it. The planner needs statistics (the store's `analyse()` /
+`optimize()`) to put a selective event filter before the tag index in joins.
 
 ## Why an interpreter
 
@@ -77,10 +140,8 @@ The vectors are built and checked against PostgreSQL 16 and SQLite by
 
 ## Costs and open items
 
-- Scans materialize their rows in memory. On the SQLite store, an unconstrained
-  aggregate reads every event. The prototype ran such queries natively in SQLite.
-  A relay can refuse broad scans through `acceptsScan`. A SQLite fast path for
-  plain `count` / `GROUP BY` over bare columns is a possible follow-up.
+- The interpreter's scans materialize their rows in memory. Only non-SQLite
+  stores use it, and they can refuse broad scans through `acceptsScan`.
 - An aggregate whose arguments read only outer columns belongs to the query it is
   written in, not to the outer query as in PostgreSQL. The NIP does not say which,
   and no vector tests it.
