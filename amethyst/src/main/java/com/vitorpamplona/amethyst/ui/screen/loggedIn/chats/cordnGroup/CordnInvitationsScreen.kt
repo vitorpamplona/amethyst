@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -155,6 +156,12 @@ fun CordnInvitationsScreen(
                 return@Column
             }
 
+            // Collected rather than read as `.value` further down: the empty
+            // state says either "you have no coordinators" or "nobody has
+            // invited you", and adding a coordinator in another tab has to
+            // change which of those two this screen is showing.
+            val coordinators by runtime.coordinators.collectAsStateWithLifecycle()
+
             Text(
                 text = stringRes(R.string.cordn_invitations_explainer),
                 style = MaterialTheme.typography.bodyMedium,
@@ -227,7 +234,7 @@ fun CordnInvitationsScreen(
                 if (loaded.isEmpty) {
                     Text(
                         text =
-                            if (runtime.coordinators.value.isEmpty()) {
+                            if (coordinators.isEmpty()) {
                                 stringRes(R.string.cordn_invitations_no_coordinators)
                             } else {
                                 stringRes(R.string.cordn_invitations_none)

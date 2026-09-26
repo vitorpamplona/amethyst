@@ -147,6 +147,12 @@ fun CordnCreateGroupScreen(
         }
 
         val known by runtime.coordinators.collectAsStateWithLifecycle()
+        // Collected, not read as `.value` below: the exposure card counts the
+        // groups this coordinator already carries, and reading the flow inside
+        // composition would leave that count frozen at whatever it was when the
+        // screen opened — the one number on the card that can change while you
+        // are looking at it, since creating a group is what changes it.
+        val rooms by runtime.groups.all.collectAsStateWithLifecycle()
         val scope = rememberCoroutineScope()
 
         val me = accountViewModel.account.signer.pubKey
@@ -491,10 +497,7 @@ fun CordnCreateGroupScreen(
                         // serves for this account: the disclosure is about what
                         // one coordinator can correlate, so a second group on
                         // the same one widens it.
-                        linkedGroupCount =
-                            1 +
-                                runtime.groups.all.value
-                                    .count { room -> room.coordinatorPubKey == it.pubKey },
+                        linkedGroupCount = 1 + rooms.count { room -> room.coordinatorPubKey == it.pubKey },
                         joinedFromShareLink = false,
                         publishedKeyPackage = false,
                         encryptionPinned = true,
