@@ -43,9 +43,13 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 sealed interface TaggingTarget {
     /**
      * What stands for this target in the assertion `d`: `<id8>` for a plain event,
-     * `<author8>-<d16>-<hash8>` for an addressable one. Two distinct targets must never produce
-     * the same one — kind 39999 is addressable, so taggings sharing a `d` do not sit side by
-     * side: the later one replaces the earlier.
+     * `<author8>-<d16>-<hash8>` for an addressable one. Kind 39999 is addressable, so two
+     * taggings that share a `d` do not sit side by side — the later one replaces the earlier.
+     *
+     * The draft fixes these widths, so the separation is 32 bits of hash rather than a guarantee:
+     * it removes the old rule's *certain* collision between any two of an author's events, and
+     * leaves a birthday-bound residue that the draft accepts. Widening it is an upstream change,
+     * not ours.
      */
     val prefix: String
 
@@ -62,7 +66,23 @@ sealed interface TaggingTarget {
          * An empty `dTag` yields an empty `d16`, i.e. `<author8>--<hash8>`, which the draft spells
          * out. A plain event uses its own id (below): that already covers the whole event.
          */
-        override val prefix get() = "${address.pubKeyHex.take(AUTHOR_CHARS)}-${address.dTag.take(D_TAG_CHARS)}-${hash8()}"
+        override val prefix get() = "${address.pubKeyHex.take(AUTHOR_CHARS)}-${d16()}-${hash8()}"
+
+        /**
+         * The draft counts `d16` in UTF-16 code units, which can cut an astral character in half
+         * and leave a dangling high surrogate. That is not survivable: the id is hashed from the
+         * intact char, but UTF-8 encoding the event for the wire has no encoding for half a
+         * character and substitutes `?`, so the relay re-hashes different bytes, gets a different
+         * id, and rejects the event. Verified end to end — see the test.
+         *
+         * So the half character is dropped, giving 15 units instead of 16. `d16` is decoration
+         * the draft says carries no uniqueness, and dropping it stays deterministic, so nothing
+         * that matters is lost; `hash8` still separates the targets.
+         */
+        private fun d16(): String {
+            val cut = address.dTag.take(D_TAG_CHARS)
+            return if (cut.lastOrNull()?.isHighSurrogate() == true) cut.dropLast(1) else cut
+        }
 
         // Lowercase hex of the UTF-8 coordinate exactly as the `a` tag carries it: no trimming,
         // no normalization, no reordering. Hex.encode already emits lower case.

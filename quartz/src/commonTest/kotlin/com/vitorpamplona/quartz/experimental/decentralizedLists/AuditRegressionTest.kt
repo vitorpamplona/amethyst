@@ -183,6 +183,30 @@ class AuditRegressionTest {
         )
     }
 
+    // Truncating at 16 UTF-16 code units can cut an astral character in half. The id is hashed
+    // from the intact char while the wire bytes get `?` in its place, so the relay re-hashes
+    // different bytes and rejects the event. The half character is dropped instead.
+    @Test
+    fun aDTagCutMidAstralCharacterDoesNotLeaveHalfACharacterInTheD() {
+        // 15 ASCII then an emoji: the 16th code unit is the high surrogate of the pair.
+        val dTag = "a".repeat(15) + "\uD83D\uDE00" + "tail"
+        val d = EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, dTag)), alice)
+
+        assertFalse(d.any { it.isHighSurrogate() || it.isLowSurrogate() }, "the `d` still carries half a character: $d")
+        // 15 units of decoration, not 16, and hash8 is over the untruncated coordinate.
+        assertEquals("event-tag-awesome-tag-bbbbbbbb-${"a".repeat(15)}-15c09d87-aaaaaaaa", d)
+    }
+
+    // The property the above protects: what is hashed for the id must survive UTF-8 encoding,
+    // or the relay recomputes a different id. Pins the bytes, not just the string.
+    @Test
+    fun theDSurvivesAUtf8RoundTripByteForByte() {
+        val dTag = "a".repeat(15) + "\uD83D\uDE00" + "tail"
+        val d = EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, dTag)), alice)
+
+        assertEquals(d, d.encodeToByteArray().decodeToString(), "the `d` does not survive UTF-8 encoding")
+    }
+
     // A plain event is still named by its own id: it already covers the whole event, and hashing
     // it would only cost a round of SHA-256 per assertion built. The `e` branch is unchanged.
     @Test
