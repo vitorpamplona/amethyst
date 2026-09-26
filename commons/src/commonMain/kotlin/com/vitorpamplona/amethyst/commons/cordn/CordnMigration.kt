@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -150,7 +149,7 @@ class CordnMigration(
         val dTag = RandomInstance.randomChars(D_TAG_LENGTH)
 
         val inner = signer.signInner(inventory)
-        val sealedInner = signer.nip44Encrypt(JacksonMapper.toJson(inner), signer.pubKey)
+        val sealedInner = signer.nip44Encrypt(inner.toJson(), signer.pubKey)
 
         val outer =
             NostrSignerInternal(ephemeral).sign<Event>(
@@ -215,7 +214,7 @@ class CordnMigration(
 
         val inner =
             try {
-                JacksonMapper.fromJson(innerJson)
+                Event.fromJson(innerJson)
             } catch (e: Exception) {
                 throw CordnMigrationException("the tip's inner event is not readable: ${e.message}")
             }
