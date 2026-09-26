@@ -73,7 +73,7 @@ class CordnAnnotationIndexTest {
     }
 
     @Test
-    fun `only the author may edit, and the newest edit wins`() {
+    fun `only the author may edit and the newest edit wins`() {
         val note = message(alice, CordnMessageKinds.TEXT, "original", createdAt = 100)
         val tags = CordnMessageReferences.editTags(note.asTarget())
 
@@ -177,7 +177,7 @@ class CordnAnnotationIndexTest {
     }
 
     @Test
-    fun `any member may pin, and the last write wins`() {
+    fun `any member may pin and the last write wins`() {
         val note = message(alice, CordnMessageKinds.TEXT, "important", createdAt = 100)
         val t = note.asTarget()
 

@@ -184,7 +184,7 @@ class PaymentTest {
     }
 
     @Test
-    fun `CVM-8-22 a server that ignores the request is a failed negotiation, not a downgrade`() {
+    fun `CVM-8-22 a server that ignores the request is a failed negotiation rather than a downgrade`() {
         val session = PaymentSession(requested = PaymentInteraction.EXPLICIT_GATING)
         session.observeServerTags(emptyArray())
         assertTrue(session.negotiationFailed, "silent fallback must be visible to the caller")

@@ -43,7 +43,7 @@ class CvmMessageEventTest {
     private val ping = JsonRpcRequest(JsonRpcId.Num(1), "ping")
 
     @Test
-    fun `CVM-CORE-02 content is a stringified JSON-RPC message, not an embedded object`() {
+    fun `CVM-CORE-02 content is a stringified JSON-RPC message rather than an embedded object`() {
         val template = CvmMessageEvent.build(ping, serverPubKey)
 
         // The spec's examples print `content` unstringified for readability,
@@ -91,7 +91,7 @@ class CvmMessageEventTest {
     }
 
     @Test
-    fun `CVM-CORE-06 kind 25910 is ephemeral, so delivery has no replay`() {
+    fun `CVM-CORE-06 kind 25910 is ephemeral so delivery has no replay`() {
         // Consequence, not decoration: relays do not retain this kind, so a
         // subscription must be live before the peer publishes. The transport's
         // request API is built around this and the property is worth pinning.
