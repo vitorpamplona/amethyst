@@ -32,22 +32,30 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Po
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /** What an event tagging is about: an addressable event (`a`) or a plain one (`e`). */
 @Immutable
 sealed interface TaggingTarget {
-    /** The first 8 characters used in the assertion `d`. */
+    /**
+     * The 8 hex characters that stand for this target in the assertion `d`. Two distinct targets
+     * must not produce the same one: kind 39999 is addressable, so taggings that share a `d` do
+     * not sit side by side — the later one replaces the earlier.
+     */
     val prefix: String
 
     @Immutable
     data class ByAddress(
         val address: Address,
     ) : TaggingTarget {
-        // the author segment of the coordinate, not its kind
-        override val prefix get() = address.pubKeyHex.take(8)
+        // Hashed over the WHOLE coordinate, because no single segment identifies the target: the
+        // author repeats across everything they write, and the kind across everything of a type.
+        // A plain event can use its own id (below) since that already covers the whole event.
+        override val prefix get() = sha256(address.toValue().encodeToByteArray()).toHexKey().take(8)
     }
 
     @Immutable

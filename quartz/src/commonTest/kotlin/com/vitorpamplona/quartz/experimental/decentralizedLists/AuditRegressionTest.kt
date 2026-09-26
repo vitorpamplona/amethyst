@@ -36,6 +36,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 
 /** Regressions found in the audit: each failed before its fix. */
 class AuditRegressionTest {
@@ -109,6 +110,66 @@ class AuditRegressionTest {
         val node = item(arrayOf(arrayOf("d", "x"), arrayOf("z", name)))
         assertIs<ParentList.Name>(node.parentLists().single())
         assertFalse(name in node.linkedAddressIds())
+    }
+
+    // The `d` must separate two addressable targets. kind 39999 is addressable, so a colliding
+    // `d` means the second tagging silently replaces the first.
+    @Test
+    fun twoAddressableTargetsByTheSameAuthorGetDifferentDTags() {
+        val first = TaggingTarget.ByAddress(Address(39999, bob, "good-tag"))
+        val second = TaggingTarget.ByAddress(Address(39999, bob, "other-tag"))
+
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", first, alice),
+            EventTagging.dTag("awesome-tag", second, alice),
+        )
+    }
+
+    // Same idea across the other two coordinate segments: only one of the three may differ.
+    @Test
+    fun addressableTargetsDifferingOnlyByKindGetDifferentDTags() {
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "tag")), alice),
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(30023, bob, "tag")), alice),
+        )
+    }
+
+    @Test
+    fun addressableTargetsDifferingOnlyByAuthorGetDifferentDTags() {
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "tag")), alice),
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, other, "tag")), alice),
+        )
+    }
+
+    // ...while the `d` stays deterministic, which is what lets a re-tag replace its own assertion
+    // instead of piling up a second one. Pinned against SHA-256 prefixes of the coordinates
+    // computed outside this codebase, so the test cross-checks the derivation rather than
+    // restating it: a change of hash input would silently orphan every assertion already signed.
+    @Test
+    fun theAddressablePrefixIsTheHashOfTheWholeCoordinate() {
+        assertEquals(
+            "event-tag-awesome-tag-6a5e1c40-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "good-tag")), alice),
+        )
+        assertEquals(
+            "event-tag-awesome-tag-e89b797c-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "other-tag")), alice),
+        )
+        assertEquals(
+            "event-tag-awesome-tag-96856fd8-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(30023, bob, "good-tag")), alice),
+        )
+    }
+
+    // A plain event is still named by its own id: it already covers the whole event, and hashing
+    // it would only cost a round of SHA-256 per assertion built.
+    @Test
+    fun plainEventTargetsStillUseTheirOwnId() {
+        assertEquals(
+            "event-tag-awesome-tag-11111111-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByEventId("1".repeat(64)), alice),
+        )
     }
 
     // Authored JSON: an explicit null in a list field must not make the whole section unreadable.
