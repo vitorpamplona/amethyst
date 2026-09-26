@@ -179,6 +179,9 @@
     <string name="post">Δημοσίευση</string>
     <string name="voice_post">Φωνητική ανάρτηση</string>
     <string name="voice_reply">Φωνητική απάντηση</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Ιδιωτικό Μήνυμα</string>
     <string name="nest_notification_broadcasting">Nest — Ζωντανά</string>
     <string name="nest_notification_channel_description">Διατηρεί τον ήχο σε αναπαραγωγή ενώ το δωμάτιο είναι ανοιχτό.</string>

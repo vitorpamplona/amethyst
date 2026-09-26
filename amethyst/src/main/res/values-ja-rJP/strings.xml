@@ -177,6 +177,9 @@
     <string name="post">送信</string>
     <string name="voice_post">音声投稿</string>
     <string name="voice_reply">音声返信</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">プライベートメッセージ</string>
     <string name="nest_notification_broadcasting">Nest — ライブ中</string>
     <string name="nest_notification_channel_description">ルームが開いている間オーディオを再生し続けます。</string>

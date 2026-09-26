@@ -256,7 +256,6 @@
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
-    <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
@@ -322,6 +321,10 @@
     <string name="voice_post">ध्वनि सन्देश</string>
     <string name="voice_reply">ध्वनि उत्तर</string>
     <string name="pow_kind_report">वृत्तान्त</string>
+    <!-- Emoji packs -->
+    <string name="health_connect_rationale_activity_label">स्वास्थ्य संयोजन तथा अमेथिस्ट</string>
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">निजी सन्देश</string>
     <string name="pow_kind_chat_message">चर्चा सन्देश</string>
     <string name="nest_notification_broadcasting">निलय - वर्तमान</string>

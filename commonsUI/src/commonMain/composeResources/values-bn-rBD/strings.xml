@@ -2968,4 +2968,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s-এ প্রাপকের Lightning সেবা পাওয়া যাচ্ছে না। এটি Lightning ঠিকানা "%2$s" থেকে গণনা করা হয়েছে। ত্রুটি: %3$s। সার্ভার চালু আছে কিনা এবং Lightning ঠিকানাটি সঠিক কিনা পরীক্ষা করুন</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s থেকে একটি Lightning ইনভয়েস তৈরি করতে অক্ষম: ফলাফলের JSON-এ উপাদান pr পাওয়া যায়নি।</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">একটি Lightning ইনভয়েস তৈরি করতে অক্ষম। %1$s থেকে বার্তা: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

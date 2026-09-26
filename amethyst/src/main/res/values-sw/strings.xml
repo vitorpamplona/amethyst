@@ -180,6 +180,9 @@
     <string name="post">Tuma</string>
     <string name="voice_post">Chapisho la Sauti</string>
     <string name="voice_reply">Jibu la Sauti</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Ujumbe wa Siri</string>
     <string name="nest_notification_broadcasting">Nest — Moja kwa Moja</string>
     <string name="nest_notification_channel_description">Inaweka sauti ikicheza wakati chumba kiko wazi.</string>

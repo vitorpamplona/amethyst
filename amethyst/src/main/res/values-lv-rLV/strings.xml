@@ -183,6 +183,9 @@
     <string name="post">Ieraksts</string>
     <string name="voice_post">Balss ziņa</string>
     <string name="voice_reply">Balss atbilde</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Privāta ziņa</string>
     <string name="nest_notification_broadcasting">Nest — Tiešraide</string>
     <string name="nest_notification_channel_description">Turpina atskaņot audio, kamēr telpa ir atvērta.</string>

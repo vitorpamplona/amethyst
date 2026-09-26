@@ -179,6 +179,9 @@
     <string name="post">ارسال</string>
     <string name="voice_post">پست صوتی</string>
     <string name="voice_reply">پاسخ صوتی</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">پیام خصوصی</string>
     <string name="nest_notification_broadcasting">Nest — زنده</string>
     <string name="nest_notification_channel_description">پخش صدا را هنگام باز بودن اتاق ادامه می‌دهد.</string>

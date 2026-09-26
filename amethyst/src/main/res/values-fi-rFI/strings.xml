@@ -180,6 +180,9 @@
     <string name="post">Lähetä</string>
     <string name="voice_post">Äänijulkaisu</string>
     <string name="voice_reply">Äänivastaus</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Yksityinen viesti</string>
     <string name="nest_notification_channel_description">Pitää äänen toistossa huoneen ollessa auki.</string>
     <string name="nest_notification_listening">Nest yhdistetty</string>

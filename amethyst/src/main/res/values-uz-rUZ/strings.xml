@@ -178,6 +178,9 @@
     <string name="boost">Targʻib qilish</string>
     <string name="voice_post">Ovozli post</string>
     <string name="voice_reply">Ovozli javob</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Shaxsiy Xabar</string>
     <string name="nest_notification_broadcasting">Nest — Jonli</string>
     <string name="nest_notification_channel">Nestlar</string>
