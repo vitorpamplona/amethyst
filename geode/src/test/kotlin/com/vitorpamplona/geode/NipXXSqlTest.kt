@@ -26,10 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nipXXSql.FetchCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
-import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
+import com.vitorpamplona.quartz.nipXXSql.NqlCmd
+import com.vitorpamplona.quartz.nipXXSql.NqlResultMessage
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -49,7 +47,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * Read-only SQL over a real `ws://` connection to [KtorRelay], with the
+ * NIP-FF `NQL` over a real `ws://` connection to [KtorRelay], with the
  * frames built and parsed by quartz's command/message types.
  */
 class NipXXSqlTest {
@@ -107,32 +105,24 @@ class NipXXSqlTest {
     private suspend fun next(): Message = Message.fromJson(withTimeout(10_000) { frames.receive() })
 
     @Test
-    fun hashtagCountsThenPagedRowsOverWebSocket() =
+    fun hashtagCountsThenRowsOverWebSocket() =
         runBlocking<Unit> {
-            ws.send(SqlCmd("tags", "SELECT t1, count(*) AS n FROM tags WHERE t0 = 't' GROUP BY t1 ORDER BY t1").toJson())
-            assertEquals(listOf("t1", "n"), assertIs<SqlColsMessage>(next()).columns)
-            val counts = assertIs<SqlRowsMessage>(next())
+            ws.send(NqlCmd("tags", "SELECT t1, count(*) AS n FROM tags WHERE t0 = 't' GROUP BY t1 ORDER BY t1").toJson())
+            val counts = assertIs<NqlResultMessage>(next()).result
+            assertEquals(listOf("t1", "n"), counts.columns.map { it.name })
             assertEquals(listOf(listOf("even", 4L), listOf("odd", 3L)), counts.rows)
-            assertTrue(counts.done)
+            assertEquals(false, counts.truncated)
 
-            ws.send(SqlCmd("notes", "SELECT content FROM events WHERE pubkey = ? ORDER BY created_at", params = listOf(alice.pubKey), pageSize = 4).toJson())
-            next()
-            val first = assertIs<SqlRowsMessage>(next())
-            assertEquals((0..3).map { listOf("note $it") }, first.rows)
-            assertEquals(false, first.done)
-
-            ws.send(FetchCmd("notes", 10).toJson())
-            val rest = assertIs<SqlRowsMessage>(next())
-            assertEquals((4..6).map { listOf("note $it") }, rest.rows)
-            assertTrue(rest.done)
+            ws.send(NqlCmd("notes", "SELECT content FROM events WHERE pubkey = ? ORDER BY created_at", params = listOf(alice.pubKey)).toJson())
+            assertEquals((0..6).map { listOf("note $it") }, assertIs<NqlResultMessage>(next()).result.rows)
         }
 
     @Test
     fun badQueriesAreClosedWithAReason() =
         runBlocking<Unit> {
-            ws.send(SqlCmd("bad", "SELECT * FROM event_headers").toJson())
+            ws.send(NqlCmd("bad", "SELECT * FROM event_headers").toJson())
             val closed = assertIs<ClosedMessage>(next())
             assertEquals("bad", closed.subId)
-            assertTrue(closed.message.startsWith("invalid: no such table"), closed.message)
+            assertTrue(closed.message.startsWith("invalid: no source named event_headers"), closed.message)
         }
 }

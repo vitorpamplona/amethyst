@@ -31,10 +31,8 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
-import com.vitorpamplona.quartz.nipXXSql.FetchCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlJackson
+import com.vitorpamplona.quartz.nipXXSql.NqlCmd
+import com.vitorpamplona.quartz.nipXXSql.NqlJackson
 
 class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
     val eventDeserializer = EventDeserializer()
@@ -127,22 +125,8 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     )
                 }
 
-                SqlCmd.LABEL -> {
-                    SqlJackson.readSqlCmd(jp)
-                }
-
-                FetchCmd.LABEL -> {
-                    val queryId = jp.nextTextValue()
-                    FetchCmd(
-                        queryId = queryId,
-                        maxRows = if (jp.nextToken() == JsonToken.VALUE_NUMBER_INT) jp.intValue else 0,
-                    )
-                }
-
-                SqlCloseCmd.LABEL -> {
-                    SqlCloseCmd(
-                        queryId = jp.nextTextValue(),
-                    )
+                NqlCmd.LABEL -> {
+                    NqlJackson.readCmd(jp)
                 }
 
                 else -> {

@@ -73,6 +73,8 @@ class RelayLimits(
     val createdAtLowerLimit: Long? = null,
     /** Reject events with `created_at` after this epoch-second. */
     val createdAtUpperLimit: Long? = null,
+    /** Most rows one NIP-FF `NQL` answer carries; past it the answer is marked truncated. Null: no cap. */
+    val maxNqlRows: Int? = null,
 ) {
     /** Renders these limits as a NIP-11 `limitation` object for the relay info document. */
     fun toNip11Limitation(): RelayInformationLimitation =
@@ -93,5 +95,6 @@ class RelayLimits(
             // post-2038 epoch second can't silently wrap to a negative timestamp.
             created_at_lower_limit = createdAtLowerLimit?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt(),
             created_at_upper_limit = createdAtUpperLimit?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt(),
+            max_nql_rows = maxNqlRows,
         )
 }

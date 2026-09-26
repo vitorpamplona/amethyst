@@ -197,13 +197,11 @@ class ObservableEventStore(
 
     override suspend fun liveNegentropySnapshot(maxEntries: Int) = inner.liveNegentropySnapshot(maxEntries)
 
-    override suspend fun sql(
+    override suspend fun nql(
         query: String,
         params: List<Any?>,
-        named: Map<String, Any?>,
-        onColumns: (List<String>) -> Unit,
-        onRow: (List<Any?>) -> Unit,
-    ) = inner.sql(query, params, named, onColumns, onRow)
+        maxRows: Int?,
+    ) = inner.nql(query, params, maxRows)
 
     override fun sqlBackend() = inner.sqlBackend()
 

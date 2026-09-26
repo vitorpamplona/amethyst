@@ -1,6 +1,9 @@
 # Nostr SQL profile: read-only SQL over websockets
 
-Status: **prototype, wired into the relay.** Parser, compiler and cursor are in `quartz/…/nipXXSql/`. `SQL` / `FETCH` / `SQL-CLOSE` are always on in `NostrServer` over a file-backed SQLite store (so geode too), with no settings. No NIP text yet.
+Status: **superseded** by NIP-FF (Nostr Query Language) and its engine, see
+[`2026-09-26-nql-engine.md`](2026-09-26-nql-engine.md). This document records the
+SQLite-dialect prototype it replaced; the scan specs, join-key propagation, id
+walks and native aggregates described here carried over.
 
 ## Goal
 

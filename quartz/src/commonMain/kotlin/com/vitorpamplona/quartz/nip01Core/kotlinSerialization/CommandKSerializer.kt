@@ -30,21 +30,18 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
-import com.vitorpamplona.quartz.nipXXSql.FetchCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlJsonValues
+import com.vitorpamplona.quartz.nipXXSql.NqlCmd
+import com.vitorpamplona.quartz.nipXXSql.NqlJsonValues
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -103,19 +100,10 @@ object CommandKSerializer : KSerializer<Command> {
                         add(JsonPrimitive(value.subId))
                     }
 
-                    is SqlCmd -> {
+                    is NqlCmd -> {
                         add(JsonPrimitive(value.queryId))
-                        add(JsonPrimitive(value.sql))
-                        SqlJsonValues.optionsToElement(value)?.let { add(it) }
-                    }
-
-                    is FetchCmd -> {
-                        add(JsonPrimitive(value.queryId))
-                        add(JsonPrimitive(value.maxRows))
-                    }
-
-                    is SqlCloseCmd -> {
-                        add(JsonPrimitive(value.queryId))
+                        add(JsonPrimitive(value.query))
+                        if (value.params.isNotEmpty()) add(NqlJsonValues.paramsToElement(value.params))
                     }
                 }
             }
@@ -179,23 +167,12 @@ object CommandKSerializer : KSerializer<Command> {
                 )
             }
 
-            SqlCmd.LABEL -> {
-                SqlJsonValues.sqlCmd(
+            NqlCmd.LABEL -> {
+                NqlCmd(
                     queryId = array[1].jsonPrimitive.content,
-                    sql = array[2].jsonPrimitive.content,
-                    options = if (array.size > 3) array[3] as? JsonObject else null,
+                    query = array[2].jsonPrimitive.content,
+                    params = (array.getOrNull(3) as? JsonArray)?.map { NqlJsonValues.fromElement(it) } ?: emptyList(),
                 )
-            }
-
-            FetchCmd.LABEL -> {
-                FetchCmd(
-                    queryId = array[1].jsonPrimitive.content,
-                    maxRows = array[2].jsonPrimitive.int,
-                )
-            }
-
-            SqlCloseCmd.LABEL -> {
-                SqlCloseCmd(array[1].jsonPrimitive.content)
             }
 
             else -> {

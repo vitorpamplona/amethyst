@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -77,6 +78,7 @@ class AuthGatedRelayHarness(
     private val signer: NostrSigner? = NostrSignerInternal(KeyPair()),
     attachAuthenticator: Boolean = true,
     private val signDelayMs: Long = 0,
+    limits: RelayLimits? = null,
 ) : AutoCloseable {
     private val store = EventStore(null)
 
@@ -84,6 +86,7 @@ class AuthGatedRelayHarness(
         NostrServer(
             store = store,
             policyBuilder = { FullAuthPolicy(URL) },
+            limits = limits,
         )
 
     private val builder =

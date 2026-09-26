@@ -52,11 +52,11 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * SQL / FETCH / SQL-CLOSE through a real [NostrServer] session: every
- * frame is parsed and serialized by the production JSON path, and the
- * replies are decoded back with [Message.fromJson].
+ * `NQL` (NIP-FF) through a real [NostrServer] session: every frame is parsed
+ * and serialized by the production JSON path, and the replies are decoded
+ * back with [Message.fromJson].
  */
-class SqlRelayTest {
+class NqlRelayTest {
     private val alice = NostrSignerSync()
     private val bob = NostrSignerSync()
 
@@ -81,7 +81,7 @@ class SqlRelayTest {
 
     @BeforeTest
     fun setup() {
-        dbFile = Files.createTempFile("nostr-sql-relay-", ".db")
+        dbFile = Files.createTempFile("nostr-nql-relay-", ".db")
         Files.deleteIfExists(dbFile)
         store = EventStore(dbName = dbFile.toAbsolutePath().toString(), relay = null)
         runBlocking<Unit> {
@@ -118,164 +118,110 @@ class SqlRelayTest {
         return msg.message
     }
 
-    @Test
-    fun pagesThroughAResultWithFetch() =
-        runBlocking<Unit> {
-            val c = server().client()
-            c.send("""["SQL","q1","SELECT content, created_at FROM events WHERE kind = ? ORDER BY created_at",{"params":[1],"page":5}]""")
-
-            val cols = assertIs<SqlColsMessage>(c.next())
-            assertEquals(listOf("content", "created_at"), cols.columns)
-
-            val first = assertIs<SqlRowsMessage>(c.next())
-            assertEquals("q1", first.queryId)
-            assertEquals(listOf("alice 0", 1000L), first.rows[0])
-            assertEquals(5, first.rows.size)
-            assertEquals(false, first.done)
-
-            c.send("""["FETCH","q1",5]""")
-            val second = assertIs<SqlRowsMessage>(c.next())
-            assertEquals(5, second.rows.size)
-            assertEquals(false, second.done)
-
-            c.send("""["FETCH","q1",100]""")
-            val last = assertIs<SqlRowsMessage>(c.next())
-            assertEquals(listOf(listOf("bob 0", 2000L), listOf("bob 1", 2001L), listOf("bob 2", 2002L)), last.rows)
-            assertTrue(last.done)
-
-            // Exhausted cursors are gone.
-            c.send("""["FETCH","q1",1]""")
-            c.expectClosed("q1", "error: no such cursor")
-        }
+    private suspend fun Client.answer(id: String): NqlResult {
+        val msg = assertIs<NqlResultMessage>(next())
+        assertEquals(id, msg.queryId)
+        return msg.result
+    }
 
     @Test
-    fun smallResultsFinishInOneFrame() =
+    fun answersWithTypedColumnsAndRows() =
         runBlocking<Unit> {
             val c = server().client()
-            c.send("""["SQL","agg","SELECT pubkey = :a AS is_alice, count(*) AS n FROM events GROUP BY 1 ORDER BY 1",{"params":{"a":"${alice.pubKey}"}}]""")
-            assertEquals(listOf("is_alice", "n"), assertIs<SqlColsMessage>(c.next()).columns)
-            val rows = assertIs<SqlRowsMessage>(c.next())
-            assertEquals(listOf(listOf(0L, 4L), listOf(1L, 10L)), rows.rows)
-            assertTrue(rows.done)
+            c.send("""["NQL","q1","SELECT content, created_at FROM events WHERE kind = ? ORDER BY created_at LIMIT 2",[1]]""")
+            val r = c.answer("q1")
+            assertEquals(listOf("content" to NqlType.TEXT, "created_at" to NqlType.INTEGER), r.columns.map { it.name to it.type })
+            assertEquals(listOf(listOf("alice 0", 1000L), listOf("alice 1", 1001L)), r.rows)
+            assertEquals(false, r.truncated)
             assertEquals(0, c.pending())
         }
 
     @Test
-    fun valuesKeepTheirJsonTypes() =
+    fun valuesKeepTheirTypes() =
         runBlocking<Unit> {
             val c = server().client()
-            c.send("""["SQL","v","SELECT 1, 2.5, 'x', NULL, 1e999, -1e999"]""")
-            c.next()
-            assertEquals(listOf(listOf(1L, 2.5, "x", null, "Inf", "-Inf")), assertIs<SqlRowsMessage>(c.next()).rows)
+            c.send("""["NQL","v","SELECT 1 AS i, 2.0 AS r, 'x' AS t, NULL AS n, 1 < 2 AS b, 1e308 * 10 AS big"]""")
+            c.expectClosed("v", "error:")
+            c.send("""["NQL","w","SELECT 1 AS i, 2.0 AS r, 'x' AS t, NULL AS n, 1 < 2 AS b, ? AS p",[3.0]]""")
+            val r = c.answer("w")
+            assertEquals(listOf(NqlType.INTEGER, NqlType.REAL, NqlType.TEXT, NqlType.TEXT, NqlType.BOOLEAN, NqlType.REAL), r.columns.map { it.type })
+            assertEquals(listOf(listOf(1L, 2.0, "x", null, true, 3.0)), r.rows)
+        }
+
+    @Test
+    fun groupsAndParameters() =
+        runBlocking<Unit> {
+            val c = server().client()
+            c.send("""["NQL","agg","SELECT pubkey = ? AS is_alice, count(*) AS n FROM events GROUP BY is_alice ORDER BY n",["${alice.pubKey}"]]""")
+            assertEquals(listOf(listOf(false, 4L), listOf(true, 10L)), c.answer("agg").rows)
         }
 
     @Test
     fun errorsUseNip01Prefixes() =
         runBlocking<Unit> {
             val c = server().client()
-            c.send("""["SQL","a","SELEC 1"]""")
-            c.expectClosed("a", "unsupported:")
-            c.send("""["SQL","b","SELECT * FROM event_headers"]""")
-            c.expectClosed("b", "invalid: no such table")
-            c.send("""["SQL","c","SELECT 1; DELETE FROM events"]""")
-            c.expectClosed("c", "unsupported:")
-            c.send("""["SQL","d","SELECT load_extension('x')"]""")
-            c.expectClosed("d", "unsupported: function")
-            c.send("""["SQL","e","SELECT nope FROM events"]""")
-            c.expectClosed("e", "error:")
-            c.send("""["SQL","f","SELECT ?"]""")
-            c.expectClosed("f", "invalid: no value for parameter")
+            c.send("""["NQL","a","SELEC 1"]""")
+            c.expectClosed("a", "invalid:")
+            c.send("""["NQL","b","SELECT * FROM event_headers"]""")
+            c.expectClosed("b", "invalid: no source named event_headers")
+            c.send("""["NQL","c","SELECT 1 AS a; DELETE FROM events"]""")
+            c.expectClosed("c", "invalid:")
+            c.send("""["NQL","d","SELECT load_extension('x') AS x"]""")
+            c.expectClosed("d", "invalid: no function named load_extension")
+            c.send("""["NQL","e","SELECT kind / 0 AS x FROM events"]""")
+            c.expectClosed("e", "error: division by zero")
+            c.send("""["NQL","f","SELECT ? AS x"]""")
+            c.expectClosed("f", "invalid:")
         }
 
     @Test
-    fun firstPageDefaultsToTheRelayDefaultLimit() =
+    fun theRowCapTruncatesInOrder() =
         runBlocking<Unit> {
-            val c = server(limits = RelayLimits(defaultLimit = 3)).client()
-            c.send("""["SQL","d","SELECT id FROM events"]""")
-            c.next()
-            val page = assertIs<SqlRowsMessage>(c.next())
-            assertEquals(3, page.rows.size)
-            assertEquals(false, page.done)
+            val c = server(limits = RelayLimits(maxNqlRows = 3)).client()
+            c.send("""["NQL","d","SELECT content FROM events WHERE kind = 1 ORDER BY created_at DESC"]""")
+            val r = c.answer("d")
+            assertEquals(listOf(listOf("bob 2"), listOf("bob 1"), listOf("bob 0")), r.rows)
+            assertTrue(r.truncated)
 
-            // An explicit page size wins over the default.
-            c.send("""["SQL","e","SELECT id FROM events",{"page":5}]""")
-            c.next()
-            assertEquals(5, assertIs<SqlRowsMessage>(c.next()).rows.size)
+            c.send("""["NQL","e","SELECT count(*) AS n FROM events"]""")
+            assertEquals(false, c.answer("e").truncated)
         }
 
     @Test
-    fun withoutADefaultLimitTheFirstPageHasEverything() =
+    fun withoutACapEverythingComesBack() =
         runBlocking<Unit> {
             val c = server().client()
-            c.send("""["SQL","all","SELECT id FROM events"]""")
-            c.next()
-            val page = assertIs<SqlRowsMessage>(c.next())
-            assertEquals(14, page.rows.size)
-            assertTrue(page.done)
+            c.send("""["NQL","all","SELECT id FROM events"]""")
+            val r = c.answer("all")
+            assertEquals(14, r.rows.size)
+            assertEquals(false, r.truncated)
         }
 
     @Test
-    fun sqlFollowsTheSamePolicyAsReq() =
+    fun nqlFollowsTheSamePolicyAsReq() =
         runBlocking<Unit> {
-            val c = server(policy = { FullAuthPolicy("wss://sql.test/".normalizeRelayUrl()) }).client()
+            val c = server(policy = { FullAuthPolicy("wss://nql.test/".normalizeRelayUrl()) }).client()
             assertIs<AuthMessage>(c.next())
-            c.send("""["SQL","p","SELECT 1"]""")
+            c.send("""["NQL","p","SELECT 1 AS x"]""")
             c.expectClosed("p", "auth-required:")
         }
 
     @Test
-    fun inMemoryStoresAnswerThroughPushdown() =
+    fun inMemoryStoresAnswerToo() =
         runBlocking<Unit> {
             val memory = EventStore(dbName = null, relay = null)
             memory.insert(alice.sign<Event>(5, 1, arrayOf(arrayOf("t", "x")), "m"))
             val c = server(backingStore = memory).client()
-            c.send("""["SQL","u","SELECT count(*) FROM tags WHERE t0 = 't' AND t1 = 'x'"]""")
-            assertEquals(listOf("count(*)"), assertIs<SqlColsMessage>(c.next()).columns)
-            assertEquals(listOf(listOf(1L)), assertIs<SqlRowsMessage>(c.next()).rows)
-        }
-
-    @Test
-    fun reusingAnIdReplacesTheCursor() =
-        runBlocking<Unit> {
-            val c = server().client()
-            c.send("""["SQL","x","SELECT id FROM events",{"page":1}]""")
-            c.next()
-            assertEquals(false, assertIs<SqlRowsMessage>(c.next()).done)
-
-            c.send("""["SQL","x","SELECT 42"]""")
-            c.next()
-            assertEquals(listOf(listOf(42L)), assertIs<SqlRowsMessage>(c.next()).rows)
-            c.send("""["FETCH","x",1]""")
-            c.expectClosed("x", "error: no such cursor")
-        }
-
-    @Test
-    fun closeAndDisconnectReleaseCursors() =
-        runBlocking<Unit> {
-            val c = server().client()
-            c.send("""["SQL","a","SELECT id FROM events",{"page":1}]""")
-            c.next()
-            c.next()
-            c.send("""["SQL-CLOSE","a"]""")
-            c.send("""["FETCH","a",1]""")
-            c.expectClosed("a", "error: no such cursor")
-
-            c.send("""["SQL","b","SELECT id FROM events",{"page":1}]""")
-            c.next()
-            c.next()
-            c.session.close()
-            assertEquals(0, c.pending())
+            c.send("""["NQL","u","SELECT count(*) AS n FROM tags WHERE t0 = 't' AND t1 = 'x'"]""")
+            assertEquals(listOf(listOf(1L)), c.answer("u").rows)
         }
 
     @Test
     fun framesRoundTripThroughBothSerializers() {
         val cmds =
             listOf(
-                SqlCmd("q", "SELECT ?", params = listOf(1L, 2.5, "s", true, null), pageSize = 7),
-                SqlCmd("q", "SELECT :a", named = mapOf("a" to "b")),
-                SqlCmd("q", "SELECT 1"),
-                FetchCmd("q", 50),
-                SqlCloseCmd("q"),
+                NqlCmd("q", "SELECT ? AS a", params = listOf(1L, 2.5, "s", true, null)),
+                NqlCmd("q", "SELECT 1 AS a"),
             )
         cmds.forEach { cmd ->
             val json = cmd.toJson()
@@ -285,11 +231,23 @@ class SqlRelayTest {
             assertEquals(json, viaKotlinx)
             assertEquals(json, Json.decodeFromString(CommandKSerializer, json).toJson())
         }
+        // A REAL parameter keeps a point, so the relay reads it as REAL; an INTEGER stays one.
+        val parsed = Command.fromJson("""["NQL","q","SELECT ? AS a, ? AS b, ? AS c",[2.0,2,1e3]]""") as NqlCmd
+        assertEquals(listOf<Any?>(2.0, 2L, 1000.0), parsed.params)
+        val viaKotlinx = Json.decodeFromString(CommandKSerializer, """["NQL","q","SELECT ? AS a, ? AS b, ? AS c",[2.0,2,1e3]]""") as NqlCmd
+        assertEquals(listOf<Any?>(2.0, 2L, 1000.0), viaKotlinx.params)
+
         val msgs =
             listOf(
-                SqlColsMessage("q", listOf("a", "count(*)")),
-                SqlRowsMessage("q", listOf(listOf(1L, 2.5, "x", null), listOf(0L, 0.0, "", null)), done = false),
-                SqlRowsMessage("q", emptyList(), done = true),
+                NqlResultMessage(
+                    "q",
+                    NqlResult(
+                        listOf(NqlColumn("a", NqlType.INTEGER), NqlColumn("b", NqlType.REAL), NqlColumn("c", NqlType.TEXT), NqlColumn("d", NqlType.BOOLEAN)),
+                        listOf(listOf(1L, 2.5, "x", true), listOf(null, 3.0, null, null)),
+                        truncated = true,
+                    ),
+                ),
+                NqlResultMessage("q", NqlResult(emptyList(), emptyList())),
             )
         msgs.forEach { msg ->
             val json = msg.toJson()
@@ -298,5 +256,8 @@ class SqlRelayTest {
             assertEquals(json, viaKotlinx)
             assertEquals(json, Json.decodeFromString(MessageKSerializer, json).toJson())
         }
+        // A REAL column's whole number reads back as a Double whatever the JSON spelled.
+        val r = (Message.fromJson("""["NQL","q",{"columns":[["x","REAL"]],"rows":[[3]],"truncated":false}]""") as NqlResultMessage).result
+        assertEquals(listOf(listOf<Any?>(3.0)), r.rows)
     }
 }

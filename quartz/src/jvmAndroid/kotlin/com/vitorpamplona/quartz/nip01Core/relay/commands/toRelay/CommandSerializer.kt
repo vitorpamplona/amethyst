@@ -28,10 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterSerializer
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
-import com.vitorpamplona.quartz.nipXXSql.FetchCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlJackson
+import com.vitorpamplona.quartz.nipXXSql.NqlCmd
+import com.vitorpamplona.quartz.nipXXSql.NqlJackson
 
 class CommandSerializer : StdSerializer<Command>(Command::class.java) {
     val eventSerializer = EventSerializer()
@@ -87,19 +85,10 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
                 gen.writeString(cmd.subId)
             }
 
-            is SqlCmd -> {
+            is NqlCmd -> {
                 gen.writeString(cmd.queryId)
-                gen.writeString(cmd.sql)
-                SqlJackson.writeOptions(cmd, gen)
-            }
-
-            is FetchCmd -> {
-                gen.writeString(cmd.queryId)
-                gen.writeNumber(cmd.maxRows)
-            }
-
-            is SqlCloseCmd -> {
-                gen.writeString(cmd.queryId)
+                gen.writeString(cmd.query)
+                if (cmd.params.isNotEmpty()) NqlJackson.writeParams(cmd.params, gen)
             }
 
             else -> {}

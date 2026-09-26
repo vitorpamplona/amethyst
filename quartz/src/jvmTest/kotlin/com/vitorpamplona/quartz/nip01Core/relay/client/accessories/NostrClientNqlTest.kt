@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
+import com.vitorpamplona.quartz.nipXXSql.NqlType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -30,63 +33,37 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-/**
- * [sql] against an in-process relay behind NIP-42: the client authenticates,
- * re-sends, and pulls every page with FETCH.
- */
-class NostrClientSqlTest {
+/** [nql] against an in-process relay behind NIP-42: the client authenticates and re-sends. */
+class NostrClientNqlTest {
     @Test
     fun countsBehindAuth() =
         runBlocking {
             AuthGatedRelayHarness().use { h ->
                 h.preload(12)
-                val result = h.client.sql(AuthGatedRelayHarness.URL, "SELECT count(*) AS n FROM events WHERE kind = 1")
-                assertEquals(listOf("n"), result.columns)
+                val result = h.client.nql(AuthGatedRelayHarness.URL, "SELECT count(*) AS n FROM events WHERE kind = 1")
+                assertEquals(listOf("n" to NqlType.INTEGER), result.columns.map { it.name to it.type })
                 assertEquals(listOf(listOf(12L)), result.rows)
             }
         }
 
     @Test
-    fun pagesThroughEverything() =
+    fun theRelayCapMarksTheAnswerTruncated() =
         runBlocking {
-            AuthGatedRelayHarness().use { h ->
+            AuthGatedRelayHarness(limits = RelayLimits(maxNqlRows = 5)).use { h ->
                 h.preload(12)
-                val result =
-                    h.client.sql(
-                        AuthGatedRelayHarness.URL,
-                        "SELECT content FROM events WHERE kind = ? ORDER BY created_at DESC",
-                        params = listOf(1L),
-                        pageSize = 5,
-                    )
-                assertEquals((0 until 12).map { listOf("gated-$it") }, result.rows)
-            }
-        }
-
-    @Test
-    fun streamsPageByPage() =
-        runBlocking {
-            AuthGatedRelayHarness().use { h ->
-                h.preload(7)
-                var columns = emptyList<String>()
-                val seen = ArrayList<Any?>()
-                h.client.sqlStream(
-                    AuthGatedRelayHarness.URL,
-                    "SELECT content FROM events WHERE kind = 1",
-                    pageSize = 2,
-                    onColumns = { columns = it },
-                ) { seen.add(it[0]) }
-                assertEquals(listOf("content"), columns)
-                assertEquals(7, seen.size)
+                val result = h.client.nql(AuthGatedRelayHarness.URL, "SELECT content FROM events WHERE kind = ? ORDER BY created_at DESC", params = listOf(1L))
+                assertEquals((0 until 5).map { listOf("gated-$it") }, result.rows)
+                assertTrue(result.truncated)
             }
         }
 
     /**
      * A client-wide reconnect sweep (`reconnect(onlyIfChanged = false)`, debounced 200ms) drops
-     * every socket. A slow signer keeps the query waiting on AUTH across it, so its cursor dies
-     * with the first socket every time and the query must start over on the second.
+     * every socket. A slow signer keeps the query waiting on AUTH across it, so its answer dies
+     * with the first socket every time and the query must be sent again on the second.
      */
     @Test
-    fun survivesTheSocketDroppingBeforeTheFirstRow() =
+    fun survivesTheSocketDroppingBeforeTheAnswer() =
         runBlocking {
             AuthGatedRelayHarness(signDelayMs = 1_000).use { h ->
                 h.preload(3)
@@ -95,23 +72,37 @@ class NostrClientSqlTest {
                         delay(100)
                         h.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
                     }
-                val result = h.client.sql(AuthGatedRelayHarness.URL, "SELECT count(*) FROM events", idleTimeoutMs = 10_000)
+                val result = h.client.nql(AuthGatedRelayHarness.URL, "SELECT count(*) AS n FROM events", timeoutMs = 10_000)
                 sweep.join()
                 assertEquals(listOf(listOf(3L)), result.rows)
             }
         }
 
     @Test
-    fun filtersReadOverSql() =
+    fun filtersReadOverNql() =
         runBlocking {
             AuthGatedRelayHarness().use { h ->
                 h.preload(12)
                 val filter = Filter(kinds = listOf(1), limit = 5)
-                val events = h.client.sqlQuery(AuthGatedRelayHarness.URL, filter)
+                val events = h.client.nqlQuery(AuthGatedRelayHarness.URL, filter)
                 assertEquals((0 until 5).map { "gated-$it" }, events.map { it.content })
                 assertTrue(events.all { it.verify() })
-                assertEquals(12L, h.client.sqlCount(AuthGatedRelayHarness.URL, filter))
-                assertEquals(events.map { it.id }, h.client.sqlIdsAndTimes(AuthGatedRelayHarness.URL, filter).map { it.id })
+                assertEquals(12L, h.client.nqlCount(AuthGatedRelayHarness.URL, filter))
+                assertEquals(events.map { it.id }, h.client.nqlIdsAndTimes(AuthGatedRelayHarness.URL, filter).map { it.id })
+            }
+        }
+
+    @Test
+    fun filtersPagePastTheRelayCap() =
+        runBlocking {
+            AuthGatedRelayHarness(limits = RelayLimits(maxNqlRows = 4)).use { h ->
+                h.preload(11)
+                val all = h.client.nqlQuery(AuthGatedRelayHarness.URL, Filter(kinds = listOf(1)))
+                // Preloaded a second apart, but two can share a second: newest first, ties by id.
+                assertEquals((0 until 11).map { "gated-$it" }.toSet(), all.map { it.content }.toSet())
+                assertEquals(all.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id }), all)
+                assertTrue(all.all { it.verify() })
+                assertEquals(7, h.client.nqlIdsAndTimes(AuthGatedRelayHarness.URL, Filter(kinds = listOf(1), limit = 7)).size)
             }
         }
 
@@ -119,7 +110,7 @@ class NostrClientSqlTest {
     fun refusalsSurfaceWithTheirPrefix() =
         runBlocking {
             AuthGatedRelayHarness().use { h ->
-                val e = assertFailsWith<SqlQueryException> { h.client.sql(AuthGatedRelayHarness.URL, "SELECT * FROM event_headers") }
+                val e = assertFailsWith<NqlQueryException> { h.client.nql(AuthGatedRelayHarness.URL, "SELECT * FROM event_headers") }
                 assertTrue(e.reason.startsWith("invalid:"), e.reason)
             }
         }
@@ -128,7 +119,7 @@ class NostrClientSqlTest {
     fun withoutAuthTheWallIsReported() =
         runBlocking {
             AuthGatedRelayHarness(attachAuthenticator = false).use { h ->
-                val e = assertFailsWith<SqlQueryException> { h.client.sql(AuthGatedRelayHarness.URL, "SELECT 1") }
+                val e = assertFailsWith<NqlQueryException> { h.client.nql(AuthGatedRelayHarness.URL, "SELECT 1 AS x") }
                 assertTrue(e.reason.startsWith("auth-required:"), e.reason)
             }
         }

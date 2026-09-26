@@ -21,34 +21,35 @@
 package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.EventFactory
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * NIP-01 filters spelled in the SQL profile, so a client can read a relay's
- * raw store over `SQL` with the exact semantics of `REQ` minus its per-relay
- * caps, ranking and live tail.
+ * NIP-01 filters spelled in NQL (NIP-FF), so a client can read a relay's raw
+ * store with the exact semantics of `REQ` minus its per-relay caps, ranking
+ * and live tail.
  *
- * Every query is shaped so each table reference carries its own selective
- * conditions: a filter with tags is answered off the `tags` table first
- * (name, values and the filter's kinds/authors/time mirrored onto it), never
- * as `events WHERE id IN (subquery)`, which would make a pushdown store scan
- * every event of the kind to join a handful of tag rows.
+ * Every query is shaped so each source carries its own selective conditions:
+ * a filter with tags is answered off the `tags` source first (name, values and
+ * the filter's kinds/authors/time mirrored onto it), never as
+ * `events WHERE id IN (subquery)`, which would make a store scan every event
+ * of the kind to join a handful of tag rows.
  *
- * Events come back in two steps, [ids] then [hydrate], because the profile
- * keeps tags in their own table.
+ * Results can be capped by the relay, so listings are ordered and paged: [ids]
+ * newest first, ties by id, continuing after a given row; [events] by id;
+ * [tags] by event and position. Events come back in steps, [ids], then [events] and [tags], because
+ * NQL keeps tags in their own source.
  */
 object FilterSql {
     class Query(
-        val sql: String,
+        val nql: String,
         val params: List<Any?>,
     )
 
-    /** Ids per [hydrate] query: enough to amortise a round trip, few enough for one bound statement. */
-    const val HYDRATE_CHUNK = 500
+    /** Ids per [events] / [tags] query: enough to amortise a round trip, few enough for one statement. */
+    const val HYDRATE_CHUNK = 200
 
     /** True when [filter] can't match anything and no query need be sent. */
     fun matchesNothing(filter: Filter): Boolean =
@@ -60,22 +61,27 @@ object FilterSql {
             (filter.since != null && filter.until != null && filter.since > filter.until)
 
     /**
-     * `(id, created_at)` of every event [filter] matches, newest first (ties by
-     * id), honouring its `limit`. `search` has no SQL spelling and is refused.
+     * `(id, created_at)` of the events [filter] matches, newest first, ties by
+     * id, starting after [after] (a row a previous page ended with), at most
+     * [limit]. `search` has no NQL spelling and is refused.
      */
-    fun ids(filter: Filter): Query {
+    fun ids(
+        filter: Filter,
+        after: IdAndTime? = null,
+        limit: Int? = filter.limit,
+    ): Query {
         val b = Builder()
         val sql =
             if (hasTags(filter)) {
                 // Answered off one tag condition; the rest ride as subqueries that carry the same mirrored bounds.
                 val (first, restTags, restAll) = splitFirstTag(filter)
-                val where = b.tagRow("t", first.first, first.second, filter)
-                val extra = b.otherTags(filter, restTags, restAll, "t.event_id")
-                "SELECT DISTINCT t.event_id AS id, t.created_at AS created_at FROM tags t WHERE " + (listOf(where) + extra).joinToString(" AND ") +
-                    " ORDER BY t.created_at DESC, t.event_id" + limit(filter)
+                val where = listOf(b.tagRow("t", first.first, first.second, filter)) + b.otherTags(filter, restTags, restAll, "t.event_id") + b.after("t", "event_id", after)
+                "SELECT DISTINCT t.event_id AS id, t.created_at AS created_at FROM tags AS t WHERE " + where.joinToString(" AND ") +
+                    " ORDER BY created_at DESC, id" + limit(limit)
             } else {
-                "SELECT e.id AS id, e.created_at AS created_at FROM events e" + b.eventWhere(filter) +
-                    " ORDER BY e.created_at DESC, e.id" + limit(filter)
+                val where = b.common("e", "id", filter) + b.after("e", "id", after)
+                "SELECT e.id AS id, e.created_at AS created_at FROM events AS e" + (if (where.isEmpty()) "" else " WHERE " + where.joinToString(" AND ")) +
+                    " ORDER BY created_at DESC, id" + limit(limit)
             }
         return Query(sql, b.params)
     }
@@ -86,87 +92,110 @@ object FilterSql {
         val sql =
             if (hasTags(filter)) {
                 val (first, restTags, restAll) = splitFirstTag(filter)
-                val where = b.tagRow("t", first.first, first.second, filter)
-                val extra = b.otherTags(filter, restTags, restAll, "t.event_id")
-                "SELECT count(DISTINCT t.event_id) FROM tags t WHERE " + (listOf(where) + extra).joinToString(" AND ")
+                val where = listOf(b.tagRow("t", first.first, first.second, filter)) + b.otherTags(filter, restTags, restAll, "t.event_id")
+                "SELECT count(DISTINCT t.event_id) AS n FROM tags AS t WHERE " + where.joinToString(" AND ")
             } else {
-                "SELECT count(*) FROM events e" + b.eventWhere(filter)
+                val where = b.common("e", "id", filter)
+                "SELECT count(*) AS n FROM events AS e" + if (where.isEmpty()) "" else " WHERE " + where.joinToString(" AND ")
             }
         return Query(sql, b.params)
     }
 
     /**
-     * Full events for up to [HYDRATE_CHUNK] [ids], one row per tag (or one
-     * tagless row), for [collect]. Both references carry the id list so a
-     * pushdown store answers each with an id lookup.
+     * The events' own fields for up to [HYDRATE_CHUNK] [ids], by id, starting
+     * after [after] (a previous page's last id), for [Collector.addEvent].
      */
-    fun hydrate(ids: Collection<String>): Query {
-        require(ids.size <= HYDRATE_CHUNK) { "at most $HYDRATE_CHUNK ids per hydrate" }
-        val marks = ids.joinToString(",") { "?" }
-        val sql =
-            "SELECT e.id, e.pubkey, e.created_at, e.kind, e.content, e.sig, t.idx, t.t0, t.t1, t.t2, t.t3, t.t4, t.rest " +
-                "FROM events e LEFT JOIN tags t ON t.event_id = e.id AND t.event_id IN ($marks) " +
-                "WHERE e.id IN ($marks) ORDER BY e.created_at DESC, e.id, t.idx"
-        return Query(sql, ids.toList() + ids.toList())
+    fun events(
+        ids: Collection<String>,
+        after: String? = null,
+    ): Query {
+        require(ids.size <= HYDRATE_CHUNK) { "at most $HYDRATE_CHUNK ids per query" }
+        val params = ArrayList<Any?>(ids)
+        val page =
+            if (after == null) {
+                ""
+            } else {
+                params.add(after)
+                " AND id > ?"
+            }
+        return Query("SELECT id, pubkey, created_at, kind, content, sig FROM events WHERE id IN (${marks(ids)})$page ORDER BY id", params)
     }
 
-    /** Rebuilds [hydrate]'s rows into events, in row order. */
+    /**
+     * The tag rows of up to [HYDRATE_CHUNK] [ids], by event and position,
+     * starting after [after] (`event_id`, `idx` of a previous page's last row),
+     * for [Collector.addTag].
+     */
+    fun tags(
+        ids: Collection<String>,
+        after: Pair<String, Long>? = null,
+    ): Query {
+        require(ids.size <= HYDRATE_CHUNK) { "at most $HYDRATE_CHUNK ids per query" }
+        val params = ArrayList<Any?>(ids)
+        val page =
+            if (after == null) {
+                ""
+            } else {
+                params.addAll(listOf(after.first, after.first, after.second))
+                " AND (event_id > ? OR (event_id = ? AND idx > ?))"
+            }
+        return Query("SELECT event_id, idx, t0, t1, t2, t3, t4 FROM tags WHERE event_id IN (${marks(ids)})$page ORDER BY event_id, idx", params)
+    }
+
+    /**
+     * Rebuilds events from [events] and [tags] rows. NQL shows a tag's first
+     * five elements only, so an event whose rebuilt id doesn't match (a longer
+     * or empty tag) is reported in [Result.incomplete] for the caller to fetch
+     * whole another way.
+     */
     class Collector {
-        private val out = ArrayList<Event>()
-        private var id: String? = null
-        private var head: List<Any?>? = null
-        private val tags = ArrayList<Array<String>>()
+        class Result(
+            val events: List<Event>,
+            val incomplete: List<String>,
+        )
 
-        fun add(row: List<Any?>) {
-            val rowId = row[0] as String
-            if (rowId != id) {
-                flush()
-                id = rowId
-                head = row
-            }
-            if (row[7] != null) tags.add(tag(row))
+        private val heads = LinkedHashMap<String, List<Any?>>()
+        private val tags = HashMap<String, MutableList<Pair<Long, Array<String>>>>()
+
+        fun addEvent(row: List<Any?>) {
+            heads[row[0] as String] = row
         }
 
-        fun finish(): List<Event> {
-            flush()
-            return out
+        fun addTag(row: List<Any?>) {
+            val tag = ArrayList<String>(5)
+            for (i in 2..6) tag.add(row[i] as? String ?: break)
+            tags.getOrPut(row[0] as String) { ArrayList() }.add((row[1] as Number).toLong() to tag.toTypedArray())
         }
 
-        private fun flush() {
-            val h = head ?: return
-            out.add(
-                EventFactory.create(
-                    id = h[0] as String,
-                    pubKey = h[1] as String,
-                    createdAt = (h[2] as Number).toLong(),
-                    kind = (h[3] as Number).toInt(),
-                    tags = tags.toTypedArray(),
-                    content = h[4] as String,
-                    sig = h[5] as String,
-                ),
-            )
-            tags.clear()
-            head = null
-        }
-
-        /** `[t0, t1, t2, t3, t4, ...rest]`, stopping at the first absent position. */
-        private fun tag(row: List<Any?>): Array<String> {
-            val t = ArrayList<String>(5)
-            t.add(row[7] as String)
-            for (i in 8..11) {
-                val v = row[i] ?: return t.toTypedArray()
-                t.add(v.toString())
+        fun finish(): Result {
+            val out = ArrayList<Event>()
+            val incomplete = ArrayList<String>()
+            for ((id, h) in heads) {
+                val pubKey = h[1] as String
+                val createdAt = (h[2] as Number).toLong()
+                val kind = (h[3] as Number).toInt()
+                val content = h[4] as String
+                val eventTags =
+                    tags[id]
+                        .orEmpty()
+                        .sortedBy { it.first }
+                        .map { it.second }
+                        .toTypedArray()
+                if (EventHasher.hashId(pubKey, createdAt, kind, eventTags, content) == id) {
+                    out.add(EventFactory.create(id, pubKey, createdAt, kind, eventTags, content, h[5] as String))
+                } else {
+                    incomplete.add(id)
+                }
             }
-            (row[12] as? String)?.let { rest ->
-                (Json.parseToJsonElement(rest) as JsonArray).forEach { t.add((it as JsonPrimitive).content) }
-            }
-            return t.toTypedArray()
+            return Result(out, incomplete)
         }
     }
+
+    private fun marks(values: Collection<*>) = values.joinToString(",") { "?" }
 
     private fun hasTags(filter: Filter) = !filter.tags.isNullOrEmpty() || !filter.tagsAll.isNullOrEmpty()
 
-    private fun limit(filter: Filter) = filter.limit?.let { " LIMIT $it" } ?: ""
+    private fun limit(limit: Int?) = limit?.let { " LIMIT ${maxOf(it, 0)}" } ?: ""
 
     /** The tag condition the query is driven by, and what's left for subqueries. */
     private fun splitFirstTag(filter: Filter): Triple<Pair<String, List<String>>, Map<String, List<String>>, List<Pair<String, String>>> {
@@ -188,13 +217,13 @@ object FilterSql {
             return values.joinToString(",") { "?" }
         }
 
-        /** The filter's own columns on alias [a]; `id`/`event_id` picked by table. */
+        /** The filter's own columns on alias [a]; `id`/`event_id` picked by source. */
         fun common(
             a: String,
             idColumn: String,
             filter: Filter,
         ): List<String> {
-            if (filter.search != null) throw SqlException(SqlException.UNSUPPORTED, "a filter's search has no SQL spelling")
+            if (filter.search != null) throw SqlException.unsupported("a filter's search has no NQL spelling")
             val c = ArrayList<String>()
             filter.ids?.let { c += "$a.$idColumn IN (${marks(it)})" }
             filter.authors?.let { c += "$a.pubkey IN (${marks(it)})" }
@@ -210,9 +239,15 @@ object FilterSql {
             return c
         }
 
-        fun eventWhere(filter: Filter): String {
-            val c = common("e", "id", filter)
-            return if (c.isEmpty()) "" else " WHERE " + c.joinToString(" AND ")
+        /** Rows after [after] in newest-first, then-id order. */
+        fun after(
+            a: String,
+            idColumn: String,
+            after: IdAndTime?,
+        ): List<String> {
+            if (after == null) return emptyList()
+            params.addAll(listOf(after.createdAt, after.createdAt, after.id))
+            return listOf("($a.created_at < ? OR ($a.created_at = ? AND $a.$idColumn > ?))")
         }
 
         fun tagRow(
@@ -235,7 +270,7 @@ object FilterSql {
             val c = ArrayList<String>()
             val subqueries = tags.map { (name, values) -> name to values } + all.map { (name, value) -> name to listOf(value) }
             subqueries.forEachIndexed { i, (name, values) ->
-                c += "$outer IN (SELECT x$i.event_id FROM tags x$i WHERE ${tagRow("x$i", name, values, filter)})"
+                c += "$outer IN (SELECT x$i.event_id FROM tags AS x$i WHERE ${tagRow("x$i", name, values, filter)})"
             }
             return c
         }

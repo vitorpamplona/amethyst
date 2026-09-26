@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipXXSql
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
@@ -33,9 +34,9 @@ import kotlin.test.assertTrue
 
 /**
  * [FilterSql] must answer every filter exactly as the store's own `query` /
- * `count` does, both run directly on SQLite and through [SqlPushdown] with a
- * backend that only answers filters (the shape a Vespa-like store has), and
- * the rebuilt events must be byte-identical to the stored ones.
+ * `count` does, over the store's backend and over one that only answers
+ * filters (the shape a Vespa-like store has), paging past a small row cap,
+ * and the rebuilt events must be byte-identical to the stored ones.
  */
 class FilterSqlTest {
     private val store = EventStore(dbName = null, relay = null)
@@ -97,22 +98,55 @@ class FilterSqlTest {
         )
     }
 
-    private fun sqlite(q: FilterSql.Query): List<List<Any?>> {
-        val out = ArrayList<List<Any?>>()
-        runBlocking { store.sql(q.sql, q.params) { out.add(it) } }
-        return out
-    }
+    private fun sqlite(
+        q: FilterSql.Query,
+        maxRows: Int? = null,
+    ): NqlResult = runBlocking { store.nql(q.nql, q.params, maxRows) }
 
-    private fun pushdown(q: FilterSql.Query): List<List<Any?>> = runBlocking { SqlPushdown.open(q.sql, q.params, emptyMap(), filterOnly).use { it.fetch(100_000) } }
+    private fun pushdown(
+        q: FilterSql.Query,
+        maxRows: Int? = null,
+    ): NqlResult = runBlocking { Nql.run(q.nql, q.params, filterOnly, maxRows) }
 
+    /** Every event [filter] matches, paging past a [cap] rows per answer as a client does; how many came whole from elsewhere. */
     private fun events(
         filter: Filter,
-        run: (FilterSql.Query) -> List<List<Any?>>,
-    ): List<Event> {
-        val ids = run(FilterSql.ids(filter)).map { it[0] as String }
-        val collector = FilterSql.Collector()
-        ids.chunked(FilterSql.HYDRATE_CHUNK).forEach { chunk -> run(FilterSql.hydrate(chunk)).forEach(collector::add) }
-        return collector.finish()
+        run: (FilterSql.Query, Int?) -> NqlResult,
+        cap: Int = 7,
+    ): Pair<List<Event>, Int> {
+        val ids = ArrayList<IdAndTime>()
+        while (true) {
+            val remaining = filter.limit?.let { it - ids.size }
+            if (remaining != null && remaining <= 0) break
+            val page = run(FilterSql.ids(filter, ids.lastOrNull(), remaining), cap)
+            page.rows.forEach { ids.add(IdAndTime(it[1] as Long, it[0] as String)) }
+            if (!page.truncated) break
+        }
+        val out = ArrayList<Event>()
+        var fetchedWhole = 0
+        for (chunk in ids.map { it.id }.chunked(FilterSql.HYDRATE_CHUNK)) {
+            val collector = FilterSql.Collector()
+            var lastId: String? = null
+            while (true) {
+                val page = run(FilterSql.events(chunk, lastId), cap)
+                page.rows.forEach(collector::addEvent)
+                if (!page.truncated) break
+                lastId = page.rows.last()[0] as String
+            }
+            var after: Pair<String, Long>? = null
+            while (true) {
+                val page = run(FilterSql.tags(chunk, after), cap)
+                page.rows.forEach(collector::addTag)
+                if (!page.truncated) break
+                after = page.rows.last()[0] as String to page.rows.last()[1] as Long
+            }
+            val result = collector.finish()
+            val whole = runBlocking { store.query<Event>(Filter(ids = result.incomplete)) }.associateBy { it.id }
+            fetchedWhole += whole.size
+            val byId = result.events.associateBy { it.id }
+            chunk.forEach { id -> (byId[id] ?: whole[id])?.let(out::add) }
+        }
+        return out to fetchedWhole
     }
 
     private fun Event.wire() = toJson()
@@ -127,10 +161,10 @@ class FilterSqlTest {
             if (expected.isNotEmpty()) nonEmpty++
             val expectedCount = runBlocking { store.count(f.copy(limit = null)) }.toLong()
 
-            assertEquals(expected, events(f, ::sqlite).map { it.wire() }, "sqlite: ${f.toJson()}")
-            assertEquals(expected, events(f, ::pushdown).map { it.wire() }, "pushdown: ${f.toJson()}")
-            assertEquals(expectedCount, sqlite(FilterSql.count(f)).single()[0], "count: ${f.toJson()}")
-            assertEquals(expectedCount, pushdown(FilterSql.count(f)).single()[0], "pushdown count: ${f.toJson()}")
+            assertEquals(expected, events(f, ::sqlite).first.map { it.wire() }, "sqlite: ${f.toJson()}")
+            assertEquals(expected, events(f, ::pushdown).first.map { it.wire() }, "pushdown: ${f.toJson()}")
+            assertEquals(expectedCount, sqlite(FilterSql.count(f)).rows.single()[0], "count: ${f.toJson()}")
+            assertEquals(expectedCount, pushdown(FilterSql.count(f)).rows.single()[0], "pushdown count: ${f.toJson()}")
         }
         assertTrue(nonEmpty > 100, "the generator should mostly hit something: $nonEmpty")
     }
@@ -138,15 +172,17 @@ class FilterSqlTest {
     @Test
     fun rebuiltEventsKeepEveryTagPosition() {
         val all = runBlocking { store.query<Event>(Filter()) }.sortedByDescending { it.createdAt }
-        val rebuilt = events(Filter(), ::sqlite)
+        val (rebuilt, fetchedWhole) = events(Filter(), ::sqlite)
         assertEquals(all.map { it.wire() }, rebuilt.map { it.wire() })
-        assertTrue(rebuilt.any { e -> e.tags.any { it.size == 7 } }, "a tag past t4 should round-trip through rest")
+        // NQL shows five elements of a tag: events with a longer one are caught by their id and fetched whole.
+        assertTrue(rebuilt.any { e -> e.tags.any { it.size == 7 } }, "a tag past t4 should round-trip")
+        assertEquals(all.count { e -> e.tags.any { it.size > 5 } }, fetchedWhole)
         assertTrue(rebuilt.any { e -> e.tags.any { it.size == 1 } }, "a name-only tag should round-trip")
     }
 
     @Test
     fun tagFiltersAreDrivenOffTheTagsTable() {
         val q = FilterSql.ids(Filter(kinds = listOf(1), tags = mapOf("t" to listOf("a"))))
-        assertTrue(q.sql.startsWith("SELECT DISTINCT t.event_id"), q.sql)
+        assertTrue(q.nql.startsWith("SELECT DISTINCT t.event_id"), q.nql)
     }
 }

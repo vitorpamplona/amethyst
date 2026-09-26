@@ -20,35 +20,37 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+
 /**
- * An NQL query the relay does not answer. [prefix] is the NIP-01
- * machine-readable prefix a relay puts in front of the CLOSED reason:
- * `invalid` for a query that breaks NIP-FF, `unsupported` for a valid one
- * the relay declines for its cost, `error` for a failed evaluation.
- * [position] is the 0-based offset in the query text, or -1 when the error
- * is not tied to one spot.
+ * Runs a query: `["NQL", <queryId>, <query>, <params>?]` (NIP-FF). `params`
+ * holds one value per `?`, in order. The relay answers [NqlResultMessage], or
+ * `CLOSED` with an `invalid:` / `auth-required:` / `restricted:` /
+ * `unsupported:` / `error:` reason.
  */
-class SqlException(
-    val prefix: String,
-    val detail: String,
-    val position: Int = -1,
-) : Exception(if (position >= 0) "$prefix: $detail at offset $position" else "$prefix: $detail") {
+class NqlCmd(
+    val queryId: String,
+    val query: String,
+    val params: List<Any?> = emptyList(),
+) : Command {
+    override fun label() = LABEL
+
+    override fun isValid() = queryId.isNotEmpty()
+
     companion object {
-        const val INVALID = "invalid"
-        const val UNSUPPORTED = "unsupported"
-        const val ERROR = "error"
+        const val LABEL = "NQL"
+    }
+}
 
-        fun invalid(
-            detail: String,
-            position: Int = -1,
-        ) = SqlException(INVALID, detail, position)
+/** The answer: `["NQL", <queryId>, {"columns": [[name, type], …], "rows": [[…], …], "truncated": bool}]`. */
+class NqlResultMessage(
+    val queryId: String,
+    val result: NqlResult,
+) : Message {
+    override fun label() = LABEL
 
-        fun unsupported(
-            detail: String,
-            position: Int = -1,
-        ) = SqlException(UNSUPPORTED, detail, position)
-
-        /** Evaluation failed: overflow, division by zero, a domain error, a subquery with too many rows. */
-        fun error(detail: String) = SqlException(ERROR, detail)
+    companion object {
+        const val LABEL = "NQL"
     }
 }

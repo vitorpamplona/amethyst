@@ -114,6 +114,8 @@ data class Nip11RelayInformation(
         val restricted_writes: Boolean? = null,
         val created_at_lower_limit: Int? = null,
         val created_at_upper_limit: Int? = null,
+        /** NIP-FF: the most rows the relay sends for one `NQL` query. */
+        val max_nql_rows: Int? = null,
     )
 
     @Stable

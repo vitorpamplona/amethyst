@@ -1,41 +1,38 @@
 {
-  "authors": [
-    "alice",
-    "bob",
-    "carol",
-    "dave",
-    "zapper"
-  ],
-  "corpus": [
+  "nip": "FF",
+  "events": [
     {
-      "ref": "a-profile",
-      "author": "alice",
-      "kind": 0,
+      "id": "6c5817e5f36edafe75ad32c74e96aceb7a60c44594786b7f25de721ada401d1b",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700000000,
+      "kind": 0,
       "tags": [],
-      "content": "{\"name\":\"alice\"}"
+      "content": "{\"name\":\"alice\"}",
+      "sig": "9a531180aff3b0f936ec30a2c2e82288edca28b346dbc9cc567df12e58ccdba2dddcf841b103cb23b7fe0fa450732e5f0d79f139a6397a474f6c20f6ae91030d"
     },
     {
-      "ref": "b-profile",
-      "author": "bob",
-      "kind": 0,
+      "id": "0967710cdc5e5748e98ae2faa5842e2401c655343da47b3c9d832db4ff6363e6",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700000001,
-      "tags": [],
-      "content": "{\"name\":\"Bob\"}"
-    },
-    {
-      "ref": "c-profile",
-      "author": "carol",
       "kind": 0,
-      "created_at": 1700000002,
       "tags": [],
-      "content": "{\"name\":\"carol é\"}"
+      "content": "{\"name\":\"Bob\"}",
+      "sig": "fe467870096711832a6707b18c358da1c80c336ea7bc34a1689631c4036734361375dfeb44d57909d7ca3f9d13db7b1f830a431bfac28c5d0af50c1485dc46a3"
     },
     {
-      "ref": "a-hello",
-      "author": "alice",
-      "kind": 1,
+      "id": "b8445199cf0c15b9ccd13dc5c2473f52ea3ead2d5baa2986ddf0fcf08af0f1c3",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+      "created_at": 1700000002,
+      "kind": 0,
+      "tags": [],
+      "content": "{\"name\":\"carol é\"}",
+      "sig": "1ee25e66da8ea9d78a7b60536973d09c0613217506d2ba0063f3e58023125427d3c65d00d6105f44c83416ab44e816ca820142d6713b4172f38583f5e5fffea2"
+    },
+    {
+      "id": "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700000100,
+      "kind": 1,
       "tags": [
         [
           "t",
@@ -46,138 +43,147 @@
           "intro"
         ]
       ],
-      "content": "Hello Nostr"
+      "content": "Hello Nostr",
+      "sig": "0df97da63cc64acec60a34260329db033a349687cda882011a22b7defb70febaa008cdfa49762073b456654cb9c8f48a01cdab2b7d38f4ef6b03387697076f2e"
     },
     {
-      "ref": "a-sale",
-      "author": "alice",
-      "kind": 1,
+      "id": "8cf111b359e3e1c827c5ca43d568005694651fe99b1ce665362822d560658554",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700000200,
+      "kind": 1,
       "tags": [
         [
           "t",
           "nostr"
         ]
       ],
-      "content": "50% off_sale"
+      "content": "50% off_sale",
+      "sig": "9e1efec5a5cd7a1d01d4dff09d538c364ad307d0fb6d6a5f0985d87789ddf2949c2b6ac6a4b5b2bb0075211ec82579d4e69fef4f04408e7e3c4b2b2d3c6fc932"
     },
     {
-      "ref": "b-cafe",
-      "author": "bob",
-      "kind": 1,
+      "id": "e3a91366a6b50b1ad319c51694131eda97c8ecbadd5fbd0784ca6cd675a01590",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700000300,
+      "kind": 1,
       "tags": [
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ],
         [
           "t",
           "coffee"
         ]
       ],
-      "content": "café ☕"
+      "content": "café ☕",
+      "sig": "74649db503d7c509b1822031cd81d29185448330564160f9af3ee8ae4c73f4e89248adfeab7eaddcabd06d2592fce0bebe2ba5ee0d7e9ef6920217db3fa376de"
     },
     {
-      "ref": "c-emoji",
-      "author": "carol",
-      "kind": 1,
+      "id": "eb0e86c66cc433aff65be29a817c0370b5b6ac233f0086fe8cd9a6570e5022f6",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
       "created_at": 1700000400,
+      "kind": 1,
       "tags": [
         [
           "e",
-          "{id:a-hello}",
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a",
           "wss://r.example",
           "root"
         ],
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": "😀 emoji"
+      "content": "😀 emoji",
+      "sig": "c1272197fa721544c18c90ff80864f31bd6807ae7f15c068ffdcc979b60752f5ed49028a7df76c6bb61117f2fb42262bca408635a3b5719f6e767e5010db6f76"
     },
     {
-      "ref": "d-plain",
-      "author": "dave",
-      "kind": 1,
+      "id": "59088e169db3e1b17a33a98b1a0deaa0cb38e831b2fe5f8ab66d827c5ee24b64",
+      "pubkey": "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13",
       "created_at": 1700000500,
+      "kind": 1,
       "tags": [],
-      "content": "no tags"
+      "content": "no tags",
+      "sig": "cc99f19ac19949ff67dc7f2f726504c341dfab04722f40ca8e7c54c1eefbddbf7804567fa30cb7ae16e7d90b36b5d364f0c092e651fac80cdce261cdae77ac80"
     },
     {
-      "ref": "b-like",
-      "author": "bob",
-      "kind": 7,
+      "id": "a18f0c23eac8cc868a1f7f7d479734390f9feec3910e0fd129c97caf31a1129b",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700000600,
+      "kind": 7,
       "tags": [
         [
           "e",
-          "{id:a-hello}"
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a"
         ],
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": "+"
+      "content": "+",
+      "sig": "b4313c8ad3db3acf2ec922866a29c0d3978eb1dd6c1e091817a491257d7cb69f653b8660700aa73a2cdd73f9a5363e692883d526fe9471b296ee296780f59220"
     },
     {
-      "ref": "c-like",
-      "author": "carol",
-      "kind": 7,
+      "id": "379f8bd6865a9f4e0fc71c95098129d09904172e1d533787bb69a2e04ba258c0",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
       "created_at": 1700000601,
+      "kind": 7,
       "tags": [
         [
           "e",
-          "{id:a-hello}"
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a"
         ],
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": "+"
+      "content": "+",
+      "sig": "420dd373fd2699103f9d2777e4a6f3c93dfe058a887899d0bd74c4105977c01708960d18e41ba22b461e8976b7d97845c01a711566b365a1405ac94b8b68f2a2"
     },
     {
-      "ref": "d-dislike",
-      "author": "dave",
-      "kind": 7,
+      "id": "ea0eec15311e572def4b543ef78a4784de4ae1d268a73869fb73efc636da9c34",
+      "pubkey": "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13",
       "created_at": 1700000602,
-      "tags": [
-        [
-          "e",
-          "{id:a-sale}"
-        ],
-        [
-          "p",
-          "{pubkey:alice}"
-        ]
-      ],
-      "content": "-"
-    },
-    {
-      "ref": "a-shaka",
-      "author": "alice",
       "kind": 7,
-      "created_at": 1700000603,
       "tags": [
         [
           "e",
-          "{id:b-cafe}"
+          "8cf111b359e3e1c827c5ca43d568005694651fe99b1ce665362822d560658554"
         ],
         [
           "p",
-          "{pubkey:bob}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": "🤙"
+      "content": "-",
+      "sig": "f71ff0a0e34c795cf55091e1043d2c0889026a7d434bf8402d0dba29e00e41efa3432802b70a226b5e4016d2e9048d6a27bef9e58c06abd5be526fbd27a42990"
     },
     {
-      "ref": "z-1",
-      "author": "zapper",
-      "kind": 9735,
+      "id": "ae666ca03bf82c1345ed92761b1362ea87c48a03cef9576f981c47681eab5f0b",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700000603,
+      "kind": 7,
+      "tags": [
+        [
+          "e",
+          "e3a91366a6b50b1ad319c51694131eda97c8ecbadd5fbd0784ca6cd675a01590"
+        ],
+        [
+          "p",
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
+        ]
+      ],
+      "content": "🤙",
+      "sig": "6ce884c2b2c8bcc840a114dfd3e51a2a06be6dc6faba4087c35574f153cf2bd752d326fc915be486bf6da841492611d57da4c0da22d7b0cf9034b273dd999553"
+    },
+    {
+      "id": "fc08bec9e0bdb46bdff7843c0bdcf9f1a9fdbcdc518ea97c1cceae2ba0f12ec8",
+      "pubkey": "2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4",
       "created_at": 1700000700,
+      "kind": 9735,
       "tags": [
         [
           "amount",
@@ -185,20 +191,21 @@
         ],
         [
           "e",
-          "{id:a-hello}"
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a"
         ],
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "c066f60ec5e0004ea9dd23c052fac834e684616f1ea294d8b1bee78a8dba8f61496cde4ce93a1ed35dd7f25e3ceb7ee7b1700cf09b0d9ce7907206c0c06b28c0"
     },
     {
-      "ref": "z-2",
-      "author": "zapper",
-      "kind": 9735,
+      "id": "84ce81c0da35531edb9640da5c380c3b3f6a2223fa4e5ab95a53ff90f2a6a0dc",
+      "pubkey": "2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4",
       "created_at": 1700000701,
+      "kind": 9735,
       "tags": [
         [
           "amount",
@@ -206,20 +213,21 @@
         ],
         [
           "e",
-          "{id:a-hello}"
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a"
         ],
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "e28e65c32fa7b98fc6bf80a62c5ced8914d752fa401f8a87a73ec5406259e78cea31f9c570cd4de3de0f0a247bcb071b0a9eebc7b27cca02474f5562b47d1fe6"
     },
     {
-      "ref": "z-3",
-      "author": "zapper",
-      "kind": 9735,
+      "id": "795cd017c27c26e2b2394a3de162afb116c10c71b04351900a95880aede3f986",
+      "pubkey": "2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4",
       "created_at": 1700000702,
+      "kind": 9735,
       "tags": [
         [
           "amount",
@@ -227,20 +235,21 @@
         ],
         [
           "e",
-          "{id:b-cafe}"
+          "e3a91366a6b50b1ad319c51694131eda97c8ecbadd5fbd0784ca6cd675a01590"
         ],
         [
           "p",
-          "{pubkey:bob}"
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "9c88234e893bcda758ae27b1d0164d8942db707f8a81e07690840b544078146b8520e90f7e23f40f77a975e77cbb7761bbb0c73332dac73cbbe5693dede95a34"
     },
     {
-      "ref": "z-4",
-      "author": "zapper",
-      "kind": 9735,
+      "id": "f89c0f13471a57f68bc16421dc9a9b7d573b54abbd48224026e43e83b9b27f72",
+      "pubkey": "2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4",
       "created_at": 1700000703,
+      "kind": 9735,
       "tags": [
         [
           "amount",
@@ -248,20 +257,21 @@
         ],
         [
           "e",
-          "{id:c-emoji}"
+          "eb0e86c66cc433aff65be29a817c0370b5b6ac233f0086fe8cd9a6570e5022f6"
         ],
         [
           "p",
-          "{pubkey:carol}"
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "01ee17041c915ac44c560c422d6c63c282f9386cd5225a3e1492bd47b05137b524934eca21b006fcd6310a36db74dd84c63de5df65e3279d47037bdd5883a504"
     },
     {
-      "ref": "a-relays",
-      "author": "alice",
-      "kind": 10002,
+      "id": "5e3bf33c16696592f5ec89c6194aacd0367f120ddfa52aea4734b29ecbef33c6",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700000800,
+      "kind": 10002,
       "tags": [
         [
           "r",
@@ -278,13 +288,14 @@
           "read"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "278aa66cb36f87dd2e3062bce34664fb4e376bcd9a1f5b89537bf331a9306a0b6ef27cc5f98acf5484a36d0710a1155055c16c4ef154ab05899e30bfe302ab5d"
     },
     {
-      "ref": "b-relays",
-      "author": "bob",
-      "kind": 10002,
+      "id": "0f37a7c8f8d24a053ac7098de1bc4192704af7082577734726863548e0f06dd1",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700000801,
+      "kind": 10002,
       "tags": [
         [
           "r",
@@ -296,43 +307,46 @@
           "wss://d.example"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "8ed27d33f982216e08f3a667b123433754caa14988a421e8e74090d5d975d8ed29dd072b1b4c9d9e508f24b37d4e99213105ece5e1826e4b218e55d99f8a91e3"
     },
     {
-      "ref": "a-follows",
-      "author": "alice",
-      "kind": 3,
+      "id": "e1222fdf296a4b0d934eb5013e7d690c5eb1a4e5e45e9869da240d2bd085e034",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700000900,
+      "kind": 3,
       "tags": [
         [
           "p",
-          "{pubkey:bob}"
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
         ],
         [
           "p",
-          "{pubkey:carol}"
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "1cdc8acf95fe9cf303a4e24c81ae18ce77a2789240c3aff1e5cbc480665944ffd4c286edd15ebb5f484a5a834cf17546c700bee5440228870398798fbfedacd3"
     },
     {
-      "ref": "b-follows",
-      "author": "bob",
-      "kind": 3,
+      "id": "6f0a5a9917a81e639891b24bdfce8e88b406885c052d7565433513fac0ba5a19",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700000901,
+      "kind": 3,
       "tags": [
         [
           "p",
-          "{pubkey:alice}"
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
         ]
       ],
-      "content": ""
+      "content": "",
+      "sig": "cbc7f6c3ea8d3139be25351fd8706f862a6be5d8ff59ba4a246138704a08aec0691ca0920c28133911b128a06fd740c15fe7da51ba23e8a8bf62aa45198c3c99"
     },
     {
-      "ref": "a-post1",
-      "author": "alice",
-      "kind": 30023,
+      "id": "bc4f510fc2b31ec52d0a6dbc79b6b39ab28a2d3a8edcd9ed0e1c36ece95cfdab",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700001000,
+      "kind": 30023,
       "tags": [
         [
           "d",
@@ -347,13 +361,14 @@
           "nostr"
         ]
       ],
-      "content": "Long form one"
+      "content": "Long form one",
+      "sig": "2c0e8cdd1a42ff5e01bbb08df6407a46c01d1c253b3bfa357960a590757c8bc9494cad717ecfb3cb715408a0875aaee32113161fe8ff47ca966efac940f2cb4a"
     },
     {
-      "ref": "a-post2",
-      "author": "alice",
-      "kind": 30023,
+      "id": "e48916c882a83adceda7009c1fd73eab1406c3777b5584fd10525761636efc92",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
       "created_at": 1700001001,
+      "kind": 30023,
       "tags": [
         [
           "d",
@@ -364,13 +379,14 @@
           "Second"
         ]
       ],
-      "content": "Long form two"
+      "content": "Long form two",
+      "sig": "6257d9bda2c64e47dfcbbe6d53a5e201c935de7fe05f4e274376a88cdb5f85fbc67a0f6e64f90d014d4f773cb27d937702b16aa6e05af9ac44bb747a23652e68"
     },
     {
-      "ref": "d-edge",
-      "author": "dave",
-      "kind": 1,
+      "id": "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a",
+      "pubkey": "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13",
       "created_at": 1700001100,
+      "kind": 1,
       "tags": [
         [
           "x"
@@ -393,43 +409,46 @@
           ""
         ]
       ],
-      "content": "edge"
+      "content": "edge",
+      "sig": "588415dbc74d90c1175812f4962cf4ca218fcf2333ffec3bf3ae1a46ef34b7cbb411c3782d0f4b0dfa6e7a786bef875c1e7bd65c7c50845c932d74aba29d6caa"
     },
     {
-      "ref": "b-tie",
-      "author": "bob",
-      "kind": 1,
+      "id": "dc5d5432be1bf7cb20fa72cd00a41aef8192a0b3d3ef17e7646885d693dd510f",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700001200,
+      "kind": 1,
       "tags": [],
-      "content": "tie b"
+      "content": "tie b",
+      "sig": "743e4f295680e393c8b260bd4bb12c9f106399bdd77055371f3e119e82e67bdb2b4569e06a24aa9d8deb3c21c9a4d2e213080e291f272b4f07c3ef7304f0f52f"
     },
     {
-      "ref": "c-tie",
-      "author": "carol",
-      "kind": 1,
+      "id": "dbbc607b0c45ecc2e465bec87ec3f99921b0912442ae3f49b0017416c53473fd",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
       "created_at": 1700001200,
+      "kind": 1,
       "tags": [],
-      "content": "tie c"
+      "content": "tie c",
+      "sig": "b86972904c58b18f73077a14a8f0e925517664dc5a5f54fe048ac54b9b0d4bdf19a66120ee41ee0bafb8057c38ed0878e0c87d2bbfa11f26a7937df5198d2257"
     },
     {
-      "ref": "b-quote",
-      "author": "bob",
-      "kind": 1,
+      "id": "9df161aa485ece278d3b0a426e0005f836c2672617495d71f6481be01d58355b",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
       "created_at": 1700001300,
+      "kind": 1,
       "tags": [
         [
           "a",
-          "30023:{pubkey:alice}:post-1"
+          "30023:79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798:post-1"
         ]
       ],
-      "content": "check this"
+      "content": "check this",
+      "sig": "223bebd14ad18dfba765523cdfab18dcfd61f2d354984c584ee13c6abc641f6a108044c99529c7862a5c4a95f9a117cd3ab61de39cf88438451f46983d51217b"
     }
   ],
   "cases": [
     {
       "name": "model/events-columns",
       "query": "SELECT * FROM events WHERE kind = 0 ORDER BY created_at",
-      "ordered": true,
       "columns": [
         [
           "id",
@@ -455,15 +474,41 @@
           "sig",
           "TEXT"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "6c5817e5f36edafe75ad32c74e96aceb7a60c44594786b7f25de721ada401d1b",
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          1700000000,
+          0,
+          "{\"name\":\"alice\"}",
+          "9a531180aff3b0f936ec30a2c2e82288edca28b346dbc9cc567df12e58ccdba2dddcf841b103cb23b7fe0fa450732e5f0d79f139a6397a474f6c20f6ae91030d"
+        ],
+        [
+          "0967710cdc5e5748e98ae2faa5842e2401c655343da47b3c9d832db4ff6363e6",
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          1700000001,
+          0,
+          "{\"name\":\"Bob\"}",
+          "fe467870096711832a6707b18c358da1c80c336ea7bc34a1689631c4036734361375dfeb44d57909d7ca3f9d13db7b1f830a431bfac28c5d0af50c1485dc46a3"
+        ],
+        [
+          "b8445199cf0c15b9ccd13dc5c2473f52ea3ead2d5baa2986ddf0fcf08af0f1c3",
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+          1700000002,
+          0,
+          "{\"name\":\"carol é\"}",
+          "1ee25e66da8ea9d78a7b60536973d09c0613217506d2ba0063f3e58023125427d3c65d00d6105f44c83416ab44e816ca820142d6713b4172f38583f5e5fffea2"
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "model/tags-columns",
       "query": "SELECT * FROM tags WHERE event_id = ? ORDER BY idx",
       "params": [
-        "{id:d-edge}"
+        "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a"
       ],
-      "ordered": true,
       "columns": [
         [
           "event_id",
@@ -505,7 +550,58 @@
           "pubkey",
           "TEXT"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a",
+          0,
+          "x",
+          null,
+          null,
+          null,
+          null,
+          1700001100,
+          1,
+          "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13"
+        ],
+        [
+          "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a",
+          1,
+          "six",
+          "1",
+          "2",
+          "3",
+          "4",
+          1700001100,
+          1,
+          "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13"
+        ],
+        [
+          "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a",
+          2,
+          "t",
+          "NOSTR",
+          null,
+          null,
+          null,
+          1700001100,
+          1,
+          "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13"
+        ],
+        [
+          "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a",
+          3,
+          "t",
+          "",
+          null,
+          null,
+          null,
+          1700001100,
+          1,
+          "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13"
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "model/counts",
@@ -531,7 +627,7 @@
       "name": "model/untagged-event-has-no-rows",
       "query": "SELECT count(*) AS n FROM tags WHERE event_id = ?",
       "params": [
-        "{id:d-plain}"
+        "59088e169db3e1b17a33a98b1a0deaa0cb38e831b2fe5f8ab66d827c5ee24b64"
       ],
       "columns": [
         [
@@ -564,9 +660,8 @@
       "name": "model/positions",
       "query": "SELECT t0, t1, t2, t3, t4 FROM tags WHERE event_id = ? AND t0 IN ('x', 'six') ORDER BY idx",
       "params": [
-        "{id:d-edge}"
+        "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a"
       ],
-      "ordered": true,
       "columns": [
         [
           "t0",
@@ -604,15 +699,15 @@
           "3",
           "4"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "model/empty-value-is-not-null",
       "query": "SELECT t1, t1 IS NULL AS missing FROM tags WHERE t0 = 't' AND event_id = ? ORDER BY idx",
       "params": [
-        "{id:d-edge}"
+        "1f948afd4a9ee9841771d8430a4289bdd325b56617b2d34644c185fbff3c210a"
       ],
-      "ordered": true,
       "columns": [
         [
           "t1",
@@ -632,15 +727,15 @@
           "",
           false
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "model/idx-is-position",
       "query": "SELECT idx, t0 FROM tags WHERE event_id = ? ORDER BY idx",
       "params": [
-        "{id:a-post1}"
+        "bc4f510fc2b31ec52d0a6dbc79b6b39ab28a2d3a8edcd9ed0e1c36ece95cfdab"
       ],
-      "ordered": true,
       "columns": [
         [
           "idx",
@@ -664,7 +759,8 @@
           2,
           "t"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "literal/integer",
@@ -920,50 +1016,42 @@
     {
       "name": "arith/integer-division-by-zero",
       "query": "SELECT 5 / 0 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/real-division-by-zero",
       "query": "SELECT 5.0 / 0 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/remainder-by-zero",
       "query": "SELECT 5 % 0 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/division-by-zero-from-data",
       "query": "SELECT kind / (kind - 7) AS x FROM events WHERE kind = 7",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/integer-overflow-add",
       "query": "SELECT 9223372036854775807 + 1 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/integer-overflow-subtract",
       "query": "SELECT -9223372036854775807 - 2 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/integer-overflow-multiply",
       "query": "SELECT 4611686018427387904 * 2 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/integer-overflow-negate",
       "query": "SELECT -(-9223372036854775807 - 1) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/integer-overflow-abs",
@@ -973,20 +1061,17 @@
     {
       "name": "arith/integer-overflow-divide",
       "query": "SELECT (-9223372036854775807 - 1) / -1 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/real-overflow",
       "query": "SELECT 1e308 * 10 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/real-underflow",
       "query": "SELECT 1e-300 * 1e-300 AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "arith/near-the-limits",
@@ -1466,8 +1551,7 @@
           false,
           true
         ]
-      ],
-      "postgres": "SELECT 'a\\b' LIKE 'a\\b' ESCAPE '' AS a, 'a%' LIKE 'a\\%' ESCAPE '' AS b, 'a\\x' LIKE 'a\\_' ESCAPE '' AS c"
+      ]
     },
     {
       "name": "like/underscore-is-one-code-point",
@@ -1563,8 +1647,7 @@
           7,
           0
         ]
-      ],
-      "postgres": "SELECT nql_text_to_integer('42') AS a, nql_text_to_integer('-12') AS b, nql_text_to_integer('+7') AS c, nql_text_to_integer('007') AS d, nql_text_to_integer('-0') AS e"
+      ]
     },
     {
       "name": "cast/text-to-integer-malformed-is-null",
@@ -1619,9 +1702,7 @@
           null,
           null
         ]
-      ],
-      "postgres": "SELECT nql_text_to_integer('12abc') AS a, nql_text_to_integer(' 42') AS b, nql_text_to_integer('abc') AS c, nql_text_to_integer('1e3') AS d, nql_text_to_integer('3.9') AS e, nql_text_to_integer('0x10') AS f, nql_text_to_integer('') AS g, nql_text_to_integer('1_000') AS h, nql_text_to_integer('-') AS i",
-      "sqlite": null
+      ]
     },
     {
       "name": "cast/text-to-integer-range",
@@ -1651,9 +1732,7 @@
           null,
           null
         ]
-      ],
-      "postgres": "SELECT nql_text_to_integer('9223372036854775807') AS a, nql_text_to_integer('-9223372036854775808') AS b, nql_text_to_integer('9223372036854775808') AS c, nql_text_to_integer('-9999999999999999999') AS d",
-      "sqlite": null
+      ]
     },
     {
       "name": "cast/text-to-real",
@@ -1693,8 +1772,7 @@
           0.01,
           3.0
         ]
-      ],
-      "postgres": "SELECT nql_text_to_real('1.5e2') AS a, nql_text_to_real('-2.5') AS b, nql_text_to_real('7') AS c, nql_text_to_real('0.1') AS d, nql_text_to_real('1E-2') AS e, nql_text_to_real('+3') AS f"
+      ]
     },
     {
       "name": "cast/text-to-real-malformed-is-null",
@@ -1749,9 +1827,7 @@
           null,
           null
         ]
-      ],
-      "postgres": "SELECT nql_text_to_real('1.5e2x') AS a, nql_text_to_real('x') AS b, nql_text_to_real('.5') AS c, nql_text_to_real('5.') AS d, nql_text_to_real(' 1') AS e, nql_text_to_real('Infinity') AS f, nql_text_to_real('NaN') AS g, nql_text_to_real('1e999') AS h, nql_text_to_real('') AS i",
-      "sqlite": null
+      ]
     },
     {
       "name": "cast/real-to-integer",
@@ -1796,9 +1872,7 @@
           -9223372036854775808,
           0
         ]
-      ],
-      "postgres": "SELECT nql_real_to_integer(3.9) AS a, nql_real_to_integer(-3.9) AS b, nql_real_to_integer(1e20) AS c, nql_real_to_integer(-1e20) AS d, nql_real_to_integer(9223372036854775807.0) AS e, nql_real_to_integer(-9223372036854775808.0) AS f, nql_real_to_integer(0.5) AS g",
-      "sqlite": null
+      ]
     },
     {
       "name": "cast/others",
@@ -1848,8 +1922,7 @@
           7,
           2.5
         ]
-      ],
-      "postgres": "SELECT CAST(3 AS REAL) AS a, CAST(-12 AS TEXT) AS b, CAST(CAST(TRUE AS int4) AS INTEGER) AS c, CAST(CAST(1 > 2 AS int4) AS INTEGER) AS d, CAST(NULL AS INTEGER) AS e, CAST('x' AS TEXT) AS f, CAST(7 AS INTEGER) AS g, CAST(2.5 AS REAL) AS h"
+      ]
     },
     {
       "name": "cast/zap-amounts",
@@ -1869,14 +1942,11 @@
           1026000,
           3
         ]
-      ],
-      "postgres": "SELECT CAST(sum(nql_text_to_integer(t1)) AS INTEGER) AS msats, count(nql_text_to_integer(t1)) AS parsed FROM tags WHERE kind = 9735 AND t0 = 'amount'",
-      "sqlite": "SELECT sum(CAST(t1 AS INTEGER)) AS msats, count(CASE WHEN t1 GLOB '[0-9]*' THEN 1 END) AS parsed FROM tags WHERE kind = 9735 AND t0 = 'amount'"
+      ]
     },
     {
       "name": "case/searched",
       "query": "SELECT CASE WHEN kind = 0 THEN 'profile' WHEN kind = 1 THEN 'note' ELSE 'other' END AS k, count(*) AS n FROM events GROUP BY k ORDER BY k",
-      "ordered": true,
       "columns": [
         [
           "k",
@@ -1900,7 +1970,8 @@
           "profile",
           3
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "case/without-else",
@@ -1988,14 +2059,13 @@
           null,
           null
         ]
-      ],
-      "postgres": "SELECT coalesce(NULL, 2, 3) AS a, coalesce(NULL, 'x') AS b, nullif(1, 1) AS c, nullif(1, 2) AS d, CAST(coalesce(NULL, NULL) AS text) AS e, nullif(CAST(NULL AS INTEGER), 1) AS f"
+      ]
     },
     {
       "name": "text/length",
       "query": "SELECT length('héllo') AS a, length('😀') AS b, length('') AS c, length(content) AS d FROM events WHERE id = ?",
       "params": [
-        "{id:b-cafe}"
+        "e3a91366a6b50b1ad319c51694131eda97c8ecbadd5fbd0784ca6cd675a01590"
       ],
       "columns": [
         [
@@ -2147,8 +2217,7 @@
           1,
           2
         ]
-      ],
-      "postgres": "SELECT strpos('héllo', 'l') AS a, strpos('abc', 'z') AS b, strpos('abc', '') AS c, strpos('😀a', 'a') AS d"
+      ]
     },
     {
       "name": "text/substr",
@@ -2208,9 +2277,7 @@
           "él",
           "a"
         ]
-      ],
-      "postgres": "SELECT nql_substr('abcdef', 2, 3) AS a, nql_substr('abcdef', 2) AS b, nql_substr('abcdef', 0, 2) AS c, nql_substr('abcdef', -1, 3) AS d, nql_substr('abcdef', -2) AS e, nql_substr('abcdef', 5, 10) AS f, nql_substr('abcdef', 10) AS g, nql_substr('abcdef', 1, 0) AS h, nql_substr('héllo', 2, 2) AS i, nql_substr('😀ab', 2, 1) AS j",
-      "sqlite": "SELECT substr('abcdef', 2, 3) AS a, substr('abcdef', 2) AS b, substr('abcdef', 1, 1) AS c, substr('abcdef', 1, 1) AS d, substr('abcdef', 1) AS e, substr('abcdef', 5, 10) AS f, substr('abcdef', 10) AS g, substr('abcdef', 1, 0) AS h, substr('héllo', 2, 2) AS i, substr('😀ab', 2, 1) AS j"
+      ]
     },
     {
       "name": "text/substr-negative-length-is-null",
@@ -2230,15 +2297,13 @@
           null,
           null
         ]
-      ],
-      "postgres": "SELECT nql_substr('abcdef', 3, -1) AS a, nql_substr(content, 1, strpos(content, ':') - 1) AS b FROM events WHERE kind = 1 AND content = 'no tags'",
-      "sqlite": null
+      ]
     },
     {
       "name": "text/split-an-a-tag",
       "query": "SELECT CAST(substr(t1, 1, instr(t1, ':') - 1) AS INTEGER) AS k, substr(t1, instr(t1, ':') + 1, 64) = ? AS by_alice, substr(t1, instr(t1, ':') + 66) AS d FROM tags WHERE t0 = 'a'",
       "params": [
-        "{pubkey:alice}"
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
       ],
       "columns": [
         [
@@ -2260,8 +2325,7 @@
           true,
           "post-1"
         ]
-      ],
-      "postgres": "SELECT nql_text_to_integer(nql_substr(t1, 1, strpos(t1, ':') - 1)) AS k, nql_substr(t1, strpos(t1, ':') + 1, 64) = ? AS by_alice, nql_substr(t1, strpos(t1, ':') + 66) AS d FROM tags WHERE t0 = 'a'"
+      ]
     },
     {
       "name": "numeric/abs",
@@ -2336,8 +2400,7 @@
           5.0,
           1e+300
         ]
-      ],
-      "sqlite": null
+      ]
     },
     {
       "name": "numeric/ceil-floor-trunc",
@@ -2377,8 +2440,7 @@
           7.0,
           9.0
         ]
-      ],
-      "sqlite": "SELECT ceil(5.0) AS a, ceil(5.2) AS b, floor(-5.5) AS c, trunc(-5.5) AS d, floor(7.0) AS e, trunc(9.0) AS f"
+      ]
     },
     {
       "name": "numeric/exact-math",
@@ -2469,68 +2531,57 @@
     {
       "name": "numeric/sqrt-of-negative",
       "query": "SELECT sqrt(-1) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/ln-of-zero",
       "query": "SELECT ln(0) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/ln-of-negative",
       "query": "SELECT ln(-1) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/log10-of-zero",
       "query": "SELECT log10(0) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/pow-complex",
       "query": "SELECT pow(-8, 1.0 / 3) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/pow-pole",
       "query": "SELECT pow(0, -1) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/pow-overflow",
       "query": "SELECT pow(10, 400) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/pow-underflow",
       "query": "SELECT pow(10, -400) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/exp-overflow",
       "query": "SELECT exp(1000) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/exp-underflow",
       "query": "SELECT exp(-1000) AS x",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/domain-error-from-data",
       "query": "SELECT ln(CAST(kind - 7 AS REAL)) AS x FROM events WHERE kind = 7",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "numeric/geometric-mean-of-zaps",
@@ -2546,9 +2597,7 @@
           47176.939803165325
         ]
       ],
-      "tolerance": 1e-09,
-      "postgres": "SELECT exp(avg(ln(nql_text_to_real(t1)))) AS g FROM tags WHERE kind = 9735 AND t0 = 'amount'",
-      "sqlite": "SELECT exp(avg(ln(CAST(t1 AS REAL)))) AS g FROM tags WHERE kind = 9735 AND t0 = 'amount' AND t1 GLOB '[0-9]*'"
+      "tolerance": 1e-09
     },
     {
       "name": "aggregate/counts",
@@ -2569,6 +2618,14 @@
         [
           "d",
           "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          45,
+          44,
+          10,
+          5
         ]
       ]
     },
@@ -2610,8 +2667,7 @@
           null,
           0
         ]
-      ],
-      "postgres": "SELECT count(*) AS a, CAST(sum(kind) AS INTEGER) AS b, CAST(avg(kind) AS REAL) AS c, min(kind) AS d, max(content) AS e, count(content) AS f FROM events WHERE kind = 99999"
+      ]
     },
     {
       "name": "aggregate/result-types",
@@ -2641,14 +2697,12 @@
           7.0,
           7
         ]
-      ],
-      "postgres": "SELECT CAST(sum(kind) AS INTEGER) AS a, sum(kind * 1.0) AS b, CAST(avg(kind) AS REAL) AS c, max(kind) AS d FROM events WHERE kind = 7"
+      ]
     },
     {
       "name": "aggregate/integer-sum-overflow",
       "query": "SELECT sum(9223372036854775807) AS s FROM events WHERE kind = 7",
-      "error": "error",
-      "postgres": "SELECT CAST(sum(9223372036854775807) AS INTEGER) AS s FROM events WHERE kind = 7"
+      "error": "error"
     },
     {
       "name": "aggregate/integer-sum-past-an-overflowing-partial",
@@ -2663,9 +2717,7 @@
         [
           0
         ]
-      ],
-      "postgres": "SELECT CAST(sum(CASE WHEN kind = 7 THEN 9223372036854775807 ELSE -9223372036854775807 END) AS INTEGER) AS s FROM events WHERE kind IN (7, 9735)",
-      "sqlite": null
+      ]
     },
     {
       "name": "aggregate/min-max-text",
@@ -2750,13 +2802,11 @@
           1
         ]
       ],
-      "ordered": true,
-      "sqlite": "SELECT t1, count(*) AS n FROM tags WHERE t0 IN ('x', 'six') GROUP BY t1 ORDER BY t1 NULLS LAST"
+      "ordered": true
     },
     {
       "name": "group/by-kind",
       "query": "SELECT kind, count(*) AS n FROM events GROUP BY kind ORDER BY kind",
-      "ordered": true,
       "columns": [
         [
           "kind",
@@ -2796,12 +2846,12 @@
           30023,
           2
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/having",
       "query": "SELECT pubkey, count(*) AS n FROM events GROUP BY pubkey HAVING count(*) >= 5 ORDER BY n DESC, pubkey",
-      "ordered": true,
       "columns": [
         [
           "pubkey",
@@ -2811,12 +2861,22 @@
           "n",
           "INTEGER"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          8
+        ],
+        [
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          7
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/by-alias",
       "query": "SELECT kind AS k, count(*) AS n FROM events GROUP BY k ORDER BY k",
-      "ordered": true,
       "columns": [
         [
           "k",
@@ -2826,12 +2886,42 @@
           "n",
           "INTEGER"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          9735,
+          4
+        ],
+        [
+          10002,
+          2
+        ],
+        [
+          30023,
+          2
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/by-expression",
       "query": "SELECT created_at / 1000 AS bucket, count(*) AS n FROM events GROUP BY created_at / 1000 ORDER BY bucket",
-      "ordered": true,
       "columns": [
         [
           "bucket",
@@ -2841,12 +2931,22 @@
           "n",
           "INTEGER"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          1700000,
+          20
+        ],
+        [
+          1700001,
+          6
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/distinct",
       "query": "SELECT DISTINCT kind FROM events ORDER BY kind",
-      "ordered": true,
       "columns": [
         [
           "kind",
@@ -2875,7 +2975,8 @@
         [
           30023
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/distinct-treats-nulls-as-equal",
@@ -2897,8 +2998,7 @@
           null
         ]
       ],
-      "ordered": true,
-      "sqlite": "SELECT DISTINCT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 NULLS LAST"
+      "ordered": true
     },
     {
       "name": "group/zaps-per-note",
@@ -2917,14 +3017,28 @@
           "INTEGER"
         ]
       ],
-      "ordered": true,
-      "postgres": "SELECT target.t1 AS note, count(*) AS zaps, CAST(sum(nql_text_to_integer(amount.t1)) AS INTEGER) / 1000 AS sats FROM tags AS target JOIN tags AS amount ON amount.event_id = target.event_id AND amount.t0 = 'amount' WHERE target.kind = 9735 AND target.t0 = 'e' GROUP BY target.t1 ORDER BY sats DESC, note",
-      "sqlite": "SELECT target.t1 AS note, count(*) AS zaps, sum(CASE WHEN amount.t1 GLOB '[0-9]*' THEN CAST(amount.t1 AS INTEGER) END) / 1000 AS sats FROM tags AS target JOIN tags AS amount ON amount.event_id = target.event_id AND amount.t0 = 'amount' WHERE target.kind = 9735 AND target.t0 = 'e' GROUP BY target.t1 ORDER BY sats DESC NULLS FIRST, note"
+      "rows": [
+        [
+          "eb0e86c66cc433aff65be29a817c0370b5b6ac233f0086fe8cd9a6570e5022f6",
+          1,
+          null
+        ],
+        [
+          "e3a91366a6b50b1ad319c51694131eda97c8ecbadd5fbd0784ca6cd675a01590",
+          1,
+          1000
+        ],
+        [
+          "c000eb81cfad8c86854d318ebd7c59cf601a30c715f8143f76dd7af1c270c73a",
+          2,
+          26
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/write-relays",
       "query": "SELECT t1 AS relay, count(DISTINCT pubkey) AS authors FROM tags WHERE kind = 10002 AND t0 = 'r' AND (t2 IS NULL OR t2 = 'write') GROUP BY t1 ORDER BY authors DESC, relay",
-      "ordered": true,
       "columns": [
         [
           "relay",
@@ -2948,7 +3062,8 @@
           "wss://d.example",
           1
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "group/by-expression-matched-structurally",
@@ -3001,8 +3116,7 @@
           null
         ]
       ],
-      "ordered": true,
-      "sqlite": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 NULLS LAST, event_id, idx"
+      "ordered": true
     },
     {
       "name": "order/nulls-sort-first-descending",
@@ -3030,24 +3144,33 @@
           "read"
         ]
       ],
-      "ordered": true,
-      "sqlite": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 DESC NULLS FIRST, event_id, idx"
+      "ordered": true
     },
     {
       "name": "order/newest-first-tie-break",
       "query": "SELECT content FROM events WHERE kind = 1 ORDER BY created_at DESC, id LIMIT 3",
-      "ordered": true,
       "columns": [
         [
           "content",
           "TEXT"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "check this"
+        ],
+        [
+          "tie c"
+        ],
+        [
+          "tie b"
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "order/limit-offset",
       "query": "SELECT created_at FROM events ORDER BY created_at, id LIMIT 3 OFFSET 2",
-      "ordered": true,
       "columns": [
         [
           "created_at",
@@ -3064,7 +3187,8 @@
         [
           1700000200
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "order/limit-parameter",
@@ -3072,7 +3196,6 @@
       "params": [
         2
       ],
-      "ordered": true,
       "columns": [
         [
           "kind",
@@ -3086,7 +3209,8 @@
         [
           0
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "order/limit-zero",
@@ -3102,13 +3226,42 @@
     {
       "name": "order/by-expression",
       "query": "SELECT content FROM events WHERE kind = 1 ORDER BY length(content) DESC, id",
-      "ordered": true,
       "columns": [
         [
           "content",
           "TEXT"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "50% off_sale"
+        ],
+        [
+          "Hello Nostr"
+        ],
+        [
+          "check this"
+        ],
+        [
+          "no tags"
+        ],
+        [
+          "😀 emoji"
+        ],
+        [
+          "café ☕"
+        ],
+        [
+          "tie c"
+        ],
+        [
+          "tie b"
+        ],
+        [
+          "edge"
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "order/by-alias",
@@ -3148,6 +3301,12 @@
           "INTEGER"
         ]
       ],
+      "rows": [
+        [
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          1
+        ]
+      ],
       "ordered": true
     },
     {
@@ -3159,12 +3318,40 @@
           "TEXT"
         ]
       ],
+      "rows": [
+        [
+          "50% off_sale"
+        ],
+        [
+          "Hello Nostr"
+        ],
+        [
+          "café ☕"
+        ],
+        [
+          "check this"
+        ],
+        [
+          "edge"
+        ],
+        [
+          "no tags"
+        ],
+        [
+          "tie b"
+        ],
+        [
+          "tie c"
+        ],
+        [
+          "😀 emoji"
+        ]
+      ],
       "ordered": true
     },
     {
       "name": "join/inner",
       "query": "SELECT notes.content, count(*) AS total FROM events AS notes JOIN tags AS reactions ON reactions.t1 = notes.id AND reactions.kind = 7 AND reactions.t0 = 'e' GROUP BY notes.id, notes.content ORDER BY total DESC, notes.content",
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3188,15 +3375,15 @@
           "café ☕",
           1
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "join/left-keeps-unmatched",
       "query": "SELECT notes.content, count(reactions.event_id) AS total FROM events AS notes LEFT JOIN tags AS reactions ON reactions.t1 = notes.id AND reactions.kind = 7 AND reactions.t0 = 'e' WHERE notes.kind = 1 AND notes.pubkey = ? GROUP BY notes.id, notes.content ORDER BY total DESC, notes.content",
       "params": [
-        "{pubkey:alice}"
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
       ],
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3216,15 +3403,15 @@
           "50% off_sale",
           1
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "join/left-null-extends",
       "query": "SELECT events.content, tags.t0 FROM events LEFT JOIN tags ON tags.event_id = events.id WHERE events.kind = 1 AND events.pubkey = ? ORDER BY events.created_at, events.id, tags.idx",
       "params": [
-        "{pubkey:dave}"
+        "e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13"
       ],
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3256,15 +3443,15 @@
           "edge",
           "t"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "join/tag-to-referenced-event",
       "query": "SELECT reactions.pubkey = ? AS by_bob, notes.content FROM tags JOIN events AS notes ON notes.id = tags.t1 JOIN events AS reactions ON reactions.id = tags.event_id WHERE tags.kind = 7 AND tags.t0 = 'e' ORDER BY tags.created_at",
       "params": [
-        "{pubkey:bob}"
+        "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
       ],
-      "ordered": true,
       "columns": [
         [
           "by_bob",
@@ -3292,12 +3479,12 @@
           false,
           "café ☕"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "join/subquery-source",
       "query": "SELECT per_kind.kind, per_kind.n FROM (SELECT kind, count(*) AS n FROM events GROUP BY kind) AS per_kind WHERE per_kind.n > 2 ORDER BY per_kind.kind",
-      "ordered": true,
       "columns": [
         [
           "kind",
@@ -3325,7 +3512,8 @@
           9735,
           4
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "join/three-way",
@@ -3374,7 +3562,6 @@
     {
       "name": "subquery/exists",
       "query": "SELECT content FROM events WHERE events.kind = 1 AND EXISTS (SELECT 1 FROM tags WHERE tags.event_id = events.id AND tags.t0 = 'p') ORDER BY events.created_at",
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3388,23 +3575,34 @@
         [
           "😀 emoji"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "subquery/not-exists",
       "query": "SELECT content FROM events WHERE events.kind = 1 AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.event_id = events.id) ORDER BY events.created_at, events.id",
-      "ordered": true,
       "columns": [
         [
           "content",
           "TEXT"
         ]
-      ]
+      ],
+      "rows": [
+        [
+          "no tags"
+        ],
+        [
+          "tie c"
+        ],
+        [
+          "tie b"
+        ]
+      ],
+      "ordered": true
     },
     {
       "name": "subquery/in",
       "query": "SELECT content FROM events WHERE id IN (SELECT t1 FROM tags WHERE kind = 7 AND t0 = 'e') ORDER BY created_at",
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3421,7 +3619,8 @@
         [
           "café ☕"
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "subquery/scalar",
@@ -3451,13 +3650,11 @@
     {
       "name": "subquery/scalar-with-two-rows",
       "query": "SELECT (SELECT kind FROM events WHERE kind = 0) AS k",
-      "error": "error",
-      "sqlite": null
+      "error": "error"
     },
     {
       "name": "subquery/correlated",
       "query": "SELECT events.content, (SELECT count(*) FROM tags WHERE tags.event_id = events.id) AS ntags FROM events WHERE events.kind = 30023 ORDER BY events.created_at",
-      "ordered": true,
       "columns": [
         [
           "content",
@@ -3477,7 +3674,8 @@
           "Long form two",
           2
         ]
-      ]
+      ],
+      "ordered": true
     },
     {
       "name": "subquery/not-in-with-null",
@@ -3501,6 +3699,11 @@
         [
           "n",
           "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          15
         ]
       ]
     },
@@ -3528,7 +3731,7 @@
       "name": "params/positional",
       "query": "SELECT count(*) AS n FROM events WHERE pubkey = ? AND created_at >= ?",
       "params": [
-        "{pubkey:alice}",
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
         1700000150
       ],
       "columns": [
@@ -3602,8 +3805,7 @@
         [
           26
         ]
-      ],
-      "postgres": "SELECT count(*) AS n FROM events WHERE kind = CAST(? AS INTEGER) OR CAST(? AS TEXT) IS NULL"
+      ]
     },
     {
       "name": "params/real-parameter",

@@ -26,9 +26,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventSerializer
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
-import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
-import com.vitorpamplona.quartz.nipXXSql.SqlJackson
-import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
+import com.vitorpamplona.quartz.nipXXSql.NqlJackson
+import com.vitorpamplona.quartz.nipXXSql.NqlResultMessage
 
 class MessageSerializer : StdSerializer<Message>(Message::class.java) {
     val eventSerializer = EventSerializer()
@@ -135,17 +134,9 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
                 msg.cap?.let { gen.writeNumber(it) }
             }
 
-            is SqlColsMessage -> {
+            is NqlResultMessage -> {
                 gen.writeString(msg.queryId)
-                gen.writeStartArray()
-                msg.columns.forEach { gen.writeString(it) }
-                gen.writeEndArray()
-            }
-
-            is SqlRowsMessage -> {
-                gen.writeString(msg.queryId)
-                SqlJackson.writeRows(msg.rows, gen)
-                gen.writeString(if (msg.done) SqlRowsMessage.DONE else SqlRowsMessage.MORE)
+                NqlJackson.writeResult(msg.result, gen)
             }
         }
 

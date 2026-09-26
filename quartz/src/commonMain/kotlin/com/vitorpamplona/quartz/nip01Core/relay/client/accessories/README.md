@@ -140,9 +140,8 @@ pins this). The accessories already wait for the first challenge to resolve, so
 | --- | --- | --- |
 | `count(relay, filter, idleTimeoutMs)` | `NostrClientCountExt` | NIP-45 `COUNT` against one relay (`null` on timeout / no support / an auth wall it could not get over). A COUNT is NIP-42-gated exactly like a REQ. |
 | `countMerged(relays, filter, ...)` | `NostrClientCountExt` | Merged count across relays. |
-| `sql(relay, query, params, named, pageSize)` | `NostrClientSqlExt` | Read-only SQL (the Nostr SQL profile) on one relay: sends `SQL`, pulls every page with `FETCH`, returns all rows. Throws `SqlQueryException` with the relay's `CLOSED` reason. NIP-42-gated like REQ. |
-| `sqlStream(relay, query, ..., onColumns, onRow)` | `NostrClientSqlExt` | Same, handing rows over a page at a time; `SQL-CLOSE`s on cancellation. |
-| `sqlQuery(relay, filter)` / `sqlCount(relay, filter)` / `sqlIdsAndTimes(relay, filter)` | `NostrClientSqlExt` | A NIP-01 filter answered over SQL (`FilterSql`): the relay's raw store with REQ/COUNT semantics but no result cap, ranking or live tail. For a relay's own back-office processes (mirrors, monitors) reading their store through the relay. |
+| `nql(relay, query, params)` | `NostrClientNqlExt` | One read-only NIP-FF (Nostr Query Language) query on one relay: sends `NQL`, returns its typed columns and rows (`truncated` when the relay capped them). Throws `NqlQueryException` with the relay's `CLOSED` reason. NIP-42-gated like REQ; re-sent if the socket drops before the answer. |
+| `nqlQuery(relay, filter)` / `nqlCount(relay, filter)` / `nqlIdsAndTimes(relay, filter)` | `NostrClientNqlExt` | A NIP-01 filter answered over NQL (`FilterSql`), paged past the relay's row cap: the relay's raw store with REQ/COUNT semantics but no result cap, ranking or live tail. For a relay's own back-office processes (mirrors, monitors) reading their store through the relay. Events whose tags NQL can't show whole (past `t4`) are fetched with a REQ by id. |
 
 ## Negentropy (NIP-77)
 

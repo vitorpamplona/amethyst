@@ -94,24 +94,17 @@ class ScanSpec(
         until: Long?,
     ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact)
 
-    /** The query reference this spec was read from; identity only. */
-    internal var ref: Any? = null
-
-    /** Equalities tying this reference to another in the same FROM, for [SqlPushdown]'s join-key propagation. */
+    /** Equalities tying this reference to another in the same FROM, for the executor's join-key propagation. */
     internal var links: List<ScanLink> = emptyList()
-
-    /** The alias the query names this reference by. */
-    internal var alias: String? = null
 
     /**
      * The predicates this spec holds exactly (`kind IN …`, `pubkey = …`, time bounds, ids): every
      * row a store returns for the spec satisfies them.
      */
-    internal var captured: List<Expr> = emptyList()
+    internal var captured: List<NqlExpr> = emptyList()
 
     /**
-     * The columns the query reads from this reference outside [captured] (see [ColumnUsage]), or
-     * null for all of them.
+     * The columns the query reads from this reference outside [captured], or null for all of them.
      */
     internal var columns: Set<String>? = null
 
@@ -147,29 +140,30 @@ class ScanSpec(
 
 /**
  * `column = target.targetColumn` holds for every row of the reference that
- * can reach the query's output, [target] being another base reference of
- * the same FROM (identity, see [ScanSpec.ref]).
+ * can reach the query's output, [target] being another table source of the
+ * same FROM (its index there).
  */
 internal class ScanLink(
     val column: String,
-    val target: Any,
+    val target: Int,
     val targetColumn: String,
 )
 
 /**
- * Reads the conditions on one table reference out of the predicates that
- * must hold for its rows (see [SqlCompiler]'s caller for which those are).
- * Only simple comparisons of a column with a constant are understood; any
- * other predicate is left to the query and makes the spec inexact.
+ * Reads the conditions on one table source out of the predicates that must
+ * hold for its rows. Only comparisons of one of its columns with a constant
+ * are understood; any other predicate is left to the query and makes the spec
+ * inexact. [column] names the source column an expression is, if it is one;
+ * [constant] gives an expression's value when it is fixed for this run of the
+ * query (a literal, a parameter, a column of an enclosing query), else null.
  */
 internal class ScanAnalyzer(
-    private val constant: (Expr) -> Any?,
+    private val column: (NqlExpr) -> String?,
+    private val constant: (NqlExpr) -> Any?,
 ) {
     fun analyze(
         table: String,
-        alias: String,
-        single: Boolean,
-        preds: List<Expr>,
+        preds: List<NqlExpr>,
     ): ScanSpec {
         val isTags = table == SqlProfile.TAGS
         var ids: Set<String>? = null
@@ -181,121 +175,120 @@ internal class ScanAnalyzer(
         var values: Set<String>? = null
         var valueNonEmpty = false
         var exact = true
-        val captured = ArrayList<Expr>()
-
-        fun column(e: Expr): String? {
-            if (e !is ColumnRef) return null
-            if (e.table != null && e.table.lowercase() != alias) return null
-            if (e.table == null && !single) return null
-            return e.column.lowercase()
-        }
+        val captured = ArrayList<NqlExpr>()
 
         fun <T> intersect(
             current: Set<T>?,
             next: Set<T>,
         ) = current?.intersect(next) ?: next
 
-        fun strings(e: Expr): Set<String>? = (constant(e) as? String)?.let { setOf(it) }
+        fun text(e: NqlExpr): String? = constant(e) as? String
 
-        fun longs(e: Expr): Long? = constant(e) as? Long
+        fun long(e: NqlExpr): Long? = constant(e) as? Long
 
-        for (p in preds) {
-            var used = false
-            when {
-                // col = const / const = col
-                p is Binary && p.op == "=" -> {
-                    val (col, other) = column(p.left)?.let { it to p.right } ?: column(p.right)?.let { it to p.left } ?: (null to null)
-                    if (col != null && other != null) {
-                        used = true
-                        when (col) {
-                            "id", "event_id" -> {
-                                if ((col == "id") == !isTags) {
-                                    strings(other)?.let { ids = intersect(ids, it) } ?: run { used = false }
-                                } else {
-                                    used = false
-                                }
-                            }
-                            "pubkey" -> strings(other)?.let { authors = intersect(authors, it) } ?: run { used = false }
-                            "kind" -> longs(other)?.let { kinds = intersect(kinds, setOf(it.toIntOrNull() ?: Int.MIN_VALUE)) } ?: run { used = false }
-                            "created_at" ->
-                                longs(other)?.let {
-                                    since = maxOf(since ?: it, it)
-                                    until = minOf(until ?: it, it)
-                                } ?: run { used = false }
-                            "t0" -> if (isTags) strings(other)?.let { names = intersect(names, it) } ?: run { used = false } else used = false
-                            "t1" -> if (isTags) strings(other)?.let { values = intersect(values, it) } ?: run { used = false } else used = false
-                            else -> used = false
-                        }
-                    }
+        /** Narrows the spec by `col = value` / `col IN (values)`; false when it can't. */
+        fun equals(
+            col: String,
+            items: List<NqlExpr>,
+        ): Boolean {
+            when (col) {
+                "id", "event_id" -> {
+                    if ((col == "id") == isTags) return false
+                    ids = intersect(ids, items.map { text(it) ?: return false }.toSet())
                 }
 
-                // col IN (consts)
-                p is InList && !p.not && p.items.isNotEmpty() -> {
-                    val col = column(p.expr)
-                    if (col != null) {
-                        val consts = p.items.map { constant(it) }
-                        used = true
-                        when {
-                            (col == "id" && !isTags) || (col == "event_id" && isTags) -> {
-                                if (consts.all { it is String }) ids = intersect(ids, consts.map { it as String }.toSet()) else used = false
-                            }
-                            col == "pubkey" -> {
-                                if (consts.all { it is String }) authors = intersect(authors, consts.map { it as String }.toSet()) else used = false
-                            }
-                            col == "kind" -> {
-                                if (consts.all { it is Long }) kinds = intersect(kinds, consts.map { (it as Long).toIntOrNull() ?: Int.MIN_VALUE }.toSet()) else used = false
-                            }
-                            col == "t0" && isTags -> {
-                                if (consts.all { it is String }) names = intersect(names, consts.map { it as String }.toSet()) else used = false
-                            }
-                            col == "t1" && isTags -> {
-                                if (consts.all { it is String }) values = intersect(values, consts.map { it as String }.toSet()) else used = false
-                            }
-                            else -> used = false
-                        }
-                    }
+                "pubkey" -> {
+                    authors = intersect(authors, items.map { text(it) ?: return false }.toSet())
                 }
 
-                // t1 <> '' / '' <> t1
-                p is Binary && p.op == "<>" && isTags &&
-                    ((column(p.left) == "t1" && constant(p.right) == "") || (column(p.right) == "t1" && constant(p.left) == "")) -> {
-                    used = true
-                    valueNonEmpty = true
+                "kind" -> {
+                    kinds = intersect(kinds, items.map { (long(it) ?: return false).toIntOrNull() ?: Int.MIN_VALUE }.toSet())
                 }
 
-                // created_at <op> const, either side
-                p is Binary && p.op in RANGE_OPS -> {
-                    val leftCol = column(p.left)
-                    val rightCol = column(p.right)
-                    val (op, value) =
-                        when {
-                            leftCol == "created_at" -> p.op to longs(p.right)
-                            rightCol == "created_at" -> FLIP[p.op]!! to longs(p.left)
-                            else -> null to null
-                        }
-                    if (op != null && value != null) {
-                        used = true
-                        when (op) {
-                            // Saturate rather than overflow: a wider range is still a superset.
-                            ">" -> since = maxOf(since ?: Long.MIN_VALUE, if (value == Long.MAX_VALUE) value else value + 1)
-                            ">=" -> since = maxOf(since ?: Long.MIN_VALUE, value)
-                            "<" -> until = minOf(until ?: Long.MAX_VALUE, if (value == Long.MIN_VALUE) value else value - 1)
-                            "<=" -> until = minOf(until ?: Long.MAX_VALUE, value)
-                        }
-                    }
+                "t0" -> {
+                    if (!isTags) return false
+                    names = intersect(names, items.map { text(it) ?: return false }.toSet())
                 }
 
-                // created_at BETWEEN a AND b
-                p is Between && !p.not && column(p.expr) == "created_at" -> {
-                    val lo = longs(p.low)
-                    val hi = longs(p.high)
-                    if (lo != null && hi != null) {
-                        used = true
-                        since = maxOf(since ?: lo, lo)
-                        until = minOf(until ?: hi, hi)
-                    }
+                "t1" -> {
+                    if (!isTags) return false
+                    values = intersect(values, items.map { text(it) ?: return false }.toSet())
+                }
+
+                "created_at" -> {
+                    val v = items.singleOrNull()?.let(::long) ?: return false
+                    since = maxOf(since ?: v, v)
+                    until = minOf(until ?: v, v)
+                }
+
+                else -> {
+                    return false
                 }
             }
+            return true
+        }
+
+        for (p in preds) {
+            val used =
+                when {
+                    p is NqlBinary && p.op == "=" -> {
+                        val left = column(p.left)
+                        val right = column(p.right)
+                        when {
+                            left != null && right == null -> equals(left, listOf(p.right))
+                            right != null && left == null -> equals(right, listOf(p.left))
+                            else -> false
+                        }
+                    }
+
+                    p is NqlInList && !p.not -> {
+                        column(p.expr)?.let { equals(it, p.items) } ?: false
+                    }
+
+                    // t1 <> '' / '' <> t1: the rows a tag-value index holds.
+                    p is NqlBinary && p.op == "<>" && isTags &&
+                        ((column(p.left) == "t1" && constant(p.right) == "") || (column(p.right) == "t1" && constant(p.left) == "")) -> {
+                        valueNonEmpty = true
+                        true
+                    }
+
+                    p is NqlBinary && p.op in RANGE_OPS -> {
+                        val (op, value) =
+                            when {
+                                column(p.left) == "created_at" -> p.op to long(p.right)
+                                column(p.right) == "created_at" -> FLIP[p.op]!! to long(p.left)
+                                else -> null to null
+                            }
+                        if (op != null && value != null) {
+                            when (op) {
+                                // Saturate rather than overflow: a wider range is still a superset.
+                                ">" -> since = maxOf(since ?: Long.MIN_VALUE, if (value == Long.MAX_VALUE) value else value + 1)
+                                ">=" -> since = maxOf(since ?: Long.MIN_VALUE, value)
+                                "<" -> until = minOf(until ?: Long.MAX_VALUE, if (value == Long.MIN_VALUE) value else value - 1)
+                                "<=" -> until = minOf(until ?: Long.MAX_VALUE, value)
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    p is NqlBetween && !p.not && column(p.expr) == "created_at" -> {
+                        val lo = long(p.low)
+                        val hi = long(p.high)
+                        if (lo != null && hi != null) {
+                            since = maxOf(since ?: lo, lo)
+                            until = minOf(until ?: hi, hi)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
             if (used) captured.add(p) else exact = false
         }
 
@@ -312,12 +305,9 @@ internal class ScanAnalyzer(
             tagName = name,
             tagValues = values,
             valueNonEmpty = valueNonEmpty,
-            // Several candidate names (`name IN ('a','b')`) aren't expressible.
+            // Several candidate names (`t0 IN ('a','b')`) aren't expressible.
             exact = exact && (names == null || name != null),
-        ).also {
-            it.alias = alias
-            it.captured = captured
-        }
+        ).also { it.captured = captured }
     }
 
     private fun Long.toIntOrNull(): Int? = if (this in Int.MIN_VALUE..Int.MAX_VALUE) toInt() else null

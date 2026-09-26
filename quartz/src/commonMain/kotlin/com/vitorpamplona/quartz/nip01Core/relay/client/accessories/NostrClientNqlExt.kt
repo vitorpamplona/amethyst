@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
@@ -36,88 +37,53 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
-import com.vitorpamplona.quartz.nipXXSql.FetchCmd
 import com.vitorpamplona.quartz.nipXXSql.FilterSql
-import com.vitorpamplona.quartz.nipXXSql.SqlCloseCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlCmd
-import com.vitorpamplona.quartz.nipXXSql.SqlColsMessage
-import com.vitorpamplona.quartz.nipXXSql.SqlRowsMessage
+import com.vitorpamplona.quartz.nipXXSql.NqlCmd
+import com.vitorpamplona.quartz.nipXXSql.NqlResult
+import com.vitorpamplona.quartz.nipXXSql.NqlResultMessage
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.Volatile
 
-/** A whole SQL result. */
-class SqlResult(
-    val columns: List<String>,
-    val rows: List<List<Any?>>,
-)
-
 /**
- * The relay refused or dropped a SQL query. [reason] is the `CLOSED`
+ * The relay refused or dropped an NQL query. [reason] is the `CLOSED`
  * text, with its NIP-01 prefix (`invalid:`, `unsupported:`, `error:`,
  * `auth-required:`, …), or a local reason for timeouts and disconnects.
  */
-class SqlQueryException(
+class NqlQueryException(
     val reason: String,
 ) : Exception(reason)
 
 /**
- * Runs a read-only SQL query on [relay] (`SQL`, then `FETCH` until the
- * relay says `done`) and returns every row. For large results prefer
- * [sqlStream], which hands rows over a page at a time.
+ * Runs one read-only NIP-FF query on [relay] and returns its answer. The
+ * relay may cap the rows ([NqlResult.truncated]); page with a condition past
+ * the last row, as [nqlIdsAndTimes] does.
  *
- * @throws SqlQueryException when the relay refuses the query, drops the
- *   connection, or stays silent for [idleTimeoutMs].
+ * Like REQ and COUNT, NQL is gated by NIP-42 on relays that require it: with
+ * an auth responder registered, an `auth-required:` refusal waits for the AUTH
+ * to land and re-sends the query once. A socket that drops before the answer
+ * is waited out and the query re-sent, a few times.
+ *
+ * @param params one value per `?`: `Long`, `Double`, `String`, `Boolean` or null.
+ * @throws NqlQueryException when the relay refuses the query, drops the
+ *   connection for good, or stays silent for [timeoutMs].
  */
-suspend fun INostrClient.sql(
+suspend fun INostrClient.nql(
     relay: NormalizedRelayUrl,
     query: String,
     params: List<Any?> = emptyList(),
-    named: Map<String, Any?> = emptyMap(),
-    pageSize: Int? = null,
-    idleTimeoutMs: Long = 30_000,
-): SqlResult {
-    var columns = emptyList<String>()
-    val rows = ArrayList<List<Any?>>()
-    sqlStream(relay, query, params, named, pageSize, idleTimeoutMs, onColumns = { columns = it }) { rows.add(it) }
-    return SqlResult(columns, rows)
-}
-
-/**
- * Runs a read-only SQL query on [relay], handing [onColumns] the column
- * names once and [onRow] every row as pages arrive. Each page after the
- * first is requested with `FETCH [pageSize]`, so the relay never sends more
- * than the caller has consumed. An abandoned query (cancellation, error)
- * sends `SQL-CLOSE` so the relay frees the cursor.
- *
- * Like REQ and COUNT, SQL is gated by NIP-42 on relays that require it:
- * with an auth responder registered, an `auth-required:` refusal waits for
- * the AUTH to land and re-sends the query once.
- *
- * @param pageSize rows per page; null lets the relay use its default REQ limit
- *   for the first page, and [DEFAULT_SQL_FETCH] for the rest.
- * @throws SqlQueryException see [sql].
- */
-suspend fun INostrClient.sqlStream(
-    relay: NormalizedRelayUrl,
-    query: String,
-    params: List<Any?> = emptyList(),
-    named: Map<String, Any?> = emptyMap(),
-    pageSize: Int? = null,
-    idleTimeoutMs: Long = 30_000,
-    onColumns: (List<String>) -> Unit = {},
-    onRow: (List<Any?>) -> Unit,
-) {
+    timeoutMs: Long = 30_000,
+): NqlResult {
     val target = relay
     val incoming = Channel<Message>(UNLIMITED)
 
-    // Each attempt gets its own id, so nothing a dead attempt still has in flight
-    // (a page, a refusal, the drop notice itself) can be mistaken for the live one.
-    var command = SqlCmd(newSubId(), query, params, named, pageSize)
-
+    // Each attempt gets its own id, so nothing a dead attempt still has in
+    // flight (an answer, a refusal, the drop notice) is mistaken for the live one.
+    var command = NqlCmd(newSubId(), query, params)
     val live = LiveQueryId(command.queryId)
+
     val listener =
         object : RelayConnectionListener {
             override suspend fun onIncomingMessage(
@@ -127,8 +93,7 @@ suspend fun INostrClient.sqlStream(
             ) {
                 val id =
                     when (msg) {
-                        is SqlColsMessage -> msg.queryId
-                        is SqlRowsMessage -> msg.queryId
+                        is NqlResultMessage -> msg.queryId
                         is ClosedMessage -> msg.subId
                         else -> return
                     }
@@ -141,31 +106,27 @@ suspend fun INostrClient.sqlStream(
         }
 
     val relayClient = getOrCreateRelay(relay)
-    var done = false
     addConnectionListener(listener)
     val keepAliveSubId = pinRelay(relay)
     try {
         relayClient.connect()
-        withTimeoutOrNull(idleTimeoutMs) { connectedRelaysFlow().first { relay in it } }
-            ?: throw SqlQueryException("error: could not connect to $relay within ${idleTimeoutMs}ms")
+        withTimeoutOrNull(timeoutMs) { connectedRelaysFlow().first { relay in it } }
+            ?: throw NqlQueryException("error: could not connect to $relay within ${timeoutMs}ms")
 
         val pendingOnAuthRequired = hasAuthResponder()
         var authMark = if (pendingOnAuthRequired) authSuccessMark(relay) else 0
         var retriedAfterAuth = false
-        var rowsHandedOver = false
         var reconnects = 0
 
-        fun droppedBeforeRows(msg: Message?) = msg is ClosedMessage && msg.message == DISCONNECTED && msg.subId == command.queryId && !rowsHandedOver
+        fun dropped(msg: Message?) = msg is ClosedMessage && msg.message == DISCONNECTED && msg.subId == command.queryId
 
-        // The cursor died with the socket. Nothing handed over yet (the client's own
-        // reconnect sweep lands here, as do blips): wait for the socket and start over
-        // under a new id. Once rows are out, starting over could repeat them: it fails.
+        // The answer died with the socket: wait for a new one and ask again under a new id.
         suspend fun startOver() {
-            if (reconnects++ >= MAX_SQL_RECONNECTS) throw SqlQueryException(DISCONNECTED)
-            command = SqlCmd(newSubId(), query, params, named, pageSize)
+            if (reconnects++ >= MAX_NQL_RECONNECTS) throw NqlQueryException(DISCONNECTED)
+            command = NqlCmd(newSubId(), query, params)
             live.id = command.queryId
-            withTimeoutOrNull(idleTimeoutMs) { connectedRelaysFlow().first { relay in it } }
-                ?: throw SqlQueryException("error: could not reconnect to $relay within ${idleTimeoutMs}ms")
+            withTimeoutOrNull(timeoutMs) { connectedRelaysFlow().first { relay in it } }
+                ?: throw NqlQueryException("error: could not reconnect to $relay within ${timeoutMs}ms")
             // A new socket is a new NIP-42 session: the auth retry is owed again.
             if (pendingOnAuthRequired) authMark = authSuccessMark(relay)
             retriedAfterAuth = false
@@ -174,14 +135,13 @@ suspend fun INostrClient.sqlStream(
 
         relayClient.sendIfConnected(command)
 
-        while (!done) {
+        while (true) {
             val msg =
-                withTimeoutOrNull(idleTimeoutMs) { incoming.receive() }
-                    ?: throw SqlQueryException("error: no answer from $relay within ${idleTimeoutMs}ms")
+                withTimeoutOrNull(timeoutMs) { incoming.receive() }
+                    ?: throw NqlQueryException("error: no answer from $relay within ${timeoutMs}ms")
             val msgId =
                 when (msg) {
-                    is SqlColsMessage -> msg.queryId
-                    is SqlRowsMessage -> msg.queryId
+                    is NqlResultMessage -> msg.queryId
                     is ClosedMessage -> msg.subId
                     else -> null
                 }
@@ -189,21 +149,11 @@ suspend fun INostrClient.sqlStream(
             if (msgId != command.queryId) continue
 
             when (msg) {
-                is SqlColsMessage -> {
-                    onColumns(msg.columns)
+                is NqlResultMessage -> {
+                    return msg.result
                 }
 
-                is SqlRowsMessage -> {
-                    if (msg.rows.isNotEmpty()) rowsHandedOver = true
-                    msg.rows.forEach(onRow)
-                    if (msg.done) {
-                        done = true
-                    } else {
-                        relayClient.sendIfConnected(FetchCmd(command.queryId, pageSize ?: DEFAULT_SQL_FETCH))
-                    }
-                }
-
-                is ClosedMessage if droppedBeforeRows(msg) -> {
+                is ClosedMessage if dropped(msg) -> {
                     startOver()
                 }
 
@@ -211,7 +161,7 @@ suspend fun INostrClient.sqlStream(
                     val authWall = MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED
                     val outcome =
                         if (authWall && pendingOnAuthRequired && !retriedAfterAuth) {
-                            awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs)
+                            awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, timeoutMs)
                         } else {
                             null
                         }
@@ -223,13 +173,12 @@ suspend fun INostrClient.sqlStream(
 
                         // A socket dropping under the AUTH reads as a refusal too. Its drop notice is
                         // raised on the same disconnect, a hop behind the auth state: wait for it.
-                        outcome != null && droppedBeforeRows(withTimeoutOrNull(DROP_NOTICE_GRACE_MS) { incoming.receive() }) -> {
+                        outcome != null && dropped(withTimeoutOrNull(DROP_NOTICE_GRACE_MS) { incoming.receive() }) -> {
                             startOver()
                         }
 
                         else -> {
-                            done = true
-                            throw SqlQueryException(msg.message)
+                            throw NqlQueryException(msg.message)
                         }
                     }
                 }
@@ -240,16 +189,15 @@ suspend fun INostrClient.sqlStream(
     } finally {
         removeConnectionListener(listener)
         incoming.close()
-        if (!done) relayClient.sendIfConnected(SqlCloseCmd(command.queryId))
         unsubscribe(keepAliveSubId)
     }
 }
 
 /**
- * Keeps [relay] in the pool's desired set while a SQL exchange runs: `SQL` is
+ * Keeps [relay] in the pool's desired set while an NQL exchange runs: `NQL` is
  * not a REQ, so without a subscription the pool sees the relay as unwanted and
- * drops the socket between pages. The filter matches nothing. Returns the
- * subscription id to [INostrClient.unsubscribe] when done.
+ * may drop the socket. The filter matches nothing. Returns the subscription id
+ * to [INostrClient.unsubscribe] when done.
  */
 private fun INostrClient.pinRelay(relay: NormalizedRelayUrl): String {
     val subId = newSubId()
@@ -260,71 +208,104 @@ private fun INostrClient.pinRelay(relay: NormalizedRelayUrl): String {
 /**
  * `(created_at, id)` of every event [filter] matches on [relay]'s raw store,
  * newest first — a REQ without the relay's result cap, ranking or live tail,
- * sized for NIP-77 snapshots. See [FilterSql].
+ * sized for NIP-77 snapshots. Pages past the relay's row cap. See [FilterSql].
  *
- * @throws SqlQueryException see [sql].
+ * @throws NqlQueryException see [nql].
  */
-suspend fun INostrClient.sqlIdsAndTimes(
+suspend fun INostrClient.nqlIdsAndTimes(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    pageSize: Int? = DEFAULT_SQL_FETCH,
-    idleTimeoutMs: Long = 30_000,
+    timeoutMs: Long = 30_000,
 ): List<IdAndTime> {
     if (FilterSql.matchesNothing(filter)) return emptyList()
-    val q = FilterSql.ids(filter)
     val out = ArrayList<IdAndTime>()
-    sqlStream(relay, q.sql, q.params, pageSize = pageSize, idleTimeoutMs = idleTimeoutMs) { out.add(IdAndTime((it[1] as Number).toLong(), it[0] as String)) }
+    var after: IdAndTime? = null
+    while (true) {
+        val remaining = filter.limit?.let { it - out.size }
+        if (remaining != null && remaining <= 0) break
+        val q = FilterSql.ids(filter, after, remaining)
+        val page = nql(relay, q.nql, q.params, timeoutMs)
+        page.rows.forEach { out.add(IdAndTime((it[1] as Number).toLong(), it[0] as String)) }
+        if (!page.truncated || page.rows.isEmpty()) break
+        after = out.last()
+    }
     return out
 }
 
 /**
  * How many events [filter] matches on [relay]'s raw store (NIP-45 semantics:
- * `limit` ignored), as one SQL `count`.
+ * `limit` ignored), as one NQL `count`.
  *
- * @throws SqlQueryException see [sql].
+ * @throws NqlQueryException see [nql].
  */
-suspend fun INostrClient.sqlCount(
+suspend fun INostrClient.nqlCount(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    idleTimeoutMs: Long = 30_000,
+    timeoutMs: Long = 30_000,
 ): Long {
     if (FilterSql.matchesNothing(filter.copy(limit = null))) return 0
     val q = FilterSql.count(filter)
-    return (sql(relay, q.sql, q.params, idleTimeoutMs = idleTimeoutMs).rows.single()[0] as Number).toLong()
+    return (nql(relay, q.nql, q.params, timeoutMs).rows.single()[0] as Number).toLong()
 }
 
 /**
  * Every event [filter] matches on [relay]'s raw store, newest first: the ids
- * with [sqlIdsAndTimes], then the events [FilterSql.HYDRATE_CHUNK] at a time.
+ * with [nqlIdsAndTimes], then the events and their tags
+ * [FilterSql.HYDRATE_CHUNK] at a time. NQL shows a tag's first five elements
+ * only: an event with a longer tag is fetched whole with a `REQ` by id.
  *
- * @throws SqlQueryException see [sql].
+ * @throws NqlQueryException see [nql].
  */
-suspend fun INostrClient.sqlQuery(
+suspend fun INostrClient.nqlQuery(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    idleTimeoutMs: Long = 30_000,
+    timeoutMs: Long = 30_000,
 ): List<Event> {
     val out = ArrayList<Event>()
-    sqlQuery(relay, filter, idleTimeoutMs) { out.add(it) }
+    nqlQuery(relay, filter, timeoutMs) { out.add(it) }
     return out
 }
 
-/** [sqlQuery], handing each event to [onEach] a chunk at a time. */
-suspend fun INostrClient.sqlQuery(
+/** [nqlQuery], handing each event to [onEach] a chunk at a time, newest first. */
+suspend fun INostrClient.nqlQuery(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    idleTimeoutMs: Long = 30_000,
+    timeoutMs: Long = 30_000,
     onEach: (Event) -> Unit,
 ) {
     // Pinned across the steps too, so the socket survives the gaps between them.
     val keepAliveSubId = pinRelay(relay)
     try {
-        val ids = sqlIdsAndTimes(relay, filter, idleTimeoutMs = idleTimeoutMs)
+        val ids = nqlIdsAndTimes(relay, filter, timeoutMs)
         for (chunk in ids.chunked(FilterSql.HYDRATE_CHUNK)) {
-            val q = FilterSql.hydrate(chunk.map { it.id })
+            val chunkIds = chunk.map { it.id }
             val collector = FilterSql.Collector()
-            sqlStream(relay, q.sql, q.params, pageSize = DEFAULT_SQL_FETCH, idleTimeoutMs = idleTimeoutMs) { collector.add(it) }
-            collector.finish().forEach(onEach)
+            var lastId: String? = null
+            while (true) {
+                val q = FilterSql.events(chunkIds, lastId)
+                val page = nql(relay, q.nql, q.params, timeoutMs)
+                page.rows.forEach(collector::addEvent)
+                if (!page.truncated || page.rows.isEmpty()) break
+                lastId = page.rows.last()[0] as String
+            }
+            var after: Pair<String, Long>? = null
+            while (true) {
+                val q = FilterSql.tags(chunkIds, after)
+                val page = nql(relay, q.nql, q.params, timeoutMs)
+                page.rows.forEach(collector::addTag)
+                if (!page.truncated || page.rows.isEmpty()) break
+                val last = page.rows.last()
+                after = last[0] as String to (last[1] as Number).toLong()
+            }
+            val result = collector.finish()
+            val whole =
+                if (result.incomplete.isEmpty()) {
+                    emptyMap()
+                } else {
+                    fetchAll(relay, Filter(ids = result.incomplete), timeoutMs).filter { it.verify() }.associateBy { it.id }
+                }
+            val byId = result.events.associateBy { it.id }
+            for (id in chunkIds) (byId[id] ?: whole[id])?.let(onEach)
         }
     } finally {
         unsubscribe(keepAliveSubId)
@@ -342,8 +323,5 @@ private const val DISCONNECTED = "error: relay disconnected"
 /** How long an AUTH refusal waits for the drop notice that would make it a disconnect instead. */
 private const val DROP_NOTICE_GRACE_MS = 500L
 
-/** Re-sends of a query whose socket dropped before its first row. */
-private const val MAX_SQL_RECONNECTS = 3
-
-/** Rows per `FETCH` when the caller doesn't choose a page size. */
-const val DEFAULT_SQL_FETCH = 500
+/** Re-sends of a query whose socket dropped before its answer. */
+private const val MAX_NQL_RECONNECTS = 3
