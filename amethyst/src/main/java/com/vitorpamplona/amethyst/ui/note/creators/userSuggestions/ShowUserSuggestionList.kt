@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.user_suggestion_in_this_chat
+import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay

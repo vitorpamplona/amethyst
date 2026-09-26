@@ -18,26 +18,58 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 
 @Composable
 fun WatchScrollToTop(
-    feedContent: CardFeedContentState,
+    feedContentState: FeedContentState,
     listState: LazyListState,
 ) {
-    val scrollToTop by feedContent.scrollToTop.collectAsStateWithLifecycle()
+    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContent.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContentState.scrollToTopPending) {
             listState.scrollToItem(index = 0)
-            feedContent.sentToTop()
+            feedContentState.sentToTop()
+        }
+    }
+}
+
+@Composable
+fun WatchScrollToTop(
+    feedContentState: FeedContentState,
+    listState: LazyGridState,
+) {
+    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && feedContentState.scrollToTopPending) {
+            listState.scrollToItem(index = 0)
+            feedContentState.sentToTop()
+        }
+    }
+}
+
+@Composable
+fun WatchScrollToTop(
+    videoFeedContentState: FeedContentState,
+    pagerState: PagerState,
+) {
+    val scrollToTop by videoFeedContentState.scrollToTop.collectAsStateWithLifecycle()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && videoFeedContentState.scrollToTopPending) {
+            pagerState.scrollToPage(page = 0)
+            videoFeedContentState.sentToTop()
         }
     }
 }

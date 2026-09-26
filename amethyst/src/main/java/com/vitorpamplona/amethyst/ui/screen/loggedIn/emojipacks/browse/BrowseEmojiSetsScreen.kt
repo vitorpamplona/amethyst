@@ -46,12 +46,12 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
-import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

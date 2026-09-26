@@ -91,3 +91,27 @@ fun ClickableEmail(
             },
     )
 }
+
+/**
+ * A primary-colored clickable phone number that opens the platform dialer via
+ * [LocalUriHandler] (`tel:`). Strips a leading `tel:` from the display text.
+ * [underline] + hover cursor are the Desktop mouse-first affordances.
+ */
+@Composable
+fun ClickablePhone(
+    number: String,
+    modifier: Modifier = Modifier,
+    underline: Boolean = false,
+) {
+    val uriHandler = LocalUriHandler.current
+    val display = remember(number) { number.removePrefix("tel:") }
+    Text(
+        text = display,
+        color = MaterialTheme.colorScheme.primary,
+        textDecoration = if (underline) TextDecoration.Underline else null,
+        modifier =
+            modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
+                runCatching { uriHandler.openUri("tel:$display") }
+            },
+    )
+}

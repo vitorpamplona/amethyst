@@ -18,30 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.theme.newItemBubbleModifier
 
+/** The small dot that marks a row with unread items. */
 @Composable
-fun ClickablePhone(phone: String) {
-    val context = LocalContext.current
-
-    ClickableTextPrimary(
-        text = phone,
-        onClick = { context.dial(phone) },
-    )
-}
-
-fun Context.dial(phone: String) {
-    try {
-        val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))
-        startActivity(intent)
-    } catch (t: Throwable) {
-        // TODO: Handle potential exceptions
-    }
+fun NewItemsBubble() {
+    Box(MaterialTheme.colorScheme.newItemBubbleModifier)
 }

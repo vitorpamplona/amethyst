@@ -18,26 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.feeds
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.commons.feeds.AdditiveComplexFeedFilter
-import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -75,7 +73,7 @@ class ChannelFeedContentState(
     }
 
     fun refreshSuspended() {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         isRefreshing.value = true
         try {
@@ -178,7 +176,7 @@ class ChannelFeedContentState(
     }
 
     fun destroy() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
         bundlerInsert.cancel()
         bundler.cancel()
     }

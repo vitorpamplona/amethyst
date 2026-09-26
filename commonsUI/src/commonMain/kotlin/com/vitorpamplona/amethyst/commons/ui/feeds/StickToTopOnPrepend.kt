@@ -24,10 +24,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,11 +59,14 @@ import kotlinx.coroutines.flow.map
  * with an instant (non-animated) scroll so the prepend appears as
  * in-place growth rather than a visible jump-then-scroll.
  *
- * Commons port of `amethyst/.../WatchScrollToTop.kt` so Desktop and any
- * other multiplatform front-end can use the same auto-stick behavior.
- * Uses plain `collectAsState` instead of the Android-only
- * `collectAsStateWithLifecycle` — equivalent here because the effect's
- * lifecycle is already bound to composition via `LaunchedEffect`.
+ * Most callers should not invoke this directly: `SaveableFeedContentState`,
+ * `SaveableGridFeedContentState`, and the analogous wrappers in the app's
+ * `ui/screen/FeedView.kt` already apply auto-stick to every feed they
+ * own. Invoke the explicit overload only when the listState is
+ * constructed outside one of those wrappers, or when the key that
+ * should trigger the snap is not the default `items.list[0].idHex`
+ * (e.g. notifications, chats, or feeds keyed on something other than a
+ * Note's hex id).
  */
 @Composable
 fun StickToTopOnPrepend(
@@ -142,7 +145,7 @@ private fun rememberFirstItemIdHex(feedContentState: FeedContentState): String? 
                 }
             }
         }
-    val key by flow.collectAsState(initial = null)
+    val key by flow.collectAsStateWithLifecycle(initialValue = null)
     return key
 }
 
