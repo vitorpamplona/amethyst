@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.model.privacyOptions
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.ProxiedSocketFactory
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress

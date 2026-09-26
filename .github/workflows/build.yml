@@ -335,10 +335,29 @@ jobs:
           name: Quartz iOS Test Reports
           path: quartz/build/reports
 
-  test-and-build-android:
+  # Android Lint, split out of test-and-build-android.
+  #
+  # That job died with "the runner has received a shutdown signal" (SIGTERM,
+  # exit 143) seven times across this workflow's history — the OOM killer taking
+  # the runner agent on a 16GB box. Two attempts to fix it by tuning numbers
+  # have now been spent: capping both daemons to 4g traded the runner OOM for an
+  # R8/lintAnalyze "Java heap space", and --max-workers=3 survives a warm cache
+  # but still dies on a cold one.
+  #
+  # This is the structural fix rather than a third number. lintAnalyze is the
+  # single heaviest step in that job — measured at 13 of its 35 minutes on one
+  # cold run — and it holds a large analysis graph while the Kotlin daemon, a
+  # forked test JVM and R8 are all still resident. Giving the two lint tasks
+  # their own runner removes that peak from the critical job instead of trying
+  # to squeeze everything under one ceiling, and the two now run concurrently.
+  #
+  # The cost is honest: both jobs restore the same read-only Gradle cache and so
+  # repeat some module compilation. That buys back more than it spends here,
+  # because the duplicated work is parallel while the memory pressure was not.
+  lint-android:
     needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -354,12 +373,61 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Lint + focused unit tests + benchmark assembly in one Gradle invocation.
-      # Previously: one invocation for lint, one for `test` (which compiled all
-      # six amethyst variants × all flavors), one for `assembleBenchmark`
-      # (re-walking the same task graph). Combining them keeps the daemon hot
-      # across phases and lets task-level dedup (e.g. compileKotlin) only
-      # happen once.
+      # Same daemon cap as the sibling job: lintAnalyze draws on the Gradle
+      # daemon's heap, which is why the earlier 4g experiment broke it. Only the
+      # Kotlin daemon is trimmed.
+      - name: Lint Android (gradle)
+        run: |
+          ./gradlew \
+            -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            --max-workers=3 \
+            :amethyst:lintFdroidBenchmark \
+            :amethyst:lintPlayBenchmark
+
+      - name: Upload Android Lint Reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Android Lint Reports
+          path: amethyst/build/reports/lint-results-*.html
+
+  test-and-build-android:
+    needs: lint
+    runs-on: ubuntu-latest
+    # 90, not 60. On main this job's Gradle step takes ~46 minutes, which used
+    # 76% of a 60-minute budget — fine for an incremental run, but PR runs set
+    # `cache-read-only` (below), so they restore main's Gradle cache and never
+    # save. A PR that touches `quartz` or `commons` invalidates most of what
+    # that cache holds for everything downstream, and the job then rebuilds it
+    # from cold: measured 2-3x the main-branch time across every job in the
+    # workflow, which puts this one past the cap and gets it killed mid-step
+    # with no test report. Raising the cap costs nothing on runs that finish
+    # early — `timeout-minutes` bounds a job, it does not reserve the time.
+    timeout-minutes: 120
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Focused unit tests + benchmark assembly in one Gradle invocation.
+      # Previously: one invocation for `test` (which compiled all six amethyst
+      # variants × all flavors) and one for `assembleBenchmark` (re-walking the
+      # same task graph). Combining them keeps the daemon hot across phases and
+      # lets task-level dedup (e.g. compileKotlin) only happen once.
+      #
+      # Lint used to run here too and now has its own job (lint-android above) —
+      # see the note there for why. What remains is still the heaviest job in
+      # the workflow, so the memory notes below continue to apply.
       #
       # `-PdisableAbiSplits=true` produces a single non-split APK per
       # (flavor, buildType) instead of 5 (4 ABIs + universal). The CI only
@@ -371,11 +439,47 @@ jobs:
       # variants are compile-equivalent for unit-test purposes; running all six
       # adds ~5× the kotlinc work without catching new defects on PRs. Push to
       # main still gets the full test matrix via the production-build path.
+      # Memory, CI-only. gradle.properties asks for -Xmx6g (Gradle) plus -Xmx8g
+      # and 2g metaspace (Kotlin daemon) — about 16GB of ceiling on a 16GB
+      # ubuntu-latest runner, before the launcher JVM, Lint's fork and the KSP
+      # workers. This job is the only one heavy enough to reach it, and it died
+      # five times mid-compile with "the runner has received a shutdown signal",
+      # which is the OOM killer taking the runner agent.
+      #
+      # Only the Kotlin daemon is cut. An earlier attempt capped BOTH to 4g and
+      # traded one OOM for another: the runner survived and the job ran to
+      # completion, but R8 and lintAnalyze then failed with
+      # "java.lang.OutOfMemoryError: Java heap space" — they draw on the Gradle
+      # daemon's heap, and 4g is not enough for them on this app. 6g always was,
+      # so it stays; 8g + 2g for kotlinc is the part that did not fit.
+      #
+      # Overridden here rather than in gradle.properties so local builds on
+      # bigger machines keep the headroom.
+      #
+      # `--max-workers` is the second half, and it is about concurrency rather
+      # than ceilings. The heap numbers above are per-JVM limits; what actually
+      # tips a 16GB runner over is how many heavy JVMs are live at once. Gradle
+      # defaults max-workers to the core count (4 on ubuntu-latest) and
+      # org.gradle.parallel is on, so a cold run can have several kotlinc
+      # workers, a lint fork and a forked test JVM resident alongside the two
+      # daemons.
+      #
+      # Cold is the case that matters. The 4g cap was first validated on a run
+      # that only changed this file, so it restored main's Gradle cache and
+      # built almost nothing; the next PR run that touched `commons`
+      # invalidated that cache, rebuilt from cold, and died the same way at
+      # ~20 minutes. Fewer workers is what makes the cold path fit — dropping
+      # heap further would start starving R8 again, which is the trade the
+      # previous attempt already lost.
+      #
+      # 3 rather than 2: this job is mostly a chain of single-task module
+      # compiles, so the parallelism it loses is small, and halving it risks
+      # the timeout on a cold run. The cap goes to 120 for the same reason.
       - name: Test + Build Android (gradle)
         run: |
           ./gradlew \
-            :amethyst:lintFdroidBenchmark \
-            :amethyst:lintPlayBenchmark \
+            -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            --max-workers=3 \
             :quartz:jvmTest \
             :commons:jvmTest \
             :commonsUI:jvmTest \
@@ -385,13 +489,6 @@ jobs:
             :amethyst:testPlayDebugUnitTest \
             :amethyst:assembleBenchmark \
             -PdisableAbiSplits=true
-
-      - name: Upload Android Lint Reports
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: Android Lint Reports
-          path: amethyst/build/reports/lint-results-*.html
 
       # Publishes the JUnit XML produced by the unit-test tasks above as inline
       # annotations plus a job summary. Replaces asadmansr/android-test-report-action,

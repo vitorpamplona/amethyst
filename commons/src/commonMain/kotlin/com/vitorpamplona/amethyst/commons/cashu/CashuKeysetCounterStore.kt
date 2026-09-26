@@ -27,7 +27,8 @@ package com.vitorpamplona.amethyst.commons.cashu
  * monotonically increasing counter. Reusing a counter makes the mint reply
  * `outputs already signed`, so every reservation MUST be persisted **before**
  * the blinded outputs hit the mint. Implementations therefore make
- * [reserve] atomic and durable.
+ * [reserve] atomic and durable. They suspend because durable storage on
+ * every target this runs on is a suspending API.
  *
  * - Android backs this with `AccountSettings` / `CashuPreferences`.
  * - `amy` backs this with `~/.amy/<account>/cashu.json`.
@@ -37,13 +38,13 @@ package com.vitorpamplona.amethyst.commons.cashu
  */
 interface CashuKeysetCounterStore {
     /** The next counter for [keysetId] without advancing it (0 if unseen). */
-    fun peek(keysetId: String): Long
+    suspend fun peek(keysetId: String): Long
 
     /**
      * Atomically reserve [count] consecutive counters for [keysetId] and
      * return the first reserved index. Persists before returning.
      */
-    fun reserve(
+    suspend fun reserve(
         keysetId: String,
         count: Int,
     ): Long
@@ -55,7 +56,7 @@ interface CashuKeysetCounterStore {
      * kept whatever the backing store; a host whose store can write the value in
      * one atomic op should override it.
      */
-    fun seedIfMissing(
+    suspend fun seedIfMissing(
         keysetId: String,
         legacyValue: Long,
     ) {
@@ -76,9 +77,9 @@ interface CashuKeysetCounterStore {
 object UnavailableCashuKeysetCounterStore : CashuKeysetCounterStore {
     private fun fail(): Nothing = error("No durable NUT-13 counter store is wired for this account; refusing to reuse counters.")
 
-    override fun peek(keysetId: String): Long = fail()
+    override suspend fun peek(keysetId: String): Long = fail()
 
-    override fun reserve(
+    override suspend fun reserve(
         keysetId: String,
         count: Int,
     ): Long = fail()

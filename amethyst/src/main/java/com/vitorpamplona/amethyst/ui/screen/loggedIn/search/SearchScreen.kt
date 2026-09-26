@@ -73,7 +73,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -112,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_source_relays
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
 import com.vitorpamplona.amethyst.commons.resources.search_waiting_on_relays
+import com.vitorpamplona.amethyst.commons.search.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
@@ -135,7 +135,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.model.preferences.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -169,7 +168,7 @@ fun SearchScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val historyStorage = LocalContext.current.let { context -> remember(context) { DataStoreSearchHistoryStorage(context) } }
+    val historyStorage = remember { DataStoreSearchHistoryStorage(Amethyst.instance.appStores.getDataStore(DataStoreSearchHistoryStorage.FILE_NAME)) }
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
             // Keyed on the seed: navigating from one screen's search button to another's has to

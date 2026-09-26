@@ -723,7 +723,7 @@ class CashuMintOperations(
      */
     private suspend fun fetchInputFeePpkByKeyset(): Map<String, Long> = client.keysets().keysets.associate { it.id to (it.inputFeePpk ?: 0L) }
 
-    private fun createBlindedOutputs(
+    private suspend fun createBlindedOutputs(
         amount: Long,
         keyset: KeysetDto,
     ): List<BlindOutput> = secretOutputsFor(splitAmounts(amount), keyset)
@@ -735,7 +735,7 @@ class CashuMintOperations(
      * [SecretFactory.nextSecret] per amount instead would take the
      * @Synchronized lock + dirty `AccountSettings.saveable` N times.
      */
-    private fun secretOutputsFor(
+    private suspend fun secretOutputsFor(
         amounts: List<Long>,
         keyset: KeysetDto,
     ): List<BlindOutput> {
@@ -744,7 +744,12 @@ class CashuMintOperations(
         // [secretFactory] decides whether those bytes are pure-random or
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
-        val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
+        // Two steps on purpose. reserve() suspends and persists the NUT-13
+        // counter; derive() is pure. Keeping them apart means the durability
+        // boundary is visible here, at the only layer that can await it, rather
+        // than hidden inside secret derivation.
+        val reservation = secretFactory.reserve(keyset.id, amounts.size)
+        val derived = secretFactory.derive(reservation, amounts.size)
         return amounts.mapIndexed { i, amount ->
             val pair = derived[i]
             val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor)

@@ -1221,7 +1221,8 @@ class AccountSettings(
      * Reserve [count] consecutive NUT-13 counters for [keysetId],
      * returning the first one. Caller derives `(secret, r)` from
      * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
-     * Persisted synchronously before returning — see [CashuKeysetCounterStore].
+     * Persisted before returning — see [CashuKeysetCounterStore]. Suspends
+     * because that write is what stands between a crash and a reused counter.
      *
      * One-time migration: when this keyset has a non-zero value in the
      * legacy [cashuKeysetCounters] map (from a build that persisted
@@ -1229,7 +1230,7 @@ class AccountSettings(
      * still at zero, the legacy value is copied over before we reserve
      * so an upgrade doesn't reset the counter.
      */
-    fun reserveCashuCounters(
+    suspend fun reserveCashuCounters(
         keysetId: String,
         count: Int,
     ): Long {
@@ -1238,12 +1239,12 @@ class AccountSettings(
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
-    fun peekCashuCounter(keysetId: String): Long {
+    suspend fun peekCashuCounter(keysetId: String): Long {
         migrateLegacyCashuCounter(keysetId)
         return cashuCounters.peek(keysetId)
     }
 
-    private fun migrateLegacyCashuCounter(keysetId: String) {
+    private suspend fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
         cashuCounters.seedIfMissing(keysetId, legacy)
     }

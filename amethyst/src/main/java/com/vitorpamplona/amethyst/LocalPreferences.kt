@@ -35,11 +35,35 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountIdentity
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountIdentityStore
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
+import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
+import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissal
+import com.vitorpamplona.amethyst.commons.model.preferences.DialogDismissalStore
+import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibility
+import com.vitorpamplona.amethyst.commons.model.preferences.FeedVisibilityStore
+import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventCacheStore
+import com.vitorpamplona.amethyst.commons.model.preferences.LatestEventSlot
+import com.vitorpamplona.amethyst.commons.model.preferences.LegacyPreferenceSource
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefs
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPrefsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuth
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayAuthStore
+import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStore
+import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettings
+import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.orIfUnusable
+import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSecrets
+import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
+import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -55,6 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -81,10 +106,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 // Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
@@ -102,7 +129,7 @@ data class AccountInfo(
     val isTransient: Boolean = false,
 )
 
-private object PrefKeys {
+internal object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
 
     // Global (non-account) master switch for the always-on notification service.
@@ -249,6 +276,220 @@ object LocalPreferences {
     private val savedAccountsMutex = Mutex()
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
+    /**
+     * The per-account DataStore: every non-secret setting this account has.
+     *
+     * Each account's store carries one [CopyOnceMigration] per group in
+     * [LegacyAccountKeys.tables], lifting that group out of the account's legacy
+     * encrypted SharedPreferences the first time the store is read. The copies
+     * leave the legacy keys in place, so a build that reads the old location
+     * still works — see [CopyOnceMigration].
+     */
+    private val accountStores: AccountPreferenceStores by lazy {
+        AccountPreferenceStores(
+            rootFilesDir = {
+                Amethyst.instance.appContext.filesDir
+                    .toOkioPath()
+            },
+            migrations = { npub ->
+                LegacyAccountKeys.tables.map { it.migration { legacySource(npub) } }
+            },
+        )
+    }
+
+    private fun followListStore(npub: String) = TopNavFollowListStore(accountStores.getDataStore(npub))
+
+    private fun latestEventStore(npub: String) = LatestEventCacheStore(accountStores.getDataStore(npub))
+
+    private fun uploadSettingsStore(npub: String) = UploadSettingsStore(accountStores.getDataStore(npub))
+
+    private fun dialogDismissalStore(npub: String) = DialogDismissalStore(accountStores.getDataStore(npub))
+
+    private fun relayAuthStore(npub: String) = RelayAuthStore(accountStores.getDataStore(npub))
+
+    private fun feedVisibilityStore(npub: String) = FeedVisibilityStore(accountStores.getDataStore(npub))
+
+    private fun notificationPrefsStore(npub: String) = NotificationPrefsStore(accountStores.getDataStore(npub))
+
+    private fun identityStore(npub: String) = AccountIdentityStore(accountStores.getDataStore(npub))
+
+    private fun legacySource(npub: String): LegacyPreferenceSource = LegacySharedPreferences(encryptedPreferences(npub))
+
+    /**
+     * Whether the app has stopped mirroring into `secret_keeper_<npub>`.
+     *
+     * False, and deliberately so: the private key, the secrets and the identity
+     * group are all still written there, so that a build rolled back to reading
+     * only the legacy file still finds a complete account. Deleting the file
+     * while that is true would achieve nothing — the next save recreates it —
+     * so [legacyCleanup] refuses to.
+     *
+     * Flipping this is a release of its own, and it ends the rollback window.
+     * It waits on the device pass in
+     * `amethyst/plans/2026-09-23-encrypted-storage-retirement.md`.
+     *
+     * `internal` rather than private because the mirror is not all in this
+     * file: [com.vitorpamplona.amethyst.model.GeohashChatIdentityState] writes
+     * the location-chat identity into its own legacy file and reads this to
+     * know when to stop. Private, it would have kept writing after the flip
+     * and the switch would only half work.
+     */
+    internal const val LEGACY_WRITES_RETIRED = false
+
+    private val legacyCleanup: LegacyPreferenceCleanup by lazy {
+        LegacyPreferenceCleanup(
+            tables = LegacyAccountKeys.tables,
+            accepted = LegacyAccountKeys.accepted,
+            files =
+                object : LegacyAccountFiles {
+                    override fun source(npub: String) = legacySource(npub)
+
+                    // Either file: once the npub one is gone, the hex one still
+                    // has to be reachable or it can never be removed.
+                    override fun exists(npub: String) = legacyAccountFile(npub).exists() || legacyAccountFile(geohashLegacyKey(npub)).exists()
+
+                    override fun geohashSource(npub: String) = LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub)))
+
+                    override suspend fun delete(npub: String): Boolean {
+                        // Clear before unlinking, as deleteAccount does: the live
+                        // SharedPreferences still holds the values in memory and
+                        // would write them straight back out.
+                        encryptedPreferences(npub).edit(commit = true) { clear() }
+                        val removedAccountFile = legacyAccountFile(npub).delete()
+
+                        // The location-chat identity is in a SECOND file, keyed by the
+                        // pubkey hex rather than the npub, because that is the key its
+                        // writer passed. Nothing else would ever remove it, so it goes
+                        // with the account's own file rather than being left as an
+                        // orphan holding a seed forever.
+                        val removedGeohashFile = deleteGeohashLegacyFile(npub)
+
+                        return removedAccountFile || removedGeohashFile
+                    }
+                },
+            currentStore = { npub -> accountStores.getDataStore(npub).data.first() },
+            secrets =
+                object : MigratedSecrets {
+                    override suspend fun secrets(npub: String) = accountSecretsStore.stored(npub)
+
+                    override suspend fun privateKey(npub: String) = accountKeyStore.stored(npub)
+
+                    override suspend fun geohashIdentity(npub: String) = accountSecretsStore.storedGeohashIdentity(npub)
+                },
+            legacyWritesRetired = LEGACY_WRITES_RETIRED,
+        )
+    }
+
+    /**
+     * The file behind [encryptedPreferences], following the same branch it
+     * does — a name taken from the other side of that `if` would have the
+     * cleanup checking for, and deleting, a file that is not the one being
+     * read.
+     */
+    private fun legacyAccountFile(npub: String): File {
+        val name = if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) "${DEBUG_PREFERENCES_NAME}_$npub" else EncryptedStorage.prefsFileName(npub)
+        return File(prefsDirPath, "$name.xml")
+    }
+
+    /**
+     * The key the location-chat identity's legacy file is named by.
+     *
+     * [GeohashChatIdentityState] passed `signer.pubKey` — hex — where every
+     * other caller of [encryptedPreferences] passes an npub, so that material
+     * sits in `secret_keeper_<hex>`, a different file from the account's own
+     * `secret_keeper_<npub>`. Converting here keeps that quirk in one place.
+     */
+    private fun geohashLegacyKey(npub: String): String = npub.bechToBytes("npub").toHexKey()
+
+    /**
+     * Clears and unlinks `secret_keeper_<pubkey hex>`.
+     *
+     * Clear before unlinking, as everything else here does: the live
+     * SharedPreferences still holds the values in memory and would write them
+     * straight back out.
+     */
+    private fun deleteGeohashLegacyFile(npub: String): Boolean {
+        val hex = geohashLegacyKey(npub)
+        encryptedPreferences(hex).edit(commit = true) { clear() }
+        return legacyAccountFile(hex).delete()
+    }
+
+    /**
+     * Copies the location-chat identity out of `secret_keeper_<pubkey hex>` on
+     * the first load after the upgrade.
+     *
+     * Eager, not lazy. [GeohashChatIdentityState] also copies on first use, but
+     * only a user who opens a location chat ever reaches it — and the cleanup
+     * refuses to delete an account's legacy files while that file still holds
+     * an identity the current store does not. Left to the lazy path alone, a
+     * user who never opens another location chat would keep both files
+     * forever, which is the opposite of what the migration is for.
+     *
+     * Idempotent, and cheap after the first run: the store's marker short-circuits
+     * it, so re-running on each load cannot overwrite a later edit and — because
+     * the legacy read is a lambda — does not open `secret_keeper_<pubkey hex>`
+     * either. That matters beyond speed: opening an `EncryptedSharedPreferences`
+     * writes its Tink keyset, so an eager read would recreate the file on the
+     * load right after the cleanup deleted it, permanently.
+     */
+    private suspend fun copyGeohashIdentity(npub: String) {
+        accountSecretsStore.readGeohashIdentity(npub) {
+            readLegacyGeohashIdentity(LegacySharedPreferences(encryptedPreferences(geohashLegacyKey(npub))))
+        }
+    }
+
+    /**
+     * Everything the account's DataStore holds, read in one hop.
+     *
+     * Loaded as a group rather than store by store because
+     * [innerLoadCurrentAccountFromEncryptedStorage] is already near the JVM's
+     * 64KB method limit: every suspend call inside it adds a state to the
+     * generated coroutine state machine, and seven separate loads pushed it
+     * over. One call, one state.
+     */
+    private class AccountStoreData(
+        val identity: AccountIdentity,
+        val followLists: Map<FollowListSlot, TopFilter>,
+        val latestEvents: Map<LatestEventSlot, String>,
+        val uploadSettings: UploadSettings,
+        val dialogDismissal: DialogDismissal,
+        val relayAuth: RelayAuth,
+        val feedVisibility: FeedVisibility,
+        val notificationPrefs: NotificationPrefs,
+    )
+
+    private suspend fun loadAccountStores(
+        npub: String,
+        legacy: SharedPreferences,
+    ) = AccountStoreData(
+        identity =
+            identityStore(npub).load().orIfUnusable {
+                AccountIdentity(
+                    pubKeyHex = legacy.getString(PrefKeys.NOSTR_PUBKEY, null),
+                    loginWithExternalSigner = legacy.getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                    externalSignerPackageName = legacy.getString(PrefKeys.SIGNER_PACKAGE_NAME, null),
+                    localRelayServers = legacy.getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf(),
+                    openBackupConflictsJson = legacy.getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null),
+                )
+            },
+        followLists = migrateNotificationFilter(npub, legacy, followListStore(npub).load()),
+        latestEvents = latestEventStore(npub).load(),
+        uploadSettings = uploadSettingsStore(npub).load(),
+        dialogDismissal = dialogDismissalStore(npub).load(),
+        relayAuth = relayAuthStore(npub).load(),
+        feedVisibility = feedVisibilityStore(npub).load(),
+        notificationPrefs = notificationPrefsStore(npub).load(),
+    )
+
+    // NOT migrated to DataStore, and cannot be: DataStore is suspend-only, while
+    // NotificationRelayService.isEnabled(context) is a synchronous Boolean read
+    // from Service and BroadcastReceiver entry points in freshly started
+    // processes (boot, watchdog, WorkManager). Making it suspend would mean the
+    // restart layers could not consult it at all, and a saved OFF would be
+    // missed on cold boot — the service would resurrect itself. Plain
+    // SharedPreferences is the only store here that answers synchronously on
+    // any thread, so this key stays on it deliberately.
+    //
     // Global master switch for the always-on notification service ("Background
     // notification service"). Default ON: existing users keep current behavior, and
     // per-account participation decides who actually stays active.
@@ -292,11 +533,15 @@ object LocalPreferences {
         globalSettingsPrefs().edit { putBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, enabled) }
     }
 
+    private fun legacyCurrentAccount(): String? = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+
+    private fun legacyAllAccountInfo(): String? = encryptedPreferences().getString(PrefKeys.ALL_ACCOUNT_INFO, null)
+
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {
             currentAccount =
                 withContext(Dispatchers.IO) {
-                    encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+                    accountRoster.currentAccount(::legacyCurrentAccount, ::legacyAllAccountInfo)
                 }
         }
         return currentAccount
@@ -307,12 +552,14 @@ object LocalPreferences {
             currentAccount = null
             withContext(Dispatchers.IO) {
                 encryptedPreferences().edit { clear() }
+                accountRoster.clear()
             }
         } else if (currentAccount != info.npub) {
             currentAccount = info.npub
             if (!info.isTransient) {
                 withContext(Dispatchers.IO) {
                     encryptedPreferences().edit { putString(PrefKeys.CURRENT_ACCOUNT, info.npub) }
+                    accountRoster.mirrorCurrentAccount(info.npub)
                 }
             }
         }
@@ -332,7 +579,7 @@ object LocalPreferences {
         withContext(Dispatchers.IO) {
             with(encryptedPreferences()) {
                 val newSystemOfAccounts =
-                    getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                    (accountRoster.allAccountInfoJson(::legacyCurrentAccount, ::legacyAllAccountInfo) ?: "[]").let {
                         JsonMapper.fromJson<List<AccountInfo>>(it)
                     }
 
@@ -354,9 +601,17 @@ object LocalPreferences {
                             )
                         }
 
+                    val json = JsonMapper.toJson(migrated)
                     edit {
-                        putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.toJson(migrated))
+                        putString(PrefKeys.ALL_ACCOUNT_INFO, json)
                     }
+                    // Mirrored as well, exactly as updateSavedAccounts does. The
+                    // roster's own copy has already run by this point, against an
+                    // ALL_ACCOUNT_INFO that did not exist yet, and its marker is
+                    // set — so without this the roster store stays permanently
+                    // empty for these installs and they open as a fresh install
+                    // the moment the legacy write goes.
+                    accountRoster.mirrorAllAccountInfoJson(json)
 
                     migrated
                 }
@@ -367,16 +622,15 @@ object LocalPreferences {
 
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) =
         withContext(Dispatchers.IO) {
-            if (savedAccounts != accounts) {
+            // .value, not the flow: StateFlow does not override equals, so
+            // comparing the holder to a List was unconditionally true and every
+            // call rewrote both stores.
+            if (savedAccounts.value != accounts) {
                 savedAccounts.emit(accounts)
 
-                encryptedPreferences()
-                    .edit {
-                        putString(
-                            PrefKeys.ALL_ACCOUNT_INFO,
-                            JsonMapper.toJson(accounts.filter { !it.isTransient }),
-                        )
-                    }
+                val json = JsonMapper.toJson(accounts.filter { !it.isTransient })
+                encryptedPreferences().edit { putString(PrefKeys.ALL_ACCOUNT_INFO, json) }
+                accountRoster.mirrorAllAccountInfoJson(json)
             }
         }
 
@@ -448,6 +702,19 @@ object LocalPreferences {
             // would resurrect the deleted settings from this cache.
             mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
+            // The location-chat identity's own file, keyed by pubkey hex. Without
+            // this the anonymous device seed outlives the account that owned it
+            // and comes back if the same npub is re-added — the opposite of what
+            // an unlinkable per-cell identity is for.
+            deleteGeohashLegacyFile(accountInfo.npub)
+            accountKeyStore.delete(accountInfo.npub)
+            accountSecretsStore.delete(accountInfo.npub)
+            // The account's plain DataStore, which deleteUserPreferenceFile cannot
+            // reach: that sweeps shared_prefs/, this lives in filesDir/datastore/.
+            // Left behind it would keep the deleted account's pubkey, signer and
+            // cached events on disk — and re-adding the same npub would find a
+            // live identity there and resurrect the account that was just deleted.
+            accountStores.removeAccount(accountInfo.npub)
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
 
@@ -510,54 +777,13 @@ object LocalPreferences {
                     }
                     settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
 
-                    putString(
-                        PrefKeys.DEFAULT_FILE_SERVER,
-                        JsonMapper.toJson(settings.defaultFileServer),
-                    )
-
-                    putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
-                    putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
-                    putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
-                    putBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, settings.mirrorUploadsToAllServers.value)
-                    putBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, settings.optimizeMediaOnUpload.value)
-                    putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
                     putBoolean(PrefKeys.NIP46_SIGNER_ENABLED, settings.nip46SignerEnabled.value)
                     putString(PrefKeys.NIP46_BUNKER_SECRET, settings.nip46BunkerSecret.value)
                     putString(PrefKeys.NIP46_TRANSPORT_KEY, settings.nip46TransportKey.value)
                     putStringSet(PrefKeys.NIP46_SEEN_IDS, settings.nip46SeenRequestIds.value)
 
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
-                    putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNotificationFollowList.value))
-                    putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultDiscoveryFollowList.value))
-
-                    putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
-                    putString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultRelayGroupsDiscoveryFollowList.value))
-                    putString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNappletsFollowList.value))
-                    putString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNsitesFollowList.value))
-                    putString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultWorkoutsFollowList.value))
-                    putString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGitRepositoriesFollowList.value))
-                    putString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHighlightsFollowList.value))
-                    putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
-                    putString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultGeocachesFollowList.value))
-                    putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
-                    putString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLiveStreamsFollowList.value))
-                    putString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNestsFollowList.value))
-                    putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
-                    putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
-                    putString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicTracksFollowList.value))
-                    putString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicPlaylistsFollowList.value))
-                    putString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastEpisodesFollowList.value))
-                    putString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastsFollowList.value))
-                    putString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultSoftwareAppsFollowList.value))
-                    putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
-                    putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
-                    putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
-                    putString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultFollowPacksFollowList.value))
-                    putString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultAppRecommendationsFollowList.value))
+                    // top-nav filters now live in the account's DataStore; written below,
+                    // outside this edit block, because that write is suspend.
 
                     val walletEntries = settings.nwcWallets.value.mapNotNull { it.denormalize() }
                     if (walletEntries.isNotEmpty()) {
@@ -582,8 +808,6 @@ object LocalPreferences {
                     // Remove legacy key after migration
                     remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
 
-                    putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
-
                     // The undecided conflicts themselves, not just the backups they hold back.
                     // Without these the card vanishes on the next launch and the user never
                     // answers the question the backup is still waiting on.
@@ -594,56 +818,12 @@ object LocalPreferences {
                         putString(PrefKeys.OPEN_BACKUP_CONFLICTS, BackupConflictStorage.encode(openConflicts))
                     }
 
-                    putOrRemove(PrefKeys.LATEST_USER_METADATA, settings.backupUserMetadata)
-                    putOrRemove(PrefKeys.LATEST_DM_RELAY_LIST, settings.backupDMRelayList)
-                    putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
-                    putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
-                    putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupRelayFeedsList)
-                    putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
-                    putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
-
                     if (settings.localRelayServers.value.isNotEmpty()) {
                         putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers.value)
                     } else {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
 
-                    putOrRemove(PrefKeys.LATEST_MUTE_LIST, settings.backupMuteList)
-                    putOrRemove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, settings.backupPrivateHomeRelayList)
-                    putOrRemove(PrefKeys.LATEST_APP_SPECIFIC_DATA, settings.backupAppSpecificData)
-
-                    putOrRemove(PrefKeys.LATEST_CHANNEL_LIST, settings.backupChannelList)
-                    putOrRemove(PrefKeys.LATEST_COMMUNITY_LIST, settings.backupCommunityList)
-                    putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupHashtagList)
-                    putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
-                    putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
-                    putOrRemove(PrefKeys.LATEST_CONCORD_LIST, settings.backupConcordList)
-                    putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
-                    putOrRemove(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, settings.backupKeyPackageRelayList)
-                    putOrRemove(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, settings.backupFavoriteAlgoFeedsList)
-                    putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
-                    putOrRemove(PrefKeys.LATEST_BOLT12_OFFERS, settings.backupBolt12Offers)
-                    putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
-                    putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
-
-                    putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
-                    putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
-                    putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
-                    putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
-                    putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
-                    putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
-                    putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
-                    putString(PrefKeys.CONCORD_VIEW_MODE, settings.concordViewMode.value.name)
-                    putString(PrefKeys.DISABLED_CHAT_FEEDS, ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value))
-                    putString(PrefKeys.DISABLED_HOME_FEED_TYPES, HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value))
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
-                    putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, settings.relayAuthTrustMessageStrangers.value)
-                    putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
-                    putBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, settings.showMessagesInNotifications.value)
                     // Any account that reaches a save has its notification filter in its
                     // post-split meaning, so stamp it as migrated. This keeps the one-shot
                     // Global -> Selected rewrite from ever touching it again and preserves a
@@ -663,37 +843,187 @@ object LocalPreferences {
                         PrefKeys.LAST_READ_PER_ROUTE,
                         JsonMapper.toJson(regularMap),
                     )
-                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
-                    putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
-                    putStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, settings.dismissedChannelInvites.value)
-                    putStringSet(PrefKeys.MUTED_PUBLIC_CHATS, settings.mutedPublicChats.value)
-                    putString(
-                        PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
-                        JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
-                    )
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
                         JsonMapper.toJson(settings.pendingAttestations.value),
                     )
                 }
+
+                // Mirrored into the key store after the legacy write, not
+                // instead of it: both stores carry the key during the
+                // transition so a rollback still loads the account.
+                accountSecretsStore.mirror(
+                    npub = settings.keyPair.pubKey.toNpub(),
+                    value =
+                        AccountSecrets(
+                            nip46SignerEnabled = settings.nip46SignerEnabled.value,
+                            nip46BunkerSecret = settings.nip46BunkerSecret.value,
+                            nip46TransportKey = settings.nip46TransportKey.value,
+                            nip46SeenRequestIds = settings.nip46SeenRequestIds.value,
+                            nwcWalletsJson =
+                                settings.nwcWallets.value
+                                    .mapNotNull { it.denormalize() }
+                                    .takeIf { it.isNotEmpty() }
+                                    ?.let { JsonMapper.toJson(it) },
+                            // .map { denormalize() } and not the raw wallets: the legacy
+                            // write stores the denormalized shape, and the read path parses
+                            // that shape. Serializing the raw value here would write JSON
+                            // the loader cannot understand.
+                            clinkDebitWalletsJson =
+                                settings.clinkDebitWallets.value
+                                    .map { it.denormalize() }
+                                    .takeIf { it.isNotEmpty() }
+                                    ?.let { JsonMapper.toJson(it) },
+                            defaultPaymentSourceId = settings.defaultPaymentSourceId.value,
+                        ),
+                )
+                accountKeyStore.mirrorSave(
+                    npub = settings.keyPair.pubKey.toNpub(),
+                    usesExternalSigner = settings.externalSignerPackageName != null,
+                    privKeyHex = settings.keyPair.privKey?.toHexKey(),
+                )
             }
+            // Mirrored, not moved: NOSTR_PUBKEY is the one key whose loss empties
+            // the app, so the legacy write above stays until a release has
+            // proved this one — see [EncryptedStorage].
+            identityStore(settings.keyPair.pubKey.toNpub()).save(
+                AccountIdentity(
+                    pubKeyHex = settings.keyPair.pubKey.toHexKey(),
+                    loginWithExternalSigner = settings.externalSignerPackageName != null,
+                    externalSignerPackageName = settings.externalSignerPackageName,
+                    localRelayServers = settings.localRelayServers.value,
+                    openBackupConflictsJson = settings.openBackupConflicts().takeIf { it.isNotEmpty() }?.let { BackupConflictStorage.encode(it) },
+                ),
+            )
+            uploadSettingsStore(settings.keyPair.pubKey.toNpub()).save(
+                UploadSettings(
+                    stripLocationOnUpload = settings.stripLocationOnUpload,
+                    optimizeMediaOnUpload = settings.optimizeMediaOnUpload.value,
+                    mirrorUploadsToAllServers = settings.mirrorUploadsToAllServers.value,
+                    useLocalBlossomCache = settings.useLocalBlossomCache.value,
+                    localBlossomCacheProfilePicturesOnly = settings.localBlossomCacheProfilePicturesOnly.value,
+                    defaultFileServerJson = JsonMapper.toJson(settings.defaultFileServer),
+                ),
+            )
+            dialogDismissalStore(settings.keyPair.pubKey.toNpub()).save(
+                DialogDismissal(
+                    hideDeleteRequestDialog = settings.hideDeleteRequestDialog,
+                    hideBlockAlertDialog = settings.hideBlockAlertDialog,
+                    hideNip17WarningDialog = settings.hideNIP17WarningDialog,
+                    hideCommunityRulesViolations = settings.hideCommunityRulesViolations.value,
+                    dismissedPollNoteIds = settings.dismissedPollNoteIds.value,
+                    dismissedChannelInvites = settings.dismissedChannelInvites.value,
+                    mutedPublicChats = settings.mutedPublicChats.value,
+                    hasDonatedInVersion = settings.hasDonatedInVersion.value,
+                    viewedPollResultNoteIdsJson = JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
+                ),
+            )
+            relayAuthStore(settings.keyPair.pubKey.toNpub()).save(
+                RelayAuth(
+                    policyName = settings.defaultRelayAuthPolicy.value.name,
+                    trustMyRelays = settings.relayAuthTrustMyRelaysAndVenues.value,
+                    trustReadFollows = settings.relayAuthTrustReadFollows.value,
+                    trustMessageFollows = settings.relayAuthTrustMessageFollows.value,
+                    trustMessageStrangers = settings.relayAuthTrustMessageStrangers.value,
+                ),
+            )
+            feedVisibilityStore(settings.keyPair.pubKey.toNpub()).save(
+                FeedVisibility(
+                    disabledChatFeeds = ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value),
+                    disabledHomeFeedTypes = HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value),
+                    relayGroupViewMode = settings.relayGroupViewMode.value.name,
+                    concordViewMode = settings.concordViewMode.value.name,
+                    callsEnabled = settings.callsEnabled.value,
+                ),
+            )
+            notificationPrefsStore(settings.keyPair.pubKey.toNpub()).save(
+                NotificationPrefs(
+                    alwaysOnService = settings.alwaysOnNotificationService.value,
+                    showMessagesInNotifications = settings.showMessagesInNotifications.value,
+                    splitNotificationsEnabled = settings.splitNotificationsEnabled.value,
+                ),
+            )
+            latestEventStore(settings.keyPair.pubKey.toNpub()).saveAll(
+                mapOf(
+                    LatestEventSlot.CONTACT_LIST to settings.backupContactList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.USER_METADATA to settings.backupUserMetadata?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.DM_RELAY_LIST to settings.backupDMRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.NIP65_RELAY_LIST to settings.backupNIP65RelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.SEARCH_RELAY_LIST to settings.backupSearchRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.INDEX_RELAY_LIST to settings.backupIndexRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.RELAY_FEEDS_LIST to settings.backupRelayFeedsList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.BLOCKED_RELAY_LIST to settings.backupBlockedRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.TRUSTED_RELAY_LIST to settings.backupTrustedRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.MUTE_LIST to settings.backupMuteList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.PRIVATE_HOME_RELAY_LIST to settings.backupPrivateHomeRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.APP_SPECIFIC_DATA to settings.backupAppSpecificData?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CHANNEL_LIST to settings.backupChannelList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.COMMUNITY_LIST to settings.backupCommunityList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.HASHTAG_LIST to settings.backupHashtagList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.GEOHASH_LIST to settings.backupGeohashList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.EPHEMERAL_LIST to settings.backupEphemeralChatList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.RELAY_GROUP_LIST to settings.backupRelayGroupList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CONCORD_LIST to settings.backupConcordList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.TRUST_PROVIDER_LIST to settings.backupTrustProviderList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.KEY_PACKAGE_RELAY_LIST to settings.backupKeyPackageRelayList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST to settings.backupFavoriteAlgoFeedsList?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.PAYMENT_TARGETS to settings.backupNipA3PaymentTargets?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.BOLT12_OFFERS to settings.backupBolt12Offers?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.CASHU_WALLET to settings.backupCashuWallet?.let { OptimizedJsonMapper.toJson(it) },
+                    LatestEventSlot.NUTZAP_INFO to settings.backupNutzapInfo?.let { OptimizedJsonMapper.toJson(it) },
+                ),
+            )
+            followListStore(settings.keyPair.pubKey.toNpub()).saveAll(
+                mapOf(
+                    FollowListSlot.HOME to settings.defaultHomeFollowList.value,
+                    FollowListSlot.STORIES to settings.defaultStoriesFollowList.value,
+                    FollowListSlot.NOTIFICATION to settings.defaultNotificationFollowList.value,
+                    FollowListSlot.DISCOVERY to settings.defaultDiscoveryFollowList.value,
+                    FollowListSlot.POLLS to settings.defaultPollsFollowList.value,
+                    FollowListSlot.PICTURES to settings.defaultPicturesFollowList.value,
+                    FollowListSlot.RELAY_GROUPS_DISCOVERY to settings.defaultRelayGroupsDiscoveryFollowList.value,
+                    FollowListSlot.NAPPLETS to settings.defaultNappletsFollowList.value,
+                    FollowListSlot.NSITES to settings.defaultNsitesFollowList.value,
+                    FollowListSlot.WORKOUTS to settings.defaultWorkoutsFollowList.value,
+                    FollowListSlot.GIT_REPOSITORIES to settings.defaultGitRepositoriesFollowList.value,
+                    FollowListSlot.HIGHLIGHTS to settings.defaultHighlightsFollowList.value,
+                    FollowListSlot.CALENDARS to settings.defaultCalendarsFollowList.value,
+                    FollowListSlot.PRODUCTS to settings.defaultProductsFollowList.value,
+                    FollowListSlot.GEOCACHES to settings.defaultGeocachesFollowList.value,
+                    FollowListSlot.SHORTS to settings.defaultShortsFollowList.value,
+                    FollowListSlot.PUBLIC_CHATS to settings.defaultPublicChatsFollowList.value,
+                    FollowListSlot.LIVE_STREAMS to settings.defaultLiveStreamsFollowList.value,
+                    FollowListSlot.NESTS to settings.defaultNestsFollowList.value,
+                    FollowListSlot.LONGS to settings.defaultLongsFollowList.value,
+                    FollowListSlot.ARTICLES to settings.defaultArticlesFollowList.value,
+                    FollowListSlot.MUSIC_TRACKS to settings.defaultMusicTracksFollowList.value,
+                    FollowListSlot.MUSIC_PLAYLISTS to settings.defaultMusicPlaylistsFollowList.value,
+                    FollowListSlot.PODCAST_EPISODES to settings.defaultPodcastEpisodesFollowList.value,
+                    FollowListSlot.PODCASTS to settings.defaultPodcastsFollowList.value,
+                    FollowListSlot.SOFTWARE_APPS to settings.defaultSoftwareAppsFollowList.value,
+                    FollowListSlot.BADGES to settings.defaultBadgesFollowList.value,
+                    FollowListSlot.BROWSE_EMOJI_SETS to settings.defaultBrowseEmojiSetsFollowList.value,
+                    FollowListSlot.COMMUNITIES to settings.defaultCommunitiesFollowList.value,
+                    FollowListSlot.FOLLOW_PACKS to settings.defaultFollowPacksFollowList.value,
+                    FollowListSlot.APP_RECOMMENDATIONS to settings.defaultAppRecommendationsFollowList.value,
+                ),
+            )
         }
         Log.d("LocalPreferences", "Saved to encrypted storage")
     }
 
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
-    fun saveSharedSettings(
-        sharedSettings: UiSettings,
-        prefs: SharedPreferences = encryptedPreferences(),
-    ) {
-        Log.d("LocalPreferences", "Saving to shared settings")
-        prefs.edit {
-            putString(PrefKeys.SHARED_SETTINGS, JsonMapper.toJson(sharedSettings))
-        }
-    }
-
+    /**
+     * The UI settings as the global `secret_keeper` file holds them.
+     *
+     * A migration source only: [UiSharedPreferences] owns these now and writes
+     * them to its own DataStore, which carries a one-shot copy out of this blob
+     * for installs that predate it. Nothing writes here any more — the matching
+     * `saveSharedSettings` was removed once it had no callers — but the read
+     * stays for good, like every other legacy reader; see [EncryptedStorage].
+     */
     fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
@@ -722,10 +1052,9 @@ object LocalPreferences {
     private suspend fun hasBackedUpKeysFlow(npub: String): MutableStateFlow<Boolean> =
         hasBackedUpKeysMutex.withLock {
             hasBackedUpKeysFlows.getOrPut(npub) {
-                val stored =
-                    withContext(Dispatchers.IO) {
-                        encryptedPreferences(npub).getBoolean(PrefKeys.HAS_BACKED_UP_KEYS, true)
-                    }
+                // Absent reads as true in both stores, so a store that cannot be
+                // read leaves the nudge off rather than showing it to everyone.
+                val stored = withContext(Dispatchers.IO) { identityStore(npub).hasBackedUpKeys() }
                 MutableStateFlow(stored)
             }
         }
@@ -738,7 +1067,10 @@ object LocalPreferences {
         npub: String,
     ) {
         withContext(Dispatchers.IO) {
+            // Legacy write kept alongside the new one, as for the rest of the
+            // identity group — see [EncryptedStorage].
             encryptedPreferences(npub).edit { putBoolean(PrefKeys.HAS_BACKED_UP_KEYS, value) }
+            identityStore(npub).setHasBackedUpKeys(value)
         }
         hasBackedUpKeysFlow(npub).value = value
     }
@@ -750,103 +1082,166 @@ object LocalPreferences {
         cachedAccounts[npub]?.let { return it }
 
         return withContext(Dispatchers.IO) {
-            mutex.withLock {
-                cachedAccounts[npub]?.let { return@withContext it }
+            var loadedHere = false
 
-                val accountSettings = innerLoadCurrentAccountFromEncryptedStorage(npub)
+            val accountSettings =
+                mutex.withLock {
+                    cachedAccounts[npub]?.let { return@withLock it }
 
-                // Only cache successful loads. Caching null would leave the account
-                // permanently unreachable for the rest of the session if a reader
-                // raced in before the per-npub file finished being written.
-                if (accountSettings != null) {
-                    cachedAccounts.put(npub, accountSettings)
+                    val loaded = innerLoadCurrentAccountFromEncryptedStorage(npub)
+
+                    // Only cache successful loads. Caching null would leave the account
+                    // permanently unreachable for the rest of the session if a reader
+                    // raced in before the per-npub file finished being written.
+                    if (loaded != null) {
+                        cachedAccounts.put(npub, loaded)
+                        loadedHere = true
+                    }
+
+                    loaded
                 }
 
-                return@withContext accountSettings
+            // Outside the lock, and only for the call that did the loading.
+            // Verifying decrypts the whole legacy file and reads three stores,
+            // while `mutex` serialises every account load — under the lock, each
+            // account on a multi-account cold start would wait for the previous
+            // one's full cleanup pass. Nothing here feeds the load.
+            if (loadedHere) {
+                // Before the cleanup, which refuses to delete this account's files
+                // while the location-chat identity has not been copied. Here rather
+                // than inside the loader for the reason [AccountStoreData] gives:
+                // that method is at the JVM's 64KB limit and one more suspend call
+                // inside it does not fit.
+                // Never fatal, like every other legacy step here: this runs on
+                // the account-load path, and an EncryptedSharedPreferences that
+                // cannot be opened must not take the whole load — and with it the
+                // per-account loops in the notification consumers — down with it.
+                try {
+                    copyGeohashIdentity(npub)
+                } catch (e: Exception) {
+                    Log.w("LocalPreferences", "Could not copy the location-chat identity for $npub", e)
+                }
+                legacyCleanup.deleteIfVerified(npub)
             }
+
+            accountSettings
         }
     }
 
-    private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): AccountSettings? {
+    private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String): AccountSettings? {
         Log.d("LocalPreferences") { "Load account from file $npub" }
         val startedAtMs = TimeUtils.nowMillis()
         val result =
             withContext(Dispatchers.IO) {
                 return@withContext with(encryptedPreferences(npub)) {
                     Log.d("LocalPreferences") { "Load account from file $npub - opened file" }
-                    val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
-                    val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
-                    val externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
+                    // Every store this account has, read in one hop — including
+                    // the identity the rest of this function is derived from, so
+                    // that read does not cost its own state in the generated
+                    // coroutine state machine (see [AccountStoreData]).
+                    //
+                    // Keyed by the npub handed in, which is the npub the save side
+                    // writes under and the name of the legacy file just opened. The
+                    // identity falls back to that file when its store cannot
+                    // produce a pubkey: an account without one vanishes from the
+                    // app entirely, private key intact.
+                    val stores = loadAccountStores(npub, this)
+                    val identity = stores.identity
+                    val pubKey = identity.pubKeyHex ?: return@with null
+                    val privKey =
+                        accountKeyStore.read(
+                            npub = pubKey.hexToByteArray().toNpub(),
+                            legacyValue = getString(PrefKeys.NOSTR_PRIVKEY, null),
+                        )
+                    val externalSignerPackageName = identity.externalSignerPackageName ?: if (identity.loginWithExternalSigner) "com.greenart7c3.nostrsigner" else null
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
 
+                    // The npub handed in names the file just read, and the save
+                    // side writes every store under the npub derived from the
+                    // pubkey inside it, so the two are the same by construction.
+                    // Say so if they ever are not: it would mean this load is
+                    // reading stores that a save never wrote.
+                    if (keyPair.pubKey.toNpub() != npub) {
+                        Log.e("LocalPreferences", "Account file $npub holds pubkey ${keyPair.pubKey.toNpub()}; its stores were read under the file's name", null)
+                    }
+
                     Log.d("LocalPreferences") { "Load account from file $npub - keys ready" }
 
-                    val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
-                    val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
-                    val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
-                    val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
-                    val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
-                    val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
-                    val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
-                    val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
-                    val nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: ""
-                    val nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf()
-                    val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
-                    val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
-                    val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
-                    val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
-                    val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
+                    val stripLocationOnUpload = stores.uploadSettings.stripLocationOnUpload
+                    val useLocalBlossomCache = stores.uploadSettings.useLocalBlossomCache
+                    val localBlossomCacheProfilePicturesOnly = stores.uploadSettings.localBlossomCacheProfilePicturesOnly
+                    val mirrorUploadsToAllServers = stores.uploadSettings.mirrorUploadsToAllServers
+                    val optimizeMediaOnUpload = stores.uploadSettings.optimizeMediaOnUpload
+                    val hideCommunityRulesViolations = stores.dialogDismissal.hideCommunityRulesViolations
+                    val hideDeleteRequestDialog = stores.dialogDismissal.hideDeleteRequestDialog
+                    val hideBlockAlertDialog = stores.dialogDismissal.hideBlockAlertDialog
+                    val hideNIP17WarningDialog = stores.dialogDismissal.hideNip17WarningDialog
+                    val callsEnabled = stores.feedVisibility.callsEnabled
+                    val alwaysOnNotificationService = stores.notificationPrefs.alwaysOnService
                     // Read as a group via a helper: this load lambda sits right at the JVM's
                     // per-method bytecode limit (see the note above the awaits below), so keeping
                     // these heavy string/enum decodes out of it preserves headroom.
-                    val inboxPrefs = readInboxPrefs()
-                    val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
-                    val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
-                    val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
-                    val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
-                    val dismissedChannelInvites = getStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, null) ?: setOf()
-                    val mutedPublicChats = getStringSet(PrefKeys.MUTED_PUBLIC_CHATS, null) ?: setOf()
-                    val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
-                    val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
+                    val inboxPrefs = readInboxPrefs(stores.relayAuth, stores.feedVisibility)
+                    val splitNotificationsEnabled = stores.notificationPrefs.splitNotificationsEnabled
+                    val showMessagesInNotifications = stores.notificationPrefs.showMessagesInNotifications
+                    val hasDonatedInVersion = stores.dialogDismissal.hasDonatedInVersion
+                    val dismissedPollNoteIds = stores.dialogDismissal.dismissedPollNoteIds
+                    val dismissedChannelInvites = stores.dialogDismissal.dismissedChannelInvites
+                    val mutedPublicChats = stores.dialogDismissal.mutedPublicChats
+                    val viewedPollResultNoteIdsStr = stores.dialogDismissal.viewedPollResultNoteIdsJson
+                    val localRelayServers = identity.localRelayServers
 
-                    val followListPrefs = loadFollowListPrefs()
+                    val followListPrefs = toFollowListPrefs(stores.followLists)
 
-                    val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
-                    val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
-                    val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
-                    val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
-                    val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
-                    val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
+                    // The secrets that used to live in this file now come from the
+                    // encrypted DataStore, falling back to what is still here.
+                    val secrets =
+                        accountSecretsStore.read(
+                            npub = keyPair.pubKey.toNpub(),
+                            // Through the shared reader, so the loader and the check
+                            // that gates deleting this file read the same keys.
+                            legacy = readLegacyAccountSecrets(LegacySharedPreferences(this)),
+                        )
+                    val nip46SignerEnabled = secrets.nip46SignerEnabled
+                    val nip46BunkerSecret = secrets.nip46BunkerSecret
+                    val nip46TransportKey = secrets.nip46TransportKey
+                    val nip46SeenRequestIds = secrets.nip46SeenRequestIds
+                    val zapPaymentRequestServerStr = secrets.legacyZapPaymentRequestServer
+                    val nwcWalletsStr = secrets.nwcWalletsJson
+                    val defaultNwcWalletIdStr = secrets.legacyDefaultNwcWalletId
+                    val clinkDebitWalletsStr = secrets.clinkDebitWalletsJson
+                    val defaultPaymentSourceIdStr = secrets.defaultPaymentSourceId
+                    val defaultFileServerStr = stores.uploadSettings.defaultFileServerJson
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
-                    val openBackupConflictsStr = getString(PrefKeys.OPEN_BACKUP_CONFLICTS, null)
-                    val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
-                    val latestContactListStr = getString(PrefKeys.LATEST_CONTACT_LIST, null)
-                    val latestDmRelayListStr = getString(PrefKeys.LATEST_DM_RELAY_LIST, null)
-                    val latestNip65RelayListStr = getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)
-                    val latestSearchRelayListStr = getString(PrefKeys.LATEST_SEARCH_RELAY_LIST, null)
-                    val latestIndexRelayListStr = getString(PrefKeys.LATEST_INDEX_RELAY_LIST, null)
-                    val latestRelayFeedsListStr = getString(PrefKeys.LATEST_RELAY_FEEDS_LIST, null)
-                    val latestBlockedRelayListStr = getString(PrefKeys.LATEST_BLOCKED_RELAY_LIST, null)
-                    val latestTrustedRelayListStr = getString(PrefKeys.LATEST_TRUSTED_RELAY_LIST, null)
-                    val latestMuteListStr = getString(PrefKeys.LATEST_MUTE_LIST, null)
-                    val latestPrivateHomeRelayListStr = getString(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, null)
-                    val latestAppSpecificDataStr = getString(PrefKeys.LATEST_APP_SPECIFIC_DATA, null)
-                    val latestChannelListStr = getString(PrefKeys.LATEST_CHANNEL_LIST, null)
-                    val latestCommunityListStr = getString(PrefKeys.LATEST_COMMUNITY_LIST, null)
-                    val latestHashtagListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
-                    val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
-                    val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
-                    val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
-                    val latestConcordListStr = getString(PrefKeys.LATEST_CONCORD_LIST, null)
-                    val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
-                    val latestKeyPackageRelayListStr = getString(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, null)
-                    val latestFavoriteAlgoFeedsListStr = getString(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, null)
-                    val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
-                    val latestBolt12OffersStr = getString(PrefKeys.LATEST_BOLT12_OFFERS, null)
-                    val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
-                    val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
+                    val openBackupConflictsStr = identity.openBackupConflictsJson
+                    val latestUserMetadataStr = stores.latestEvents[LatestEventSlot.USER_METADATA]
+                    val latestContactListStr = stores.latestEvents[LatestEventSlot.CONTACT_LIST]
+                    val latestDmRelayListStr = stores.latestEvents[LatestEventSlot.DM_RELAY_LIST]
+                    val latestNip65RelayListStr = stores.latestEvents[LatestEventSlot.NIP65_RELAY_LIST]
+                    val latestSearchRelayListStr = stores.latestEvents[LatestEventSlot.SEARCH_RELAY_LIST]
+                    val latestIndexRelayListStr = stores.latestEvents[LatestEventSlot.INDEX_RELAY_LIST]
+                    val latestRelayFeedsListStr = stores.latestEvents[LatestEventSlot.RELAY_FEEDS_LIST]
+                    val latestBlockedRelayListStr = stores.latestEvents[LatestEventSlot.BLOCKED_RELAY_LIST]
+                    val latestTrustedRelayListStr = stores.latestEvents[LatestEventSlot.TRUSTED_RELAY_LIST]
+                    val latestMuteListStr = stores.latestEvents[LatestEventSlot.MUTE_LIST]
+                    val latestPrivateHomeRelayListStr = stores.latestEvents[LatestEventSlot.PRIVATE_HOME_RELAY_LIST]
+                    val latestAppSpecificDataStr = stores.latestEvents[LatestEventSlot.APP_SPECIFIC_DATA]
+                    val latestChannelListStr = stores.latestEvents[LatestEventSlot.CHANNEL_LIST]
+                    val latestCommunityListStr = stores.latestEvents[LatestEventSlot.COMMUNITY_LIST]
+                    val latestHashtagListStr = stores.latestEvents[LatestEventSlot.HASHTAG_LIST]
+                    val latestGeohashListStr = stores.latestEvents[LatestEventSlot.GEOHASH_LIST]
+                    val latestEphemeralListStr = stores.latestEvents[LatestEventSlot.EPHEMERAL_LIST]
+                    val latestRelayGroupListStr = stores.latestEvents[LatestEventSlot.RELAY_GROUP_LIST]
+                    val latestConcordListStr = stores.latestEvents[LatestEventSlot.CONCORD_LIST]
+                    val latestTrustProviderListStr = stores.latestEvents[LatestEventSlot.TRUST_PROVIDER_LIST]
+                    val latestKeyPackageRelayListStr = stores.latestEvents[LatestEventSlot.KEY_PACKAGE_RELAY_LIST]
+                    val latestFavoriteAlgoFeedsListStr = stores.latestEvents[LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST]
+                    val latestPaymentTargetsStr = stores.latestEvents[LatestEventSlot.PAYMENT_TARGETS]
+                    val latestBolt12OffersStr = stores.latestEvents[LatestEventSlot.BOLT12_OFFERS]
+                    val latestCashuWalletStr = stores.latestEvents[LatestEventSlot.CASHU_WALLET]
+                    val latestNutzapInfoStr = stores.latestEvents[LatestEventSlot.NUTZAP_INFO]
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
@@ -1147,52 +1542,68 @@ object LocalPreferences {
      * deliberate raw-Global choice is never reverted. Accounts created after the
      * split are stamped at save time, so they are never touched here.
      */
-    private fun SharedPreferences.migrateNotificationFilter(current: TopFilter): TopFilter {
-        if (getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return current
+    private suspend fun migrateNotificationFilter(
+        npub: String,
+        legacy: SharedPreferences,
+        filters: Map<FollowListSlot, TopFilter>,
+    ): Map<FollowListSlot, TopFilter> {
+        if (legacy.getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return filters
 
+        val current = filters.getValue(FollowListSlot.NOTIFICATION)
         val migrated = if (current is TopFilter.Global) TopFilter.Selected else current
-        edit {
-            if (migrated !== current) {
-                putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(migrated))
-            }
-            putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
-        }
-        return migrated
+
+        // Into the store the loader reads, not the legacy key it no longer does.
+        // Writing it to the legacy file and stamping anyway left the account on
+        // raw Global for good: the stamp survives, the corrected value does not,
+        // and the next launch reads Global back out of the DataStore.
+        if (migrated !== current) followListStore(npub).save(FollowListSlot.NOTIFICATION, migrated)
+
+        // Stamped only once the value is actually stored, so a failed write
+        // means the migration runs again rather than being lost.
+        legacy.edit { putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true) }
+
+        return if (migrated === current) filters else filters + (FollowListSlot.NOTIFICATION to migrated)
     }
 
-    private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
+    /**
+     * Maps the store's slot table onto the named fields [AccountSettings]
+     * still expects. `getValue` is intentional: [TopNavFollowListStore.load]
+     * returns every slot, so a missing one is a bug in this mapping rather
+     * than a user with no saved filter, and should fail loudly.
+     */
+    private fun toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowListPrefs =
         FollowListPrefs(
-            home = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null), TopFilter.AllFollows),
-            stories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null), TopFilter.Global),
-            notification = migrateNotificationFilter(parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Selected)),
-            discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
-            polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
-            pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
-            relayGroupsDiscovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_RELAY_GROUPS_DISCOVERY_FOLLOW_LIST, null), TopFilter.Mine),
-            napplets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NAPPLETS_FOLLOW_LIST, null), TopFilter.Global),
-            nsites = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NSITES_FOLLOW_LIST, null), TopFilter.Global),
-            workouts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_WORKOUTS_FOLLOW_LIST, null), TopFilter.Global),
-            gitRepositories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GIT_REPOSITORIES_FOLLOW_LIST, null), TopFilter.Global),
-            highlights = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HIGHLIGHTS_FOLLOW_LIST, null), TopFilter.Global),
-            calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
-            products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
-            geocaches = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_GEOCACHES_FOLLOW_LIST, null), TopFilter.AroundMe),
-            shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
-            publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),
-            liveStreams = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LIVE_STREAMS_FOLLOW_LIST, null), TopFilter.Global),
-            nests = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, null), TopFilter.Global),
-            longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
-            articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
-            musicTracks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, null), TopFilter.Global),
-            musicPlaylists = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, null), TopFilter.Global),
-            podcastEpisodes = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, null), TopFilter.Global),
-            podcasts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, null), TopFilter.Global),
-            softwareApps = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, null), TopFilter.Global),
-            badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
-            browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
-            communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
-            followPacks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_FOLLOW_PACKS_FOLLOW_LIST, null), TopFilter.Global),
-            appRecommendations = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST, null), TopFilter.Global),
+            home = filters.getValue(FollowListSlot.HOME),
+            stories = filters.getValue(FollowListSlot.STORIES),
+            notification = filters.getValue(FollowListSlot.NOTIFICATION),
+            discovery = filters.getValue(FollowListSlot.DISCOVERY),
+            polls = filters.getValue(FollowListSlot.POLLS),
+            pictures = filters.getValue(FollowListSlot.PICTURES),
+            relayGroupsDiscovery = filters.getValue(FollowListSlot.RELAY_GROUPS_DISCOVERY),
+            napplets = filters.getValue(FollowListSlot.NAPPLETS),
+            nsites = filters.getValue(FollowListSlot.NSITES),
+            workouts = filters.getValue(FollowListSlot.WORKOUTS),
+            gitRepositories = filters.getValue(FollowListSlot.GIT_REPOSITORIES),
+            highlights = filters.getValue(FollowListSlot.HIGHLIGHTS),
+            calendars = filters.getValue(FollowListSlot.CALENDARS),
+            products = filters.getValue(FollowListSlot.PRODUCTS),
+            geocaches = filters.getValue(FollowListSlot.GEOCACHES),
+            shorts = filters.getValue(FollowListSlot.SHORTS),
+            publicChats = filters.getValue(FollowListSlot.PUBLIC_CHATS),
+            liveStreams = filters.getValue(FollowListSlot.LIVE_STREAMS),
+            nests = filters.getValue(FollowListSlot.NESTS),
+            longs = filters.getValue(FollowListSlot.LONGS),
+            articles = filters.getValue(FollowListSlot.ARTICLES),
+            musicTracks = filters.getValue(FollowListSlot.MUSIC_TRACKS),
+            musicPlaylists = filters.getValue(FollowListSlot.MUSIC_PLAYLISTS),
+            podcastEpisodes = filters.getValue(FollowListSlot.PODCAST_EPISODES),
+            podcasts = filters.getValue(FollowListSlot.PODCASTS),
+            softwareApps = filters.getValue(FollowListSlot.SOFTWARE_APPS),
+            badges = filters.getValue(FollowListSlot.BADGES),
+            browseEmojiSets = filters.getValue(FollowListSlot.BROWSE_EMOJI_SETS),
+            communities = filters.getValue(FollowListSlot.COMMUNITIES),
+            followPacks = filters.getValue(FollowListSlot.FOLLOW_PACKS),
+            appRecommendations = filters.getValue(FollowListSlot.APP_RECOMMENDATIONS),
         )
 
     private inline fun <reified T : Any> parseOrNull(value: String?): T? {
@@ -1276,20 +1687,22 @@ private class InboxPrefs(
     val relayAuthTrustMessageStrangers: Boolean,
 )
 
-private fun SharedPreferences.readInboxPrefs() =
-    InboxPrefs(
-        // Missing key = an account saved before this setting existed. Those keep CUSTOM; only
-        // brand-new logins get the ALWAYS default from AccountSettings' constructor.
-        defaultRelayAuthPolicy =
-            getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
-                ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
-                ?: RelayAuthPolicy.CUSTOM,
-        relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null)),
-        concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null)),
-        enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(getString(PrefKeys.DISABLED_CHAT_FEEDS, null)),
-        enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(getString(PrefKeys.DISABLED_HOME_FEED_TYPES, null)),
-        relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true),
-        relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true),
-        relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true),
-        relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false),
-    )
+private fun readInboxPrefs(
+    relayAuth: RelayAuth,
+    feedVisibility: FeedVisibility,
+) = InboxPrefs(
+    // Missing key = an account saved before this setting existed. Those keep CUSTOM; only
+    // brand-new logins get the ALWAYS default from AccountSettings' constructor.
+    defaultRelayAuthPolicy =
+        relayAuth.policyName
+            ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
+            ?: RelayAuthPolicy.CUSTOM,
+    relayGroupViewMode = RelayGroupViewMode.fromName(feedVisibility.relayGroupViewMode),
+    concordViewMode = ConcordViewMode.fromName(feedVisibility.concordViewMode),
+    enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(feedVisibility.disabledChatFeeds),
+    enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(feedVisibility.disabledHomeFeedTypes),
+    relayAuthTrustMyRelays = relayAuth.trustMyRelays,
+    relayAuthTrustReadFollows = relayAuth.trustReadFollows,
+    relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,
+    relayAuthTrustMessageStrangers = relayAuth.trustMessageStrangers,
+)

@@ -67,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -92,7 +93,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryAvatar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryDisplay
@@ -498,7 +498,8 @@ private fun PickerChildren(
 ) {
     when (item) {
         NavBarItem.BROWSER -> {
-            val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+            val favorites by Amethyst.instance.favoriteApps.favorites
+                .collectAsStateWithLifecycle()
             if (favorites.isEmpty()) {
                 EmptyChildHint(Res.string.bottom_bar_settings_no_favorites)
             } else {
@@ -817,7 +818,8 @@ private fun rememberPinnedVisual(
             PinnedVisual.Glyph(def?.icon ?: MaterialSymbols.Apps, def?.let { stringRes(it.labelRes) } ?: "")
         }
         is BottomBarEntry.Favorite -> {
-            val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+            val favorites by Amethyst.instance.favoriteApps.favorites
+                .collectAsStateWithLifecycle()
             val app = favorites.firstOrNull { it.id == entry.favoriteId }
             if (app != null) PinnedVisual.Favorite(app) else PinnedVisual.Glyph(MaterialSymbols.Public, "")
         }

@@ -111,7 +111,7 @@ private fun resolveIconBlob(event: Event?): IconBlob? =
 
 /**
  * A Coil model (`file://…`) for the cached favicon of [url]'s host, or null when no favicon
- * has been captured yet. The favicon is stored by [BrowserIconRegistry] at browse time (the
+ * has been captured yet. The favicon is stored by [com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry] at browse time (the
  * WebView captures it in the sandboxed `:napplet` process); this composable just reads the cache.
  *
  * Early-returns null when [url] is blank or has no parseable host — this early return is stable
@@ -121,8 +121,9 @@ private fun resolveIconBlob(event: Event?): IconBlob? =
 @Composable
 fun rememberWebAppIconModel(url: String): String? {
     val host = remember(url) { OmniboxInput.hostOf(url) } ?: return null
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
-    return remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
+    val iconKeys by Amethyst.instance.browserIcons.keys
+        .collectAsStateWithLifecycle()
+    return remember(host, iconKeys) { Amethyst.instance.browserIcons.iconModelFor(host) }
 }
 
 /**

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.pow
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -33,14 +34,14 @@ import com.vitorpamplona.quartz.utils.Log
 import java.util.UUID
 
 /**
- * Re-enqueues the mining jobs checkpointed by [PowJobStore] when an account
+ * Re-enqueues the mining jobs checkpointed by [PoWJobStore] when an account
  * logs in, replacing the lost in-memory continuation with the headless replay
  * described by each record. Restore is idempotent: the queue dedupes by job
  * id, so a login flow that emits twice cannot double-mine.
  */
 class PowJobRestorer(
     private val queue: PoWPublishQueue,
-    private val store: PowJobStore,
+    private val store: PoWJobStore,
     private val scheduledPostStore: ScheduledPostStore,
 ) {
     suspend fun restore(account: Account) {

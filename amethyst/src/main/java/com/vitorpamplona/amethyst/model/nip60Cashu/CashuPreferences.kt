@@ -20,110 +20,68 @@
  */
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.cashu.DataStoreCashuCounterStore
+import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 
 /**
- * Per-account Cashu state that needs durable, synchronous persistence —
- * separate from [com.vitorpamplona.amethyst.model.AccountSettings] which
- * batches writes through a 1-second debounced StateFlow.
+ * Android's per-account NUT-13 counter store: the shared
+ * [DataStoreCashuCounterStore] over a file in the app's data directory.
  *
- * # Why a separate store
+ * Two older layers feed into it, and neither may move a counter backwards:
  *
- * The NUT-13 keyset counter is the critical bit. Every mint / swap /
- * melt reserves counter slots, derives deterministic blinded outputs at
- * those slots, sends them to the mint, and the mint signs them. The
- * mint persists which (keyset, blind_message) pairs it has ever signed;
- * a second request to sign the same blind_message returns HTTP 400
- * "outputs already signed". So once the wallet hands a counter to the
- * mint, the local counter advance MUST survive a crash — otherwise the
- * next reservation pulls the same slot and the mint rejects it.
+ *  - `cashu_prefs_<npub>` SharedPreferences, copied in full on first read by
+ *    [CopyOnceMigration]. The copy happens inside the same atomic DataStore
+ *    write that records it happened, so a crash cannot leave the marker set
+ *    with the counters missing. It is a copy, not a move: the old file stays
+ *    intact, so a rolled-back build still finds its counters.
+ *  - `AccountSettings.cashuKeysetCounters`, an older in-settings map, still
+ *    applied per keyset through `seedIfMissing` on every read.
  *
- * The default settings save path debounces writes by 1000 ms, which is
- * exactly the race window between "we asked the mint to sign" and "the
- * mint replied". A crash inside that window (OOM, signer dialog dismiss,
- * unexpected process death) loses the counter advance and makes the
- * wallet unusable. This store writes via `commit = true` so each
- * reservation is durable before the function returns.
- *
- * # Layout
- *
- * One SharedPreferences file per account, named
- * `cashu_prefs_<npub>.xml`. Keys are flat:
- *   - `counter_<keysetId>` → Long, the next free NUT-13 counter
- *
- * Plain (non-encrypted) prefs because keyset counters aren't secret —
- * they're not the seed, they don't carry value, and a leak would only
- * tell an attacker how many proofs the wallet has minted at each
- * keyset (a privacy signal at most).
- *
- * # Migration
- *
- * Older builds stored counters inside `AccountSettings.cashuKeysetCounters`.
- * On first read of a given keyset, callers should pre-seed the store
- * from the legacy map (one-time copy) so an upgrade doesn't reset the
- * counter to zero. See `AccountSettings.migrateCashuCountersTo` for
- * the helper.
+ * Losing a counter here means restarting a keyset at zero and reusing
+ * indices, which costs real ecash — so nothing on this path is best-effort.
  */
-class CashuPreferences(
-    private val prefs: SharedPreferences,
-) : CashuKeysetCounterStore {
-    /** Inspect the next free counter for [keysetId] without advancing it. */
-    @Synchronized
-    override fun peek(keysetId: String): Long = prefs.getLong(counterKey(keysetId), 0L)
+object CashuPreferences {
+    private const val LEGACY_FILE_PREFIX = "cashu_prefs_"
+
+    /** The store file name for [npub], as AppPreferenceStores takes it. */
+    const val FILE_PREFIX = "cashu_"
+
+    fun fileName(npub: String) = FILE_PREFIX + npub
+
+    private val stores = LargeCache<String, CashuKeysetCounterStore>()
 
     /**
-     * Atomically reserve [count] consecutive NUT-13 counters for
-     * [keysetId] and return the first reserved index. The write is
-     * forced to disk with `commit = true` BEFORE returning — see the
-     * class header for why this isn't optional.
+     * Per-account instance, cached: DataStore refuses two live instances over
+     * one file, and a second instance would defeat the single-writer
+     * serialisation that `reserve` depends on.
      */
-    @Synchronized
-    @SuppressLint("ApplySharedPref")
-    override fun reserve(
-        keysetId: String,
-        count: Int,
-    ): Long {
-        require(count > 0) { "Counter reservation must be positive" }
-        val current = peek(keysetId)
-        val next = current + count.toLong()
-        prefs.edit(commit = true) { putLong(counterKey(keysetId), next) }
-        return current
-    }
+    fun forAccount(npub: String): CashuKeysetCounterStore =
+        stores.getOrCreate(npub) {
+            DataStoreCashuCounterStore(Amethyst.instance.appStores.getDataStore(fileName(npub)))
+        }
 
     /**
-     * Seed [keysetId]'s counter from a legacy value found in
-     * [AccountSettings.cashuKeysetCounters]. No-op when the store
-     * already has a value at or above [legacyValue] — never moves the
-     * counter backwards. Called once at wallet load to carry forward
-     * pre-migration state.
+     * The copy out of `cashu_prefs_<npub>`, wired to the file by AppModules
+     * rather than attached here.
+     *
+     * DataStore runs a file's migrations when that file is first opened, and
+     * the holder is what opens it, so the migration has to be registered with
+     * the holder or it would never run.
      */
-    @Synchronized
-    @SuppressLint("ApplySharedPref")
-    override fun seedIfMissing(
-        keysetId: String,
-        legacyValue: Long,
-    ) {
-        if (legacyValue <= 0L) return
-        val current = peek(keysetId)
-        if (current >= legacyValue) return
-        prefs.edit(commit = true) { putLong(counterKey(keysetId), legacyValue) }
-    }
-
-    companion object {
-        private const val FILE_PREFIX = "cashu_prefs_"
-
-        private fun counterKey(keysetId: String) = "counter_$keysetId"
-
-        /** Per-account instance. [npub] keys the on-disk file so each account is isolated. */
-        fun forAccount(npub: String): CashuPreferences {
-            val context = Amethyst.instance.appContext
-            val prefs = context.getSharedPreferences("$FILE_PREFIX$npub", Context.MODE_PRIVATE)
-            return CashuPreferences(prefs)
+    fun legacyMigration(
+        context: Context,
+        npub: String,
+    ) = CopyOnceMigration("migrated.cashuCounters") { out ->
+        val legacy = context.getSharedPreferences("$LEGACY_FILE_PREFIX$npub", Context.MODE_PRIVATE)
+        legacy.all.forEach { (key, value) ->
+            if (key.startsWith(DataStoreCashuCounterStore.COUNTER_PREFIX) && value is Long) {
+                out[longPreferencesKey(key)] = value
+            }
         }
     }
 }

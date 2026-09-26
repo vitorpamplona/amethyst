@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.how_should_we_call_you
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
 import com.vitorpamplona.amethyst.commons.resources.welcome
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")

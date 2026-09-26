@@ -54,9 +54,9 @@ class FileCashuKeysetCounterStore(
             Persisted()
         }
 
-    override fun peek(keysetId: String): Long = synchronized(lock) { load().keyset_counters[keysetId] ?: 0L }
+    override suspend fun peek(keysetId: String): Long = synchronized(lock) { load().keyset_counters[keysetId] ?: 0L }
 
-    override fun reserve(
+    override suspend fun reserve(
         keysetId: String,
         count: Int,
     ): Long =

@@ -179,4 +179,60 @@ class TorSettingsTest {
         assertEquals(TorType.OFF, modified.torType)
         assertNotEquals(original, modified)
     }
+
+    @Test
+    fun isPreset_torTypeDifference_ignored() {
+        val withOff = torDefaultPreset.copy(torType = TorType.OFF)
+        assertTrue(isPreset(withOff, torDefaultPreset))
+    }
+
+    @Test
+    fun presets_areIncreasing_defaultSupersetOfOnlyWhenNeeded() {
+        // Default enables DM + new relays on top of onlyWhenNeeded
+        assertTrue(torDefaultPreset.dmRelaysViaTor)
+        assertTrue(torDefaultPreset.newRelaysViaTor)
+        assertFalse(torOnlyWhenNeededPreset.dmRelaysViaTor)
+        assertFalse(torOnlyWhenNeededPreset.newRelaysViaTor)
+    }
+
+    @Test
+    fun presets_areIncreasing_fullPrivacySupersetOfSmallPayloads() {
+        // Full privacy adds images, videos, media uploads
+        assertTrue(torFullyPrivate.imagesViaTor)
+        assertTrue(torFullyPrivate.videosViaTor)
+        assertTrue(torFullyPrivate.mediaUploadsViaTor)
+        assertFalse(torSmallPayloadsPreset.imagesViaTor)
+        assertFalse(torSmallPayloadsPreset.videosViaTor)
+        assertFalse(torSmallPayloadsPreset.mediaUploadsViaTor)
+    }
+
+    @Test
+    fun smallPayloadsPreset_addsPreviewsNip05Money() {
+        assertTrue(torSmallPayloadsPreset.onionRelaysViaTor)
+        assertTrue(torSmallPayloadsPreset.dmRelaysViaTor)
+        assertTrue(torSmallPayloadsPreset.newRelaysViaTor)
+        assertTrue(torSmallPayloadsPreset.trustedRelaysViaTor)
+        assertTrue(torSmallPayloadsPreset.urlPreviewsViaTor)
+        assertTrue(torSmallPayloadsPreset.profilePicsViaTor)
+        assertFalse(torSmallPayloadsPreset.imagesViaTor)
+        assertFalse(torSmallPayloadsPreset.videosViaTor)
+        assertTrue(torSmallPayloadsPreset.moneyOperationsViaTor)
+        assertTrue(torSmallPayloadsPreset.nip05VerificationsViaTor)
+        assertFalse(torSmallPayloadsPreset.mediaUploadsViaTor)
+    }
+
+    @Test
+    fun torSettings_equality_worksForDistinctUntilChanged() {
+        val a = TorSettings(torType = TorType.INTERNAL, externalSocksPort = 9050)
+        val b = TorSettings(torType = TorType.INTERNAL, externalSocksPort = 9050)
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+    }
+
+    @Test
+    fun whichPreset_ignoresTorTypeAndPort() {
+        // whichPreset only compares boolean flags, not torType/port
+        val withExternal = torDefaultPreset.copy(torType = TorType.EXTERNAL, externalSocksPort = 1234)
+        assertEquals(TorPresetType.DEFAULT, whichPreset(withExternal))
+    }
 }
