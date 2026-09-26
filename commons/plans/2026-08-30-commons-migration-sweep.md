@@ -771,11 +771,11 @@ Options, for the maintainer to pick:
 
 ### Next work, in recommended order (needs maintainer go-ahead per item)
 
-- **Tier 4 unlocks** (small, mechanical): `NappletProtocolJson`
+- **Tier 4 unlocks** — **done 2026-09-26**, see the last section. (Was: small, mechanical: `NappletProtocolJson`
   `java.util.Base64` → `kotlin.io.encoding.Base64` (frees
   `NappletIdentityWatch`); `ScheduledPostStore` Jackson+`java.io.File` →
   kotlinx-serialization+okio (frees `ScheduledPostWorkGate`).
-  `LargeSoftCache` stays parked (needs a WeakReference expect/actual).
+  `LargeSoftCache` stays parked (needs a WeakReference expect/actual).)
 - **Wave 2: LocalCache move-group** — **part A landed (2026-09-19)**, see the
   section below. Part B (repoint `desktopApp`, delete `DesktopLocalCache.kt`)
   is the remaining half.
@@ -1302,3 +1302,100 @@ through an `ingest` helper that pins what the cache built for the lifetime of
 the test instance, the way a screen holds the notes it is showing in the app,
 and keeps the forced GC in the test that failed so the contract is asserted
 rather than left to the heap.
+
+## 2026-09-26 — Tier 4 unlocks, the strings drift, and the UI stragglers
+
+### Tier 4: two jvmAndroid groups promoted to `commonMain`
+
+- **Napplet wire protocol.** `NappletProtocolJson`, `NappletIdentityWatch` and
+  `NappletRequestRouter` moved to `commons/commonMain/…/napplet`. The only
+  pins were `java.util.Base64` and one `System.currentTimeMillis()`. Base64 is
+  now `kotlin.io.encoding.Base64`, decoding with `PaddingOption.PRESENT_OPTIONAL`
+  because `java.util.Base64.getDecoder()` accepted unpadded input and applets
+  may send it. The clock is `TimeUtils.now()`.
+- **Scheduled posts.** `ScheduledPostStore` had already dropped Jackson for
+  kotlinx-serialization; what pinned it was `java.io.File` and a POSIX
+  `chmod`. It now takes an okio `Path` plus a `FileSystem` (default
+  `platformFileSystem`), and a `String` constructor so callers need no okio,
+  the same shape as `FileSystemNip95BlobStore`. The owner-only permission is a
+  new `expect fun restrictFileToOwner(path, tag)`:
+  `Files.setPosixFilePermissions` on jvmAndroid, POSIX `chmod(0600)` on iOS.
+  The temp-file swap is `FileSystem.atomicMove`, which replaces an existing
+  target on every platform, so the old "rename, else delete and rename again"
+  fallback went with it. `ScheduledPostWorkGate`, `ScheduledPostPublisher` and
+  `ScheduledPostNotifier` came along; none had a JVM pin of its own.
+
+### The strings drift, fixed
+
+Between the 2026-09-22 move and today, the cordn UI and the backup-conflict
+review added **447 keys** to `amethyst/src/main/res` (`cordn_*`, `backup_*`),
+taking it from 190 keys back to 597. All 447 moved with
+`tools/strings-migrate/migrate.py` (1,131 elements over 57 locales) and the 18
+files that read them were repointed. The non-mechanical sites:
+
+- `stringRes(context, …)` inside `suspend` senders (`sendAttachment`,
+  `sendVoiceNote`) → `loadStringRes(…)`. `adminFailureText` became `suspend`;
+  its only caller is already in `scope.launch`.
+- The backup review kept its labels as `@StringRes Int` (`DiffGroup.label`,
+  `ReviewRow.*Res`, `eventTypeName()`, the `countTiles`/`moneyHero`/`laneItems`
+  params) → `StringResource` / `PluralStringResource`.
+- `rememberPresentation` resolved labels inside `remember { }` through
+  `LocalResources`. Compose resources have no non-suspend accessor, so the 16
+  labels `presentationOf` writes into item text are resolved in composition into
+  a map, and the map is the `remember` key.
+- `androidx.compose.ui.res.pluralStringResource` → the compose-resources one.
+
+Six moved keys have no reader today (`cordn_backup_restore_title`,
+`cordn_coordinators_relays`, `cordn_create_admin_only_me`,
+`cordn_create_coordinator`, `cordn_send`, `cordn_voice_play`). They moved
+rather than being deleted; dropping them is the feature owner's call.
+`pow_notification_sending` stays in Android `res/`: the PoW foreground service
+reads it synchronously.
+
+The rule is now written down in `.claude/CLAUDE.md` ("Strings"), in
+`commonsUI/ARCHITECTURE.md`, and in the `android-expert` and
+`find-missing-translations` skills: new strings go in `commonsUI`
+composeResources, even for Android-only screens.
+
+### UI stragglers moved to `commonsUI`
+
+A survey against `main` found that most of "Batch 4" had already landed in
+other PRs (`dde228d2`, `1a563cf2`, `8dd409cb`, `1f1b6dab`): the theme
+constants (in `commonsUI/…/theme/Shape.kt`, not the `Sizes.kt` this plan
+named), the feed shell, the top bars, `M3ActionDialog`, `NoteComposeLayout`,
+`RepostLayout` and the toast queue. This round moved what was left that had no
+real blocker:
+
+| Moved | To | Note |
+|---|---|---|
+| `NewItemsBubble` (from `ChatroomHeaderCompose.kt`) | `commonsUI/…/ui/components` | |
+| `ChatHeaderLayout`, `LeftPictureLayout` | `commonsUI/…/ui/layouts` | Their `@Preview`s use app drawables, `TimeAgo` and `TextCount`, so the previews stay app-side in `*Preview.kt` files |
+| `listItem/SlimListItemLayout` | `commonsUI/…/ui/layouts/listItem` | Same preview split; `@VisibleForTesting` dropped (no androidx.annotation in commonMain) |
+| `WatchScrollToTop` (list/grid/pager overloads) | `commonsUI/…/ui/feeds` | The `CardFeedContentState` overload stays in the app |
+| app `StickToTopOnPrepend` | deleted | It was a copy of the commons one. The commons copy now collects with `collectAsStateWithLifecycle`, as the app copy did |
+| `ChannelFeedState`, `ChannelFeedContentState` | `commons/commonMain/…/feeds` | `checkNotInMainThread()` → `LocalCache.appHost.assertNotMainThread()`, which Android wires to the same check |
+| `ClickableBuzzInviteLink`, `ClickableConcordInviteLink`, `ClickableRelayGroupLink`, `ClickableRelayUrl`, `OutlinedThinPaddingTextField` | `commonsUI/…/ui/components` | |
+| app `ClickableEmail`, `ClickablePhone` | deleted | Android now uses the commons ones (`mailto:` / `tel:` through `LocalUriHandler`) instead of `ACTION_SEND` / `ACTION_DIAL` intents. The commons `ClickablePhone` is new. Desktop still renders phone numbers as plain text, on purpose |
+
+**Still app-side, with the reason:**
+
+- `AmethystClickableIcon`: 9 lines around an Android debug action; moving it
+  only pushes `LocalContext` into its two callers.
+- `ScreenLayout`: needs `LocalConfiguration` → `LocalWindowInfo`, and the
+  window-size-class breakpoints inlined.
+- `SlidingCarousel`: needs `animatedViewerChromeInset` hoisted out of the
+  viewer-chrome file.
+- `AudioWaveformReadOnly`: needs two enums from the Android-only waveform
+  library replaced.
+- `FileAttachmentCard`: needs `extractFilename` hoisted.
+- `PdfFetcher`: needs the disk cache injected.
+- `ClickablePhone` / `ClickableEmail` on Desktop: deliberately unchanged.
+- **`AmethystTheme` split** (the pure scheme/typography half to commonsUI; the
+  `Amethyst.instance` overload and the system-bar `SideEffect` stay).
+- **`TimeAgo` split**: the labels, `NowProvider` and the style enum are pure;
+  the absolute and short formatters need expect/actual over
+  `android.text.format`.
+- **Palette unification**: Desktop's `PlatformColorScheme` and the app palette
+  differ in primary, secondary, surfaces and outlines, and every shared token
+  (`placeholderText`, `chatBubbleThem`, …) is frozen from the app palette. This
+  is a design decision, not a move.
