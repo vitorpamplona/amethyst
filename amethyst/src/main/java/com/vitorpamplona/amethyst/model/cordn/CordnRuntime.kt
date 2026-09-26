@@ -659,7 +659,7 @@ class CordnRuntime(
             }
         }
         registry.forget(coordinatorPubKey)
-        remember()
+        remember(forgotten = coordinatorPubKey)
     }
 
     /**
@@ -930,7 +930,7 @@ class CordnRuntime(
      * is already open and working, and losing the record costs a re-entry next
      * launch rather than the group.
      */
-    private suspend fun remember() {
+    private suspend fun remember(forgotten: HexKey? = null) {
         try {
             // Merged with what is already on disk, never replacing it.
             // `registry.coordinators` is the coordinators with an OPEN
@@ -940,9 +940,19 @@ class CordnRuntime(
             // gone", silently and permanently. Keyed by pubkey because that is
             // the coordinator's identity (§8.5): a reopened one with different
             // relays is a corrected address, so the live entry wins.
+            //
+            // [forgotten] is the one case the merge cannot infer. A removed
+            // coordinator and one that simply did not open this launch look
+            // identical from here — both are missing from `open` — so without
+            // being told, the merge protects the removed one too and writes it
+            // straight back. Remove was therefore a no-op that survived until
+            // the next launch and then undid itself.
             val open = registry.coordinators.value
             val openKeys = open.mapTo(mutableSetOf()) { it.pubKey }
-            val kept = coordinatorStore.load().filterNot { it.pubKey in openKeys }
+            val kept =
+                coordinatorStore
+                    .load()
+                    .filterNot { it.pubKey in openKeys || it.pubKey == forgotten }
             coordinatorStore.save(kept + open)
         } catch (e: Exception) {
             Log.w(TAG, "could not persist the coordinator list: ${e.message}", e)

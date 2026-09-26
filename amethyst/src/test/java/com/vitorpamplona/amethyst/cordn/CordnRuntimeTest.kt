@@ -383,6 +383,36 @@ class CordnRuntimeTest {
         }
 
     @Test
+    fun `a forgotten coordinator stays forgotten across a relaunch`() =
+        runBlocking {
+            // `remember()` merges the open sessions over what is on disk rather
+            // than replacing it, because a coordinator whose relay was down
+            // this launch is missing from the open set and saving that set
+            // verbatim would erase it. A forgotten coordinator is missing for
+            // the other reason and looks identical, so the merge protected it
+            // too and wrote it straight back: Remove worked until the next
+            // launch and then undid itself.
+            val runtime = runtime(runtimeScope())
+            runtime.session(configFor(keyA))
+            runtime.session(configFor(keyB))
+            settle()
+
+            runtime.forget(keyA)
+            settle()
+
+            // A second runtime over the same files is the relaunch: it reads
+            // the coordinator list back off disk, which is where the removal
+            // either stuck or did not.
+            val reopened = runtime(runtimeScope())
+            reopened.restore()
+            settle()
+
+            val keys = reopened.coordinators.value.map { it.pubKey }
+            assertFalse("the forgotten coordinator came back", keys.contains(keyA))
+            assertTrue("the other coordinator was lost with it", keys.contains(keyB))
+        }
+
+    @Test
     fun `opening a coordinator that already has one tops the pool back up`() =
         runBlocking {
             // The other half of the rule. Once a package is published there the
