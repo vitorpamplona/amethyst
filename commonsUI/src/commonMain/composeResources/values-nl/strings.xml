@@ -204,7 +204,6 @@
     <string name="relays">Relays</string>
     <string name="website">Website</string>
     <string name="lightning_address">Lightning Adress</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopieert het NSEC ID (uw wachtwoord) naar klembord voor back-up.</string>
     <string name="send_a_direct_message">Stuur een privébericht</string>
     <string name="edits_the_user_s_metadata">Bewerkt de metadata van de gebruiker</string>
     <string name="unblock">Deblokkeren</string>
@@ -259,16 +258,6 @@
     <string name="mark_all_known_as_read">Bekende markeren als gelezen</string>
     <string name="mark_all_new_as_read">Nieuwe markeren als gelezen</string>
     <string name="mark_all_as_read">Alles markeren als gelezen</string>
-    <string name="account_backup_tips2_md">        ## Sleutel back-up en veiligheidstips
-        \n\nUw account is beveiligd met een privésleutel. De sleutel is een lange, willekeurige reeks die begint met **nsec1**. Iedereen die toegang heeft tot uw privésleutel kan inhoud publiceren met uw identiteit.
-        \n\n- Voer uw privésleutel **nooit** in een website of software die u niet vertrouwt.
-        \n- Amethyst ontwikkelaars zullen u **nooit** om uw privésleutel vragen.
-        \n- **Bewaar** een veilige back-up van uw privésleutel voor accountherstel. Wij raden u aan een wachtwoordmanager te gebruiken.
-    </string>
-    <string name="account_backup_tips3_md">        Voor meer veiligheid kan je je sleutel versleutelen met een wachtwoord. Deze sleutel begint met **ncryptsec1** en kan niet worden gebruikt zonder uw wachtwoord.
-        \n\nAls je je wachtwoord verliest, je kan je sleutel niet herstellen.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Versleutel en kopieer mijn geheime sleutel</string>
     <string name="badge_award_image_for">Badge award afbeelding voor %1$s</string>
     <string name="badge_award_image">Badge-awardafbeelding</string>
     <string name="new_badge_award_notif">Je hebt een nieuwe Badge award ontvangen</string>
@@ -2047,7 +2036,6 @@
     <string name="copied_note_text_to_clipboard">Note tekst gekopieerd naar klembord</string>
     <string name="copied_to_clipboard">Gekopieerd naar klembord</string>
     <string name="copied_user_id_to_clipboard">@npub auteur gekopieerd naar klembord</string>
-    <string name="copy_my_secret_key">Kopieer mijn privésleutel</string>
     <string name="copy_to_clipboard">Kopiëren naar klembord</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kon LNUrl niet samenbrengen van Lightning Adress "%1$s". Controleer de instellingen van de gebruiker</string>
     <string name="could_not_check_downloaded_file">Kan het gedownloade bestand niet controleren na upload: %1$s</string>
@@ -2872,10 +2860,8 @@
     <string name="share_hls_video">HLS-upload</string>
     <string name="share_or_save">Delen of opslaan</string>
     <string name="shorts">Shorts</string>
-    <string name="show_encrypted_private_key_qr_code">Toon versleutelde QR-code van privésleutel</string>
     <string name="show_messages_in_notifications_setting_description">Directe berichten en groepsberichten opnemen in het tabblad Meldingen. Uitschakelen om berichten alleen in het tabblad Berichten te houden.</string>
     <string name="show_messages_in_notifications_setting_title">Berichten tonen</string>
-    <string name="show_private_key_qr_code">Toon QR-code van privésleutel</string>
     <string name="sign_request_rejected2">Ondertekenverzoek afgewezen</string>
     <string name="sign_request_rejected_description">Zorg ervoor dat de teken-app deze transactie heeft geautoriseerd</string>
     <string name="signer_illegal_state_exception_description">Externe signer heeft een onjuiste payload geretourneerd voor dit verzoek. Er kan een bug zitten in Amethyst of in de signer.</string>

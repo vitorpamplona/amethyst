@@ -216,7 +216,6 @@
     <string name="relays"> リレー</string>
     <string name="website">ウェブサイト</string>
     <string name="lightning_address">Lightningアドレス</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">バックアップ用に nsec ID (パスワード) をクリップボードにコピー</string>
     <string name="send_a_direct_message">ダイレクトメッセージを送信</string>
     <string name="edits_the_user_s_metadata">ユーザのメタデータを編集</string>
     <string name="unblock">ブロック解除</string>
@@ -271,16 +270,6 @@
     <string name="mark_all_known_as_read">すべての「知り合い」を既読にする</string>
     <string name="mark_all_new_as_read">すべての「新規リクエスト」を既読にする</string>
     <string name="mark_all_as_read">すべて既読にする</string>
-    <string name="account_backup_tips2_md">        ## 鍵のバックアップとセキュリティのヒント
-        \n\nアカウントは秘密鍵によって保護されています。この鍵は **nsec1** で始まる長い文字列です。この秘密鍵にアクセスできる人は誰でも、あなたの名前でポストしたり、プロフィールを変更したりできます。
-        \n\n- 信頼していないウェブサイトやアプリに秘密鍵を **入力しないでください**。
-        \n- Amethyst の開発者が秘密鍵を **求めることは絶対にありません**。
-        \n- アカウントの復元のために、秘密鍵の安全なバックアップを **必ず** 保管してください。パスワードマネージャーの使用をお勧めします。
-    </string>
-    <string name="account_backup_tips3_md">        さらにセキュリティを高めるために、鍵をパスワードで暗号化することができます。この鍵は **ncryptsec1** で始まり、パスワードなしでは使用できません。
-        \n\nパスワードを忘れると、鍵を復元できなくなります。
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">秘密鍵を暗号化してコピー</string>
     <string name="badge_award_image_for">%1$sのバッジ授与画像</string>
     <string name="badge_award_image">バッジ授与の画像</string>
     <string name="new_badge_award_notif">新しいバッジが授与されました</string>
@@ -2008,7 +1997,6 @@
     <string name="copied_note_text_to_clipboard">テキストがクリップボードにコピーされました</string>
     <string name="copied_to_clipboard">クリップボードにコピーしました</string>
     <string name="copied_user_id_to_clipboard">@npubをクリップボードにコピーしました</string>
-    <string name="copy_my_secret_key">秘密鍵をコピー</string>
     <string name="copy_to_clipboard">クリップボードにコピー</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning アドレス「%1$s」から LNUrl を組み立てられませんでした。ユーザーの設定を確認してください</string>
     <string name="could_not_check_downloaded_file">アップロード後にダウンロードしたファイルを確認できませんでした：%1$s</string>
@@ -2797,10 +2785,8 @@
     <string name="share_hls_video">HLS アップロード</string>
     <string name="share_or_save">共有または保存</string>
     <string name="shorts">ショート</string>
-    <string name="show_encrypted_private_key_qr_code">暗号化された秘密鍵の QR コードを表示</string>
     <string name="show_messages_in_notifications_setting_description">通知タブにダイレクト・グループメッセージを含めます。オフにするとメッセージはメッセージタブのみに表示されます。</string>
     <string name="show_messages_in_notifications_setting_title">メッセージを表示</string>
-    <string name="show_private_key_qr_code">秘密鍵の QR コードを表示</string>
     <string name="sign_request_rejected2">署名リクエストが拒否されました</string>
     <string name="sign_request_rejected_description">署名アプリがこのトランザクションを承認していることを確認してください</string>
     <string name="signer_illegal_state_exception_description">外部署名アプリがリクエストに対して予期しないペイロードを返しました。Amethyst または署名アプリにバグがある可能性があります。</string>

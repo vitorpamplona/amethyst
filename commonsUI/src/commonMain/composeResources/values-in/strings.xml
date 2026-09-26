@@ -202,7 +202,6 @@
     <string name="relays"> Relai</string>
     <string name="website">Situs Web</string>
     <string name="lightning_address">Alamat Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Salin Nsec ID (kata sandi anda) ke papan klip sebagai cadangan</string>
     <string name="send_a_direct_message">Kirim Pesan Langsung</string>
     <string name="edits_the_user_s_metadata">Ubah Metadata Pengguna</string>
     <string name="unblock">Batalkan blokir</string>
@@ -257,18 +256,6 @@
     <string name="mark_all_known_as_read">Tandai semua yg dikenal telah dibaca</string>
     <string name="mark_all_new_as_read">Tandai pesan baru telah dibaca</string>
     <string name="mark_all_as_read">Tandai semua telah dibaca</string>
-    <string name="account_backup_tips2_md">
-        ## Tips Cadangan Kunci dan Keamanan
-        \n\nAkun Anda diamankan dengan kunci rahasia. Kunci ini adalah rangkaian karakter panjang yang diawali dengan **nsec1**. Siapa pun yang memiliki akses ke kunci rahasia ini dapat memposting dan mengubah identitas Anda.
-        \n\n- **Jangan** memasukkan kunci rahasia Anda ke situs web atau perangkat lunak yang tidak Anda percaya.
-        \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasia Anda.
-        \n- **Lakukan** pencadangan kunci rahasia Anda secara aman untuk pemulihan akun. Kami merekomendasikan penggunaan pengelola kata sandi.
-    </string>
-    <string name="account_backup_tips3_md">
-        Untuk keamanan tambahan, Anda dapat mengenkripsi kunci dengan kata sandi. Kunci ini diawali dengan **ncryptsec1** dan tidak dapat digunakan tanpa kata sandi Anda.
-        \n\nJika Anda kehilangan kata sandi, Anda tidak akan dapat memulihkan kunci Anda.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Enkripsi dan salin kunci rahasia saya</string>
     <string name="badge_award_image_for">Gambar penghargaan lencana untuk %1$s</string>
     <string name="badge_award_image">"Gambar penghargaan lencana</string>
     <string name="new_badge_award_notif">Anda Menerima Penghargaan Lencana baru</string>
@@ -2040,7 +2027,6 @@
     <string name="copied_note_text_to_clipboard">Teks catatan disalin ke papan klip</string>
     <string name="copied_to_clipboard">Disalin ke clipboard</string>
     <string name="copied_user_id_to_clipboard">@npub Penulis  disalin ke papan klip</string>
-    <string name="copy_my_secret_key">Salin kunci rahasia saya</string>
     <string name="copy_to_clipboard">Salin ke clipboard</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Tidak dapat merakit LNUrl dari Alamat Lightning "%1$s". Periksa pengaturan pengguna</string>
     <string name="could_not_check_downloaded_file">Tidak dapat memeriksa file yang diunduh setelah diunggah: %1$s</string>
@@ -2853,10 +2839,8 @@
     <string name="share_hls_video">Unggah HLS</string>
     <string name="share_or_save">Bagikan atau Simpan</string>
     <string name="shorts">Shorts</string>
-    <string name="show_encrypted_private_key_qr_code">Tampilkan kode QR kunci privat terenkripsi</string>
     <string name="show_messages_in_notifications_setting_description">Sertakan pesan langsung dan grup pada tab Notifikasi. Matikan untuk menyimpan pesan hanya di tab Pesan.</string>
     <string name="show_messages_in_notifications_setting_title">Tampilkan Pesan</string>
-    <string name="show_private_key_qr_code">Tampilkan kode QR kunci privat</string>
     <string name="sign_request_rejected2">Permintaan tanda tangan ditolak</string>
     <string name="sign_request_rejected_description">Pastikan aplikasi penandatangan telah mengizinkan transaksi ini</string>
     <string name="signer_illegal_state_exception_description">Penanda tangan eksternal mengembalikan payload yang tidak sesuai dengan permintaan. Mungkin ada bug di Amethyst atau di penanda tangan.</string>

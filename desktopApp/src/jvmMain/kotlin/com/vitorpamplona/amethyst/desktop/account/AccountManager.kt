@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -700,7 +701,8 @@ class AccountManager internal constructor(
     }
 
     fun loginWithKey(keyInput: String): Result<AccountState.LoggedIn> {
-        val trimmedInput = keyInput.trim()
+        // Also accepts keys copied by hand: UPPERCASE, split into dash/space-separated groups.
+        val trimmedInput = Bech32Transcription.normalize(keyInput)
 
         val privKeyHex = decodePrivateKeyAsHexOrNull(trimmedInput)
         if (privKeyHex != null) {

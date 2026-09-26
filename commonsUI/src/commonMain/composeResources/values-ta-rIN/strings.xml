@@ -217,7 +217,6 @@
     <string name="relays"> ரிலேகள்</string>
     <string name="website">இணையதளம்</string>
     <string name="lightning_address">லைட்னிங் முகவரி</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Nsec IDயை (உங்கள் கடவுச்சொல்) காப்புப்பிரதிக்காக கிளிப்போர்டுக்கு நகலெடுக்கிறது</string>
     <string name="send_a_direct_message">நேரடிச் செய்தியை அனுப்பு</string>
     <string name="edits_the_user_s_metadata">பயனரின் தகவலை திருத்துகிறது</string>
     <string name="unblock">தடையை நீக்கு</string>
@@ -272,16 +271,6 @@
     <string name="mark_all_known_as_read">தெரிந்தவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_new_as_read">புதியனவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_as_read">அனைத்தையும் படித்ததாகக் குறி</string>
-    <string name="account_backup_tips2_md">        ## திறவுகோல் காப்புப்பிரதி மற்றும் பாதுகாப்பு குறிப்புகள்
-        \n\nஉங்கள் கணக்கு ஒரு இரகசிய திறவுகோலால் பாதுகாக்கப்படுகிறது. இந்த திறவுகோல் **nsec1** என்று தொடங்கும் நீண்ட எழுத்துத் தொடராகும். இந்த இரகசிய திறவுகோலை யாராவது பெற்றால் அவர்கள் உங்கள் அடையாளத்தை பயன்படுத்தி இடுகையிடலாம் மற்றும் மாற்றலாம்.
-        \n\n- உங்கள் இரகசிய திறவுகோலை நீங்கள் நம்பாத எந்த வலைத்தளத்திலும் அல்லது மென்பொருளிலும் வைக்க **வேண்டாம்**.
-        \n- Amethyst டெவலப்பர்கள் உங்கள் இரகசிய திறவுகோலை **ஒருபோதும்** கேட்கமாட்டார்கள்.
-        \n- கணக்கு மீட்டெடுப்புக்காக உங்கள் இரகசிய திறவுகோலை பாதுகாப்பாக காப்புப்பிரதி எடுங்கள். கடவுச்சொல் மேலாளரை பயன்படுத்த பரிந்துரைக்கிறோம்.
-    </string>
-    <string name="account_backup_tips3_md">        கூடுதல் பாதுகாப்புக்காக, உங்கள் திறவுகோலை கடவுச்சொல்லால் குறியாக்கலாம். இந்த திறவுகோல் **ncryptsec1** என்று தொடங்கும் மற்றும் உங்கள் கடவுச்சொல்லின்றி பயன்படுத்த முடியாது.
-        \n\nகடவுச்சொல்லை மறந்தால், உங்கள் திறவுகோலை மீட்டெடுக்க முடியாது.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">என் இரகசிய விசையை மறைகுறியாக்கி நகல் எடுக்கவும்</string>
     <string name="badge_award_image_for"> %1$s க்கான பேட்ஜ் விருது படம்</string>
     <string name="badge_award_image">"பேட்ஜ் விருது படம்</string>
     <string name="new_badge_award_notif">நீங்கள் ஒரு புதிய பேட்ஜ் விருதைப் பெற்றீர்கள்</string>
@@ -2008,7 +1997,6 @@
     <string name="copied_note_text_to_clipboard">குறிப்பு கிளிப்போர்டுக்கு நகலெடுக்கப் பட்டது</string>
     <string name="copied_to_clipboard">கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது</string>
     <string name="copied_user_id_to_clipboard">கிளிப்போர்டுக்கு எழுத்தாளரின் @npub நகலெடுக்கப் பட்டது</string>
-    <string name="copy_my_secret_key">எனது ரகசிய சாவியை நகலெடுக்கவும்</string>
     <string name="copy_to_clipboard">கிளிப்போர்டுக்கு நகலெடு</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning முகவரி "%1$s" இலிருந்து LNUrl ஐ உருவாக்க முடியவில்லை. பயனரின் அமைப்பை சரிபார்க்கவும்</string>
     <string name="could_not_check_downloaded_file">பதிவேற்றத்திற்குப் பிறகு பதிவிறக்கிய கோப்பை சரிபார்க்க முடியவில்லை: %1$s</string>
@@ -2807,10 +2795,8 @@
     <string name="share_hls_video">HLS பதிவேற்றம்</string>
     <string name="share_or_save">பகிர் அல்லது சேமி</string>
     <string name="shorts">குறுவீடியோக்கள்</string>
-    <string name="show_encrypted_private_key_qr_code">மறைகுறியாக்கப்பட்ட தனிப்பட்ட விசை QR குறியீட்டை காட்டு</string>
     <string name="show_messages_in_notifications_setting_description">அறிவிப்பு தாவலில் நேரடி மற்றும் குழு செய்திகளை சேர்க்கவும். செய்திகளை செய்திகள் தாவலில் மட்டும் வைக்க அணைக்கவும்.</string>
     <string name="show_messages_in_notifications_setting_title">செய்திகளை காட்டு</string>
-    <string name="show_private_key_qr_code">தனிப்பட்ட விசை QR குறியீட்டை காட்டு</string>
     <string name="sign_request_rejected2">கையொப்பமிடல் கோரிக்கை நிராகரிக்கப்பட்டது</string>
     <string name="sign_request_rejected_description">கையொப்பமிடல் செயலி இந்த பரிவர்த்தனையை அங்கீகரித்திருக்கிறதா என சரிபார்க்கவும்</string>
     <string name="signer_illegal_state_exception_description">வெளிப்புற கையெழுத்திட்டவர் கோரிக்கைக்கு அசாதாரணமான தரவை திரும்ப அனுப்பியது. Amethyst அல்லது கையெழுத்திட்டவரில் ஒரு பிழை இருக்கலாம்.</string>

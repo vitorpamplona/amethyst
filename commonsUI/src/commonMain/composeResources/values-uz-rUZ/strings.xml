@@ -218,7 +218,6 @@
     <string name="relays"> Relay lar</string>
     <string name="website">Veb-sayt</string>
     <string name="lightning_address">Lightning manzili</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Nsec ID (parolingiz) nusxasini zaxiralash uchun buferga nusxalaydi</string>
     <string name="send_a_direct_message">To'g'ridan-to'g'ri xabar yuborish</string>
     <string name="edits_the_user_s_metadata">Foydalanuvchi metama'lumotlarini tahrirlaydi</string>
     <string name="unblock">Blokdan chiqarish</string>
@@ -273,16 +272,6 @@
     <string name="mark_all_known_as_read">Barcha ma'lumlarni o'qilgan deb belgilash</string>
     <string name="mark_all_new_as_read">Barcha yangilarni o'qilgan deb belgilash</string>
     <string name="mark_all_as_read">Barchasini o'qilgan deb belgilash</string>
-    <string name="account_backup_tips2_md">        ## Kalit zaxiralash va xavfsizlik maslahatlari
-        \n\nHisobingiz maxfiy kalit bilan himoyalangan. Kalit **nsec1** bilan boshlanadigan uzun belgilar ketma-ketligidir. Ushbu maxfiy kalitga kirish huquqiga ega bo'lgan har kim sizning nomingizdan post qo'yishi va identifikatoringizni o'zgartirishi mumkin.
-        \n\n- Maxfiy kalitingizni ishonmagan veb-sayt yoki dasturga **kiritmang**.
-        \n- Amethyst ishlab chiquvchilari maxfiy kalitingizni hech **qachon** so'ramaydi.
-        \n- Hisob tiklash uchun maxfiy kalitingizning xavfsiz zaxira nusxasini saqlang. Parol menejeridan foydalanishni tavsiya qilamiz.
-    </string>
-    <string name="account_backup_tips3_md">        Qo'shimcha xavfsizlik uchun kalitingizni parol bilan shifrlashingiz mumkin. Bu kalit **ncryptsec1** bilan boshlanadi va parolsiz ishlatib bo'lmaydi.
-        \n\nParolingizni unutsangiz, kalitingizni tiklay olmaysiz.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Maxfiy kalitni shifrlash va nusxalash</string>
     <string name="badge_award_image_for">%1$s uchun nishon mukofoti rasmi</string>
     <string name="badge_award_image">"Nishon mukofoti rasmi</string>
     <string name="new_badge_award_notif">Siz yangi nishon mukofoti oldingiz</string>
@@ -2004,7 +1993,6 @@
     <string name="copied_note_text_to_clipboard">Eslatma matni buferga nusxalandi</string>
     <string name="copied_to_clipboard">Buferga nusxalandi</string>
     <string name="copied_user_id_to_clipboard">Muallifning @npub manzili buferga nusxalandi</string>
-    <string name="copy_my_secret_key">Mening maxfiy kalitimni nusxalash</string>
     <string name="copy_to_clipboard">Buferga nusxalash</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning manzilidan LNUrl yig'ib bo'lmadi "%1$s". Foydalanuvchi sozlamasini tekshiring</string>
     <string name="could_not_check_downloaded_file">Yuklashdan keyin yuklab olingan faylni tekshirib bo'lmadi: %1$s</string>
@@ -2821,10 +2809,8 @@
     <string name="share_hls_video">HLS yuklash</string>
     <string name="share_or_save">Ulashish yoki saqlash</string>
     <string name="shorts">Shortslar</string>
-    <string name="show_encrypted_private_key_qr_code">Shifrlangan shaxsiy kalit QR kodini ko'rsatish</string>
     <string name="show_messages_in_notifications_setting_description">Bildirishnoma yorlig'iga to'g'ridan-to'g'ri va guruh xabarlarini kiriting. Xabarlarni faqat Xabarlar yorlig'ida saqlash uchun o'chiring.</string>
     <string name="show_messages_in_notifications_setting_title">Xabarlarni Ko'rsatish</string>
-    <string name="show_private_key_qr_code">Shaxsiy kalit QR kodini ko'rsatish</string>
     <string name="sign_request_rejected2">Imzo so'rovi rad etildi</string>
     <string name="sign_request_rejected_description">Imzolash ilovasi ushbu tranzaksiyaga ruxsat berganligini tekshiring</string>
     <string name="signer_illegal_state_exception_description">Tashqi imzolash dasturi so'rov uchun g'alati javob qaytardi. Amethyst yoki imzolash dasturida xato bo'lishi mumkin.</string>

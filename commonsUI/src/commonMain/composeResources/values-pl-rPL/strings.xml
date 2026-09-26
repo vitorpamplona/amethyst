@@ -548,7 +548,6 @@
     <string name="relays"> Transmitery</string>
     <string name="website">Strona www</string>
     <string name="lightning_address">Lightning Adres</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiuje Nsec ID (hasło) do schowka w celu wykonania kopii zapasowej</string>
     <string name="send_a_direct_message">Wyślij bezpośrednią wiadomość</string>
     <string name="edits_the_user_s_metadata">Edytowanie metadanych użytkowników</string>
     <string name="unblock">Odblokuj</string>
@@ -657,21 +656,11 @@
     <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
     <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
     <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
-    <string name="account_backup_tips2_md">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
-        \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość.
-        \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz.
-        \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz.
-        \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.
-    </string>
-    <string name="account_backup_tips3_md">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
-        \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.
-    </string>
     <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>
     <string name="backup_keys_nudge_body">Twój tajny klucz jest jedynym sposobem na dostęp do tego konta. Jeśli go zgubisz, nigdy nie będzie można go odzyskać. Zapisz go w bezpiecznym miejscu.</string>
     <string name="backup_keys_nudge_backup_now">Utwórz kopię zapasową</string>
     <string name="backup_keys_nudge_already_saved">Zapisałem(am)</string>
     <string name="backup_keys_nudge_dismiss">Ignoruj</string>
-    <string name="encrypt_and_copy_my_secret_key">Zaszyfruj i skopiuj mój tajny klucz</string>
     <string name="badge_award_image_for">Wizerunek odznaki dla %1$s</string>
     <string name="badge_award_image">Wizerunek odznaki</string>
     <string name="new_badge_award_notif">Otrzymałeś nową odznakę</string>
@@ -3648,7 +3637,6 @@
     <string name="copied_note_text_to_clipboard">Skopiowano tekst wpisu do schowka</string>
     <string name="copied_to_clipboard">Skopiowano do schowka</string>
     <string name="copied_user_id_to_clipboard">Skopiowano @npub autora do schowka</string>
-    <string name="copy_my_secret_key">Kopiuj mój tajny klucz</string>
     <string name="copy_to_clipboard">Kopiuj do schowka</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nie można stworzyć LNUrl z Adresu  "%1$s". Sprawdź konfigurację użytkownika</string>
     <string name="could_not_check_downloaded_file">Nie można sprawdzić pobranego pliku po wgraniu: %1$s</string>
@@ -5263,10 +5251,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_hls_video">Wgraj HLS</string>
     <string name="share_or_save">Udostępnij lub zapisz</string>
     <string name="shorts">Filmiki</string>
-    <string name="show_encrypted_private_key_qr_code">Pokaż zaszyfrowany kod QR klucza prywatnego</string>
     <string name="show_messages_in_notifications_setting_description">W zakładce „Powiadomienia” znajdują się zarówno wiadomości bezpośrednie, jak i grupowe. Wyłącz tę opcję, aby wiadomości były wyświetlane wyłącznie w zakładce „Wiadomości”.</string>
     <string name="show_messages_in_notifications_setting_title">Pokaż wiadomości</string>
-    <string name="show_private_key_qr_code">Pokaż kod QR klucza prywatnego</string>
     <string name="sign_request_rejected2">Prośba o zalogowanie została odrzucona</string>
     <string name="sign_request_rejected_description">Upewnij się, że aplikacja logującego autoryzuje tę operację</string>
     <string name="signer_illegal_state_exception_description">Sygnatariusz zewnętrzny zwrócił dane, które są niezgodne z żądaniem. Być może wystąpił błąd w Amethyst lub w samym sygnatariuszu.</string>

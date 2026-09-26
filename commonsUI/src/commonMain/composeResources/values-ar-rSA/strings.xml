@@ -227,7 +227,6 @@
     <string name="relays">Relays</string>
     <string name="website">الموقع</string>
     <string name="lightning_address">Lightning عنوان</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">نسخ معرف Nsec (كلمة المرور الخاصة بك) إلى الحافظة للنسخ الاحتياطي</string>
     <string name="send_a_direct_message">إرسال رسالة مباشرة</string>
     <string name="edits_the_user_s_metadata">القيام بتحرير metadata للمستخدم</string>
     <string name="unblock">رفع الحظر</string>
@@ -282,16 +281,6 @@
     <string name="mark_all_known_as_read">ضع علامة على جميع الرسائل/الاشعارات المعروفة كمقروء</string>
     <string name="mark_all_new_as_read">تعيين الجديد كمقروء</string>
     <string name="mark_all_as_read">تعيين الكل كمقروء</string>
-    <string name="account_backup_tips2_md">        ## النصائح الرئيسية للنسخ الاحتياطي والسلامة
-        \n\n- يتم تأمين حسابك بمفتاح سري. المفتاح السري هو سلسلة عشوائية طويلة تبدأ بـ **nsec1**. أي شخص لديه مفتاحك السري يمكنه نشر المحتوى باستخدام هويتك.
-        \n\n- لا تقم بوضع مفتاحك السري في أي موقع أو برنامج لا تثق به.
-        \n- مطوري Amethyst لن يطلبوا منك **أبدا** المفتاح السري الخاص بك.
-        \n- حافظ على نسخة احتياطية آمنة لمفتاحك السري لاسترداد الحساب. نوصي باستخدام برنامج لادارة كلمات المرور.
-    </string>
-    <string name="account_backup_tips3_md">        للحصول على أمان إضافي، يمكنك تشفير مفتاحك الخاص بكلمة مرور. يبدأ هذا المفتاح المشفر بـ **ncryptsec1** ولا يمكن استخدامه دون كلمة المرور الخاصة بك.
-        \n\nإذا فقدت كلمة المرور، لن تتمكن من استرداد مفتاحك الخاص.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">تشفير و نسخ المفتاح الخاص</string>
     <string name="badge_award_image_for">صورة شارة مكافئة ل %1$s</string>
     <string name="badge_award_image">"صورة منح الشارة</string>
     <string name="new_badge_award_notif">لقد حصلت على شارة جائزة جديدة</string>
@@ -2052,7 +2041,6 @@
     <string name="copied_note_text_to_clipboard">تم نسخ نص الملاحظة/المنشور إلى الحافظة</string>
     <string name="copied_to_clipboard">تم النسخ إلى الحافظة</string>
     <string name="copied_user_id_to_clipboard">تم نسخ عنوان @npub المؤلف إلى الحافظة</string>
-    <string name="copy_my_secret_key">إنسخ مفتاحي السري</string>
     <string name="copy_to_clipboard">نسخ إلى الحافظة</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">تعذّر إنشاء LNUrl من عنوان Lightning "%1$s". تحقق من إعداد المستخدم</string>
     <string name="could_not_check_downloaded_file">تعذّر التحقق من الملف المنزّل بعد الرفع: %1$s</string>
@@ -2958,10 +2946,8 @@
     <string name="share_hls_video">رفع HLS</string>
     <string name="share_or_save">مشاركة أو حفظ</string>
     <string name="shorts">مقاطع قصيرة</string>
-    <string name="show_encrypted_private_key_qr_code">إظهار رمز QR المفتاح الخاص المشفر</string>
     <string name="show_messages_in_notifications_setting_description">تضمين الرسائل المباشرة والجماعية في تبويب الإشعارات. أوقف التشغيل للاحتفاظ بالرسائل في تبويب الرسائل فقط.</string>
     <string name="show_messages_in_notifications_setting_title">إظهار الرسائل</string>
-    <string name="show_private_key_qr_code">إظهار رمز QR المفتاح الخاص</string>
     <string name="sign_request_rejected2">تم رفض طلب التوقيع</string>
     <string name="sign_request_rejected_description">تأكد من أن تطبيق الموقِّع قد أذن بهذه المعاملة</string>
     <string name="signer_illegal_state_exception_description">أعاد الموقِّع الخارجي بيانات غير متوقعة للطلب. قد يكون هناك خطأ في Amethyst أو في تطبيق الموقِّع.</string>

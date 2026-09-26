@@ -202,7 +202,6 @@
     <string name="relays"> รีเลย์</string>
     <string name="website">เว็บไซต์</string>
     <string name="lightning_address">ไม่ได้ตั้งค่า Lightning Address</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">คัดลอก Nsec ID (รหัสผ่านของคุณ) ลงคลิปบอร์ดเพื่อสำรองข้อมูล</string>
     <string name="send_a_direct_message">ส่งข้อความส่วนตัว</string>
     <string name="edits_the_user_s_metadata">แก้ไข the User's Metadata</string>
     <string name="unblock">เลิกบล๊อก</string>
@@ -257,15 +256,6 @@
     <string name="mark_all_known_as_read">ทำเครื่องหมายอ่านแล้วในแชทที่รู้จักทั้งหมด</string>
     <string name="mark_all_new_as_read">ทำเครื่องหมายว่าอ่านแล้วทั้งหมดสำหรับข้อความใหม่</string>
     <string name="mark_all_as_read">ทพเครื่องหมายว่าอ่านแล้วทั้งหมด</string>
-    <string name="account_backup_tips2_md">        ## เคล็ดลับการสำรองข้อมูลและความปลอดภัยที่สำคัญ
-        \n\nบัญชีของคุณได้รับการรักษาความปลอดภัยด้วยคีย์ลับ คีย์เป็นรหัสชุดตัวอักษรยาวขึ้นต้นด้วย **nsec1**  ใครก็ตามที่สามารถเข้าถึงรหัสชุดนี้ได้ จะสามารถโพสต์และเปลี่ยนแปลงข้อมูลประจำตัวของคุณได้
-
-        \n\n- **ห้าม** ใส่รหัสชุดนี้ในเว็บไซต์หรือซอฟต์แวร์ที่คุณไม่ไว้ใจ
-        \n- ทีมพัฒนา Amethyst **จะไม่มีวัน** ขอรหัสชุดนี้ของคุณ
-        \n- **ควร** สำรองข้อมูลรหัสชุดนี้ไว้เพื่อกู้คืนบัญชีของคุณ เราแนะนำให้ใช้โปรแกรมจัดการรหัสผ่าน</string>
-    <string name="account_backup_tips3_md">        สำหรับการรักษาความปลอดภัยเพิ่มเติม คุณสามารถเข้ารหัสคีย์ของคุณด้วยรหัสผ่าน  คีย์นี้ขึ้นต้นด้วย **ncryptsec1** และไม่สามารถใช้งานได้หากไม่มีรหัสผ่านของคุณ
-        \n\n**แต่**  หากคุณสูญหายรหัสผ่าน คุณจะไม่สามารถกู้คืนคีย์ของคุณได้        </string>
-    <string name="encrypt_and_copy_my_secret_key">เข้ารหัสและคัดลอกคีย์ความปลอดภัยของฉัน</string>
     <string name="badge_award_image_for">ภาพเหรียญตราสําหรับ %1$s</string>
     <string name="badge_award_image">"รูปภาพรางวัลป้าย</string>
     <string name="new_badge_award_notif">คุณได้รับเหรียญตราใหม่</string>
@@ -2034,7 +2024,6 @@
     <string name="copied_note_text_to_clipboard">คัดลอกข่้อความในโน้ตลงคลิปบอร์ด</string>
     <string name="copied_to_clipboard">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
     <string name="copied_user_id_to_clipboard">คัดลอก @npub ของผู้เขียนลงคลิปบอร์ด</string>
-    <string name="copy_my_secret_key">คัดลอก secret key ของฉัน</string>
     <string name="copy_to_clipboard">คัดลอก</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">ไม่สามารถสร้าง LNUrl จากที่อยู่ Lightning ได้ "%1$s" โปรดตรวจสอบการตั้งค่า</string>
     <string name="could_not_check_downloaded_file">ไม่สามารถตรวจสอบไฟล์ที่ดาวน์โหลดหลังจากอัปโหลด: %1$s</string>
@@ -2841,10 +2830,8 @@
     <string name="share_hls_video">อัปโหลด HLS</string>
     <string name="share_or_save">แชร์ หรือเก็บไว้</string>
     <string name="shorts">Shorts</string>
-    <string name="show_encrypted_private_key_qr_code">แสดง QR code คีย์ส่วนตัวแบบเข้ารหัส</string>
     <string name="show_messages_in_notifications_setting_description">รวมข้อความส่วนตัวและกลุ่มในแท็บการแจ้งเตือน ปิดเพื่อเก็บข้อความไว้เฉพาะในแท็บข้อความ</string>
     <string name="show_messages_in_notifications_setting_title">แสดงข้อความ</string>
-    <string name="show_private_key_qr_code">แสดง QR code คีย์ส่วนตัว</string>
     <string name="sign_request_rejected2">คำขอลงชื่อถูกปฏิเสธ</string>
     <string name="sign_request_rejected_description">โปรดตรวจสอบให้แน่ใจว่าแอพเข้ารหัส หรือ Signer ได้อนุญาติทำรายการนี้</string>
     <string name="signer_illegal_state_exception_description">ผู้ลงนามภายนอกส่งคืนข้อมูลที่ผิดปกติสำหรับคำขอนี้ อาจมีข้อผิดพลาดใน Amethyst หรือแอปผู้ลงนาม</string>

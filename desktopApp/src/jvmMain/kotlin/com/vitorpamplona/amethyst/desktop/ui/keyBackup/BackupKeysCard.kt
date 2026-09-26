@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.backup_keys_show_qr
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_title
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_subtitle
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_title
+import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.security.DesktopLockScreen
 import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
@@ -314,7 +315,16 @@ private fun RevealedSecret(
     nsec: String,
     onHide: () -> Unit,
 ) {
-    MonospaceKeyValue(value = nsec, isSensitive = true)
+    KeyTranscriptionGrid(
+        bech32 = nsec,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(4.dp),
+                ).padding(horizontal = 12.dp, vertical = 16.dp),
+    )
 
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -431,19 +441,11 @@ private fun EncryptedCopy(nsec: String) {
 }
 
 @Composable
-private fun MonospaceKeyValue(
-    value: String,
-    isSensitive: Boolean = false,
-) {
+private fun MonospaceKeyValue(value: String) {
     Text(
         value,
         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-        color =
-            if (isSensitive) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
             Modifier
                 .fillMaxWidth()

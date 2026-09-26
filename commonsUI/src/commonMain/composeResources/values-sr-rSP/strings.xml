@@ -216,7 +216,6 @@
     <string name="relays"> Relay-ovi</string>
     <string name="website">Veb stranica</string>
     <string name="lightning_address">Lightning adresa</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopira Nsec ID (vaša lozinka) u međuspremnik radi rezervne kopije</string>
     <string name="send_a_direct_message">Pošalji direktnu poruku</string>
     <string name="edits_the_user_s_metadata">Izmeni metapodatke korisnika</string>
     <string name="unblock">Odblokiraj</string>
@@ -271,16 +270,6 @@
     <string name="mark_all_known_as_read">Označi sve poznate kao pročitano</string>
     <string name="mark_all_new_as_read">Označi sve novo kao pročitano</string>
     <string name="mark_all_as_read">Označi sve kao pročitano</string>
-    <string name="account_backup_tips2_md">        ## Saveti za bekap ključa i bezbednost
-        \n\nVaš nalog je zaštićen tajnim ključem. Ključ je dugačak niz znakova koji počinje sa **nsec1**. Svako ko ima pristup ovom tajnom ključu može da objavljuje i menja vaš identitet.
-        \n\n- **Ne** unosite vaš tajni ključ ni na jedan veb-sajt ili softver kojemu ne verujete.
-        \n- Amethyst programeri **nikada** neće tražiti vaš tajni ključ.
-        \n- **Čuvajte** bezbednu kopiju vašeg tajnog ključa radi oporavka naloga. Preporučujemo korišćenje menadžera lozinki.
-    </string>
-    <string name="account_backup_tips3_md">        Za dodatnu bezbednost, možete šifrovati vaš ključ lozinkom. Ovaj ključ počinje sa **ncryptsec1** i ne može se koristiti bez vaše lozinke.
-        \n\nAko izgubite lozinku, nećete moći da obnovite ključ.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Šifruj i kopiraj moj tajni ključ</string>
     <string name="badge_award_image_for">Slika značke za %1$s</string>
     <string name="badge_award_image">"Slika značke</string>
     <string name="new_badge_award_notif">Dobili ste novu značku</string>
@@ -2006,7 +1995,6 @@
     <string name="copied_note_text_to_clipboard">Tekst beleške kopiran u clipboard</string>
     <string name="copied_to_clipboard">Kopirano u privremenu memoriju</string>
     <string name="copied_user_id_to_clipboard">@npub autora kopiran u clipboard</string>
-    <string name="copy_my_secret_key">Kopiraj moj tajni ključ</string>
     <string name="copy_to_clipboard">Kopiraj u privremenu memoriju</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nije moguće sastaviti LNUrl iz Lightning adrese "%1$s". Proverite podešavanja korisnika</string>
     <string name="could_not_check_downloaded_file">Preuzeta datoteka se ne može proveriti nakon otpremanja: %1$s</string>
@@ -2843,10 +2831,8 @@
     <string name="share_hls_video">HLS otpremanje</string>
     <string name="share_or_save">Podeli ili sačuvaj</string>
     <string name="shorts">Kratki snimci</string>
-    <string name="show_encrypted_private_key_qr_code">Prikaži QR kod šifrovanog privatnog ključa</string>
     <string name="show_messages_in_notifications_setting_description">Uključi direktne i grupne poruke na kartici Obaveštenja. Isključite da poruke budu samo na kartici Poruke.</string>
     <string name="show_messages_in_notifications_setting_title">Prikaži poruke</string>
-    <string name="show_private_key_qr_code">Prikaži QR kod privatnog ključa</string>
     <string name="sign_request_rejected2">Zahtev za potpisivanje odbijen</string>
     <string name="sign_request_rejected_description">Proverite da li je aplikacija za potpisivanje odobrila ovu transakciju</string>
     <string name="signer_illegal_state_exception_description">Spoljni potpisnik je vratio podatke koji su neočekivani za zahtev. Možda postoji greška u Amethyst-u ili aplikaciji za potpisivanje.</string>

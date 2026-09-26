@@ -217,7 +217,6 @@
     <string name="relays"> রিলেগুলি</string>
     <string name="website">ওয়েবসাইট</string>
     <string name="lightning_address">বিজলি-ঠিকানা</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">ব্যাকআপের জন্য আপনার Nsec আইডি (তথা পাসওয়ার্ড) ক্লিপবোর্ডে কপি করে</string>
     <string name="send_a_direct_message">একটি সরাসরি-বার্তা পাঠান</string>
     <string name="edits_the_user_s_metadata">ব্যবহারকারীর মেটাডেটা সম্পাদনা করে</string>
     <string name="unblock">আনব্লক করুন</string>
@@ -271,16 +270,6 @@
     <string name="mark_all_known_as_read">পরিচিত সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
     <string name="mark_all_new_as_read">নতুন সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
     <string name="mark_all_as_read">সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
-    <string name="account_backup_tips2_md">        ## মূল ব্যাকআপ এবং নিরাপত্তা টিপস
-        \n\n আপনার অ্যাকাউন্ট একটি গোপন কী দ্বারা সুরক্ষিত। মূলটি হল অক্ষরগুলির একটি দীর্ঘ ক্রম যা শুরু হয় **nsec1**. যে কেউ এই গোপন কী অ্যাক্সেস করতে পারে পোস্ট এবং আপনার পরিচয় পরিবর্তন করতে পারেন.
-        \n\n- আপনি বিশ্বাস করেন না এমন কোনো ওয়েবসাইট বা সফ্টওয়্যারে আপনার গোপন কী **করবেন না**.
-        \n- অ্যামেথিস্ট ডেভেলপাররা **কখনই** আপনার গোপন কী চাইবে না.
-        \n- **করুন** অ্যাকাউন্ট পুনরুদ্ধারের জন্য আপনার গোপন কীটির একটি নিরাপদ ব্যাকআপ রাখুন৷. আমরা একটি পাসওয়ার্ড ম্যানেজার ব্যবহার করার পরামর্শ দিই।.
-    </string>
-    <string name="account_backup_tips3_md">        অতিরিক্ত নিরাপত্তার জন্য, আপনি একটি পাসওয়ার্ড দিয়ে আপনার কী এনক্রিপ্ট করতে পারেন. এই কী দিয়ে শুরু হয় **ncryptsec1** এবং আপনার পাসওয়ার্ড ছাড়া ব্যবহার করা যাবে না।.
-        \n\n আপনি যদি আপনার পাসওয়ার্ড হারিয়ে ফেলেন, আপনি আপনার কী পুনরুদ্ধার করতে পারবেন না।.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">এনক্রিপ্ট এবং আমার গোপন কী অনুলিপি</string>
     <string name="badge_award_image_for">%1$s -এর জন্য ব্যাজ পুরষ্কারের ছবি</string>
     <string name="badge_award_image">"ব্যাজ পুরস্কার চিত্র</string>
     <string name="new_badge_award_notif">আপনি একটি নতুন ব্যাজ পুরষ্কার পেয়েছেন</string>
@@ -2014,7 +2003,6 @@
     <string name="copied_note_text_to_clipboard">নোটের রচনাটি ক্লিপবোর্ডে কপি করা হয়েছে</string>
     <string name="copied_to_clipboard">ক্লিপবোর্ডে কপি হয়েছে</string>
     <string name="copied_user_id_to_clipboard">রচয়িতার @npub ক্লিপবোর্ডে কপি করুন</string>
-    <string name="copy_my_secret_key">আমার ব্যক্তিগত চাবিটি কপি করুন</string>
     <string name="copy_to_clipboard">ক্লিপবোর্ডে কপি করুন</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Lightning Address "%1$s" থেকে LNUrl তৈরি করা যায়নি। ব্যবহারকারীর সেটআপ পরীক্ষা করুন</string>
     <string name="could_not_check_downloaded_file">আপলোডের পরে ডাউনলোড করা ফাইল পরীক্ষা করা যায়নি: %1$s</string>
@@ -2834,10 +2822,8 @@
     <string name="share_hls_video">HLS আপলোড</string>
     <string name="share_or_save">শেয়ার বা সেভ করুন</string>
     <string name="shorts">শর্টস</string>
-    <string name="show_encrypted_private_key_qr_code">এনক্রিপ্টেড প্রাইভেট কী QR কোড দেখান</string>
     <string name="show_messages_in_notifications_setting_description">বিজ্ঞপ্তি ট্যাবে সরাসরি ও গ্রুপ বার্তা অন্তর্ভুক্ত করুন। বার্তাগুলো শুধুমাত্র বার্তা ট্যাবে রাখতে বন্ধ করুন।</string>
     <string name="show_messages_in_notifications_setting_title">বার্তা দেখান</string>
-    <string name="show_private_key_qr_code">প্রাইভেট কী QR কোড দেখান</string>
     <string name="sign_request_rejected2">সাইন অনুরোধ প্রত্যাখ্যাত</string>
     <string name="sign_request_rejected_description">নিশ্চিত করুন যে সাইনার অ্যাপ্লিকেশনটি এই লেনদেন অনুমোদন করেছে</string>
     <string name="signer_illegal_state_exception_description">এক্সটার্নাল সাইনার অনুরোধের জন্য একটি অপরিচিত পেলোড ফেরত দিয়েছে। Amethyst বা সাইনারে একটি বাগ থাকতে পারে।</string>

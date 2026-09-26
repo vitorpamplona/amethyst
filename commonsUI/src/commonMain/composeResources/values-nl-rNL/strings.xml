@@ -338,7 +338,6 @@
     <string name="number_reports">%1$s rapportages</string>
     <string name="relays">Relays</string>
     <string name="lightning_address">Lightning-adres</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopieert je privésleutel (nsec) naar het klembord voor back-up</string>
     <string name="send_a_direct_message">Stuur privébericht</string>
     <string name="edits_the_user_s_metadata">Bewerkt gebruikers-metadata</string>
     <string name="unblock">Deblokkeren</string>
@@ -444,14 +443,11 @@
     <string name="mark_all_known_as_read">Alle bekende markeren als gelezen</string>
     <string name="mark_all_new_as_read">Alle nieuwe markeren als gelezen</string>
     <string name="mark_all_as_read">Alles markeren als gelezen</string>
-    <string name="account_backup_tips2_md">## Sleutelback-up en veiligheidstips\n\nJe account wordt beveiligd door een privésleutel (begint met **nsec1**). Iedereen met deze sleutel kan namens jou posten.\n\n- Voer je privésleutel **nooit** in op een website of app die je niet volledig vertrouwt.\n- Amethyst-ontwikkelaars zullen **nooit** om je privésleutel vragen.\n- Maak een veilige back-up van je privésleutel (bijvoorbeeld in een wachtwoordmanager).</string>
-    <string name="account_backup_tips3_md">Voor extra veiligheid kun je je sleutel versleutelen met een wachtwoord. Deze versleutelde sleutel begint met **ncryptsec1** en kan alleen met je wachtwoord worden gebruikt.\n\nAls je het wachtwoord vergeet, kun je de sleutel niet meer herstellen.</string>
     <string name="backup_keys_nudge_title">Maak een back-up van je sleutels</string>
     <string name="backup_keys_nudge_body">Je geheime sleutel is de enige manier om bij dit account te komen. Raak je hem kwijt, dan is hij nooit meer te herstellen. Sla hem nu op een veilige plek op.</string>
     <string name="backup_keys_nudge_backup_now">Nu back-uppen</string>
     <string name="backup_keys_nudge_already_saved">Ik heb ze opgeslagen</string>
     <string name="backup_keys_nudge_dismiss">Sluiten</string>
-    <string name="encrypt_and_copy_my_secret_key">Versleutel en kopieer mijn privésleutel</string>
     <string name="badge_award_image_for">Badge-awardafbeelding voor %1$s</string>
     <string name="badge_award_image">Badge-awardafbeelding</string>
     <string name="new_badge_award_notif">Je hebt een nieuwe badge-award ontvangen</string>
@@ -3081,7 +3077,6 @@
     <string name="copied_note_text_to_clipboard">Note-tekst gekopieerd naar klembord</string>
     <string name="copied_to_clipboard">Gekopieerd naar klembord</string>
     <string name="copied_user_id_to_clipboard">Gebruikers-ID (@npub…) gekopieerd naar klembord</string>
-    <string name="copy_my_secret_key">Mijn privésleutel kopiëren</string>
     <string name="copy_to_clipboard">Kopiëren naar klembord</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kon LNURL niet samenstellen vanuit Lightning-adres "%1$s". Controleer de instellingen van de gebruiker.</string>
     <string name="could_not_check_downloaded_file">Kon gedownload bestand niet controleren na upload: %1$s</string>
@@ -4473,10 +4468,8 @@
     <string name="share_hls_video">HLS-upload</string>
     <string name="share_or_save">Delen of opslaan</string>
     <string name="shorts">Shorts</string>
-    <string name="show_encrypted_private_key_qr_code">Toon versleutelde QR-code van privésleutel</string>
     <string name="show_messages_in_notifications_setting_description">Directe berichten en groepsberichten opnemen in het tabblad Meldingen. Uitschakelen om berichten alleen in het tabblad Berichten te houden.</string>
     <string name="show_messages_in_notifications_setting_title">Berichten tonen</string>
-    <string name="show_private_key_qr_code">Toon QR-code van privésleutel</string>
     <string name="sign_request_rejected2">Ondertekenverzoek afgewezen</string>
     <string name="sign_request_rejected_description">Zorg dat de signer-app dit verzoek heeft goedgekeurd.</string>
     <string name="signer_illegal_state_exception_description">Externe signer heeft een onjuiste payload geretourneerd voor dit verzoek. Er kan een bug zitten in Amethyst of in de signer.</string>

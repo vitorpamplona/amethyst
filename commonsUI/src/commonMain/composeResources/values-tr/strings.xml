@@ -204,7 +204,6 @@
     <string name="relays">Relaylar</string>
     <string name="website">Web Sitesi</string>
     <string name="lightning_address">Lİghtning Adresi</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Yedekleme için Nsec ID'yi (sizin şifreniz) panoya kopyalar</string>
     <string name="send_a_direct_message">Direkt Mesaj Gönder</string>
     <string name="edits_the_user_s_metadata">Kullanıcının Üstverisini Düzenler</string>
     <string name="unblock">Engelleme</string>
@@ -259,18 +258,6 @@
     <string name="mark_all_known_as_read">Tüm bilinenleri okundu olarak işaretle</string>
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
-    <string name="account_backup_tips2_md">
-        ## Anahtar Yedekleme ve Güvenlik İpuçları
-        \n\nHesabınız bir gizli anahtarla korunmaktadır. Anahtar, **nsec1** ile başlayan uzun bir karakter dizisidir. Bu gizli anahtara erişimi olan herkes kimliğiniz adına gönderi yapabilir ve kimliğinizi değiştirebilir.
-        \n\n- Gizli anahtarınızı güvenmediğiniz herhangi bir web sitesine veya yazılıma **koymayın**.
-        \n- Amethyst geliştiricileri gizli anahtarınızı **asla** istemez.
-        \n- Hesap kurtarma için gizli anahtarınızın güvenli bir yedeğini **alın**. Bir parola yöneticisi kullanmanızı öneririz.
-    </string>
-    <string name="account_backup_tips3_md">
-        Ek güvenlik için anahtarınızı bir parola ile şifreleyebilirsiniz. Bu anahtar **ncryptsec1** ile başlar ve parolanız olmadan kullanılamaz.
-        \n\nParolanızı kaybederseniz anahtarınızı kurtaramazsınız.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Gizli anahtarımı şifrele ve kopyala</string>
     <string name="badge_award_image_for">%1$s için rozet ödülü görseli</string>
     <string name="badge_award_image">"Rozet ödülü görseli</string>
     <string name="new_badge_award_notif">Yeni bir Rozet Ödülü aldınız</string>
@@ -2050,7 +2037,6 @@
     <string name="copied_note_text_to_clipboard">Not metni panoya kopyalandı</string>
     <string name="copied_to_clipboard">Panoya kopyalandı</string>
     <string name="copied_user_id_to_clipboard">Yazarın @npub'ı panoya kopyalandı</string>
-    <string name="copy_my_secret_key">Gizli anahtarımı kopyala</string>
     <string name="copy_to_clipboard">Panoya kopyala</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">"%1$s" Lightning Adresinden LNUrl oluşturulamadı. Kullanıcının kurulumunu kontrol edin</string>
     <string name="could_not_check_downloaded_file">Yükleme sonrası indirilen dosya kontrol edilemedi: %1$s</string>
@@ -2889,10 +2875,8 @@
     <string name="share_hls_video">HLS Yükle</string>
     <string name="share_or_save">Paylaş veya Kaydet</string>
     <string name="shorts">Kısa videolar</string>
-    <string name="show_encrypted_private_key_qr_code">Şifreli özel anahtar QR kodunu göster</string>
     <string name="show_messages_in_notifications_setting_description">Bildirim sekmesine doğrudan ve grup mesajlarını dahil et. Mesajları yalnızca Mesajlar sekmesinde tutmak için kapatın.</string>
     <string name="show_messages_in_notifications_setting_title">Mesajları Göster</string>
-    <string name="show_private_key_qr_code">Özel anahtar QR kodunu göster</string>
     <string name="sign_request_rejected2">İmza isteği reddedildi</string>
     <string name="sign_request_rejected_description">İmzalayıcı uygulamanın bu işlemi yetkilendirdiğinden emin olun</string>
     <string name="signer_illegal_state_exception_description">Harici imzalayıcı, istek için beklenmedik bir yük döndürdü. Amethyst veya İmzalayıcıda bir hata olabilir.</string>

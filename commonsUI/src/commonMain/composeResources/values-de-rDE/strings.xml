@@ -354,7 +354,6 @@
     <string name="relays"> Relays</string>
     <string name="website">Website</string>
     <string name="lightning_address">Lightning-Adresse</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiert die Nsec-ID (Ihr Passwort) zur Sicherung in die Zwischenablage</string>
     <string name="send_a_direct_message">Sende eine Direktnachricht</string>
     <string name="edits_the_user_s_metadata">Bearbeitet die Benutzermetadaten</string>
     <string name="unblock">Entsperren</string>
@@ -463,19 +462,11 @@
     <string name="mark_all_known_as_read">Alle Kontakte als gelesen markieren</string>
     <string name="mark_all_new_as_read">Alle Unbekannten als gelesen markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
-    <string name="account_backup_tips2_md">    ## Tipps zur Schlüsselsicherheit
-    \n\nDein Konto ist durch einen privaten Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen privaten Schlüssel hat, kann in deinem Namen posten und dein Profil ändern.
-    \n\n- Lege deinen privaten Schlüssel **nicht** auf einer Website oder in einer Software ab, der du nicht vertraust.
-    \n- Die Entwickler von Amethyst werden dich **niemals** nach deinem privaten Schlüssel fragen.
-    \n- **Bewahre** eine sichere Kopie deines privaten Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md">    Für zusätzliche Sicherheit kannst du deinen Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne dein Passwort nicht verwendet werden.
-    \n\nWenn du dein Passwort verlierst, kannst du deinen Schlüssel nicht wiederherstellen.</string>
     <string name="backup_keys_nudge_title">Sichere deine Schlüssel</string>
     <string name="backup_keys_nudge_body">Dein geheimer Schlüssel ist der einzige Weg zu diesem Konto. Wenn du ihn verlierst, kann er nie wiederhergestellt werden. Speichere ihn jetzt an einem sicheren Ort.</string>
     <string name="backup_keys_nudge_backup_now">Jetzt sichern</string>
     <string name="backup_keys_nudge_already_saved">Habe ich gespeichert</string>
     <string name="backup_keys_nudge_dismiss">Schließen</string>
-    <string name="encrypt_and_copy_my_secret_key">Meinen privaten Schlüssel verschlüsseln und kopieren</string>
     <string name="badge_award_image_for">Auszeichnungsbild für %1$s</string>
     <string name="badge_award_image">Auszeichnungsbild</string>
     <string name="new_badge_award_notif">Du hast eine neue Auszeichnung erhalten</string>
@@ -3315,7 +3306,6 @@
     <string name="copied_note_text_to_clipboard">Notiztext in die Zwischenablage kopiert</string>
     <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
     <string name="copied_user_id_to_clipboard">Autor-ID in die Zwischenablage kopiert</string>
-    <string name="copy_my_secret_key">Meinen geheimen Schlüssel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse "%1$s" zusammenstellen. Überprüfe die Konfiguration des Benutzers</string>
     <string name="could_not_check_downloaded_file">Die heruntergeladene Datei konnte nach dem Hochladen nicht überprüft werden: %1$s</string>
@@ -4763,10 +4753,8 @@
     <string name="share_hls_video">HLS-Upload</string>
     <string name="share_or_save">Teilen oder Speichern</string>
     <string name="shorts">Kurzvideos</string>
-    <string name="show_encrypted_private_key_qr_code">QR-Code für verschlüsselten privaten Schlüssel anzeigen</string>
     <string name="show_messages_in_notifications_setting_description">Direkt- und Gruppennachrichten im Benachrichtigungs-Tab anzeigen. Deaktivieren, um Nachrichten nur im Nachrichten-Tab zu behalten.</string>
     <string name="show_messages_in_notifications_setting_title">Nachrichten anzeigen</string>
-    <string name="show_private_key_qr_code">Privaten QR-Code anzeigen</string>
     <string name="sign_request_rejected2">Signaturanfrage abgelehnt</string>
     <string name="sign_request_rejected_description">Stell sicher, dass die Signer-App diese Transaktion autorisiert hat</string>
     <string name="signer_illegal_state_exception_description">Externer Signer hat Daten zurückgegeben, die für die Anfrage ungewöhnlich sind. Es könnte ein Fehler in Amethyst oder im Signer vorliegen.</string>

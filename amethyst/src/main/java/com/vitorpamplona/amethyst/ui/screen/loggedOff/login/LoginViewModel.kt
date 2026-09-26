@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 
 @Stable
 class LoginViewModel : ViewModel() {
@@ -57,7 +58,7 @@ class LoginViewModel : ViewModel() {
 
     var password by mutableStateOf(TextFieldValue(""))
     val needsPassword by derivedStateOf {
-        key.text.startsWith("ncryptsec1")
+        Bech32Transcription.normalize(key.text).startsWith("ncryptsec1")
     }
 
     var isFirstLogin by mutableStateOf(false)

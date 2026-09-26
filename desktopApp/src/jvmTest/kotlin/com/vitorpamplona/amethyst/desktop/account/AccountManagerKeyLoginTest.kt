@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import io.mockk.coEvery
@@ -82,6 +83,19 @@ class AccountManagerKeyLoginTest {
         val state = result.getOrThrow()
         assertFalse(state.isReadOnly)
         assertEquals(SignerType.Internal, state.signerType)
+    }
+
+    @Test
+    fun loginWithHandCopiedNsecReturnsLoggedIn() {
+        val keyPair = KeyPair()
+        val nsec = keyPair.privKey!!.toNsec()
+        // As written down from the backup screen: uppercase, in dash-separated groups, one row per line.
+        val handCopied =
+            Bech32Transcription.groups(nsec.uppercase()).joinToString("\n") { it.joinToString("-") }
+
+        val state = manager.loginWithKey(handCopied).getOrThrow()
+        assertFalse(state.isReadOnly)
+        assertEquals(nsec, state.nsec)
     }
 
     @Test

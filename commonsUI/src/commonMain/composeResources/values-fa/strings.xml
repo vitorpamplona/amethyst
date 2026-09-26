@@ -204,7 +204,6 @@
     <string name="relays">رله ها</string>
     <string name="website">وبسایت</string>
     <string name="lightning_address">آدرس لایتنینگ</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">شناسه کلید خصوصی (پسوردتان) را در کلیپبورد کپی می کند(</string>
     <string name="send_a_direct_message">ارسال پیام مستقیم</string>
     <string name="edits_the_user_s_metadata">متادیتای کاربر را ویرایش می کند</string>
     <string name="unblock">از بلاک درآوردن</string>
@@ -259,15 +258,6 @@
     <string name="mark_all_known_as_read">همه شناس ها خوانده شده کن</string>
     <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
     <string name="mark_all_as_read">همه را خوانده شده کن</string>
-    <string name="account_backup_tips2_md">نکات ایمنی و ذخیره کلید
-
-حساب کاربری شما با یک کلید خصوصی محافظت می شود. این کلید دنباله ای بلند از کاراکترها است که با **nsec1** آغاز می گردد. هر کس به این کلید خصوصی دسترسی داشته باشد می تواند بجای شما یادداشت پست کرده یا هویت شما را تغییر دهد.
-هرگز کلید خصوصی خود را در هیچ وبسایت با نرم افزاری که به آن اطمینان ندارید **وارد نکنید**.
-سازندگان امتیست **هرگز** کلیدتان را از شما نمی خواهند.
-یک پشتیبان یدکی مخفی از کلید خود به منظور بازیابی **نگه دارید**. ما استفاده از نرم افزار مدیریت پسورد را توصیه می کنیم.</string>
-    <string name="account_backup_tips3_md">برای ایمنی بیشتر، می توانید کلید خود را با یک رمزعبور رمزنگاری کنید. این نوع کلید با **ncryptsec1** آغاز می شود و نمی تواند بدون رمز عبور شما استفاده شود.
-اگر پسوردتان را گم کنید، نخواهید توانست کلیدتان را بازیابی کنید.</string>
-    <string name="encrypt_and_copy_my_secret_key">رمزنگاری و کپی کلید من</string>
     <string name="badge_award_image_for">تصویر مدال پاداش برای %1$s</string>
     <string name="badge_award_image">تصویر جایزه نشان</string>
     <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
@@ -2049,7 +2039,6 @@
     <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_to_clipboard">در کلیپ‌بورد کپی شد</string>
     <string name="copied_user_id_to_clipboard">@npubنویسنده در کلیپبورد کپی شد </string>
-    <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
     <string name="copy_to_clipboard">کپی به کلیپ‌بورد</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">LNUrl از آدرس لایتنینگ "%1$s" بدست نیامد. تنظیمات کاربر را بررسی کنید.</string>
     <string name="could_not_check_downloaded_file">فایل بارگیری شده پس از بارگذاری بررسی نشد: %1$s</string>
@@ -2888,10 +2877,8 @@
     <string name="share_hls_video">آپلود HLS</string>
     <string name="share_or_save">اشتراک گذاری یا ذخیره‌سازی</string>
     <string name="shorts">ویدیوهای کوتاه</string>
-    <string name="show_encrypted_private_key_qr_code">نمایش کد QR کلید خصوصی رمزنگاری شده</string>
     <string name="show_messages_in_notifications_setting_description">پیام‌های مستقیم و گروهی را در تب اعلان‌ها نمایش دهید. غیرفعال کنید تا پیام‌ها فقط در تب پیام‌ها باشند.</string>
     <string name="show_messages_in_notifications_setting_title">نمایش پیام‌ها</string>
-    <string name="show_private_key_qr_code">نمایش کد QR کلید خصوصی</string>
     <string name="sign_request_rejected2">درخواست امضا رد شد</string>
     <string name="sign_request_rejected_description">مطمئن شوید که اپ امضا کننده این تراکنش را تایید کرده است</string>
     <string name="signer_illegal_state_exception_description">signer خارجی یک پاسخ عجیب برای درخواست بازگرداند. ممکن است باگی در Amethyst یا در signer وجود داشته باشد.</string>

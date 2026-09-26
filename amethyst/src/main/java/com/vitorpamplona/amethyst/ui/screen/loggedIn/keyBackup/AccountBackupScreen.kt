@@ -29,21 +29,25 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -53,7 +57,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,46 +67,52 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
-import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
-import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
-import com.halilibo.richtext.markdown.BasicMarkdown
-import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.RichText
-import com.halilibo.richtext.ui.resolveDefaults
-import com.vitorpamplona.amethyst.R
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.account_backup_tips2_md
-import com.vitorpamplona.amethyst.commons.resources.account_backup_tips3_md
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_body
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_password
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_title
+import com.vitorpamplona.amethyst.commons.resources.account_backup_headline
+import com.vitorpamplona.amethyst.commons.resources.account_backup_intro
+import com.vitorpamplona.amethyst.commons.resources.account_backup_qr_code
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tap_to_reveal
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tip_developers
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tip_storage
+import com.vitorpamplona.amethyst.commons.resources.account_backup_tip_trust
+import com.vitorpamplona.amethyst.commons.resources.account_backup_write_down_hint
 import com.vitorpamplona.amethyst.commons.resources.backup_keys
-import com.vitorpamplona.amethyst.commons.resources.copies_the_nsec_id_your_password_to_the_clipboard_for_backup
-import com.vitorpamplona.amethyst.commons.resources.copy_my_secret_key
-import com.vitorpamplona.amethyst.commons.resources.encrypt_and_copy_my_secret_key
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_copy
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_external_signer
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_hide
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_reveal
+import com.vitorpamplona.amethyst.commons.resources.backup_keys_secret_label
 import com.vitorpamplona.amethyst.commons.resources.failed_to_encrypt_key
 import com.vitorpamplona.amethyst.commons.resources.hide_password
-import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
-import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.secret_key_copied_to_clipboard
-import com.vitorpamplona.amethyst.commons.resources.show_encrypted_private_key_qr_code
 import com.vitorpamplona.amethyst.commons.resources.show_password
-import com.vitorpamplona.amethyst.commons.resources.show_private_key_qr_code
+import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -109,15 +120,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.note.rememberAuthPromptLabels
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
@@ -126,12 +131,15 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
+import kotlinx.coroutines.withContext
 
 /** Best-effort delay before the plaintext nsec is wiped from the clipboard. */
 private const val CLIPBOARD_CLEAR_DELAY_MS = 60_000L
+
+private val CardShape = RoundedCornerShape(16.dp)
 
 @Composable
 fun AccountBackupScreen(
@@ -152,7 +160,6 @@ fun AccountBackupScreenPreview() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
@@ -162,8 +169,6 @@ private fun AccountBackupScreenContent(
     // screen is on-screen. Cleared on dispose so the flag never leaks to other
     // screens. This is the only FLAG_SECURE usage in the app — scoped on purpose.
     val context = LocalContext.current
-    val authLabels = rememberAuthPromptLabels()
-    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
     DisposableEffect(context) {
         val window = context.getFragmentActivity()?.window
         window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -184,217 +189,412 @@ private fun AccountBackupScreenContent(
             Modifier
                 .fillMaxSize()
                 .padding(it)
-                .padding(horizontal = 20.dp, vertical = 10.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            val content1 = stringRes(Res.string.account_backup_tips2_md)
+            BackupHeader()
 
-            val astNode1 =
-                remember {
-                    CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content1)
+            val nsec =
+                remember(accountViewModel) {
+                    accountViewModel.account.settings.keyPair.privKey
+                        ?.toNsec()
                 }
 
-            RichText(
-                style = RichTextStyle().resolveDefaults(),
-                renderer = null,
-            ) {
-                BasicMarkdown(astNode1)
+            if (nsec == null) {
+                TipRow(MaterialSymbols.Info, stringRes(Res.string.backup_keys_external_signer))
+            } else {
+                val gate = rememberKeyAccessGate(accountViewModel)
+
+                SecretKeyCard(nsec, gate)
+
+                EncryptedKeyCard(accountViewModel, gate)
+
+                BackupTips()
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackupHeader() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Key,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringRes(Res.string.account_backup_headline),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringRes(Res.string.account_backup_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun SecretKeyCard(
+    nsec: String,
+    gate: KeyAccessGate,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    var revealed by remember { mutableStateOf(false) }
+    var showQr by remember { mutableStateOf(false) }
+
+    // Never leave the key on screen while the app is in the background.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        revealed = false
+        showQr = false
+        gate.lock()
+    }
+
+    val reveal = { gate.withAccess { revealed = true } }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CardTitle(MaterialSymbols.Key, stringRes(Res.string.backup_keys_secret_label), Modifier.weight(1f))
+                IconButton(onClick = { if (revealed) revealed = false else reveal() }) {
+                    Icon(
+                        symbol = if (revealed) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                        contentDescription = stringRes(if (revealed) Res.string.backup_keys_hide else Res.string.backup_keys_reveal),
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row {
-                Column {
-                    NSecCopyButton(accountViewModel)
+            Column(Modifier.padding(end = 8.dp)) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .clickable(enabled = !revealed, onClick = reveal)
+                            .padding(horizontal = 12.dp, vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    KeyTranscriptionGrid(
+                        bech32 = nsec,
+                        masked = !revealed,
+                        color = if (revealed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (!revealed) {
+                        RevealChip()
+                    }
                 }
 
-                Column {
-                    QrCodeButton(accountViewModel)
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = stringRes(Res.string.account_backup_write_down_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { gate.withAccess { copyNSec(context, scope, nsec, clipboard) } },
+                    ) {
+                        ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
+                    }
+                    FilledTonalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { gate.withAccess { showQr = true } },
+                    ) {
+                        ButtonContent(MaterialSymbols.QrCode2, stringRes(Res.string.account_backup_qr_code))
+                    }
                 }
             }
+        }
+    }
 
-            Spacer(modifier = Modifier.height(30.dp))
+    if (showQr) {
+        ShowKeyQRDialog(nsec, onClose = { showQr = false })
+    }
+}
 
-            val content = stringRes(Res.string.account_backup_tips3_md)
+@Composable
+private fun RevealChip() {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(MaterialSymbols.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringRes(Res.string.account_backup_tap_to_reveal), style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
 
-            val astNode =
-                remember {
-                    CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
+@Composable
+private fun EncryptedKeyCard(
+    accountViewModel: AccountViewModel,
+    gate: KeyAccessGate,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    var password by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var working by remember { mutableStateOf(false) }
+    var qrCode by remember { mutableStateOf<String?>(null) }
+
+    // NIP-49 runs scrypt, which takes a noticeable moment: keep it off the main thread.
+    fun encryptThen(onEncrypted: suspend (String) -> Unit) {
+        val privKey = accountViewModel.account.settings.keyPair.privKey ?: return
+        val currentPassword = password
+        working = true
+        scope.launch {
+            val encrypted =
+                withContext(Dispatchers.Default) {
+                    runCatching { Nip49().encrypt(privKey.toHexKey(), currentPassword) }.getOrNull()
                 }
-
-            RichText(
-                style = RichTextStyle().resolveDefaults(),
-                renderer = null,
-            ) {
-                BasicMarkdown(astNode)
+            working = false
+            if (encrypted != null) {
+                onEncrypted(encrypted)
+            } else {
+                Toast.makeText(context, loadStringRes(Res.string.failed_to_encrypt_key), Toast.LENGTH_SHORT).show()
             }
+        }
+    }
 
-            val password = remember { mutableStateOf(TextFieldValue("")) }
-            var errorMessage by remember { mutableStateOf("") }
-            var showCharsPassword by remember { mutableStateOf(false) }
+    val canEncrypt = password.isNotBlank() && !working
 
-            Spacer(modifier = Modifier.height(20.dp))
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            CardTitle(MaterialSymbols.Lock, stringRes(Res.string.account_backup_encrypted_title))
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = stringRes(Res.string.account_backup_encrypted_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 modifier =
                     Modifier
-                        .semantics { contentType = ContentType.Password },
-                value = password.value,
-                onValueChange = {
-                    password.value = it
-                    if (errorMessage.isNotEmpty()) {
-                        errorMessage = ""
-                    }
-                },
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.NewPassword },
+                value = password,
+                onValueChange = { password = it },
+                singleLine = true,
+                label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
                 keyboardOptions =
                     KeyboardOptions(
                         autoCorrectEnabled = false,
                         keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Go,
+                        imeAction = ImeAction.Done,
                     ),
-                placeholder = {
-                    Text(
-                        text = stringRes(Res.string.ncryptsec_password),
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                },
                 trailingIcon = {
-                    Row {
-                        IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
-                            Icon(
-                                symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                                contentDescription =
-                                    if (showCharsPassword) {
-                                        stringRes(Res.string.show_password)
-                                    } else {
-                                        stringRes(
-                                            Res.string.hide_password,
-                                        )
-                                    },
-                            )
-                        }
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(
+                            symbol = if (showPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                            contentDescription = stringRes(if (showPassword) Res.string.hide_password else Res.string.show_password),
+                        )
                     }
                 },
-                visualTransformation =
-                    if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             )
 
-            if (errorMessage.isNotBlank()) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    enabled = canEncrypt,
+                    onClick = {
+                        gate.withAccess {
+                            encryptThen { encrypted ->
+                                clipboard.setText(encrypted)
+                                Toast.makeText(context, loadStringRes(Res.string.secret_key_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                ) {
+                    ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    enabled = canEncrypt,
+                    onClick = { gate.withAccess { encryptThen { qrCode = it } } },
+                ) {
+                    ButtonContent(MaterialSymbols.QrCode2, stringRes(Res.string.account_backup_qr_code))
+                }
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            EncryptNSecCopyButton(accountViewModel, password)
         }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { qrCode = null }
+
+    qrCode?.let {
+        ShowKeyQRDialog(it, onClose = { qrCode = null })
     }
 }
 
 @Composable
-private fun NSecCopyButton(accountViewModel: AccountViewModel) {
-    val clipboardManager = LocalClipboard.current
+private fun BackupTips() {
+    Column(
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        TipRow(MaterialSymbols.EditNote, stringRes(Res.string.account_backup_tip_storage))
+        TipRow(MaterialSymbols.Warning, stringRes(Res.string.account_backup_tip_trust))
+        TipRow(MaterialSymbols.Shield, stringRes(Res.string.account_backup_tip_developers))
+    }
+}
+
+@Composable
+private fun CardTitle(
+    symbol: MaterialSymbol,
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(symbol, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun TipRow(
+    symbol: MaterialSymbol,
+    text: String,
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(symbol, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ButtonContent(
+    symbol: MaterialSymbol,
+    label: String,
+) {
+    Icon(symbol, contentDescription = null, modifier = Modifier.size(18.dp))
+    Spacer(Modifier.width(8.dp))
+    Text(label)
+}
+
+/**
+ * Asks for the device credential (biometric or lock screen) once per visit, before
+ * the key is first revealed, copied or shown as a QR code. [lock] forgets the approval,
+ * e.g. when the app goes to the background.
+ */
+@Stable
+private class KeyAccessGate {
+    var isUnlocked by mutableStateOf(false)
+        private set
+
+    /** The action waiting on the keyguard fallback activity to return. */
+    var pending: (() -> Unit)? = null
+
+    var prompt: ((onApproved: () -> Unit) -> Unit)? = null
+
+    fun withAccess(action: () -> Unit) {
+        if (isUnlocked) {
+            action()
+        } else {
+            prompt?.invoke {
+                isUnlocked = true
+                action()
+            }
+        }
+    }
+
+    fun lock() {
+        isUnlocked = false
+        pending = null
+    }
+}
+
+@Composable
+private fun rememberKeyAccessGate(accountViewModel: AccountViewModel): KeyAccessGate {
     val context = LocalContext.current
     val authLabels = rememberAuthPromptLabels()
-    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
-    val scope = rememberCoroutineScope()
+    val authTitle = stringRes(Res.string.backup_keys)
+    val gate = remember { KeyAccessGate() }
 
     val keyguardLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            val action = gate.pending
+            gate.pending = null
             if (result.resultCode == Activity.RESULT_OK) {
-                copyNSec(context, scope, accountViewModel.account, clipboardManager)
+                action?.invoke()
             }
         }
 
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {
+    SideEffect {
+        gate.prompt = { onApproved ->
+            gate.pending = onApproved
             authenticate(
-                title = authLabelCopyKey,
+                title = authTitle,
                 context = context,
                 labels = authLabels,
                 keyguardLauncher = keyguardLauncher,
-                onApproved = { copyNSec(context, scope, accountViewModel.account, clipboardManager) },
-                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-            )
-        },
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-        contentPadding = ButtonPadding,
-    ) {
-        Icon(
-            tint = MaterialTheme.colorScheme.onPrimary,
-            symbol = MaterialSymbols.Key,
-            contentDescription =
-                stringRes(Res.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
-            modifier = Modifier.padding(end = 5.dp),
-        )
-        Text(
-            stringRes(id = Res.string.copy_my_secret_key),
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
-    }
-}
-
-@Composable
-private fun EncryptNSecCopyButton(
-    accountViewModel: AccountViewModel,
-    password: MutableState<TextFieldValue>,
-) {
-    val clipboardManager = LocalClipboard.current
-    val context = LocalContext.current
-    val authLabels = rememberAuthPromptLabels()
-    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
-    val scope = rememberCoroutineScope()
-
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager)
-            }
-        }
-
-    Row {
-        Column {
-            OutlinedButton(
-                modifier = Modifier.padding(horizontal = 3.dp),
-                onClick = {
-                    authenticate(
-                        title = authLabelCopyKey,
-                        context = context,
-                        labels = authLabels,
-                        keyguardLauncher = keyguardLauncher,
-                        onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
-                        onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                    )
+                onApproved = {
+                    gate.pending = null
+                    onApproved()
                 },
-                shape = ButtonBorder,
-                contentPadding = ButtonPadding,
-                enabled = password.value.text.isNotBlank(),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Key,
-                    contentDescription =
-                        stringRes(Res.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
-                    modifier = Modifier.padding(end = 5.dp),
-                )
-                Text(
-                    stringRes(id = Res.string.encrypt_and_copy_my_secret_key),
-                )
-            }
-        }
-
-        Column {
-            QrCodeButtonEncrypted(accountViewModel, password)
+                onError = { title, message ->
+                    gate.pending = null
+                    accountViewModel.toastManager.toast(title, message)
+                },
+            )
         }
     }
+
+    return gate
 }
 
 fun Context.getFragmentActivity(): FragmentActivity? {
@@ -411,156 +611,31 @@ fun Context.getFragmentActivity(): FragmentActivity? {
 private fun copyNSec(
     context: Context,
     scope: CoroutineScope,
-    account: Account,
+    nsec: String,
     clipboardManager: Clipboard,
 ) {
-    account.settings.keyPair.privKey?.let {
-        val nsec = it.toNsec()
-        scope.launch {
-            clipboardManager.setText(nsec)
-            Toast
-                .makeText(
-                    context,
-                    loadStringRes(Res.string.secret_key_copied_to_clipboard),
-                    Toast.LENGTH_SHORT,
-                ).show()
+    scope.launch {
+        clipboardManager.setText(nsec)
+        Toast
+            .makeText(
+                context,
+                loadStringRes(Res.string.secret_key_copied_to_clipboard),
+                Toast.LENGTH_SHORT,
+            ).show()
 
-            // Best-effort auto-clear: after a delay, wipe the clipboard only if it
-            // still holds this exact nsec (don't clobber anything copied since).
-            // On Android 13+ the OS also shows its own sensitive-content UI.
-            delay(CLIPBOARD_CLEAR_DELAY_MS)
-            if (clipboardManager.getText() == nsec) {
-                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("", "")))
-            }
+        // Best-effort auto-clear: after a delay, wipe the clipboard only if it
+        // still holds this exact nsec (don't clobber anything copied since).
+        // On Android 13+ the OS also shows its own sensitive-content UI.
+        delay(CLIPBOARD_CLEAR_DELAY_MS)
+        if (clipboardManager.getText() == nsec) {
+            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("", "")))
         }
     }
-}
-
-private fun encryptCopyNSec(
-    password: MutableState<TextFieldValue>,
-    context: Context,
-    scope: CoroutineScope,
-    accountViewModel: AccountViewModel,
-    clipboardManager: Clipboard,
-) {
-    if (password.value.text.isBlank()) {
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    loadStringRes(Res.string.password_is_required),
-                    Toast.LENGTH_SHORT,
-                ).show()
-        }
-    } else {
-        accountViewModel.account.settings.keyPair.privKey?.let {
-            val key = runCatching { Nip49().encrypt(it.toHexKey(), password.value.text) }.getOrNull()
-            if (key != null) {
-                scope.launch {
-                    clipboardManager.setText(key)
-                    Toast
-                        .makeText(
-                            context,
-                            loadStringRes(Res.string.secret_key_copied_to_clipboard),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                }
-            } else {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            loadStringRes(Res.string.failed_to_encrypt_key),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QrCodeButtonBase(
-    accountViewModel: AccountViewModel,
-    isEnabled: Boolean = true,
-    contentDescription: StringResource,
-    onDialogShow: () -> String?,
-) {
-    val context = LocalContext.current
-    val authLabels = rememberAuthPromptLabels()
-    val authLabelCopyKey = stringRes(Res.string.copy_my_secret_key)
-
-    // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
-
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                dialogOpen = true
-            }
-        }
-
-    IconButton(
-        enabled = isEnabled,
-        onClick = {
-            authenticate(
-                title = authLabelCopyKey,
-                context = context,
-                labels = authLabels,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { dialogOpen = true },
-                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-            )
-        },
-    ) {
-        Icon(
-            painter = painterRes(R.drawable.ic_qrcode, 4),
-            contentDescription = stringRes(id = contentDescription),
-            modifier = Modifier.size(24.dp),
-            tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
-        )
-    }
-
-    if (dialogOpen) {
-        ShowKeyQRDialog(
-            onDialogShow(),
-            onClose = { dialogOpen = false },
-        )
-    }
-}
-
-@Composable
-private fun QrCodeButton(accountViewModel: AccountViewModel) {
-    QrCodeButtonBase(
-        accountViewModel = accountViewModel,
-        contentDescription = Res.string.show_private_key_qr_code,
-        onDialogShow = {
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toNsec()
-        },
-    )
-}
-
-@Composable
-private fun QrCodeButtonEncrypted(
-    accountViewModel: AccountViewModel,
-    password: MutableState<TextFieldValue>,
-) {
-    QrCodeButtonBase(
-        accountViewModel = accountViewModel,
-        isEnabled = password.value.text.isNotBlank(),
-        contentDescription = Res.string.show_encrypted_private_key_qr_code,
-        onDialogShow = {
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toHexKey()
-                ?.let { Nip49().encrypt(it, password.value.text) }
-        },
-    )
 }
 
 @Composable
 private fun ShowKeyQRDialog(
-    qrCode: String?,
+    qrCode: String,
     onClose: () -> Unit,
 ) {
     Dialog(
@@ -574,7 +649,6 @@ private fun ShowKeyQRDialog(
                         .fillMaxSize()
                         .padding(10.dp),
             ) {
-                // Back button at the top
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -582,7 +656,6 @@ private fun ShowKeyQRDialog(
                     BackButton(onPress = onClose)
                 }
 
-                // QR Code content
                 Column(
                     modifier =
                         Modifier
@@ -591,7 +664,7 @@ private fun ShowKeyQRDialog(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    QrCodeDrawer(qrCode ?: "error")
+                    QrCodeDrawer(qrCode)
                 }
             }
         }

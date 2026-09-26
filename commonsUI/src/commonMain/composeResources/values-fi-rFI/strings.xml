@@ -213,7 +213,6 @@
     <string name="relays"> Releet</string>
     <string name="website">Verkkosivusto</string>
     <string name="lightning_address">Lightning-osoite</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopioi Nsec-tunniste (salasanasi) leikepöydälle varmuuskopiointia varten</string>
     <string name="send_a_direct_message">Lähetä suora viesti</string>
     <string name="edits_the_user_s_metadata">Muokkaa käyttäjän metatietoja</string>
     <string name="unblock">Poista esto</string>
@@ -268,16 +267,6 @@
     <string name="mark_all_known_as_read">Merkitse kaikki Tunnetut luetuiksi</string>
     <string name="mark_all_new_as_read">Merkitse kaikki Uudet luetuiksi</string>
     <string name="mark_all_as_read">Merkitse kaikki luetuiksi</string>
-    <string name="account_backup_tips2_md">        ## Avainten varmuuskopiointi ja turvallisuusvinkit
-        \n\nTilisi on suojattu salaisella avaimella. Avain on pitkä merkkijono, joka alkaa **nsec1**:llä. Kuka tahansa, jolla on pääsy tähän salaiseen avaimeen, voi julkaista ja muuttaa henkilöllisyyttäsi.
-        \n\n- **Älä** anna salaista avaintasi mihinkään verkkosivustoon tai ohjelmistoon, johon et luota.
-        \n- Amethystin kehittäjät eivät **koskaan** pyydä salaista avaintasi.
-        \n- **Tee** turvallinen varmuuskopio salaisesta avaimestasi tilin palauttamista varten. Suosittelemme salasananhallintaohjelman käyttöä.
-    </string>
-    <string name="account_backup_tips3_md">        Lisäturvallisuuden vuoksi voit salata avaimesi salasanalla. Tämä avain alkaa **ncryptsec1**:llä eikä sitä voi käyttää ilman salasanaasi.
-        \n\nJos kadotat salasanasi, et pysty palauttamaan avaintasi.
-    </string>
-    <string name="encrypt_and_copy_my_secret_key">Salaa ja kopioi salainen avaimeni</string>
     <string name="badge_award_image_for">Merkki kohteelle %1$s</string>
     <string name="badge_award_image">"Merkkipalkinnon kuva</string>
     <string name="new_badge_award_notif">Olet saanut uuden merkin</string>
@@ -2003,7 +1992,6 @@
     <string name="copied_note_text_to_clipboard">Viestin teksti kopioitu leikepöydälle</string>
     <string name="copied_to_clipboard">Kopioitu leikepöydälle</string>
     <string name="copied_user_id_to_clipboard">Käyttäjän @npub kopioitu leikepöydälle</string>
-    <string name="copy_my_secret_key">Kopioi salainen avain</string>
     <string name="copy_to_clipboard">Kopioi leikepöydälle</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Ei voitu koota LNUrlia Lightning-osoitteesta "%1$s". Tarkista käyttäjän asetukset</string>
     <string name="could_not_check_downloaded_file">Ladatun tiedoston tarkistus epäonnistui latauksen jälkeen: %1$s</string>
@@ -2812,10 +2800,8 @@
     <string name="share_hls_video">HLS-lataus</string>
     <string name="share_or_save">Jaa tai tallenna</string>
     <string name="shorts">Lyhytvideot</string>
-    <string name="show_encrypted_private_key_qr_code">Näytä salatun yksityisen avaimen QR-koodi</string>
     <string name="show_messages_in_notifications_setting_description">Sisällytä suorat viestit ja ryhmäviestit Ilmoitukset-välilehdelle. Poista käytöstä, jos haluat pitää viestit vain Viestit-välilehdellä.</string>
     <string name="show_messages_in_notifications_setting_title">Näytä viestit</string>
-    <string name="show_private_key_qr_code">Näytä yksityisen avaimen QR-koodi</string>
     <string name="sign_request_rejected2">Allekirjoituspyyntö hylätty</string>
     <string name="sign_request_rejected_description">Varmista, että allekirjoittajasovellus on valtuuttanut tämän tapahtuman</string>
     <string name="signer_illegal_state_exception_description">Ulkoinen allekirjoittaja palautti pyyntöön nähden odottamattoman tietopaketin. Kyseessä voi olla vika Amethystissä tai allekirjoittajassa.</string>
