@@ -488,6 +488,10 @@
     <string name="cordn_coordinators_add_action">Add</string>
     <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
     <string name="cordn_coordinators_label">A name for it (yours, optional)</string>
+    <string name="cordn_coordinators_relays_label">Answers on</string>
+    <string name="cordn_coordinators_key">Coordinator key</string>
+    <string name="cordn_coordinators_copy_key">Copy the coordinator\'s npub</string>
+    <string name="cordn_coordinators_more">More actions</string>
     <string name="cordn_coordinators_rename">Rename</string>
     <string name="cordn_coordinators_label_note">This name is yours and stays on this device. A coordinator cannot prove a name, so it is never asked for one.</string>
     <string name="cordn_coordinators_identify">Ask who it is</string>

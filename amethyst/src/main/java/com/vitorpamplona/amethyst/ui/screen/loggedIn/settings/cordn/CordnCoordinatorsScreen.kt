@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,12 +31,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,6 +54,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -60,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_discover
@@ -70,10 +76,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CopyableKeyRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
@@ -148,8 +156,11 @@ fun CordnCoordinatorsScreen(
             // dividers said "something else follows" without saying what.
             SettingsSection(Res.string.cordn_coordinators_section_yours) {
                 SettingsFormBlock {
-                    coordinators.forEach { config ->
+                    coordinators.forEachIndexed { index, config ->
                         CoordinatorCard(config, runtime, accountViewModel, nav)
+                        // Between coordinators, never after the last: the
+                        // section's own card edge already ends the list.
+                        if (index != coordinators.lastIndex) HorizontalDivider(thickness = DividerThickness)
                     }
 
                     if (coordinators.isEmpty()) {
@@ -192,76 +203,109 @@ private fun CoordinatorCard(
     var infoChecked by remember(config.pubKey) { mutableStateOf(false) }
     var confirmingPurge by remember(config.pubKey) { mutableStateOf(false) }
     var renaming by remember(config.pubKey) { mutableStateOf(false) }
+    var menuOpen by remember(config.pubKey) { mutableStateOf(false) }
 
     val health = runtime.health(config.pubKey)?.collectAsStateWithLifecycle()?.value
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // "Unnamed" was only ever true of the *label*. A coordinator that
-            // published a kind 0 has had a name all along (CEP-23), and the app
-            // could already resolve it -- so this now falls back to the profile
-            // before it gives up and says nothing.
-            CoordinatorIdentityRow(
-                pubKey = config.pubKey,
-                label = config.label,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                trailing = {
-                    // The label was only ever settable while adding a coordinator
-                    // by hand, so one that arrived from discovery, or came back
-                    // with a restore, could not be named at all.
-                    IconButton(onClick = { renaming = true }) {
-                        Icon(
-                            symbol = MaterialSymbols.Edit,
-                            contentDescription = stringRes(R.string.cordn_coordinators_rename),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            ) { name ->
+    // No Card here: SettingsSection already IS the card, and a second one
+    // inside it rendered as a square-cornered slab of a different grey inside
+    // the section's rounded one -- every other cordn settings section puts its
+    // content straight into the form block.
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        CoordinatorIdentityRow(
+            pubKey = config.pubKey,
+            label = config.label,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            size = 36.dp,
+            trailing = {
+                // The label was only ever settable while adding a coordinator
+                // by hand, so one that arrived from discovery, or came back
+                // with a restore, could not be named at all.
+                IconButton(onClick = { renaming = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.Edit,
+                        contentDescription = stringRes(R.string.cordn_coordinators_rename),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+        ) { name ->
+            // Name and state together at the top, because "is this one working"
+            // is the question this screen is opened with. Everything verifiable
+            // sits below, where it is read once rather than scanned.
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                health?.let { HealthLine(it) }
             }
+        }
 
-            if (renaming) {
-                RenameCoordinatorDialog(
-                    current = config.label,
-                    onDismiss = { renaming = false },
-                    onSave = {
-                        renaming = false
-                        scope.launch { runtime.relabel(config.pubKey, it) }
-                    },
-                )
-            }
-
-            // The key stays in full, and selectable: this is the screen where
-            // you verify that the coordinator you were told to use is the one
-            // you added, and a name -- from a label or a profile -- cannot
-            // settle that.
-            SelectionContainer {
-                Text(config.pubKey, style = MaterialTheme.typography.bodySmall)
-            }
-            Text(
-                text = config.relays.joinToString("\n") { it.url },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (renaming) {
+            RenameCoordinatorDialog(
+                current = config.label,
+                onDismiss = { renaming = false },
+                onSave = {
+                    renaming = false
+                    scope.launch { runtime.relabel(config.pubKey, it) }
+                },
             )
+        }
 
-            health?.let { HealthLine(it) }
+        // An npub, not the 64 hex characters that used to sit here. This is the
+        // screen where you check that the coordinator you were told to use is
+        // the one you added -- and what you were told is an npub, which a hex
+        // string cannot be compared against at all. The full value is one tap
+        // away on the clipboard, which is how a comparison is actually done.
+        val coordinator = remember(config.pubKey) { LocalCache.getOrCreateUser(config.pubKey) }
+        CopyableKeyRow(
+            label = stringRes(R.string.cordn_coordinators_key),
+            shown = coordinator.pubkeyDisplayHex(),
+            copied = coordinator.pubkeyNpub(),
+            copyDescription = stringRes(R.string.cordn_coordinators_copy_key),
+        )
 
-            // Only ever what a call of ours already observed — nothing here
-            // polls. The handshake below is a call the user asked for.
-            if (infoChecked) {
+        // Every relay, not the first two and a count: this is the management
+        // screen, and an address the coordinator answers on is the thing you
+        // came here to check or to rule out.
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = stringRes(R.string.cordn_coordinators_relays_label),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            config.relays.forEach { relay ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        symbol = MaterialSymbols.Link,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = relay.url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        // Only ever what a call of ours already observed -- nothing here
+        // polls. The handshake below is a call the user asked for.
+        if (infoChecked) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text =
                         info?.let {
                             stringRes(
                                 R.string.cordn_coordinators_server,
-                                listOfNotNull(it.name, it.version, it.protocolVersion).joinToString(" · "),
+                                listOfNotNull(it.name, it.version, it.protocolVersion).joinToString(" \u00b7 "),
                             )
                         } ?: stringRes(R.string.cordn_coordinators_server_silent),
                     style = MaterialTheme.typography.bodySmall,
@@ -276,25 +320,56 @@ private fun CoordinatorCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
 
-            Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(onClick = {
-                    scope.launch {
-                        info = runCatching { runtime.serverInfo(config.pubKey) }.getOrNull()
-                        infoChecked = true
-                    }
-                }) {
-                    Text(stringRes(R.string.cordn_coordinators_identify))
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedButton(onClick = {
+                scope.launch {
+                    info = runCatching { runtime.serverInfo(config.pubKey) }.getOrNull()
+                    infoChecked = true
                 }
-                TextButton(onClick = { scope.launch { runtime.forget(config.pubKey) } }) {
-                    Text(stringRes(R.string.cordn_coordinators_remove))
+            }) {
+                Text(stringRes(R.string.cordn_coordinators_identify))
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Behind a menu rather than beside Identify. Purge deletes this
+            // coordinator's groups and keys off the device, and it sat one
+            // tap away from a harmless handshake button, at the same size.
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.cordn_coordinators_more),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                TextButton(onClick = { confirmingPurge = true }) {
-                    Text(stringRes(R.string.cordn_coordinators_purge), color = MaterialTheme.colorScheme.error)
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringRes(R.string.cordn_coordinators_remove)) },
+                        onClick = {
+                            menuOpen = false
+                            scope.launch { runtime.forget(config.pubKey) }
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringRes(R.string.cordn_coordinators_purge),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            confirmingPurge = true
+                        },
+                    )
                 }
             }
         }
