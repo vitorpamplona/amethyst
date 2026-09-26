@@ -34,7 +34,8 @@ actual fun sha256(data: ByteArray): ByteArray {
     data.usePinned { inputPinned ->
         digest.usePinned { digestPinned ->
             CC_SHA256(
-                inputPinned.addressOf(0),
+                // addressOf(0) throws on an empty array; CommonCrypto accepts null for a 0-byte input.
+                if (data.isEmpty()) null else inputPinned.addressOf(0),
                 data.size.convert(),
                 digestPinned.addressOf(0),
             )
@@ -53,7 +54,8 @@ actual fun sha256Into(
     data.usePinned { inputPinned ->
         out.asUByteArray().usePinned { digestPinned ->
             CC_SHA256(
-                inputPinned.addressOf(0),
+                // addressOf(0) throws on an empty array; CommonCrypto accepts null for a 0-byte input.
+                if (data.isEmpty()) null else inputPinned.addressOf(0),
                 len.convert(),
                 digestPinned.addressOf(0),
             )
