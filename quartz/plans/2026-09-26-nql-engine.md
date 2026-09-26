@@ -99,8 +99,10 @@ vespa-eventstore's `VespaSqlBackend` compiles against it as is.
 2. Otherwise each `events` / `tags` source is scanned with the predicates that
    hold for its rows alone. These are the WHERE conjuncts that read only that
    source (none for the right side of a LEFT JOIN) plus its own ON conjuncts. A
-   source that the store refuses (`acceptsScan`) is fetched by the join keys of a
-   source already loaded (`ScanLink`), in chunks of 500.
+   later source that joins by equality to one already loaded (`ScanLink`) is
+   fetched by that source's keys instead, in chunks of 500, when there are at
+   most 2,000 of them or the store refuses the scan (`acceptsScan`). The keys can
+   be ids, pubkeys, or the `t1` of a single-letter tag name.
 3. A plain newest-first listing pushes `LIMIT + OFFSET` down and fetches the whole
    tie group at the boundary.
 4. An `events` source read only for `id` / `created_at` becomes an id walk
@@ -108,6 +110,40 @@ vespa-eventstore's `VespaSqlBackend` compiles against it as is.
 5. Joins hash on an equality between the joined-so-far and the new source, and
    fall back to a nested loop otherwise.
 6. Subqueries run once per distinct value of the outer columns they read.
+
+### The filesystem store
+
+`FsEventStore` answers through `FsSqlBackend`. Every index entry of an event is
+named `<ts>-<id>` in every tree it sits in (kind, author, tag value), so directory
+listings say which events match and when without opening JSON. One tree drives,
+and the other conditions are `exists` probes of the same name. That answers these
+without reading an event:
+
+- id walks;
+- `count(*)`, alone or grouped by `kind` or `pubkey`, with `min` and `max` of
+  `created_at`;
+- `DISTINCT t1` of a single-letter tag (under the default indexing strategy),
+  from the value directories. A hashed directory (emoji, URLs, the empty string)
+  costs one read to recover its value.
+
+The store's own query also checks `since` / `until` against the entry name
+before reading the JSON. The executor's tie-group fetch relies on this.
+
+`count(*)` over `tags` still reads events. The index keeps one entry per
+(event, value), so it can't see an event carrying the same tag twice.
+
+60k events (`NQL_BENCH=fs` against `fs-plain`, which reads event by event):
+
+| query | read event by event | index trees |
+|---|---|---|
+| count all | 1915 ms | 104 ms |
+| group by kind | 1963 ms | 91 ms |
+| newest 50 | 1298 ms | 162 ms |
+| reactions per note of author (join) | 664 ms | 11 ms |
+| top hashtags (`count(*)` over tags) | 1958 ms | 1944 ms |
+
+The join gain comes from the key lookup (step 2 above) and holds for every
+interpreted backend.
 
 ## Protocol
 
@@ -127,10 +163,13 @@ On the client:
 ## Tests
 
 - `NqlConformanceTest` runs the NIP's vectors (a copy in
-  `jvmTest/resources/nql/FF-conformance.json`) over three backends: the SQLite
-  store, id walks, and a store that refuses unselective scans.
+  `jvmTest/resources/nql/FF-conformance.json`) over the SQLite store's compiled
+  path and over these backends: the SQLite store, the filesystem store, id walks,
+  and a store that refuses unselective scans.
 - `NqlDifferentialFuzzTest` runs 400 random queries (joins, subqueries, grouping,
-  NULL ordering) on those three backends against SQLite over plain tables.
+  NULL ordering) on those backends against SQLite over plain tables.
+- `NqlFsStoreTest` checks that each query the filesystem store should answer off
+  its index trees is answered there, and matches SQLite.
 - `NqlPushdownTest` covers what the store is asked for per query shape.
 - `FilterSqlTest`, `NqlRelayTest`, `NostrClientNqlTest` and geode's `NipXXSqlTest`
   cover the protocol and the client.

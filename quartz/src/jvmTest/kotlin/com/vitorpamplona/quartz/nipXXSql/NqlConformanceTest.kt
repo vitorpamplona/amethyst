@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -34,6 +35,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import java.nio.file.Files
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.test.AfterTest
@@ -45,7 +47,7 @@ import kotlin.test.fail
  * NIP-FF's conformance vectors (`nql/FF-conformance.json`, a copy of the NIP's
  * `FF-conformance.json`) against the SQLite store's native path (the query
  * compiled to SQLite SQL) and the interpreter over three backends: the SQLite
- * store's own, one that answers through id walks, and one that refuses
+ * store's own, the filesystem store's, one that answers through id walks, and one that refuses
  * unselective scans (whose `unsupported:` refusals the NIP allows).
  */
 class NqlConformanceTest {
@@ -54,6 +56,10 @@ class NqlConformanceTest {
 
     /** The same events in a store that keeps `event_tag_values`, which the compiled path reads `tags` from. */
     private val tagValuesStore = EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = true))
+
+    /** The same events in the filesystem store, which answers id walks, counts and tag values off its index trees. */
+    private val fsRoot = Files.createTempDirectory("nql-fs")
+    private val fsStore = FsEventStore(fsRoot)
 
     init {
         runBlocking {
@@ -71,6 +77,7 @@ class NqlConformanceTest {
                     )
                 store.insert(event)
                 tagValuesStore.insert(event)
+                fsStore.insert(event)
             }
         }
     }
@@ -79,6 +86,8 @@ class NqlConformanceTest {
     fun close() {
         store.close()
         tagValuesStore.close()
+        fsStore.close()
+        fsRoot.toFile().deleteRecursively()
     }
 
     private val cases = vectors["cases"]!!.jsonArray.map { it.jsonObject }
@@ -96,6 +105,11 @@ class NqlConformanceTest {
     @Test
     fun overTheSqliteStore() {
         check(store.sqlBackend(), unsupportedAllowed = false)
+    }
+
+    @Test
+    fun overTheFilesystemStore() {
+        check(fsStore.sqlBackend(), unsupportedAllowed = false)
     }
 
     @Test

@@ -28,9 +28,11 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
 import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -50,6 +52,8 @@ class NqlDifferentialFuzzTest {
     private val signers = List(3) { NostrSignerSync() }
     private val store = EventStore(dbName = null, relay = null)
     private val tagValuesStore = EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = true))
+    private val fsRoot = Files.createTempDirectory("nql-fs-fuzz")
+    private val fsStore = FsEventStore(fsRoot)
     private val oracle: SQLiteConnection = BundledSQLiteDriver().open(":memory:")
     private val words = listOf("a", "b", "c", "", "B")
     private val kinds = listOf(1, 7, 20, 1111)
@@ -78,6 +82,7 @@ class NqlDifferentialFuzzTest {
                 ids.add(e.id)
                 store.insert(e)
                 tagValuesStore.insert(e)
+                fsStore.insert(e)
                 oracle.prepare("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?)").use {
                     it.bindText(1, e.id)
                     it.bindText(2, e.pubKey)
@@ -106,6 +111,8 @@ class NqlDifferentialFuzzTest {
     fun close() {
         store.close()
         tagValuesStore.close()
+        fsStore.close()
+        fsRoot.toFile().deleteRecursively()
         oracle.close()
     }
 
@@ -253,6 +260,7 @@ class NqlDifferentialFuzzTest {
                 "compiled" to { c -> store.nql(c.nql, c.params) },
                 "compiled over tag values" to { c -> tagValuesStore.nql(c.nql, c.params) },
                 "store" to { c -> Nql.run(c.nql, c.params, store.sqlBackend()) },
+                "filesystem store" to { c -> Nql.run(c.nql, c.params, fsStore.sqlBackend()) },
                 "id walks" to { c -> Nql.run(c.nql, c.params, IdWalkBackend(store)) },
                 "selective" to { c -> Nql.run(c.nql, c.params, SelectiveBackend(store)) },
             )

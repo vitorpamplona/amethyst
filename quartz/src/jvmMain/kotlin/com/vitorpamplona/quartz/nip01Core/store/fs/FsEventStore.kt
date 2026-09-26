@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nipXXSql.SqlStoreBackend
 import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.nio.file.FileAlreadyExistsException
@@ -63,7 +64,7 @@ import kotlin.io.path.readText
  */
 open class FsEventStore(
     val root: Path,
-    indexingStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    private val indexingStrategy: IndexingStrategy = DefaultIndexingStrategy(),
     /**
      * Optional relay URL the store is acting on behalf of. Used by
      * NIP-62 [RequestToVanishEvent.shouldVanishFrom] scoping. When
@@ -311,8 +312,14 @@ open class FsEventStore(
         if (limit <= 0) return
         var emitted = 0
         val seenIds = HashSet<HexKey>()
+        // Index entry names carry `created_at`, so the time window is checked
+        // before the JSON is read. Not for an id lookup, whose time is the
+        // canonical file's mtime (a copy that drops it would drop the event).
+        val since = if (stripped.ids == null) stripped.since else null
+        val until = if (stripped.ids == null) stripped.until else null
         for (candidate in planner.plan(stripped)) {
             if (emitted >= limit) break
+            if ((since != null && candidate.createdAt < since) || (until != null && candidate.createdAt > until)) continue
             if (!seenIds.add(candidate.id)) continue
             val event = readEvent(candidate.id) ?: continue
             if (!stripped.match(event)) continue
@@ -331,6 +338,9 @@ open class FsEventStore(
             query<T>(f) { if (seen.add(it.id)) onEach(it) }
         }
     }
+
+    /** NQL answered off the index trees where it can: see [FsSqlBackend]. */
+    override fun sqlBackend(): SqlStoreBackend = FsSqlBackend(this, layout, hasher, indexingStrategy, ::readEvent)
 
     override suspend fun count(filter: Filter): Int {
         var n = 0

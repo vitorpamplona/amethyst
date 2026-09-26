@@ -218,6 +218,8 @@ internal class NqlExecutor(
             val spec = specs[i]!!
             if (spec.matchesNothing) {
                 loaded[i] = emptyList()
+            } else if (i > 0 && loadByKeys(q, i, spec, loaded, local[i], outer)) {
+                // Few join keys from a source already loaded: a lookup by them, not a scan.
             } else if (backend.acceptsScan(spec)) {
                 loaded[i] =
                     rows(q, i, local[i], outer) { sink ->
@@ -232,24 +234,7 @@ internal class NqlExecutor(
             progress = false
             for (i in 0 until n) {
                 if (loaded[i] != null) continue
-                val spec = specs[i]!!
-                for (link in spec.links) {
-                    val target = loaded[link.target] ?: continue
-                    val targetColumn = q.from[link.target].columns.indexOfFirst { it.first == link.targetColumn }
-                    val keys = target.mapNotNullTo(HashSet()) { it[targetColumn] as? String }
-                    val narrowed = spec.narrowedTo(link.column, keys) ?: continue
-                    if (!narrowed.matchesNothing && !backend.acceptsScan(narrowed)) continue
-                    loaded[i] =
-                        rows(q, i, local[i], outer) { sink ->
-                            if (!narrowed.matchesNothing) {
-                                for (chunk in keys.chunked(JOIN_KEY_CHUNK)) {
-                                    fetch(spec.narrowedTo(link.column, chunk.toSet())!!.also { it.columns = spec.columns }, sink)
-                                }
-                            }
-                        }
-                    progress = true
-                    break
-                }
+                if (loadByKeys(q, i, specs[i]!!, loaded, local[i], outer, maxKeys = Int.MAX_VALUE)) progress = true
             }
         }
         if (loaded.any { it == null }) {
@@ -259,6 +244,41 @@ internal class NqlExecutor(
             )
         }
         return loaded.map { it!! }
+    }
+
+    /**
+     * Loads source [i] by the keys of a loaded source it joins to by equality,
+     * when there are at most [maxKeys] of them and the store takes the narrowed
+     * scan: only rows matching a key can join. False, having loaded nothing,
+     * when no link qualifies.
+     */
+    private suspend fun loadByKeys(
+        q: NqlQuery,
+        i: Int,
+        spec: ScanSpec,
+        loaded: Array<List<Array<Any?>>?>,
+        local: List<NqlExpr>,
+        outer: Env?,
+        maxKeys: Int = NARROW_MAX_KEYS,
+    ): Boolean {
+        for (link in spec.links) {
+            val target = loaded[link.target] ?: continue
+            val targetColumn = q.from[link.target].columns.indexOfFirst { it.first == link.targetColumn }
+            val keys = target.mapNotNullTo(HashSet()) { it[targetColumn] as? String }
+            if (keys.size > maxKeys) continue
+            val narrowed = spec.narrowedTo(link.column, keys) ?: continue
+            if (!narrowed.matchesNothing && !backend.acceptsScan(narrowed)) continue
+            loaded[i] =
+                rows(q, i, local, outer) { sink ->
+                    if (!narrowed.matchesNothing) {
+                        for (chunk in keys.chunked(JOIN_KEY_CHUNK)) {
+                            fetch(spec.narrowedTo(link.column, chunk.toSet())!!.also { it.columns = spec.columns }, sink)
+                        }
+                    }
+                }
+            return true
+        }
+        return false
     }
 
     /** The rows of table source [i] from the events [fetch] hands over, each event once, kept where [local] holds. */
@@ -736,5 +756,8 @@ internal class NqlExecutor(
     companion object {
         /** Join keys per store call when a source is fetched by another's keys. */
         const val JOIN_KEY_CHUNK = 500
+
+        /** Up to this many join keys, a source that could be scanned is looked up by them instead. */
+        const val NARROW_MAX_KEYS = 2_000
     }
 }

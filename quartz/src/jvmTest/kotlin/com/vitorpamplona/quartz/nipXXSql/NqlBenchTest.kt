@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nipXXSql
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
 import kotlin.random.Random
 import kotlin.test.Test
 
@@ -32,8 +35,12 @@ class NqlBenchTest {
     @Test
     fun bench() {
         if (System.getenv("NQL_BENCH") == null) return
-        val tagValues = System.getenv("NQL_BENCH") == "tagvalues"
-        val store = EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = tagValues))
+        val mode = System.getenv("NQL_BENCH")
+        val tagValues = mode == "tagvalues"
+        // "fs": the filesystem store answering off its index trees; "fs-plain": the same store read event by event.
+        val fsRoot = if (mode.startsWith("fs")) Files.createTempDirectory("nql-bench-fs") else null
+        val store: IEventStore = fsRoot?.let { FsEventStore(it) } ?: EventStore(dbName = null, relay = null, indexStrategy = DefaultIndexingStrategy(indexTagValues = tagValues))
+        val backend = if (mode == "fs-plain") FilterStoreBackend(store) else store.sqlBackend()
         val rnd = Random(1)
         val authors = List(200) { NostrSignerSync() }
         val notes = ArrayList<String>()
@@ -52,9 +59,9 @@ class NqlBenchTest {
                 store.insert(a.sign<Event>(1_700_100_000L + i, 7, arrayOf(arrayOf("e", target), arrayOf("p", authors[0].pubKey)), "+"))
             }
         }
-        println("BENCH load ${System.currentTimeMillis() - t0} ms (tag values: $tagValues)")
+        println("BENCH load ${System.currentTimeMillis() - t0} ms ($mode)")
         // Planner statistics, as a running relay has them.
-        runBlocking { store.store.analyse() }
+        if (store is EventStore) runBlocking { store.store.analyse() }
         val author = authors[3].pubKey
         val queries =
             listOf(
@@ -73,11 +80,12 @@ class NqlBenchTest {
             var rows = 0
             repeat(6) {
                 val s = System.nanoTime()
-                rows = runBlocking { store.nql(q).rows.size }
+                rows = runBlocking { (if (store is EventStore) store.nql(q) else Nql.run(q, emptyList(), backend)).rows.size }
                 times.add((System.nanoTime() - s) / 1_000_000)
             }
             println("BENCH $name: median ${times.drop(1).sorted()[2]} ms (rows $rows)")
         }
         store.close()
+        fsRoot?.toFile()?.deleteRecursively()
     }
 }

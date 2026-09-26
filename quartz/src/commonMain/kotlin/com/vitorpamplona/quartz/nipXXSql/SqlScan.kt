@@ -119,7 +119,7 @@ class ScanSpec(
     /**
      * This spec further restricted to rows whose [column] is one of [values],
      * or null when [column] isn't one a store can look up by (`id`/`event_id`,
-     * `pubkey`).
+     * `pubkey`, the `t1` of an indexable tag name).
      */
     internal fun narrowedTo(
         column: String,
@@ -130,6 +130,9 @@ class ScanSpec(
                 ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
             column == "pubkey" ->
                 ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
+            // A tag value is looked up by with its name: a single-letter one, as filters and indexes take.
+            table == SqlProfile.TAGS && column == "t1" && tagName != null && isIndexableTagName(tagName) ->
+                ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues?.intersect(values) ?: values, valueNonEmpty, limit, false)
             else -> null
         }
 
