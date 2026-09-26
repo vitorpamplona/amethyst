@@ -14,6 +14,7 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry). 7 plans: 3 shipped, 2 in-progres
 | [2026-04-21-event-renderer.md](2026-04-21-event-renderer.md) | Cross-platform UI-agnostic `RenderedEvent` subsystem shared by Amy, Desktop, and Android; not started. |
 | [2026-05-30-amethyst-to-commons-migration.md](2026-05-30-amethyst-to-commons-migration.md) | Roadmap to move shared `amethyst` Android code into `commons`; keystone `Account`/`LocalCache` extraction not begun. |
 | [2026-08-03-poll-results-page.md](2026-08-03-poll-results-page.md) | Extended NIP-88 poll results page (per-option counts + who voted for what) for Android and Desktop; also specifies four tally-correctness fixes and the missing poll-relay subscription. Proposed, not started. |
+| [2026-09-26-viewmodel-migration.md](2026-09-26-viewmodel-migration.md) | How to move the 138 app-side ViewModels: logic into scope-injected holders in `commons`, one generic `StateHolderViewModel` in `commonsUI`, a real `ViewModelStore` on Desktop; survey, rules, pilot order. Proposed. |
 
 ## Shipped
 | Plan | Summary |
