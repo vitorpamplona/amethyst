@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_decision_allowed
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_decision_blocked
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_left_site
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_other_browser_named
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_permission_state
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_privacy
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_site_settings_none
@@ -365,10 +366,14 @@ private fun TileGrid(
         actions.chunked(columns).forEach { rowActions ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowActions.forEach { action ->
+                    // The hand-off tile names the browser it will actually open when the
+                    // system will name one; "Open in browser" is what is left when the
+                    // answer is a chooser. See BrowserPillUi.defaultBrowserName.
+                    val named = ui.defaultBrowserName?.takeIf { action == Action.OPEN_IN_BROWSER_APP }
                     ActionTile(
                         symbol = pillSymbolFor(action) ?: MaterialSymbols.Info,
-                        label = stringRes(pillTileLabelFor(action)),
-                        description = stringRes(pillLabelFor(action)),
+                        label = named?.let { stringRes(Res.string.browser_pill_other_browser_named, it) } ?: stringRes(pillTileLabelFor(action)),
+                        description = named?.let { stringRes(Res.string.browser_pill_other_browser_named, it) } ?: stringRes(pillLabelFor(action)),
                         onClick = { onAction(action) },
                         selected =
                             when (action) {

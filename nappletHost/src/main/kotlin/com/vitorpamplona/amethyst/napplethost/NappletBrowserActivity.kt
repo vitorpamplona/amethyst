@@ -1337,6 +1337,7 @@ class NappletBrowserActivity : ComponentActivity() {
                             torOn = if (proxyPort > 0) useTor else null,
                         ),
                     isFavorite = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
+                    defaultBrowserName = DefaultBrowser.label(this),
                 ),
             listener = chromeListener,
         )
