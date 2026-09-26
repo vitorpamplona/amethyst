@@ -68,9 +68,11 @@ class ScanSpec(
             ids?.isEmpty() == true || authors?.isEmpty() == true || kinds?.isEmpty() == true ||
                 tagValues?.isEmpty() == true || dValues?.isEmpty() == true || (since != null && until != null && since > until)
 
-    /** Narrows the store's work: a condition on id, author, kind or an indexable tag. */
+    /** Narrows the store's work: a condition on id, author, kind, `d` (a `#d` lookup) or an indexable tag. */
     val isSelective: Boolean
-        get() = ids != null || authors != null || kinds != null || (tagValues != null && tagName != null && isIndexableTagName(tagName))
+        get() =
+            ids != null || authors != null || kinds != null || dValues != null ||
+                (tagValues != null && tagName != null && isIndexableTagName(tagName))
 
     /**
      * The Nostr filter whose events cover this spec: for `events`, the events

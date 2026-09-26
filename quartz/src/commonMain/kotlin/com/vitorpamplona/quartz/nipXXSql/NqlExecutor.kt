@@ -239,7 +239,7 @@ internal class NqlExecutor(
         }
         if (loaded.any { it == null }) {
             throw SqlException.unsupported(
-                "this relay needs a condition on kind, pubkey, id or a single-letter tag for every source in the query, " +
+                "this relay needs a condition on kind, pubkey, id, d or a single-letter tag for every source in the query, " +
                     "or a join to one that has it",
             )
         }
