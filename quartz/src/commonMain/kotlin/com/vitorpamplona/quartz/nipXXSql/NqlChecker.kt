@@ -222,10 +222,9 @@ class NqlChecker private constructor(
         if (output < 0) return -1
         val sources = q.from.withIndex().filter { (_, s) -> s.columns.any { it.first == name } }
         if (sources.isEmpty()) return output
+        // The result column is itself one of those source columns: the name means it either way.
         val o = q.outputs[output].expr
-        val same =
-            sources.size == 1 && o is NqlColumnRef && o.output < 0 && o.up == 0 && o.source == sources[0].index && o.owner == q &&
-                q.from[o.source].columns[o.index].first == name
+        val same = o is NqlColumnRef && o.output < 0 && o.owner == q && q.from[o.source].columns[o.index].first == name
         if (!same) invalid("$name is both a result column and a source column", e.pos)
         return output
     }

@@ -3310,6 +3310,35 @@
       "ordered": true
     },
     {
+      "name": "order/by-a-result-column-two-sources-share",
+      "query": "SELECT d.t1, count(*) AS n FROM tags AS l JOIN tags AS d ON d.event_id = l.event_id AND d.t0 = 'p' WHERE l.t0 = 'e' GROUP BY d.t1 ORDER BY n DESC, t1",
+      "columns": [
+        [
+          "t1",
+          "TEXT"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          6
+        ],
+        [
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          2
+        ],
+        [
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+          1
+        ]
+      ],
+      "ordered": true
+    },
+    {
       "name": "order/text-by-code-point",
       "query": "SELECT content FROM events WHERE kind = 1 ORDER BY content",
       "columns": [
