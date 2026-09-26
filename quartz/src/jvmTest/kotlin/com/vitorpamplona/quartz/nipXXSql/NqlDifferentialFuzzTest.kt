@@ -244,7 +244,13 @@ class NqlDifferentialFuzzTest {
     @Test
     fun matchesSqliteOverEveryBackend() {
         val rnd = Random(42)
-        val backends = listOf("store" to store.sqlBackend(), "id walks" to IdWalkBackend(store), "selective" to SelectiveBackend(store))
+        val backends =
+            listOf<Pair<String, suspend (Case) -> NqlResult>>(
+                "compiled" to { c -> store.nql(c.nql, c.params) },
+                "store" to { c -> Nql.run(c.nql, c.params, store.sqlBackend()) },
+                "id walks" to { c -> Nql.run(c.nql, c.params, IdWalkBackend(store)) },
+                "selective" to { c -> Nql.run(c.nql, c.params, SelectiveBackend(store)) },
+            )
         val problems = ArrayList<String>()
         var nonEmpty = 0
         var selectiveAnswered = 0
@@ -252,10 +258,10 @@ class NqlDifferentialFuzzTest {
             val c = generate(rnd)
             val expected = sqlite(c)
             if (expected.isNotEmpty()) nonEmpty++
-            for ((name, backend) in backends) {
+            for ((name, run) in backends) {
                 val got =
                     try {
-                        runBlocking { Nql.run(c.nql, c.params, backend) }.rows
+                        runBlocking { run(c) }.rows
                     } catch (e: SqlException) {
                         if (name == "selective" && e.prefix == SqlException.UNSUPPORTED) continue
                         problems += "$name refused: ${e.message}\n  ${c.nql}"

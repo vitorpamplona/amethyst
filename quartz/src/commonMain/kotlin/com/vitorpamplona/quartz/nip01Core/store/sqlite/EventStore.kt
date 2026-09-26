@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nipXXSql.Nql
 
 /**
  * SQLite-backed [IEventStore] with default DB-file name and relay
@@ -86,6 +87,12 @@ class EventStore(
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries, onProgress)
 
     override suspend fun liveNegentropySnapshot(maxEntries: Int) = store.liveNegentropySnapshot(maxEntries)
+
+    override suspend fun nql(
+        query: String,
+        params: List<Any?>,
+        maxRows: Int?,
+    ) = store.nql(query, params, maxRows) ?: Nql.run(query, params, sqlBackend(), maxRows)
 
     override val needsFtsCatchUp: Boolean get() = store.needsFtsCatchUp
 

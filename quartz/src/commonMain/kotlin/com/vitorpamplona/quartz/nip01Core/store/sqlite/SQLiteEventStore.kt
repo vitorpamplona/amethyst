@@ -44,6 +44,11 @@ import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
+import com.vitorpamplona.quartz.nipXXSql.Nql
+import com.vitorpamplona.quartz.nipXXSql.NqlResult
+import com.vitorpamplona.quartz.nipXXSql.NqlSqliteCompiler
+import com.vitorpamplona.quartz.nipXXSql.NqlSqliteQuery
+import com.vitorpamplona.quartz.nipXXSql.NqlType
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -734,6 +739,78 @@ class SQLiteEventStore(
             db.transaction {
                 fullTextSearchModule.reindexBatch(db, resumeFrom?.toLongOrNull() ?: 0L, batchSize)
             }
+        }
+
+    /**
+     * [IEventStore.nql] run natively: the checked query is compiled to SQLite
+     * SQL over this store's tables ([NqlSqliteCompiler]) and stepped inside one
+     * reader borrow, so it uses the store's indexes and never builds an event.
+     * On an in-memory store the reader is the writer, so writes wait for it.
+     *
+     * Null when SQLite fails the query: SQLite raises every NQL error as
+     * `integer overflow`, and fails an INTEGER sum on any overflowing partial
+     * sum where NQL fails only on the final one, so the caller reruns it in the
+     * interpreter, NQL's reference, which names the error or answers.
+     */
+    suspend fun nql(
+        query: String,
+        params: List<Any?>,
+        maxRows: Int?,
+    ): NqlResult? {
+        val (checked, values) = Nql.prepare(query, params)
+        return pool.useReader { conn ->
+            val db = (conn as? StatementCachingConnection)?.uncached ?: conn
+            val hasher = if (indexStrategy is DefaultIndexingStrategy) seedModule.hasher(conn) else null
+            val tagHash: ((String, String) -> Long)? = hasher?.let { h -> { name, value -> h.hash(name, value) } }
+            db.execSQL("PRAGMA case_sensitive_like = ON")
+            try {
+                runNql(db, NqlSqliteCompiler(values, tagHash).compile(checked), maxRows)
+            } catch (e: SQLiteException) {
+                null
+            } finally {
+                db.execSQL("PRAGMA case_sensitive_like = OFF")
+            }
+        }
+    }
+
+    private fun runNql(
+        db: SQLiteConnection,
+        q: NqlSqliteQuery,
+        maxRows: Int?,
+    ): NqlResult =
+        db.prepare(q.sql).use { st ->
+            q.binds.forEachIndexed { i, v ->
+                when (v) {
+                    is Long -> st.bindLong(i + 1, v)
+                    is Double -> st.bindDouble(i + 1, v)
+                    is String -> st.bindText(i + 1, v)
+                    else -> st.bindNull(i + 1)
+                }
+            }
+            val rows = ArrayList<List<Any?>>()
+            var truncated = false
+            val width = q.columns.size
+            while (st.step()) {
+                if (maxRows != null && rows.size >= maxRows) {
+                    truncated = true
+                    break
+                }
+                rows.add(
+                    List(width) { i ->
+                        if (st.isNull(i)) {
+                            null
+                        } else {
+                            when (q.columns[i].type) {
+                                NqlType.INTEGER -> st.getLong(i)
+                                NqlType.REAL -> st.getDouble(i)
+                                NqlType.BOOLEAN -> st.getLong(i) != 0L
+                                else -> st.getText(i)
+                            }
+                        }
+                    },
+                )
+            }
+            NqlResult(q.columns, rows, truncated)
         }
 
     fun close() = pool.close()

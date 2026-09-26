@@ -74,6 +74,15 @@ object Nql {
         params: List<Any?>,
     ): List<NqlColumn> = NqlChecker.check(query, params.map(::normalize)).outputs.map { NqlColumn(it.name ?: "", it.type) }
 
+    /** Parses and checks [query] with [params]: the checked query and the parameters as NQL values. */
+    fun prepare(
+        query: String,
+        params: List<Any?>,
+    ): Pair<NqlQuery, List<Any?>> {
+        val values = params.map(::normalize)
+        return NqlChecker.check(query, values) to values
+    }
+
     /** `Int` to `Long`, `Float` to `Double`; anything else that isn't a value is refused. */
     private fun normalize(v: Any?): Any? =
         when (v) {

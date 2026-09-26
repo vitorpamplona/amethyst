@@ -139,29 +139,6 @@ internal class NqlExecutor(
 
     // ---- Scans --------------------------------------------------------------
 
-    private fun conjuncts(e: NqlExpr?): List<NqlExpr> =
-        when {
-            e == null -> emptyList()
-            e is NqlBinary && e.op == "AND" -> conjuncts(e.left) + conjuncts(e.right)
-            else -> listOf(e)
-        }
-
-    /** The sources of [q] that [e] reads (subqueries included). */
-    private fun sourcesOf(
-        q: NqlQuery,
-        e: NqlExpr,
-    ): Set<Int> {
-        val out = HashSet<Int>()
-
-        fun expr(x: NqlExpr) {
-            if (x is NqlColumnRef && x.owner === q && x.output < 0) out.add(x.source)
-            x.subqueries().forEach { sub -> sub.walkColumns { if (it.owner === q && it.output < 0) out.add(it.source) } }
-            x.children().forEach(::expr)
-        }
-        expr(e)
-        return out
-    }
-
     /** A value fixed for this run of [q]: a literal, a parameter or a column of an enclosing query; else null. */
     private fun constant(
         q: NqlQuery,
@@ -190,13 +167,7 @@ internal class NqlExecutor(
         val nullable = BooleanArray(n) { q.from[it].join == NqlJoin.LEFT }
         val where = conjuncts(q.where)
         val onOf = Array(n) { conjuncts(q.from[it].on) }
-
-        // The predicates each source's rows must satisfy on their own.
-        val local =
-            Array(n) { i ->
-                val fromWhere = if (nullable[i]) emptyList() else where.filter { sourcesOf(q, it) == setOf(i) }
-                fromWhere + onOf[i].filter { sourcesOf(q, it) == setOf(i) }
-            }
+        val local = q.localPredicates()
 
         val specs = arrayOfNulls<ScanSpec>(n)
         for (i in 0 until n) {
@@ -222,12 +193,12 @@ internal class NqlExecutor(
             if (both || b.source == later) sb.links += ScanLink(cb, a.source, ca)
         }
         for (c in where) {
-            val s = sourcesOf(q, c)
+            val s = q.sourcesOf(c)
             if (s.none { nullable[it] }) link(c, both = true, later = -1)
         }
         for (i in 1 until n) {
             // The later source's rows only matter where they match; the earlier ones', only if the join is inner.
-            for (c in onOf[i]) link(c, both = !nullable[i] && sourcesOf(q, c).none { it != i && nullable[it] }, later = i)
+            for (c in onOf[i]) link(c, both = !nullable[i] && q.sourcesOf(c).none { it != i && nullable[it] }, later = i)
         }
 
         // What each events source is read for, outside the predicates its spec already guarantees.
@@ -485,8 +456,8 @@ internal class NqlExecutor(
             var build: NqlExpr? = null
             for (c in conjuncts(on)) {
                 if (c !is NqlBinary || c.op != "=" || c.left.subqueries().isNotEmpty() || c.right.subqueries().isNotEmpty()) continue
-                val l = sourcesOf(q, c.left)
-                val r = sourcesOf(q, c.right)
+                val l = q.sourcesOf(c.left)
+                val r = q.sourcesOf(c.right)
                 if (l.isNotEmpty() && l.all { it < i } && r == setOf(i)) {
                     probe = c.left
                     build = c.right

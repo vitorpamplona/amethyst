@@ -837,3 +837,38 @@ internal fun NqlQuery.walkColumns(visit: (NqlColumnRef) -> Unit) {
         q.expressions().forEach(::expr)
     }
 }
+
+/** The AND-ed terms of [e]. */
+internal fun conjuncts(e: NqlExpr?): List<NqlExpr> =
+    when {
+        e == null -> emptyList()
+        e is NqlBinary && e.op == "AND" -> conjuncts(e.left) + conjuncts(e.right)
+        else -> listOf(e)
+    }
+
+/** The sources of this query that [e] reads (subqueries included). */
+internal fun NqlQuery.sourcesOf(e: NqlExpr): Set<Int> {
+    val q = this
+    val out = HashSet<Int>()
+
+    fun expr(x: NqlExpr) {
+        if (x is NqlColumnRef && x.owner === q && x.output < 0) out.add(x.source)
+        x.subqueries().forEach { sub -> sub.walkColumns { if (it.owner === q && it.output < 0) out.add(it.source) } }
+        x.children().forEach(::expr)
+    }
+    expr(e)
+    return out
+}
+
+/**
+ * The predicates each source's rows must satisfy on their own: the WHERE terms
+ * that read only that source (none for the right side of a LEFT JOIN, whose
+ * rows WHERE sees NULL-extended), and the terms of its own ON that do.
+ */
+internal fun NqlQuery.localPredicates(): Array<List<NqlExpr>> {
+    val where = conjuncts(where)
+    return Array(from.size) { i ->
+        val fromWhere = if (from[i].join == NqlJoin.LEFT) emptyList() else where.filter { sourcesOf(it) == setOf(i) }
+        fromWhere + conjuncts(from[i].on).filter { sourcesOf(it) == setOf(i) }
+    }
+}

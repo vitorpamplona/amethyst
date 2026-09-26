@@ -42,7 +42,8 @@ import kotlin.test.fail
 
 /**
  * NIP-FF's conformance vectors (`nql/FF-conformance.json`, a copy of the NIP's
- * `FF-conformance.json`) against the engine over three backends: the SQLite
+ * `FF-conformance.json`) against the SQLite store's native path (the query
+ * compiled to SQLite SQL) and the interpreter over three backends: the SQLite
  * store's own, one that answers through id walks, and one that refuses
  * unselective scans (whose `unsupported:` refusals the NIP allows).
  */
@@ -75,6 +76,11 @@ class NqlConformanceTest {
     private val cases = vectors["cases"]!!.jsonArray.map { it.jsonObject }
 
     @Test
+    fun compiledToSqliteByTheStore() {
+        check(unsupportedAllowed = false) { q, p -> runBlocking { store.nql(q, p) } }
+    }
+
+    @Test
     fun overTheSqliteStore() {
         check(store.sqlBackend(), unsupportedAllowed = false)
     }
@@ -94,6 +100,11 @@ class NqlConformanceTest {
     private fun check(
         backend: SqlStoreBackend,
         unsupportedAllowed: Boolean,
+    ): Int = check(unsupportedAllowed) { q, p -> runBlocking { Nql.run(q, p, backend) } }
+
+    private fun check(
+        unsupportedAllowed: Boolean,
+        run: (String, List<Any?>) -> NqlResult,
     ): Int {
         val problems = ArrayList<String>()
         var answered = 0
@@ -104,7 +115,7 @@ class NqlConformanceTest {
             val error = c["error"]?.jsonPrimitive?.content
             val result =
                 try {
-                    runBlocking { Nql.run(query, params, backend) }
+                    run(query, params)
                 } catch (e: SqlException) {
                     when {
                         e.prefix == SqlException.UNSUPPORTED && unsupportedAllowed && error != "invalid" -> {}
