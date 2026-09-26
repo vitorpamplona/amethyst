@@ -268,6 +268,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SandboxComposeResources.ensure(this)
 
         // A new window a page opened: its WebView already exists (built inside the opener's onCreateWindow).
         val popupToken = intent.getStringExtra(EXTRA_POPUP_TOKEN)
@@ -1178,8 +1179,15 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun updateTaskDescription() {
         val label = pageTitle ?: title.ifBlank { null } ?: BrowserChrome.displayHost(currentUrl())
         val color = themeColor ?: 0
+        // The Builder's `setIcon` that takes an `Icon` is API 37. We compile
+        // against 37, so it resolves, and the old guard was `TIRAMISU` — which
+        // meant every device from 33 to 36 called a method its framework does
+        // not have and died with NoSuchMethodError the moment a page delivered
+        // a favicon. Lint's NewApi did not flag it. The deprecated constructor
+        // takes the same three things and carries the bitmap, so it stays the
+        // path for everything below 37.
         val description =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= ICON_BUILDER_SDK) {
                 ActivityManager.TaskDescription
                     .Builder()
                     .setLabel(label)
@@ -1636,6 +1644,9 @@ class NappletBrowserActivity : ComponentActivity() {
         private const val EXTRA_THEME = "theme"
         private const val EXTRA_IS_FAVORITE = "isFavorite"
         private const val EXTRA_POPUP_TOKEN = "popupToken"
+
+        /** `TaskDescription.Builder.setIcon(Icon)` exists from this SDK on. */
+        private const val ICON_BUILDER_SDK = 37
 
         fun intent(
             context: Context,
