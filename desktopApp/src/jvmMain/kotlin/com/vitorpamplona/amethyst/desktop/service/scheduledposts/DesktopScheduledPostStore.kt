@@ -52,7 +52,7 @@ object DesktopScheduledPostStore {
         if (file.exists()) {
             setOwnerOnly(file, PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
         }
-        return ScheduledPostStore(file)
+        return ScheduledPostStore(file.path)
     }
 
     private fun setDirPermissions(dir: File) =

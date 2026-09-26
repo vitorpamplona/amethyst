@@ -20,21 +20,31 @@
  */
 package com.vitorpamplona.amethyst.commons.scheduledposts
 
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.restrictFileToOwner
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.attribute.PosixFilePermission
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
 
 class ScheduledPostStore(
-    private val storageFile: File,
-    private val nowSec: () -> Long = { System.currentTimeMillis() / 1000 },
+    private val storageFile: Path,
+    private val nowSec: () -> Long = { TimeUtils.now() },
+    private val fileSystem: FileSystem = platformFileSystem,
 ) {
+    /** Takes the platform's own path string, so callers need no okio of their own. */
+    constructor(
+        storagePath: String,
+        nowSec: () -> Long = { TimeUtils.now() },
+    ) : this(storagePath.toPath(), nowSec)
+
     /**
      * `encodeDefaults = true` so this writes the same bytes Jackson did — kotlinx
      * omits a value equal to its default, which would silently drop `"version":1`
@@ -214,7 +224,7 @@ class ScheduledPostStore(
      */
     suspend fun publishNow(
         id: String,
-        nowSec: Long = System.currentTimeMillis() / 1000,
+        nowSec: Long = TimeUtils.now(),
     ): Boolean =
         mutex.withLock {
             ensureLoaded()
@@ -336,8 +346,8 @@ class ScheduledPostStore(
     private fun reloadFromDiskLocked() {
         val fromDisk =
             try {
-                if (storageFile.exists() && storageFile.length() > 0) {
-                    json.decodeFromString<ScheduledPostFile>(storageFile.readText()).posts.toMutableList()
+                if (hasContent()) {
+                    json.decodeFromString<ScheduledPostFile>(readText()).posts.toMutableList()
                 } else {
                     // File vanished — treat as no external state; keep current in-memory.
                     return
@@ -354,8 +364,8 @@ class ScheduledPostStore(
         if (loaded) return
         posts =
             try {
-                if (storageFile.exists() && storageFile.length() > 0) {
-                    json.decodeFromString<ScheduledPostFile>(storageFile.readText()).posts.toMutableList()
+                if (hasContent()) {
+                    json.decodeFromString<ScheduledPostFile>(readText()).posts.toMutableList()
                 } else {
                     mutableListOf()
                 }
@@ -367,7 +377,7 @@ class ScheduledPostStore(
         // Secure a pre-existing file up front (an older build may have left it at the
         // 0644 umask default) so it's owner-only even if nothing mutates the store
         // this session.
-        if (storageFile.exists()) restrictToOwner(storageFile)
+        if (fileSystem.exists(storageFile)) restrictFileToOwner(storageFile, TAG)
         var dirty = purgeStale(nowSec())
         // Recover claims stranded by a crash-mid-publish so they aren't lost forever.
         if (recoverStuckClaimsLocked(nowSec())) dirty = true
@@ -412,48 +422,30 @@ class ScheduledPostStore(
     private fun persist() {
         val snapshot = posts.toList()
         _flow.value = snapshot
-        storageFile.parentFile?.mkdirs()
-        val tmp = File(storageFile.parentFile, storageFile.name + ".tmp")
+        val tmp = "$storageFile.tmp".toPath()
         try {
-            tmp.writeText(json.encodeToString(ScheduledPostFile(version = 1, posts = snapshot)))
+            storageFile.parent?.let { fileSystem.createDirectories(it) }
+            fileSystem.write(tmp) { writeUtf8(json.encodeToString(ScheduledPostFile(version = 1, posts = snapshot))) }
             // Restrict to owner-only BEFORE the rename so the store is never briefly
             // world-readable. It holds pre-signed events + the account's pubkey, which
             // must not leak to other local users on a shared machine.
-            restrictToOwner(tmp)
-            if (!tmp.renameTo(storageFile)) {
-                if (!storageFile.delete()) {
-                    Log.w(TAG) { "Failed to delete existing $storageFile before rename retry" }
-                }
-                if (!tmp.renameTo(storageFile)) {
-                    Log.e(TAG) { "Failed to rename $tmp to $storageFile" }
-                    if (!tmp.delete()) {
-                        Log.w(TAG) { "Failed to clean up temp file $tmp after rename failure" }
-                    }
-                }
-            }
+            restrictFileToOwner(tmp, TAG)
+            // Replaces an existing target, including on Windows, where a plain rename
+            // onto an existing file fails.
+            fileSystem.atomicMove(tmp, storageFile)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to persist scheduled posts to $storageFile", e)
-            if (!tmp.delete()) {
-                Log.w(TAG) { "Failed to clean up temp file $tmp after persist exception" }
+            try {
+                fileSystem.delete(tmp)
+            } catch (e: Exception) {
+                Log.w(TAG) { "Failed to clean up temp file $tmp after persist exception: ${e.message}" }
             }
         }
     }
 
-    /**
-     * Best-effort chmod to `0600` (owner read/write only). No-op on filesystems
-     * without POSIX permissions (e.g. Windows), where confidentiality relies on the
-     * per-user home directory instead. Never throws.
-     */
-    private fun restrictToOwner(file: File) {
-        try {
-            Files.setPosixFilePermissions(
-                file.toPath(),
-                setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
-            )
-        } catch (e: Exception) {
-            Log.w(TAG) { "Could not restrict permissions on $file: ${e.message}" }
-        }
-    }
+    private fun hasContent(): Boolean = (fileSystem.metadataOrNull(storageFile)?.size ?: 0L) > 0L
+
+    private fun readText(): String = fileSystem.read(storageFile) { readUtf8() }
 
     companion object {
         private const val TAG = "ScheduledPostStore"
