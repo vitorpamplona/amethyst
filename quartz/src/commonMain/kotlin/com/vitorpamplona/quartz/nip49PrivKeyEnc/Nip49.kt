@@ -43,6 +43,9 @@ class Nip49 {
          */
         const val MIN_PASSWORD_LENGTH = 12
 
+        /** scrypt cost used when creating: 2^16 rounds, 64 MiB. Safe on low-end phones. */
+        const val DEFAULT_LOG_N = 16
+
         /**
          * Length as scrypt sees it: code points of the NFKC-normalized password, so
          * an emoji (a UTF-16 surrogate pair) counts once and compatibility forms
@@ -64,10 +67,13 @@ class Nip49 {
     ): String {
         check(encryptedInfo != null) { "Couldn't decode key" }
         check(encryptedInfo.version == EncryptedInfo.V) { "invalid version" }
+        // 32-byte key + 16-byte tag. A shorter payload can still carry a valid tag and
+        // would otherwise come back as a zero-padded "key".
+        check(encryptedInfo.encryptedKey.size == 48) { "invalid encrypted key length" }
 
         val normalizedPassword = UnicodeNormalizer().normalizeNFKC(password).encodeToByteArray()
         val n = 2.0.pow(encryptedInfo.logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(normalizedPassword, encryptedInfo.salt, n, 8, 1, 32)
+        val key = deriveKey(normalizedPassword, encryptedInfo.salt, n, encryptedInfo.logn.toInt())
         val m = ByteArray(32)
 
         try {
@@ -97,7 +103,7 @@ class Nip49 {
     fun encrypt(
         secretKeyHex: String,
         password: String,
-        logn: Int = 16,
+        logn: Int = DEFAULT_LOG_N,
         ksb: Byte = EncryptedInfo.CLIENT_DOES_NOT_TRACK,
     ): String = encrypt(secretKeyHex.hexToByteArray(), password, logn, ksb)
 
@@ -113,7 +119,7 @@ class Nip49 {
 
         val normalizedPassword = UnicodeNormalizer().normalizeNFKC(password).encodeToByteArray()
         val n = 2.0.pow(logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
+        val key = deriveKey(normalizedPassword, salt, n, logn)
         val ciphertext = ByteArray(48)
 
         try {
@@ -148,6 +154,24 @@ class Nip49 {
             ciphertext,
         ).encodePayload()
     }
+
+    /**
+     * scrypt allocates 128 * r * N bytes up front: 1 GiB at LOG_N 20, which NIP-49 allows and
+     * other clients may choose. Past the heap that is an OutOfMemoryError, which callers'
+     * `catch (e: Exception)` would miss, crashing instead of reporting the key as unusable.
+     */
+    private fun deriveKey(
+        normalizedPassword: ByteArray,
+        salt: ByteArray,
+        n: Int,
+        logn: Int,
+    ): ByteArray =
+        try {
+            SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
+        } catch (e: Error) {
+            normalizedPassword.fill(0)
+            throw IllegalStateException("Not enough memory for this key's scrypt cost (LOG_N $logn)", e)
+        }
 
     class EncryptedInfo(
         val version: Byte,

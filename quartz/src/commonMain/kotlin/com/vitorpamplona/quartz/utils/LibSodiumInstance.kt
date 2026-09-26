@@ -39,6 +39,8 @@ object LibSodiumInstance {
         try {
             val plaintext = XChaCha20Poly1305.decrypt(ciphertext, ad, nPub, k)
             plaintext.copyInto(message)
+            // The caller owns the only copy it should have; don't leave another on the heap.
+            plaintext.fill(0)
             true
         } catch (_: Exception) {
             false

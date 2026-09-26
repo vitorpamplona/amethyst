@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
@@ -121,7 +122,7 @@ object KeyCommands {
 
     private fun decrypt(rest: Array<String>): Int {
         val args = Args(rest)
-        val ncryptsec = args.positional(0, "ncryptsec").trim()
+        val ncryptsec = Bech32Transcription.normalize(args.positional(0, "ncryptsec"))
         if (!ncryptsec.startsWith("ncryptsec")) return Output.error("bad_args", "expected an ncryptsec1… string")
         // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
         val pwAlias = args.flag("pw")

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip44Encryption.crypto.XChaCha20Poly1305
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -116,5 +117,19 @@ class Nip49SpecTest {
         assertEquals(1, Nip49.passwordLength("\uD83D\uDD11"))
         // The spec's normalization vector: 4 code points typed, 3 after NFKC.
         assertEquals(3, Nip49.passwordLength("\u212B\u2126\u1E9B\u0323"))
+    }
+
+    @Test
+    fun authenticatedButShortCiphertextIsRejected() {
+        // A tag-valid payload that encrypts only 16 bytes must not decode as a zero-padded key.
+        val password = "nostr"
+        val salt = ByteArray(16) { it.toByte() }
+        val nonce = ByteArray(24) { (it + 1).toByte() }
+        val ksb = Nip49.EncryptedInfo.CLIENT_DOES_NOT_TRACK
+        val key = SCrypt.scrypt(password.encodeToByteArray(), salt, 2, 8, 1, 32)
+        val shortCiphertext = XChaCha20Poly1305.encrypt(ByteArray(16) { 7 }, byteArrayOf(ksb), nonce, key)
+
+        val info = Nip49.EncryptedInfo(Nip49.EncryptedInfo.V, 1, salt, nonce, ksb, shortCiphertext)
+        assertFailsWith<IllegalStateException> { nip49.decrypt(info, password) }
     }
 }

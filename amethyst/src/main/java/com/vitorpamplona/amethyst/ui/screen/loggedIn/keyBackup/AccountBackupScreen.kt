@@ -24,6 +24,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.PersistableBundle
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -91,6 +92,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -138,7 +140,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
@@ -217,7 +218,7 @@ private fun AccountBackupScreenContent(
             } else {
                 val gate = rememberKeyAccessGate(accountViewModel)
 
-                SecretKeyCard(nsec, gate)
+                SecretKeyCard(nsec, gate, accountViewModel)
 
                 EncryptedKeyCard(accountViewModel, gate)
 
@@ -269,10 +270,10 @@ private fun BackupHeader() {
 private fun SecretKeyCard(
     nsec: String,
     gate: KeyAccessGate,
+    accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
 
     var revealed by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
@@ -337,7 +338,7 @@ private fun SecretKeyCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { gate.withAccess { copyNSec(context, scope, nsec, clipboard) } },
+                        onClick = { gate.withAccess { copyNSec(context, accountViewModel.viewModelScope, nsec, clipboard) } },
                     ) {
                         ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
                     }
@@ -393,7 +394,8 @@ private fun EncryptedKeyCard(
     var encrypted by remember { mutableStateOf<String?>(null) }
     var showQr by remember { mutableStateOf(false) }
 
-    // Never leave the encrypted key or the typed password around while in the background.
+    // Drop the result while in the background. The typed password is kept so switching to a
+    // password manager to fetch it doesn't wipe the fields.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         encrypted = null
         showQr = false
@@ -414,7 +416,9 @@ private fun EncryptedKeyCard(
             scope.launch {
                 val result =
                     withContext(Dispatchers.Default) {
-                        runCatching { Nip49().encrypt(privKey.toHexKey(), currentPassword) }.getOrNull()
+                        runCatching {
+                            Nip49().encrypt(privKey, currentPassword, Nip49.DEFAULT_LOG_N, Nip49.EncryptedInfo.CLIENT_DOES_NOT_TRACK)
+                        }.getOrNull()
                     }
                 working = false
                 if (result != null) {
@@ -471,6 +475,8 @@ private fun EncryptedKeyCard(
                                     .semantics { contentType = ContentType.NewPassword },
                             value = password,
                             onValueChange = { password = it },
+                            // What gets encrypted is the password at tap time: don't let it change underneath.
+                            enabled = !working,
                             singleLine = true,
                             label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
                             supportingText = {
@@ -505,6 +511,7 @@ private fun EncryptedKeyCard(
                                     .semantics { contentType = ContentType.NewPassword },
                             value = repeated,
                             onValueChange = { repeated = it },
+                            enabled = !working,
                             singleLine = true,
                             label = { Text(stringRes(Res.string.account_backup_encrypted_repeat_password)) },
                             isError = mismatch,
@@ -667,7 +674,11 @@ private class KeyAccessGate {
     var isUnlocked by mutableStateOf(false)
         private set
 
-    /** The action waiting on the keyguard fallback activity to return. */
+    /**
+     * The action waiting on the keyguard fallback activity to return. Only a new request or
+     * that activity's result replaces it: the activity stops this screen (so ON_STOP must not
+     * clear it), and a wrong fingerprint before the lockout fallback is not a final failure.
+     */
     var pending: (() -> Unit)? = null
 
     var prompt: ((onApproved: () -> Unit) -> Unit)? = null
@@ -685,7 +696,6 @@ private class KeyAccessGate {
 
     fun lock() {
         isUnlocked = false
-        pending = null
     }
 }
 
@@ -717,10 +727,7 @@ private fun rememberKeyAccessGate(accountViewModel: AccountViewModel): KeyAccess
                     gate.pending = null
                     onApproved()
                 },
-                onError = { title, message ->
-                    gate.pending = null
-                    accountViewModel.toastManager.toast(title, message)
-                },
+                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
             )
         }
     }
@@ -745,8 +752,9 @@ private fun copyNSec(
     nsec: String,
     clipboardManager: Clipboard,
 ) {
+    // The auto-clear below must outlive this screen, so [scope] is not a composition scope.
     scope.launch {
-        clipboardManager.setText(nsec)
+        clipboardManager.setClipEntry(ClipEntry(sensitiveClip(nsec)))
         Toast
             .makeText(
                 context,
@@ -756,13 +764,22 @@ private fun copyNSec(
 
         // Best-effort auto-clear: after a delay, wipe the clipboard only if it
         // still holds this exact nsec (don't clobber anything copied since).
-        // On Android 13+ the OS also shows its own sensitive-content UI.
         delay(CLIPBOARD_CLEAR_DELAY_MS)
         if (clipboardManager.getText() == nsec) {
             clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("", "")))
         }
     }
 }
+
+/**
+ * Marks the clip as sensitive so Android 13+ hides it in the copy confirmation overlay and
+ * clipboard previews. That overlay is a system window, outside this screen's FLAG_SECURE.
+ */
+private fun sensitiveClip(text: String): ClipData =
+    ClipData.newPlainText("", text).apply {
+        // ClipDescription.EXTRA_IS_SENSITIVE, spelled out: the constant is API 33, the key works earlier.
+        description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+    }
 
 @Composable
 private fun ShowKeyQRDialog(
