@@ -168,16 +168,14 @@ fun CordnExposureCard(
  *
  * Falls back to the hex if the key is not decodable, which no stored exposure
  * should carry -- a label that is wrong is still better than a card that
- * crashes on one malformed group.
+ * crashes on one malformed group. Decoded with the total `decode64OrNull`
+ * rather than `Hex.decode`, which validates no characters at all: it indexes a
+ * 256-entry table by char code, so anything above U+00FF throws an
+ * ArrayIndexOutOfBounds that no IllegalArgumentException guard would catch.
  */
 private const val NPUB_PREFIX = 5
 
-private fun shortNpub(pubKeyHex: String): String =
-    try {
-        Hex.decode(pubKeyHex).toNpub().toShortDisplay(NPUB_PREFIX)
-    } catch (e: IllegalArgumentException) {
-        pubKeyHex.take(16)
-    }
+private fun shortNpub(pubKeyHex: String): String = Hex.decode64OrNull(pubKeyHex)?.toNpub()?.toShortDisplay(NPUB_PREFIX) ?: pubKeyHex.take(16)
 
 @Composable
 private fun ExposureRow(

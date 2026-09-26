@@ -121,6 +121,12 @@ fun CordnCreateMembersScreen(
 
         val coverage by rememberCordnCoverage(runtime, draft.roster)
 
+        // The badge on a SEARCH RESULT cannot come from coverage: coverage is
+        // the roster intersected with what a coordinator holds, so somebody not
+        // yet added is never in it. This is the unfiltered set, which is what
+        // the question "could this person be added at all" needs.
+        val reachable by rememberReachableIdentities(runtime)
+
         Column(
             modifier =
                 Modifier
@@ -173,7 +179,7 @@ fun CordnCreateMembersScreen(
                         // covers both "has not published here" and "we could not
                         // ask", so it claims nothing either way.
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (coverage.values.any { it.answered && user.pubkeyHex in it.reachable }) {
+                            if (user.pubkeyHex in reachable) {
                                 Icon(
                                     symbol = MaterialSymbols.Key,
                                     contentDescription = stringRes(R.string.cordn_info_has_key_package),
@@ -376,5 +382,24 @@ fun rememberCordnCoverage(
                 val target = roster.toSet()
                 known.associate { it.pubKey to runtime.coverage(it.pubKey, target) }
             }
+    }
+}
+
+/**
+ * Every identity any coordinator this account uses holds a KeyPackage for.
+ *
+ * The union, unfiltered, for answering "could this person be added anywhere"
+ * about somebody who is not in the roster yet -- which
+ * [rememberCordnCoverage] cannot answer, because it intersects with the roster
+ * by construction. Empty also covers "nothing answered", so callers must only
+ * ever use membership in it to mark a yes, never absence to mark a no.
+ */
+@Composable
+fun rememberReachableIdentities(runtime: CordnRuntime): State<Set<HexKey>> {
+    val known by runtime.coordinators.collectAsStateWithLifecycle()
+    return produceState<Set<HexKey>>(emptySet(), runtime, known) {
+        val all = mutableSetOf<HexKey>()
+        known.forEach { runtime.identitiesWithKeyPackages(it.pubKey)?.let(all::addAll) }
+        value = all
     }
 }

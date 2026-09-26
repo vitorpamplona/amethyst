@@ -618,6 +618,66 @@ class CordnGroupManagerTest {
         }
 
     @Test
+    fun `inviteAll adds everybody in one epoch, not one each`() =
+        runTest {
+            // The reason inviteAll exists. A loop of single invites reaches
+            // epoch 2 for two people; more importantly, each Add is applied
+            // locally BEFORE its Commit is posted, so one failed post left the
+            // group forked and every later invite in the loop building on it.
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, bobStored) = bobsPublication()
+            val (_, carolStored) = carolsPublication()
+            coordinator.seedKeyPackage(bobStored)
+            coordinator.seedKeyPackage(carolStored)
+
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Batch", adminPubkeys = listOf(alice)))
+            val result = aliceManager.inviteAll(gid, listOf(bob, carolStored.pubKey))
+
+            assertEquals(2, result.invited.size, "both were invited")
+            assertTrue(result.refused.isEmpty(), "nobody was refused: ${result.refused}")
+            assertTrue(result.undelivered.isEmpty(), "every Welcome was stored: ${result.undelivered}")
+            assertEquals(1L, aliceManager.group(gid)!!.epoch, "one commit, so one epoch")
+        }
+
+    @Test
+    fun `inviteAll refuses the one with no KeyPackage and still adds the rest`() =
+        runTest {
+            // The refusal happens before the commit, so it costs the group
+            // nothing: the others are added in the same single epoch they would
+            // have reached on their own.
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            val (_, bobStored) = bobsPublication()
+            val (_, carolStored) = carolsPublication()
+            coordinator.seedKeyPackage(bobStored)
+
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Batch", adminPubkeys = listOf(alice)))
+            val result = aliceManager.inviteAll(gid, listOf(bob, carolStored.pubKey))
+
+            assertEquals(listOf(bob), result.invited.map { it.invited })
+            assertEquals(
+                CordnGroupException.Reason.NO_KEY_PACKAGE,
+                result.refused[carolStored.pubKey]?.reason,
+                "the one with nothing published is named, not the whole batch",
+            )
+            assertEquals(1L, aliceManager.group(gid)!!.epoch)
+        }
+
+    @Test
+    fun `inviteAll with nobody to invite leaves the group where it was`() =
+        runTest {
+            val coordinator = FakeCoordinator(callerPubKey = alice)
+            val aliceManager = manager(alice, coordinator)
+            aliceManager.createGroup(gid, CordnGroupMetadata(name = "Batch"))
+
+            val result = aliceManager.inviteAll(gid, emptyList())
+
+            assertTrue(result.invited.isEmpty())
+            assertEquals(0L, aliceManager.group(gid)!!.epoch, "an empty batch is not a commit")
+        }
+
+    @Test
     fun `inviting someone the coordinator has no KeyPackage for fails loudly`() =
         runTest {
             val coordinator = FakeCoordinator(callerPubKey = alice)

@@ -422,6 +422,10 @@ fun CordnCreateGroupScreen(
                         value = draft.pubKeyInput,
                         onValueChange = {
                             draft.pubKeyInput = it
+                            // Typing one in is choosing it. Without this the
+                            // best-coverage effect would replace a hand-entered
+                            // coordinator the moment the roster produced a number.
+                            draft.userPicked = true
                             error = null
                         },
                         label = { Text(stringRes(R.string.cordn_create_coordinator_pubkey)) },
@@ -432,6 +436,7 @@ fun CordnCreateGroupScreen(
                         value = draft.relaysInput,
                         onValueChange = {
                             draft.relaysInput = it
+                            draft.userPicked = true
                             error = null
                         },
                         label = { Text(stringRes(R.string.cordn_create_coordinator_relays)) },
@@ -515,7 +520,12 @@ fun CordnCreateGroupScreen(
                             // asking for one it does not hold is a call that can
                             // only fail -- and the draft.roster keeps them either way,
                             // for the link the outcome offers.
-                            val reachable = chosenCoverage?.reachable
+                            // takeIf(answered): an unanswered coordinator reports an
+                            // EMPTY reachable set, so reading it directly would turn
+                            // "we could not ask" into "invite nobody" and create the
+                            // group silently empty. Unknown means attempt everyone
+                            // and let each call say what went wrong.
+                            val reachable = chosenCoverage?.takeIf { it.answered }?.reachable
                             val invitees = draft.roster.filter { reachable == null || it in reachable }
                             val result =
                                 runtime.createGroupAndInvite(
@@ -945,6 +955,7 @@ private fun CordnCreationOutcome(
                                     when {
                                         outcome == null -> stringRes(R.string.cordn_create_outcome_skipped)
                                         outcome.sent -> stringRes(R.string.cordn_create_outcome_waiting)
+                                        outcome.joinedWithoutWelcome -> stringRes(R.string.cordn_create_outcome_no_welcome)
                                         else -> outcome.failure?.message ?: stringRes(R.string.cordn_create_outcome_failed)
                                     },
                                 style = MaterialTheme.typography.labelSmall,
