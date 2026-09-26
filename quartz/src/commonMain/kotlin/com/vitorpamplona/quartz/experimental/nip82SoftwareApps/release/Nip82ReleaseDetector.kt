@@ -44,4 +44,9 @@ fun Event.isNip82SoftwareRelease() =
  * Reinterprets `this` as a [ReleaseArtifactSetEvent]. Use [isNip82SoftwareRelease]
  * to gate the call.
  */
+@Deprecated(
+    "EventFactory already builds kind 30063 as ReleaseArtifactSetEvent, which exposes the NIP-82 fields. " +
+        "Re-wrapping an event of another kind yields one whose kind no longer matches its id and signature.",
+    ReplaceWith("this as ReleaseArtifactSetEvent", "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent"),
+)
 fun Event.asSoftwareRelease() = this as? ReleaseArtifactSetEvent ?: ReleaseArtifactSetEvent(id, pubKey, createdAt, tags, content, sig)

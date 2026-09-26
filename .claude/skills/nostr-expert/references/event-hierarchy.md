@@ -95,14 +95,22 @@ class LongFormContentEvent(...) : BaseAddressableEvent(...)
     // Addressable via kind:pubkey:d-tag
 ```
 
-### Lists (kinds 10000-30004)
+### Lists (NIP-51)
+Each list kind is its own class under `nip51Lists/`, not a subtype of a shared list event.
+Lists with private (NIP-44 encrypted) items extend one of two bases:
 ```kotlin
-sealed class FollowSetEvent : BaseAddressableEvent {
-    object MuteList : FollowSetEvent(10000)
-    object PinList : FollowSetEvent(10001)
-    object BookmarkList : FollowSetEvent(10003)
-    // ... 18 list types total
-}
+// Base for sets (kind 30000-39999); some replaceable lists use it too (MuteListEvent, InterestListEvent)
+abstract class PrivateTagArrayEvent(...) : BaseAddressableEvent(...)
+// Replaceable lists (kind 10000-19999)
+abstract class PrivateReplaceableTagArrayEvent(...) : BaseReplaceableEvent(...)
+
+class MuteListEvent(...) : PrivateTagArrayEvent(...)            // kind 10000
+class PinListEvent(...) : BaseReplaceableEvent(...)             // kind 10001, public only
+class BookmarkListEvent(...) : PrivateReplaceableTagArrayEvent(...) // kind 10003
+class InterestListEvent(...) : PrivateTagArrayEvent(...)        // kind 10015
+class FollowSetEvent(...) : PrivateTagArrayEvent(...)           // kind 30000 follow sets
+class BookmarkSetEvent(...) : PrivateTagArrayEvent(...)         // kind 30003 bookmark sets
+class StarterPackEvent(...) : BaseAddressableEvent(...)         // kind 39089 starter packs
 ```
 
 ## Event Interfaces

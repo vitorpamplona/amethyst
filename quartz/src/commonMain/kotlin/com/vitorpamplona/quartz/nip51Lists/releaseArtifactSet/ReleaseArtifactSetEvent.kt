@@ -82,8 +82,9 @@ class ReleaseArtifactSetEvent(
     }
 
     // Only NIP-82 releases carry release notes in `content`. A NIP-51 set may keep
-    // encrypted private items there, which must never reach the index.
-    private fun searchableReleaseNotes() = if (isNip82SoftwareRelease()) content.ifBlank { null } else null
+    // encrypted private items there, which must never reach the index. The blank
+    // check runs first so empty sets skip the two tag scans on every search.
+    private fun searchableReleaseNotes() = if (content.isNotBlank() && isNip82SoftwareRelease()) content else null
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 

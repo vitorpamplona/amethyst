@@ -84,6 +84,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
@@ -376,7 +377,7 @@ private fun RenderBechSegment(
                 .NAddress
                 .parse(segment.segmentText)
         }
-    if (naddr != null && naddr.kind == com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent.KIND) {
+    if (naddr != null && naddr.kind == StarterPackEvent.KIND) {
         val followPacks = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState.current
         val relayManager = com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager.current
         if (localCache != null && relayManager != null && followPacks != null) {

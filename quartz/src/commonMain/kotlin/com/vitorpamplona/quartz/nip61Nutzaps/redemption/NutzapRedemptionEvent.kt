@@ -44,6 +44,22 @@ fun CashuSpendingHistoryEvent.Companion.buildNutzapRedemption(
     initializer()
 }
 
+/** The old `NutzapRedemptionEvent.build`. */
+@Deprecated(
+    "Use CashuSpendingHistoryEvent.buildNutzapRedemption.",
+    ReplaceWith(
+        "CashuSpendingHistoryEvent.buildNutzapRedemption(nutzap, encryptedContent, createdAt, initializer)",
+        "com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent",
+        "com.vitorpamplona.quartz.nip61Nutzaps.redemption.buildNutzapRedemption",
+    ),
+)
+fun CashuSpendingHistoryEvent.Companion.build(
+    nutzap: EventHintBundle<NutzapEvent>,
+    encryptedContent: String,
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<CashuSpendingHistoryEvent>.() -> Unit = {},
+) = buildNutzapRedemption(nutzap, encryptedContent, createdAt, initializer)
+
 /**
  * NIP-61 redemptions are NIP-60 spending history events (kind 7376). This used to be a
  * second class for the same kind, which `EventFactory` could never instantiate because

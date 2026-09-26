@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1787,7 +1788,7 @@ class AmethystAppFunctions {
         lnAddress: String,
         sats: Long,
         comment: String,
-        zapRequest: com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent,
+        zapRequest: ZapRequestEvent,
     ): String {
         // Compute the LNURL-pay endpoint so we can ask the privacy-aware
         // HttpClient builder for the right OkHttpClient for that host.

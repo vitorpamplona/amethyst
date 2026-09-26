@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.redemption.notifySender
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -914,7 +915,10 @@ class CashuWalletOps(
                         TokenReference(nutzap.id, null, TokenReference.MARKER_REDEEMED),
                     ),
                 signer = signer,
-            )
+            ) {
+                // NIP-61: tag the nutzap sender so their client learns it was redeemed.
+                notifySender(EventHintBundle(nutzap))
+            }
         val historyEvent = signer.sign(historyTemplate)
         publish(historyEvent)
 

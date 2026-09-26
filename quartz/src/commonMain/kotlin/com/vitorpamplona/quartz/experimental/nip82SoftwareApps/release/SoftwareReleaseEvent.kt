@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release
 
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * NIP-82 software releases share kind 30063 with NIP-51 release artifact sets, and
@@ -32,3 +36,31 @@ import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSet
     ReplaceWith("ReleaseArtifactSetEvent", "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent"),
 )
 typealias SoftwareReleaseEvent = ReleaseArtifactSetEvent
+
+/** The old `SoftwareReleaseEvent.buildDTag`. */
+@Deprecated(
+    "Use ReleaseArtifactSetEvent.buildSoftwareReleaseDTag.",
+    ReplaceWith("ReleaseArtifactSetEvent.buildSoftwareReleaseDTag(appId, version)", "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent"),
+)
+fun ReleaseArtifactSetEvent.Companion.buildDTag(
+    appId: String,
+    version: String,
+) = buildSoftwareReleaseDTag(appId, version)
+
+/** The old `SoftwareReleaseEvent.build`: a NIP-82 release, not the NIP-51 set builder. */
+@Deprecated(
+    "Use ReleaseArtifactSetEvent.buildSoftwareRelease.",
+    ReplaceWith(
+        "ReleaseArtifactSetEvent.buildSoftwareRelease(appId, version, channel, assets, releaseNotes, createdAt, initializer)",
+        "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent",
+    ),
+)
+fun ReleaseArtifactSetEvent.Companion.build(
+    appId: String,
+    version: String,
+    channel: String,
+    assets: List<EventHintBundle<SoftwareAssetEvent>>,
+    releaseNotes: String = "",
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<ReleaseArtifactSetEvent>.() -> Unit = {},
+) = buildSoftwareRelease(appId, version, channel, assets, releaseNotes, createdAt, initializer)

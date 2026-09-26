@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.apkCertificateHash
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.platform
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.versionCode
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Platform
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -137,13 +136,12 @@ class SoftwareApplicationEventTest {
     }
 
     @Test
-    fun asSoftwareRelease_exposesParsedFields() {
-        val event =
-            Event(
+    fun releaseArtifactSet_exposesParsedNip82Fields() {
+        val release =
+            ReleaseArtifactSetEvent(
                 id = "0".repeat(64),
                 pubKey = "1".repeat(64),
                 createdAt = 0,
-                kind = ReleaseArtifactSetEvent.KIND,
                 tags =
                     arrayOf(
                         arrayOf("d", "com.example.app@1.0.0"),
@@ -154,7 +152,6 @@ class SoftwareApplicationEventTest {
                 content = "Initial release",
                 sig = "",
             )
-        val release = event.asSoftwareRelease()
         assertEquals("com.example.app", release.appId())
         assertEquals("1.0.0", release.version())
         assertEquals("main", release.channel())

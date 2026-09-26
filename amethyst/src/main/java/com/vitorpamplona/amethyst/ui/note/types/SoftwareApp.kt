@@ -242,7 +242,7 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
     return flow.collectAsStateWithLifecycle(initialValue = null)
 }
 
-fun findLatestNip82Release(app: SoftwareApplicationEvent): ReleaseArtifactSetEvent? = latestNip82Release(nip82ReleaseNotesFor(app), app)
+fun findLatestNip82Release(app: SoftwareApplicationEvent): ReleaseArtifactSetEvent? = nip82ReleasesFor(app).maxByOrNull { it.createdAt }
 
 /** Picks the newest NIP-82 release for [app] out of an already-narrowed [notes] collection. */
 private fun latestNip82Release(
@@ -256,12 +256,13 @@ private fun latestNip82Release(
 }
 
 /** kind-30063 addressables authored by [app] whose `d` tag is `<app-id>@<version>`. */
-private fun nip82ReleaseNotesFor(app: SoftwareApplicationEvent): Set<Note> {
+private fun nip82ReleasesFor(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> {
     val prefix = "${app.dTag()}@"
-    return LocalCache.addressables.filterIntoSet(ReleaseArtifactSetEvent.KIND, app.pubKey) { _, addr ->
-        val ev = addr.event ?: return@filterIntoSet false
-        ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
-    }
+    return LocalCache.addressables
+        .filterIntoSet(ReleaseArtifactSetEvent.KIND, app.pubKey) { _, addr ->
+            val ev = addr.event ?: return@filterIntoSet false
+            ev.dTag().startsWith(prefix) && ev.isNip82SoftwareRelease()
+        }.mapNotNull { it.event as? ReleaseArtifactSetEvent }
 }
 
 /**
@@ -270,15 +271,10 @@ private fun nip82ReleaseNotesFor(app: SoftwareApplicationEvent): Set<Note> {
  */
 private fun Note.asNip82ReleaseFor(prefix: String): ReleaseArtifactSetEvent? {
     val ev = event as? ReleaseArtifactSetEvent ?: return null
-    return ev.takeIf { it.isNip82SoftwareRelease() && it.dTag().startsWith(prefix) }
+    return ev.takeIf { it.dTag().startsWith(prefix) && it.isNip82SoftwareRelease() }
 }
 
-fun findAllNip82Releases(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> {
-    val prefix = "${app.dTag()}@"
-    return nip82ReleaseNotesFor(app)
-        .mapNotNull { it.asNip82ReleaseFor(prefix) }
-        .sortedByDescending { it.createdAt }
-}
+fun findAllNip82Releases(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> = nip82ReleasesFor(app).sortedByDescending { it.createdAt }
 
 @Composable
 fun AppIcon(

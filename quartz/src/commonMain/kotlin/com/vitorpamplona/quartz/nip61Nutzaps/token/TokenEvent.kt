@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip61Nutzaps.token
 
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * NIP-61 does not define its own kind 7375: redeemed nutzap proofs are stored as
@@ -32,3 +35,16 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
     ReplaceWith("CashuTokenEvent", "com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent"),
 )
 typealias TokenEvent = CashuTokenEvent
+
+/** The old `TokenEvent.build` took content that was already encrypted. */
+@Deprecated(
+    "Use CashuTokenEvent.build(tokenContent, signer), which encrypts the token content.",
+    ReplaceWith("CashuTokenEvent.build(tokenContent, signer)", "com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent"),
+)
+fun CashuTokenEvent.Companion.build(
+    encryptedContent: String,
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<CashuTokenEvent>.() -> Unit = {},
+) = eventTemplate(KIND, encryptedContent, createdAt) {
+    initializer()
+}

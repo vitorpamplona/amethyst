@@ -62,7 +62,7 @@ class NewCalendarCollectionViewModel : ViewModel() {
     private var dTag: String? = null
 
     /** The full original event in edit mode; needed to publish a NIP-09 deletion. */
-    private var loadedEvent: com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent? = null
+    private var loadedEvent: CalendarCollectionEvent? = null
 
     val selectedAddresses = mutableStateListOf<Address>()
     val availableAppointments = mutableStateOf<List<OwnedAppointmentSummary>>(emptyList())

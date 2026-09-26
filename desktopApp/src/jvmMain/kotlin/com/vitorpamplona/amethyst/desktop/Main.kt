@@ -166,6 +166,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -1926,7 +1927,7 @@ fun MainContent(
 
                 // Process into chatroomList based on event type
                 when (event) {
-                    is com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent -> {
+                    is EncryptedDmEvent -> {
                         iAccount.chatroomList.addMessage(
                             event.chatroomKey(iAccount.pubKey),
                             note,
