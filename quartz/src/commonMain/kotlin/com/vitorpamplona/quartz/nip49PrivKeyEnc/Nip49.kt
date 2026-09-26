@@ -31,6 +31,28 @@ import com.vitorpamplona.quartz.utils.UnicodeNormalizer
 import kotlin.math.pow
 
 class Nip49 {
+    companion object {
+        /**
+         * Shortest password Amethyst accepts when *creating* an ncryptsec. NIP-49 sets no
+         * minimum, and decrypting must accept any password other clients allowed, so this
+         * is a creation-time policy only.
+         *
+         * An ncryptsec can be attacked offline with no rate limit, at one scrypt(2^16)
+         * per guess. 12 characters keeps even a random-looking password out of reach of
+         * large GPU farms, while staying typeable on a phone at login.
+         */
+        const val MIN_PASSWORD_LENGTH = 12
+
+        /**
+         * Length as scrypt sees it: code points of the NFKC-normalized password, so
+         * an emoji (a UTF-16 surrogate pair) counts once and compatibility forms
+         * count as what they normalize to.
+         */
+        fun passwordLength(password: String): Int = UnicodeNormalizer().normalizeNFKC(password).count { !it.isLowSurrogate() }
+
+        fun isLongEnough(password: String): Boolean = passwordLength(password) >= MIN_PASSWORD_LENGTH
+    }
+
     fun decrypt(
         nCryptSec: String,
         password: String,

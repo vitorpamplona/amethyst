@@ -667,6 +667,7 @@
     <string name="account_backup_encrypted_title">Password-protected copy</string>
     <string name="account_backup_encrypted_password">Password</string>
     <string name="account_backup_encrypted_body">An ncryptsec1… that only works with your password.</string>
+    <string name="account_backup_password_min_length">At least %1$d characters</string>
     <string name="account_backup_encrypted_repeat_password">Repeat password</string>
     <string name="account_backup_encrypted_password_mismatch">Passwords don't match</string>
     <string name="account_backup_encrypt">Encrypt key</string>

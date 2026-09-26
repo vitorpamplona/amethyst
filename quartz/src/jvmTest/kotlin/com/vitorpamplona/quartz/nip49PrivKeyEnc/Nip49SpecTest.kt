@@ -106,4 +106,15 @@ class Nip49SpecTest {
         val handCopied = Bech32Transcription.groups(specNcryptsec.uppercase()).joinToString("\n") { it.joinToString("-") }
         assertEquals(specKey, nip49.decrypt(Bech32Transcription.normalize(handCopied), "nostr"))
     }
+
+    @Test
+    fun passwordLengthCountsNormalizedCodePoints() {
+        assertEquals(11, Nip49.passwordLength("x".repeat(11)))
+        assertEquals(false, Nip49.isLongEnough("x".repeat(11)))
+        assertEquals(true, Nip49.isLongEnough("x".repeat(12)))
+        // A surrogate-pair emoji is one character, not two.
+        assertEquals(1, Nip49.passwordLength("\uD83D\uDD11"))
+        // The spec's normalization vector: 4 code points typed, 3 after NFKC.
+        assertEquals(3, Nip49.passwordLength("\u212B\u2126\u1E9B\u0323"))
+    }
 }

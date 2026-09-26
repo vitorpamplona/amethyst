@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_tit
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypting
 import com.vitorpamplona.amethyst.commons.resources.account_backup_headline
 import com.vitorpamplona.amethyst.commons.resources.account_backup_intro
+import com.vitorpamplona.amethyst.commons.resources.account_backup_password_min_length
 import com.vitorpamplona.amethyst.commons.resources.account_backup_qr_code
 import com.vitorpamplona.amethyst.commons.resources.account_backup_tap_to_reveal
 import com.vitorpamplona.amethyst.commons.resources.account_backup_tip_developers
@@ -400,7 +401,8 @@ private fun EncryptedKeyCard(
 
     // A typo in the password makes the backup permanently useless, so it must be typed twice.
     val mismatch = repeated.isNotEmpty() && repeated != password
-    val canEncrypt = password.isNotBlank() && repeated == password && !working
+    val longEnough = Nip49.isLongEnough(password)
+    val canEncrypt = longEnough && repeated == password && !working
 
     fun encrypt() {
         if (!canEncrypt) return
@@ -471,6 +473,12 @@ private fun EncryptedKeyCard(
                             onValueChange = { password = it },
                             singleLine = true,
                             label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
+                            supportingText = {
+                                Text(
+                                    text = stringRes(Res.string.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH),
+                                    color = if (longEnough) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
                             keyboardOptions =
                                 KeyboardOptions(
                                     autoCorrectEnabled = false,
