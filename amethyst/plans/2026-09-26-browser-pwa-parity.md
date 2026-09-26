@@ -1,6 +1,6 @@
 # Browser surfaces → PWA parity review
 
-Status: **review / proposal** (no code changed yet). Scope: every surface that renders a
+Status: **review / proposal**, decisions recorded in §6. Scope: every surface that renders a
 plain web client — the **embedded** bottom-bar tab and the **external** full-screen browser —
 plus their shared top pull-down "pill" and bottom console "pill". The nsite/napplet hosts
 reuse the same chrome and are covered where the change is shared.
@@ -98,7 +98,7 @@ Legend: ✅ parity · ⚠️ partial · ❌ missing · 🔒 intentionally blocke
 | Non-http schemes | ⚠️ | ⚠️ | Handed to `ACTION_VIEW` on a gesture, but `intent:` URIs aren't parsed (`Intent.parseUri` + `browser_fallback_url`), so they fail. |
 | JS dialogs | ❌ | ❌ | **Confirmed from source:** the framework `JsDialogHelper` only shows a dialog when `webView.context is Activity`. The embed runs on a Service context, and the external browser's WebView uses `nightThemedContext()` (a `ContextThemeWrapper` over `createConfigurationContext`, not an Activity) whenever the theme is DARK/LIGHT, which `FavoriteAppLauncher` always resolves it to. So `confirm()` returns `false` and `prompt()` returns `null` in both. |
 | Permission prompts (camera/mic) | ❌ | ❌ | `onPermissionRequest` isn't overridden, so the default denies. Video calls, QR scanners and voice notes on the web all fail. |
-| Geolocation | 🔒 | 🔒 | `setGeolocationEnabled(false)`. Could be offered per-origin behind consent, off under Tor. |
+| Geolocation | ❌ | ❌ | `setGeolocationEnabled(false)`. To be offered per origin behind consent, on Tor and open web alike (§6). |
 | Notifications / Push | ❌ | ❌ | Not available in WebView at all. Only a bridge polyfill could provide it; out of scope for v1. |
 | Downloads | ❌ | ❌ | No `DownloadListener`, so download links do nothing. |
 | HTML fullscreen video | ❌ | ❌ | `onShowCustomView` isn't implemented, so the fullscreen button is dead. |
@@ -158,6 +158,7 @@ by the page). Expanded:
 │   ←     →     ↻/✕     ★      ⇪               │  back · forward · reload/stop · favorite · share
 ├──────────────────────────────────────────────┤
 │ ⧉  Copy link                                 │
+│ ✎  Edit address                              │  rare: reveals the editable URL field
 │ ⬈  Open in browser app                       │  external browser escape hatch
 │ ⛶  Open full screen   /   ⤓ Return to tab    │  embed ↔ external
 │ ⌂  Add to Home screen                        │
@@ -169,10 +170,11 @@ by the page). Expanded:
 └──────────────────────────────────────────────┘
 ```
 
-- **Drop the editable address field from running apps.** A PWA never has one. The origin chip
-  is read-only (tap = page info, long-press = copy). Typing a URL stays the Browser tab
-  launcher's job, which already has the omnibox and suggestions. This matches the stated
-  intent in `BrowserScreen`'s KDoc.
+- **Hide the editable address field by default** (decision 1). A PWA never shows one. The
+  origin chip is read-only (tap = page info, long-press = copy). An **Edit address** row, in
+  both the embed and the external browser, swaps the chip for the editable field with
+  the URL pre-selected; Go navigates and collapses it back to the chip. Expected to be used
+  rarely; the Browser tab launcher stays the main place to type a URL.
 - Header title comes from `onReceivedTitle`, falling back to the host.
 - The icon row mirrors Chrome's top row. Reload turns into Stop while `isLoading`.
 - A **scope indicator**: when the current origin differs from the app's start origin, tint the
@@ -197,22 +199,32 @@ Fix these in `NappletBrowserActivity`, `NappletBrowserService`, and where applic
 nsite/napplet hosts (sandbox profile permitting).
 
 1. **JS dialogs:** implement `onJsAlert`/`onJsConfirm`/`onJsPrompt`/`onJsBeforeUnload` ourselves.
-   - External: show an Activity-owned dialog titled "*origin* says".
+   - External: show an Activity-owned dialog titled "*origin* says" (the framework helper
+     can't, because the WebView's themed context isn't an Activity).
    - Embed: IPC to the main process and show a Compose dialog over the tab.
    - Sandboxed napplets keep today's auto-cancel.
-2. **Popups / `_blank`:** enable `setSupportMultipleWindows(true)` and handle `onCreateWindow`.
-   A user-gesture `window.open` becomes a transient child WebView (an OAuth popup, with
-   `opener` intact) shown as a sheet with origin + ✕. A plain `_blank` link opens a new
-   external-browser task. Keep auto-open without a gesture blocked.
+2. **Popups / `_blank` — follow Chrome** (decision 2): enable `setSupportMultipleWindows(true)`
+   and handle `onCreateWindow`, from both the embed and the external browser.
+   - Every new window (a `_blank` link or a user-gesture `window.open`) opens as a **new
+     full-screen Amethyst browser window** (a new `NappletBrowserActivity` task), the way
+     Chrome opens a new tab.
+   - `opener` must survive for OAuth popups. The child WebView is created in
+     `onCreateWindow` (same `:napplet` process as both parents) and handed to the new
+     activity through an in-process registry keyed by a one-shot token passed in the
+     intent. `window.close()` from the child (`onCloseWindow`) finishes that task and
+     returns the user to the opener.
+   - Keep auto-open without a user gesture blocked (Chrome's popup blocker).
 3. **`intent:` URIs:** parse them with `Intent.parseUri(..., URI_INTENT_SCHEME)`, strip the
    component/selector, and fall back to `browser_fallback_url`. Keep the gesture requirement.
 4. **Downloads:** add a `DownloadListener`. Hand off to the main process, which runs
    `DownloadManager` (through the Tor proxy when the host is on Tor, or else refuses rather
    than leaking the download). Handle `blob:`/`data:` via the shim.
-5. **Permissions:** handle `onPermissionRequest` (camera/mic) and optionally geolocation. The
-   consent prompt runs in the main process (same pattern as NIP-07 consent), is stored per
-   origin in the existing Connected Apps ledger, and requests the Android runtime permission
-   from the main activity. Geolocation stays off by default and off under Tor.
+5. **Permissions:** handle `onPermissionRequest` (camera/mic) and
+   `onGeolocationPermissionsShowPrompt` (enable geolocation). The consent prompt runs in the
+   main process (same pattern as NIP-07 consent), is stored per origin in the existing
+   Connected Apps ledger, and requests the Android runtime permission from the main
+   activity. Works the same on **Tor and the open web** (decision 3); nothing is
+   auto-denied because of routing.
 6. **Fullscreen:** implement `onShowCustomView`/`onHideCustomView`.
    - External: swap in the custom view with immersive system bars.
    - Embed: open the external browser in fullscreen, since a streamed surface can't take over
@@ -225,12 +237,19 @@ nsite/napplet hosts (sandbox profile permitting).
    `setTaskDescription`. Embed tints the top grabber.
 9. **Task description (external):** call `setTaskDescription(title, favicon, themeColor)` on
    title, icon and theme changes, so Recents looks like an installed app.
-10. **Add to Home screen:** `ShortcutManagerCompat.requestPinShortcut`, with the favicon (from
-    `BrowserIconRegistry`) as the icon and an intent to an exported main-process trampoline
-    that calls `FavoriteAppLauncher.launchUrl`. Offer "open as tab" vs "open full screen".
-    Also add dynamic shortcuts for the top favorites on launcher long-press.
+10. **Add to Home screen** (decision 4): `ShortcutManagerCompat.requestPinShortcut`, with the
+    favicon (from `BrowserIconRegistry`) as the icon. The shortcut always opens the page
+    **full screen in Amethyst's own browser** (`NappletBrowserActivity`), never the system
+    browser, so the NIP-07 signer is there. Its intent targets an exported **main-process**
+    trampoline activity (the `:napplet` activities stay unexported). The trampoline
+    brings up the broker, the Tor port and the account's WebView profile, then calls
+    `FavoriteAppLauncher.launchUrl` and finishes. Also add dynamic shortcuts for the top
+    favorites on launcher long-press, with the same target.
 11. **Renderer crash:** handle `onRenderProcessGone`. Destroy that WebView, return `true`, and
-    show the error overlay with Retry (for the embed, rebuild the session on Retry).
+    show the error overlay with Retry (for the embed, rebuild the session on Retry). All
+    WebViews in `:napplet` share one renderer, and the process is still killed if **any** of
+    them leaves the callback unhandled. So `NappletBrowserActivity`, `NappletBrowserService`,
+    `NappletHostActivity` and `NappletHostService` must all ship the handler in one change.
 12. **Context menu (external first):** on long-press over a link or image, offer Open in new
     window, Copy link, Share link, Download image.
 13. **Desktop site / text zoom:** per-host settings persisted next to `WebAppNetworkRegistry`.
@@ -250,20 +269,21 @@ nsite/napplet hosts (sandbox profile permitting).
 
 | Phase | Contents | Size |
 |---|---|---|
-| **0: bugs** | §3 bugs 1–3; `onReceivedTitle`; `onRenderProcessGone` | S |
-| **1: chrome unification** | `WebChromeSpec` in commons; both renderers; icon row (back/forward/reload-stop/star/share); Copy link; Open in browser app; Return to tab; remove the external address field; row-order test | M |
-| **2: dead web APIs** | JS dialogs, `_blank`/`window.open` popups, `intent:` URIs, downloads, fullscreen video, Web Share polyfill | M–L |
+| **0: bugs** ✅ | §3 bugs 1–3; live page titles (`onReceivedTitle`) in both surfaces; JS dialogs in the external browser (origin-labelled, with "Block dialogs from this page") | S |
+| **1: chrome unification** | `WebChromeSpec` in commons; both renderers; icon row (back/forward/reload-stop/star/share); Copy link; Open in browser app; Return to tab; address field hidden behind "Edit address"; row-order test | M |
+| **2: dead web APIs** | `onRenderProcessGone` (all four WebView owners at once — see 4.4 #11), JS dialogs in the embed, `_blank`/`window.open` → new browser window, `intent:` URIs, downloads, fullscreen video, Web Share polyfill | M–L |
 | **3: OS integration** | theme-color bars, `setTaskDescription`, Add to Home screen + trampoline, dynamic shortcuts | M |
 | **4: permissions & page info** | camera/mic/geo consent via the broker, site settings page (grants + clear data + connection state), Find in page, Desktop site, text zoom | L |
 | **5: polish** | long-press context menu, pull-to-refresh, out-of-scope indicator | M |
 
-## 6. Open questions
+## 6. Decisions (2026-09-26)
 
-1. Should running apps lose the editable address bar entirely (the PWA model), or keep it
-   behind a "Go to address…" row?
-2. Where does the user land on a new-window or `_blank` link from an **embedded** tab: a new
-   external task (Chrome PWA behaviour) or a transient sheet over the tab?
-3. Camera/mic/geo: allow over Tor at all? (WebRTC can leak the real IP; geolocation defeats
-   the point.) The proposal is to deny both when the host is on Tor.
-4. Add to Home screen: should the shortcut open as an in-app tab or as the external
-   standalone window by default?
+1. **Address bar:** hidden by default in running apps; an "Edit address" row reveals the
+   editable field. Rarely used.
+2. **New windows (`_blank`, `window.open`):** follow Chrome. They open a new full-screen
+   Amethyst browser window, keeping `opener` for OAuth popups.
+3. **Camera / mic / location:** consent-gated per origin, and they work on **both Tor and
+   the open web**. Routing never auto-denies them.
+4. **Add to Home screen:** the shortcut opens the page full screen in **Amethyst's browser**
+   (not the system browser), so the signer is present. It launches through a main-process
+   trampoline.
