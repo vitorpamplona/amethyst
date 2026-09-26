@@ -81,7 +81,12 @@ class ChatFileUploadState(
         multiOrchestrator?.remove(selected)
     }
 
-    fun canPost(): Boolean = !mediaUploadTracker.isUploading && multiOrchestrator != null
+    /**
+     * Deleting the last picked item leaves an *empty* orchestrator, not a null one, so
+     * a non-null check alone kept Send live with nothing to send. Callers that loop
+     * over the items then post nothing; one that indexes item 0 crashes.
+     */
+    fun canPost(): Boolean = !mediaUploadTracker.isUploading && (multiOrchestrator?.size() ?: 0) > 0
 
     fun hasPickedMedia() = multiOrchestrator != null
 

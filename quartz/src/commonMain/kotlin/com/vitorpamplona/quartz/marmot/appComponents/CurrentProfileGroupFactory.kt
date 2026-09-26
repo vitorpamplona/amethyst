@@ -22,15 +22,17 @@ package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
+import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentData
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentsList
-import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
-import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.marmot.mls.tree.Extension
+import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.components.ComponentData
+import com.vitorpamplona.quartz.mls.components.ComponentsList
+import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
@@ -161,7 +163,7 @@ object CurrentProfileGroupFactory {
                 signingKey = leaf.signatureKeyPair.privateKey,
                 leafSignatureKeyPair = leaf.signatureKeyPair,
                 leafExtensions = leaf.leafExtensions,
-                capabilities = MlsGroup.currentProfileLeafCapabilities(),
+                capabilities = MarmotCapabilities.currentProfileLeaf(),
                 keyPackageExtensions = keyPackageExtensions,
             )
     }
@@ -218,8 +220,11 @@ object CurrentProfileGroupFactory {
             signingKey = leaf.signatureKeyPair.privateKey,
             initialExtensions = listOf(dictionary.toExtension()),
             leafExtensions = leaf.leafExtensions,
-            capabilities = MlsGroup.currentProfileLeafCapabilities(),
-            requiredCapabilities = MlsGroup.buildCurrentProfileRequiredCapabilitiesExtension(),
+            // The current profile shares Marmot's authorization rules but
+            // advertises a different capability set, so both are named here.
+            policy = MarmotGroupPolicy,
+            capabilities = MarmotCapabilities.currentProfileLeaf(),
+            requiredCapabilities = MarmotCapabilities.currentProfileRequired(),
         )
     }
 }

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap
-import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
+import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

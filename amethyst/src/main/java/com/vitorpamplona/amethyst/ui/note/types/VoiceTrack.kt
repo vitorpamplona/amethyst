@@ -148,37 +148,15 @@ fun RenderAudioWithWaveform(
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            Modifier.fillMaxWidth().height(100.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GetMediaItem(
-                videoUri = mediaUrl,
-                title = title,
-                artworkUri = null,
-                authorName = note.author?.toBestDisplayName(),
-                callbackUri = callbackUri,
-                mimeType = mimeType,
-                aspectRatio = null,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
-                keepPlaying = false,
-                waveformData = waveform,
-            ) { mediaItem ->
-                GetVideoController(
-                    mediaItem = mediaItem,
-                    muted = false,
-                ) { controller ->
-                    PauseControllerWhenInBackground(controller)
-                    RenderVoicePlayer(
-                        mediaItem = mediaItem,
-                        controllerState = controller,
-                        waveform = waveform,
-                        borderModifier = MaterialTheme.colorScheme.imageModifier,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-        }
+        RenderAudioWaveformPlayer(
+            mediaUrl = mediaUrl,
+            title = title,
+            mimeType = mimeType,
+            waveform = waveform,
+            authorName = note.author?.toBestDisplayName(),
+            callbackUri = callbackUri,
+            accountViewModel = accountViewModel,
+        )
 
         if (noteEvent.hasHashtags()) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -187,6 +165,86 @@ fun RenderAudioWithWaveform(
         }
     }
 }
+
+/**
+ * The voice player on its own, with no [Note] behind it.
+ *
+ * Separated because a chat that carries audio does not necessarily have a Note
+ * to hand: cordn messages never enter LocalCache, so the only way they can show
+ * the same player as every other chat is for the player not to demand one. The
+ * Note-shaped overload above is this plus the hashtag row, which is the only
+ * part that genuinely needs the event.
+ *
+ * [waveform] may be null. Nothing that arrives as an encrypted blob carries one
+ * today, and the player then shows its transport controls without the bars —
+ * still the voice UI, which is the point, rather than a video surface with no
+ * picture in it.
+ */
+@Composable
+fun RenderAudioWaveformPlayer(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
+    authorName: String?,
+    callbackUri: String?,
+    accountViewModel: AccountViewModel,
+) {
+    Row(
+        Modifier.fillMaxWidth().height(100.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GetMediaItem(
+            videoUri = mediaUrl,
+            title = title,
+            artworkUri = null,
+            authorName = authorName,
+            callbackUri = callbackUri,
+            mimeType = mimeType,
+            aspectRatio = null,
+            proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
+            keepPlaying = false,
+            waveformData = waveform,
+        ) { mediaItem ->
+            GetVideoController(
+                mediaItem = mediaItem,
+                muted = false,
+            ) { controller ->
+                PauseControllerWhenInBackground(controller)
+                RenderVoicePlayer(
+                    mediaItem = mediaItem,
+                    controllerState = controller,
+                    waveform = waveform,
+                    borderModifier = MaterialTheme.colorScheme.imageModifier,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The bars drawn when a track carries no amplitudes of its own.
+ *
+ * A voice note with no waveform used to render as a play button on an empty
+ * black bar, which reads as a broken video rather than as audio. Every
+ * encrypted format can hit this: MIP-04 and encrypted-media-v2 define no
+ * waveform field at all, and a cordn message only carries one if the sender's
+ * client wrote the hint.
+ *
+ * **It has to vary.** `AudioWaveformReadOnly` normalises the amplitudes onto
+ * the bar height, so a constant list has no range to normalise and every bar
+ * collapses to the minimum — a flat 0.35f placeholder drew a dotted line, not
+ * bars. The shape below is a short pattern tiled across the width: enough
+ * relief to read as audio, regular enough that nobody mistakes it for a
+ * measurement of their recording.
+ *
+ * What it buys beyond looking right is somewhere for the progress fill to run,
+ * so position stays legible while it plays.
+ */
+private val PlaceholderPattern = listOf(0.35f, 0.62f, 0.45f, 0.85f, 0.5f, 0.72f, 0.4f, 0.58f)
+
+private val PlaceholderWaveform = WaveformData(List(48) { PlaceholderPattern[it % PlaceholderPattern.size] })
 
 @Composable
 @OptIn(UnstableApi::class)
@@ -224,7 +282,7 @@ fun RenderVoicePlayer(
 
         Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
             PlayPauseButton(controllerState)
-            waveform?.let { Waveform(it, controllerState, Modifier) }
+            Waveform(waveform ?: PlaceholderWaveform, controllerState, Modifier)
         }
 
         RenderTopButtonsForVoice(

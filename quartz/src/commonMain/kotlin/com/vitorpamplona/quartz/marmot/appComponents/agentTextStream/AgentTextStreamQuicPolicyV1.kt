@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot.appComponents.agentTextStream
 
 import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentData
+import com.vitorpamplona.quartz.mls.components.ComponentData
 
 /**
  * `marmot.group.agent-text-stream.quic.v1` (component `0x8006`).

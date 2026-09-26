@@ -68,6 +68,7 @@ enum class NavBarItem {
     RELAY_GROUPS,
     CONCORD,
     MARMOT_GROUPS,
+    CORDN_GROUPS,
     GEOHASH_CHATS,
     FOLLOW_PACKS,
     LIVE_STREAMS,

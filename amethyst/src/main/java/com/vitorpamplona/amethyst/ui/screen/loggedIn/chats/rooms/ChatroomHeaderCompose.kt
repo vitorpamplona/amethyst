@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
+import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -54,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
@@ -78,6 +80,14 @@ import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_server_label
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_via_coordinator
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_deleted
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_file
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_photo
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_video
+import com.vitorpamplona.amethyst.commons.resources.cordn_preview_voice_note
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat
@@ -142,9 +152,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -155,6 +168,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.StringResource
 
@@ -168,12 +182,21 @@ fun ChatroomHeaderCompose(
     // joined Marmot/NIP-29 group with no messages yet (an event-less placeholder carrying its channel
     // as a gatherer). Render these directly instead of waiting for an event that never arrives, which
     // would blank the row.
+    //
+    // A cordn room has no event *ever*, not just before its first message: its
+    // messages are MLS envelopes that never become Notes (§3.3 of
+    // amethyst/plans/2026-09-19-cordn-ui.md), so the row is only ever a carrier
+    // for the room in `inGatherers`. Leaving it out of this list sent every
+    // cordn room down the branch that waits for an event and drew `BlankNote()`
+    // instead — the room was in the feed, correctly, and simply had no pixels.
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
             baseNote is ConcordServerRoomNote ||
             (
                 baseNote.event == null &&
-                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel } == true
+                    baseNote.inGatherers?.any {
+                        it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel || it is CordnGroupChatroom
+                    } == true
             )
 
     if (baseNote.event != null || rendersWithoutEvent) {
@@ -225,6 +248,12 @@ private fun ChatroomEntry(
     val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
+        return
+    }
+
+    val cordnGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? CordnGroupChatroom }
+    if (cordnGroup != null) {
+        CordnGroupRoomCompose(cordnGroup, accountViewModel, nav)
         return
     }
 
@@ -524,6 +553,110 @@ private fun MarmotGroupRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+    )
+}
+
+/**
+ * What to call a message whose whole content is an attachment.
+ *
+ * The first attachment decides, which is what the eye does too: a row is one
+ * line and a message with a photo and a file in it is, to a reader skimming the
+ * inbox, a message with a photo in it.
+ */
+private fun attachmentLabelFor(tags: TagArray): StringResource {
+    val first = CordnMediaTag.parseAll(tags).firstOrNull() ?: return Res.string.cordn_preview_file
+    return when {
+        first.isAudio -> Res.string.cordn_preview_voice_note
+        first.isImage -> Res.string.cordn_preview_photo
+        first.mimeType.startsWith("video/") -> Res.string.cordn_preview_video
+        else -> Res.string.cordn_preview_file
+    }
+}
+
+/**
+ * One cordn room in the Messages list.
+ *
+ * Takes the room rather than the Note, unlike every other row here. The Note is
+ * only a carrier: cordn messages are MLS envelopes that never reach LocalCache,
+ * so there is no `lastMessage.event` to read a preview from and the live data
+ * is on the room. Reading the Note would render an empty row forever.
+ */
+@Composable
+internal fun CordnGroupRoomCompose(
+    chatroom: CordnGroupChatroom,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val name by chatroom.name.collectAsStateWithLifecycle()
+    val newest by chatroom.newest.collectAsStateWithLifecycle()
+    val annotations by chatroom.annotations.collectAsStateWithLifecycle()
+    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
+
+    val groupName = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, chatroom.gid.take(8))
+
+    // Who carries this conversation. "cordn" was the same word on every cordn
+    // row and told a reader nothing they could act on; the coordinator is the
+    // one server that sees every message in the group, so naming it is the
+    // thing worth the space.
+    val coordinators by (
+        accountViewModel.account.cordnRuntime?.coordinators
+            ?: remember { MutableStateFlow(emptyList<CoordinatorConfig>()) }
+    ).collectAsStateWithLifecycle()
+    val coordinatorName =
+        coordinatorDisplayName(
+            pubKey = chatroom.coordinatorPubKey,
+            label = coordinators.firstOrNull { it.pubKey == chatroom.coordinatorPubKey }?.label,
+            accountViewModel = accountViewModel,
+        )
+
+    val lastContent =
+        newest?.let { message ->
+            val authorName by observeUserName(LocalCache.getOrCreateUser(message.envelope.pubKey), accountViewModel)
+            // The edited text when there is one: showing the original in the
+            // inbox while the room shows the edit is the kind of mismatch that
+            // reads as a sync bug.
+            val text = annotations.contentOf(message.envelope.id) ?: message.envelope.content
+            // A voice note or a photo carries no text, so the row used to read
+            // "Someone: " and trail off — an attachment looked like an empty
+            // message. Name what was sent instead, the way the bubble does.
+            val preview =
+                text.takeIf { it.isNotBlank() }
+                    ?: if (annotations.isDeleted(message.envelope.id)) {
+                        stringRes(Res.string.cordn_preview_deleted)
+                    } else {
+                        stringRes(attachmentLabelFor(message.envelope.tags))
+                    }
+            "$authorName: ${preview.take(200)}"
+        } ?: stringRes(Res.string.cordn_group_no_messages_yet)
+
+    ChannelName(
+        channelIdHex = chatroom.gid,
+        channelPicture = null,
+        channelTitle = { modifier ->
+            ChannelTitleWithLabelInfo(
+                channelName = groupName,
+                labelIcon = MaterialSymbols.Dns,
+                labelText = coordinatorName,
+                modifier = modifier,
+                // The pill no longer says "cordn", so the kind of room has to
+                // reach a screen reader some other way.
+                labelContentDescription = stringRes(Res.string.cordn_group_via_coordinator, coordinatorName),
+            )
+        },
+        channelLastTime = newest?.envelope?.createdAt,
+        channelLastContent = lastContent,
+        // Counted against the read position the room persists, on the
+        // coordinator's cursor rather than the sender's clock -- see
+        // CordnGroupChatroom.unreadCount for why a clock cannot be trusted
+        // with this. Annotations and this account's own echoes do not count.
+        hasNewMessages = unread > 0,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.CordnGroupChat(chatroom.coordinatorPubKey, chatroom.gid)) },
     )
 }
 
@@ -944,6 +1077,23 @@ private fun ChannelTitleWithLabelInfo(
     label: StringResource,
     modifier: Modifier,
     labelContentDescription: String? = null,
+) = ChannelTitleWithLabelInfo(channelName, labelIcon, stringRes(id = label), modifier, labelContentDescription)
+
+/**
+ * As above, for a pill whose text is a name rather than a fixed word.
+ *
+ * A cordn room's pill carries its coordinator, which is a value and not a
+ * string resource: the coordinator is the one server that carries every message
+ * in that group, so which one it is tells a reader more than being told twice
+ * that this is a cordn chat.
+ */
+@Composable
+private fun ChannelTitleWithLabelInfo(
+    channelName: String,
+    labelIcon: MaterialSymbol,
+    labelText: String,
+    modifier: Modifier,
+    labelContentDescription: String? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Text(
@@ -957,7 +1107,7 @@ private fun ChannelTitleWithLabelInfo(
         Spacer(Modifier.width(6.dp))
         HeaderPill(
             symbol = labelIcon,
-            text = stringRes(id = label),
+            text = labelText,
             modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
             contentDescription = labelContentDescription,
         )

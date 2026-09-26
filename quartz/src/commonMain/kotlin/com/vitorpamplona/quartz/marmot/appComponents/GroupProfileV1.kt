@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.codec.TlsWriter
 
 /**
  * `marmot.group.profile.v1`, component `0x8001` — the group's display name and

@@ -139,6 +139,8 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -3780,6 +3782,8 @@ open class EventCache :
                 // ============================================================
                 is AcceptedBadgeSetEvent,
                 is AdvertisedRelayListEvent,
+                is CvmServerAnnouncementEvent,
+                is CvmToolsListEvent,
                 is AppDefinitionEvent,
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,

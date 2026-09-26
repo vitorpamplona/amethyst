@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.quartz.mls.components.ComponentsList
+
 /**
  * Marmot app-component ids, from the spec's `foundation/registries.md`.
  *
@@ -39,11 +41,14 @@ package com.vitorpamplona.quartz.marmot.appComponents
 object AppComponentIds {
     // ---- upstream, draft-ietf-mls-extensions-10 ----
 
+    // These three are the draft's, not Marmot's, so they are defined in the
+    // engine beside the dictionary that carries them and re-exposed here.
+
     /** `app_components`: the supported (LeafNode) or required (GroupContext) id list. */
-    const val APP_COMPONENTS = 0x0001
+    const val APP_COMPONENTS = ComponentsList.APP_COMPONENTS_ID
 
     /** `safe_aad`: component-separated framing for MLS `authenticated_data`. */
-    const val SAFE_AAD = 0x0002
+    const val SAFE_AAD = ComponentsList.SAFE_AAD_ID
 
     /**
      * `last_resort_key_package`: empty-data marker in a KeyPackage's own
@@ -51,7 +56,7 @@ object AppComponentIds {
      * MIP-era profile marked last resort with extension `0x000a`, which is now
      * the `self_remove` PROPOSAL type.
      */
-    const val LAST_RESORT_KEY_PACKAGE = 0x0004
+    const val LAST_RESORT_KEY_PACKAGE = ComponentsList.LAST_RESORT_KEY_PACKAGE_ID
 
     // ---- Marmot private range ----
 

@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
-import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.mls.framing.ContentType
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
@@ -421,7 +423,9 @@ class MarmotConvergenceEngine(
         mutex.withLock {
             contexts[groupId]?.candidateStates?.values?.mapNotNull { state ->
                 try {
-                    MlsGroup.restore(state).exporterSecret("marmot", "group-event".encodeToByteArray(), 32)
+                    MarmotGroupPolicy.commitExporter.let {
+                        MlsGroup.restore(state, MarmotGroupPolicy).exporterSecret(it.label, it.context, it.length)
+                    }
                 } catch (_: Exception) {
                     null
                 }
@@ -451,7 +455,7 @@ class MarmotConvergenceEngine(
                         // A clone per attempt: decrypting advances the secret
                         // tree, and a candidate state gets tried by every
                         // message that failed canonically.
-                        MlsGroup.restore(state).decrypt(mlsBytes)
+                        MlsGroup.restore(state, MarmotGroupPolicy).decrypt(mlsBytes)
                     } catch (_: Exception) {
                         continue
                     }
@@ -460,7 +464,7 @@ class MarmotConvergenceEngine(
                     stateId = stateId,
                     epoch = decrypted.epoch,
                     senderLeafIndex = decrypted.senderLeafIndex,
-                    senderAccount = MlsGroup.restore(state).memberIdentityHex(decrypted.senderLeafIndex),
+                    senderAccount = MlsGroup.restore(state, MarmotGroupPolicy).memberIdentityHex(decrypted.senderLeafIndex),
                     content = decrypted.content,
                 )
             }
