@@ -141,9 +141,16 @@ fun BrowserPill(
 }
 
 /**
- * The collapsed grabber. It tells the page's story before it's opened: the bar takes the error colour on
- * plain HTTP and the Tor accent when onion-routed, a hairline fills while the page loads, and a dot
- * appears when the console has errors.
+ * The collapsed grabber.
+ *
+ * It is on screen the whole time a page is, and almost nobody pulls it down: it is there for when you
+ * are stuck on a site, not as a status display. So it stays quiet, and spends colour only on the states
+ * a reader should act on.
+ *
+ * Onion routing is not one of them. It is the normal case here rather than an exception, and an accent
+ * that is always lit is one nobody reads — it just makes the handle loud on every page. Tor keeps its
+ * badge inside the pill, where the address and "Onion-routed" say it in words for anyone who opens it.
+ * What is left in the handle is plain HTTP, which is a warning, and a dot for console errors.
  */
 @Composable
 fun PillHandle(
@@ -155,8 +162,7 @@ fun PillHandle(
     val barColor =
         when (ui.security) {
             BrowserChrome.Security.HTTP -> MaterialTheme.colorScheme.error
-            BrowserChrome.Security.TOR -> MaterialTheme.colorScheme.tertiary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
         }
     Box(
         modifier
@@ -200,9 +206,9 @@ fun PillHandle(
                 Modifier
                     .align(Alignment.CenterEnd)
                     .padding(start = 44.dp)
-                    .size(7.dp)
+                    .size(5.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error),
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f)),
             )
         }
     }
