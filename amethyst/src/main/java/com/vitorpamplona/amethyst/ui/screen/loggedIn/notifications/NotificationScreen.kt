@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.notification_tab_following
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav

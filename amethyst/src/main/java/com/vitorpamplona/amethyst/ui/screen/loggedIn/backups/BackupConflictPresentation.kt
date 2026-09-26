@@ -332,15 +332,23 @@ private fun arrow(
  */
 @Composable
 fun rememberPresentation(diff: EventDiff): DiffPresentation {
-    // Compose resources resolve only in composition (or suspended), so the few labels
-    // [presentationOf] writes into item text are resolved here and handed in. The map
-    // compares by value, so a recomposition with the same locale keeps the cached result.
-    val labels = PRESENTATION_LABELS.associateWith { stringRes(it) }
+    // Compose resources resolve only in composition (or suspended), so the labels
+    // [presentationOf] writes into item text are resolved here and handed in. Only the
+    // diff types that write labels get any, so the rest pay for no resource reads. The
+    // map compares by value: a recomposition with the same locale keeps the cached result.
+    val labels = labelsWrittenBy(diff).associateWith { stringRes(it) }
     return remember(diff, labels) { presentationOf(diff) { labels.getValue(it) } }
 }
 
-/** Every label [presentationOf] resolves through its `str` parameter. */
-private val PRESENTATION_LABELS =
+/** Every label [presentationOf] resolves through its `str` parameter for [diff]. */
+internal fun labelsWrittenBy(diff: EventDiff): List<StringResource> =
+    when (diff) {
+        is MetadataDiff -> PROFILE_FIELD_LABELS
+        is AdvertisedRelayListDiff -> RELAY_MARKER_LABELS
+        else -> emptyList()
+    }
+
+private val PROFILE_FIELD_LABELS =
     listOf(
         Res.string.backup_profile_field_name,
         Res.string.backup_profile_field_display_name,
@@ -355,12 +363,19 @@ private val PRESENTATION_LABELS =
         Res.string.backup_profile_field_pronouns,
         Res.string.backup_profile_field_birthday,
         Res.string.backup_profile_field_bot,
+    )
+
+private val RELAY_MARKER_LABELS =
+    listOf(
         Res.string.backup_conflict_relay_read_write,
         Res.string.backup_conflict_relay_read_only,
         Res.string.backup_conflict_relay_write_only,
     )
 
-/** Turns each event's own diff into typed, labelled groups. [str] resolves the labels. */
+/**
+ * Turns each event's own diff into typed, labelled groups. [str] resolves the labels; a
+ * label it asks for must be in [labelsWrittenBy] for that diff type.
+ */
 fun presentationOf(
     diff: EventDiff,
     str: (StringResource) -> String,

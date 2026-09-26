@@ -211,7 +211,7 @@
     <string name="copy_user_id">Kopieer gebruiker ID</string>
     <string name="unblock_user">Deblokkeer gebruiker</string>
     <string name="user_is_blocked_hidden">Deze gebruiker is geblokkeerd/gedempt. Hun berichten zijn verborgen.</string>
-    <string name="npub_hex_username">npub, hex, gebruikersnaam </string>
+    <string name="npub_hex_username">npub, hex, gebruikersnaam</string>
     <string name="clear">Wissen</string>
     <string name="app_logo">App logo</string>
     <string name="nsec_npub_hex_private_key">nsec.. of npub..</string>
@@ -259,15 +259,8 @@
     <string name="mark_all_known_as_read">Bekende markeren als gelezen</string>
     <string name="mark_all_new_as_read">Nieuwe markeren als gelezen</string>
     <string name="mark_all_as_read">Alles markeren als gelezen</string>
-    <string name="account_backup_tips2_md">        ## Sleutel back-up en veiligheidstips
-        \n\nUw account is beveiligd met een privésleutel. De sleutel is een lange, willekeurige reeks die begint met **nsec1**. Iedereen die toegang heeft tot uw privésleutel kan inhoud publiceren met uw identiteit.
-        \n\n- Voer uw privésleutel **nooit** in een website of software die u niet vertrouwt.
-        \n- Amethyst ontwikkelaars zullen u **nooit** om uw privésleutel vragen.
-        \n- **Bewaar** een veilige back-up van uw privésleutel voor accountherstel. Wij raden u aan een wachtwoordmanager te gebruiken.
-    </string>
-    <string name="account_backup_tips3_md">        Voor meer veiligheid kan je je sleutel versleutelen met een wachtwoord. Deze sleutel begint met **ncryptsec1** en kan niet worden gebruikt zonder uw wachtwoord.
-        \n\nAls je je wachtwoord verliest, je kan je sleutel niet herstellen.
-    </string>
+    <string name="account_backup_tips2_md">## Sleutel back-up en veiligheidstips \n\nUw account is beveiligd met een privésleutel. De sleutel is een lange, willekeurige reeks die begint met **nsec1**. Iedereen die toegang heeft tot uw privésleutel kan inhoud publiceren met uw identiteit. \n\n- Voer uw privésleutel **nooit** in een website of software die u niet vertrouwt. \n- Amethyst ontwikkelaars zullen u **nooit** om uw privésleutel vragen. \n- **Bewaar** een veilige back-up van uw privésleutel voor accountherstel. Wij raden u aan een wachtwoordmanager te gebruiken.</string>
+    <string name="account_backup_tips3_md">Voor meer veiligheid kan je je sleutel versleutelen met een wachtwoord. Deze sleutel begint met **ncryptsec1** en kan niet worden gebruikt zonder uw wachtwoord. \n\nAls je je wachtwoord verliest, je kan je sleutel niet herstellen.</string>
     <string name="encrypt_and_copy_my_secret_key">Versleutel en kopieer mijn geheime sleutel</string>
     <string name="badge_award_image_for">Badge award afbeelding voor %1$s</string>
     <string name="badge_award_image">Badge-awardafbeelding</string>
@@ -960,9 +953,7 @@
     <string name="push_server_none_explainer">Push-notificaties uitschakelen</string>
     <string name="push_server_uses_app_explainer">Gebruikt app %1$s</string>
     <string name="push_server_install_app">Instellen Push-notificaties</string>
-    <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Ntfy](https://ntfy.sh/).
-        Na installatie selecteer de app die je wilt gebruiken in de instellingen.
-    </string>
+    <string name="push_server_install_app_description">Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Ntfy](https://ntfy.sh/). Na installatie selecteer de app die je wilt gebruiken in de instellingen.</string>
     <string name="thread_title">Draad</string>
     <string name="send_the_seller_a_message">Stuur de verkoper een bericht</string>
     <string name="hi_there_is_this_still_available">Hallo daar, is dit nog steeds beschikbaar?</string>

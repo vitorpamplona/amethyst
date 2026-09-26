@@ -37,6 +37,6 @@ actual fun restrictFileToOwner(
     } catch (_: UnsupportedOperationException) {
         // Windows: no POSIX permissions; the user profile's NTFS ACLs apply instead.
     } catch (e: Exception) {
-        Log.w(tag) { "Could not restrict permissions on $path: ${e.message}" }
+        Log.w(tag, "Could not restrict permissions on $path", e)
     }
 }

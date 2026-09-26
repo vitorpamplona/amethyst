@@ -283,7 +283,6 @@ private fun CordnGroupInfo(
      * roster, and a rename stayed the old name. The runtime's own methods pair
      * each commit with that refresh.
      */
-
     fun runAdmin(
         who: String? = null,
         block: suspend (CordnRuntime) -> Unit,

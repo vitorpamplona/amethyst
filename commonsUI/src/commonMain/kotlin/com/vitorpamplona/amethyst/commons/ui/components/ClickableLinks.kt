@@ -87,7 +87,8 @@ fun ClickableEmail(
         textDecoration = if (underline) TextDecoration.Underline else null,
         modifier =
             modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
-                runCatching { uriHandler.openUri("mailto:$display") }
+                // '%' is legal in an address but starts an escape in a mailto: URI (RFC 6068).
+                runCatching { uriHandler.openUri("mailto:" + display.replace("%", "%25")) }
             },
     )
 }

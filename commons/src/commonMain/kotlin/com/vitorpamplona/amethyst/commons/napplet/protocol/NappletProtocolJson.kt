@@ -60,6 +60,8 @@ object NappletProtocolJson {
     private val json = Json { ignoreUnknownKeys = true }
 
     // Accepts unpadded input, as java.util.Base64's decoder did before this moved to commonMain.
+    // One difference remains: non-zero pad bits ("SGl=") are rejected where Java ignored them.
+    // Browsers' btoa/readAsDataURL never produce those, so only a hand-crafted payload hits it.
     private val lenientBase64 = Base64.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
 
     /** The `type` discriminant of a request envelope, used to build the matching `.result` type. */

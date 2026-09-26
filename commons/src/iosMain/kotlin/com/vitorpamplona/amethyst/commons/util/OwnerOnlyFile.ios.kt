@@ -35,6 +35,7 @@ actual fun restrictFileToOwner(
     tag: String,
 ) {
     if (chmod(path.toString(), (S_IRUSR or S_IWUSR).convert()) != 0) {
-        Log.w(tag) { "Could not restrict permissions on $path: errno $errno" }
+        val error = errno
+        Log.w(tag) { "Could not restrict permissions on $path: errno $error" }
     }
 }

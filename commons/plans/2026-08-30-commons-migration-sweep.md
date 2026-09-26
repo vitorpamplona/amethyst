@@ -1399,3 +1399,36 @@ real blocker:
   differ in primary, secondary, surfaces and outlines, and every shared token
   (`placeholderText`, `chatBubbleThem`, …) is frozen from the app palette. This
   is a design decision, not a move.
+
+### Audit of the 2026-09-26 round
+
+The four commits were reviewed file by file against the originals. They had no
+functional bugs. The follow-ups:
+
+- **Compose resources keep XML whitespace; Android didn't.** This is older than this
+  round (it dates back to the first string moves), and it is the one real
+  regression. aapt collapses every whitespace run in an unquoted value and trims
+  the ends; Compose draws the XML text verbatim. So the values wrapped over
+  indented lines (`account_backup_tips2_md`, `push_server_install_app_description`,
+  `couldnt_find_nwc_wallets_description`, the chat explainers, and 349 translated
+  values) rendered with a leading line break and eight spaces. In the `_md` strings
+  CommonMark turns that into a code block. Crowdin also exports a translator's stray
+  edge space, which aapt used to drop, for example ` miejsca zniknęły` and Hindi's
+  ` दि॰` time suffix. `fix_escapes.py` now applies aapt's rule to runs holding a line
+  break or tab. In a translation it also trims an edge space its source string lacks,
+  which keeps deliberate ones like `" and "`. The Crowdin workflow already runs it
+  after every sync, and `compose_escaping_check.py` now fails on raw line breaks, so
+  a sync can't bring it back. 598 values across 54 files were repaired.
+- `rememberPresentation` read all 16 backup labels on every recomposition, even for
+  diff types that write none. It now reads only the ones its diff type uses, and
+  `BackupPresentationLabelsTest` fails if `presentationOf` asks for a label that list
+  lacks.
+- `ScheduledPostStore`: a failed stat now counts as "no file" rather than throwing
+  (okio's posix metadata throws on EACCES where `File.exists()` returned false).
+  Symlinked store files still count as present. The chmod is skipped for an injected
+  non-system `FileSystem`, and the cleanup log keeps its throwable.
+- `ClickableEmail` percent-encodes `%` in the `mailto:` URI (RFC 6068).
+- Left as-is, by design: Kotlin's Base64 rejects non-zero pad bits (`"SGl="`) that
+  Java ignored, which no browser encoder produces. `%1$d` arguments now render ASCII
+  digits in every locale, the same as every other migrated string.
+  `ChannelFeedContentState` reaches `LocalCache.appHost` for its main-thread check.

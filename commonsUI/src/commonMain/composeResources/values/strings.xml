@@ -660,17 +660,8 @@
     <string name="mark_all_known_as_read">Mark all Known as read</string>
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
-    <string name="account_backup_tips2_md">
-        ## Key Backup and Safety Tips
-        \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
-        \n\n- Do **not** put your secret key in any website or software you do not trust.
-        \n- Amethyst developers will **never** ask for your secret key.
-        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
-    </string>
-    <string name="account_backup_tips3_md">
-        For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
-        \n\nIf you lose your password, you will not be able to recover your key.
-    </string>
+    <string name="account_backup_tips2_md">## Key Backup and Safety Tips \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity. \n\n- Do **not** put your secret key in any website or software you do not trust. \n- Amethyst developers will **never** ask for your secret key. \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.</string>
+    <string name="account_backup_tips3_md">For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password. \n\nIf you lose your password, you will not be able to recover your key.</string>
     <string name="backup_keys_nudge_title">Back up your keys</string>
     <string name="backup_keys_nudge_body">Your secret key is the only way to access this account. If you lose it, it can never be recovered. Save it somewhere safe now.</string>
     <string name="backup_keys_nudge_backup_now">Back up now</string>
@@ -1853,10 +1844,7 @@
     <string name="push_server_none_explainer">Disables Push Notifications</string>
     <string name="push_server_uses_app_explainer">Uses app %1$s</string>
     <string name="push_server_install_app">Push Notification Setup</string>
-    <string name="push_server_install_app_description">
-        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/).
-        After installing, select the app you want to use in the Settings.
-    </string>
+    <string name="push_server_install_app_description">To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/). After installing, select the app you want to use in the Settings.</string>
     <string name="thread_title">Thread</string>
     <string name="send_the_seller_a_message">Send the seller a message</string>
     <string name="hi_there_is_this_still_available">Hi there, is this still available?</string>
@@ -3629,15 +3617,7 @@
     <string name="could_not_fetch_invoice_from_details">Could not fetch invoice from %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Could not open the compressed file</string>
     <string name="couldnt_find_nwc_wallets">Wallet not found</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn't find any wallet apps that support Nostr Wallet Connect (NWC).
-\n\nWhat you can do:
-\n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect.
-\n\t2. Create Connection: Go to your wallet app and create a new NWC connection.
-\n\t3. Link to Amethyst: Your wallet will usually give you three options:
-\n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen.
-\n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it.
-\n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn't find any wallet apps that support Nostr Wallet Connect (NWC). \n\nWhat you can do: \n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect. \n\t2. Create Connection: Go to your wallet app and create a new NWC connection. \n\t3. Link to Amethyst: Your wallet will usually give you three options: \n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen. \n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it. \n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.</string>
     <string name="create">Create</string>
     <string name="d">d</string>
     <string name="danger_zone">Danger Zone</string>
@@ -4773,11 +4753,8 @@
     <string name="proxy_section">Proxy Relays</string>
     <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
     <string name="public_chat">Public Chat</string>
-    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
-        can participate on them. They are great for open communities around specific topics.
-        Moderation can be controlled by deleting posts on its relays</string>
-    <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group.
-        Nostr clients use this setting to know where to download messages from and send your messages to.</string>
+    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone can participate on them. They are great for open communities around specific topics. Moderation can be controlled by deleting posts on its relays</string>
+    <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group. Nostr clients use this setting to know where to download messages from and send your messages to.</string>
     <string name="public_chat_relays_title">Relays</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chats">Public Chats</string>
@@ -4844,10 +4821,7 @@
     <string name="relay_auth_search_keywords">auth authentication login relay sign verify nip-42 identity</string>
     <string name="relay_auth_settings_title">Relay login</string>
     <string name="relay_chat">Relay Chat</string>
-    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay.
-        They are visible to everyone on Nostr and anyone can participate on them.
-        They are great for open communities around specific topics. Some of these groups are ephemeral
-    and thus chat messages disappear over time</string>
+    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay. They are visible to everyone on Nostr and anyone can participate on them. They are great for open communities around specific topics. Some of these groups are ephemeral and thus chat messages disappear over time</string>
     <string name="relay_chat_title">Relay Chats</string>
     <string name="relay_explain_account_data">Your own profile, settings and drafts, on your home relays.</string>
     <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>

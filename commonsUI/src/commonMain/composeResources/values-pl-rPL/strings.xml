@@ -508,8 +508,7 @@
     <string name="about_us">Informacja o grupie…</string>
     <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
-    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład
-[201:d0e:9ba5:8bbc::1]:8080).</string>
+    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Moje imię @tag</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
@@ -657,15 +656,8 @@
     <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
     <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
     <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
-    <string name="account_backup_tips2_md">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
-        \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość.
-        \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz.
-        \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz.
-        \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.
-    </string>
-    <string name="account_backup_tips3_md">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
-        \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.
-    </string>
+    <string name="account_backup_tips2_md">## Porady dotyczące kopii zapasowej i bezpieczeństwa \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość. \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz. \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz. \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.</string>
+    <string name="account_backup_tips3_md">Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła. \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.</string>
     <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>
     <string name="backup_keys_nudge_body">Twój tajny klucz jest jedynym sposobem na dostęp do tego konta. Jeśli go zgubisz, nigdy nie będzie można go odzyskać. Zapisz go w bezpiecznym miejscu.</string>
     <string name="backup_keys_nudge_backup_now">Utwórz kopię zapasową</string>
@@ -1849,9 +1841,7 @@
     <string name="push_server_none_explainer">Wyłącz powiadomienia</string>
     <string name="push_server_uses_app_explainer">Używa aplikacji %1$s</string>
     <string name="push_server_install_app">Ustawienia powiadomień</string>
-    <string name="push_server_install_app_description">        Aby otrzymywać powiadomienia, zainstaluj dowolną aplikację, która obsługuje [Unified Push](https://unifiedpush. rg/), np. [Ntfy](https://ntfy.sh/).
-        Po zainstalowaniu, wybierz w ustawieniach aplikację, którą chcesz użyć.
-    </string>
+    <string name="push_server_install_app_description">Aby otrzymywać powiadomienia, zainstaluj dowolną aplikację, która obsługuje [Unified Push](https://unifiedpush. rg/), np. [Ntfy](https://ntfy.sh/). Po zainstalowaniu, wybierz w ustawieniach aplikację, którą chcesz użyć.</string>
     <string name="thread_title">Wątek</string>
     <string name="send_the_seller_a_message">Wyślij sprzedawcy wiadomość</string>
     <string name="hi_there_is_this_still_available">Cześć, czy to jest nadal dostępne?</string>
@@ -3656,15 +3646,7 @@
     <string name="could_not_fetch_invoice_from_details">Nie można pobrać faktury od %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Nie można otworzyć skompresowanego pliku</string>
     <string name="couldnt_find_nwc_wallets">Nie znaleziono portfela</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst nie znalazł żadnej aplikacji portfela obsługującej Nostr Wallet Connect (NWC).
-\n\nCo możesz zrobić:
-\n\t1. Zweryfikuj wsparcie NWC: Sprawdź, czy preferowana aplikacja portfela jest kompatybilna z Nostr Wallet Connect.
-\n\t2. Utwórz połączenie: Przejdź do aplikacji portfela i utwórz nowe połączenie NWC.
-\n\t3. Połącz z Amethyst: Twój portfel zazwyczaj oferuje trzy opcje:
-\n\t\t3. Automatyczne połączenie: przycisk, który automatycznie otwiera i łączy się z Amethyst. Jeśli tak, kliknij ten przycisk, otwórz Ametyst i naciśnij przycisk "Zapisz" na nowym ekranie.
-\n\t\t3. Połączenie ręczne: adres URI połączenia, który można skopiować i wkleić, klikając ikonę wklejania na tym ekranie, aby wprowadzić go bezpośrednio.
-\n\t\t3. Kod QR: Portfel tworzy kod QR, który można odczytać z przycisku QR na tym ekranie.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nie znalazł żadnej aplikacji portfela obsługującej Nostr Wallet Connect (NWC). \n\nCo możesz zrobić: \n\t1. Zweryfikuj wsparcie NWC: Sprawdź, czy preferowana aplikacja portfela jest kompatybilna z Nostr Wallet Connect. \n\t2. Utwórz połączenie: Przejdź do aplikacji portfela i utwórz nowe połączenie NWC. \n\t3. Połącz z Amethyst: Twój portfel zazwyczaj oferuje trzy opcje: \n\t\t3. Automatyczne połączenie: przycisk, który automatycznie otwiera i łączy się z Amethyst. Jeśli tak, kliknij ten przycisk, otwórz Ametyst i naciśnij przycisk "Zapisz" na nowym ekranie. \n\t\t3. Połączenie ręczne: adres URI połączenia, który można skopiować i wkleić, klikając ikonę wklejania na tym ekranie, aby wprowadzić go bezpośrednio. \n\t\t3. Kod QR: Portfel tworzy kod QR, który można odczytać z przycisku QR na tym ekranie.</string>
     <string name="create">Utwórz</string>
     <string name="d">d</string>
     <string name="danger_zone">Niebezpieczna strefa</string>
@@ -4966,10 +4948,7 @@
     <string name="relay_auth_search_keywords">auth uwierzytelnianie transmiter podpis weryfikacja nip-42 tożsamość</string>
     <string name="relay_auth_settings_title">Uwierzytelnianie transmitera</string>
     <string name="relay_chat">Czat Transmitera</string>
-    <string name="relay_chat_explainer">Czaty transmiterów to grupy czatów kontrolowane przez ich macierzyste transmitery.
-        Są one widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć.
-        Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne
-   i dlatego wiadomości czatu znikają z czasem</string>
+    <string name="relay_chat_explainer">Czaty transmiterów to grupy czatów kontrolowane przez ich macierzyste transmitery. Są one widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć. Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne i dlatego wiadomości czatu znikają z czasem</string>
     <string name="relay_chat_title">Czaty Transmitera</string>
     <string name="relay_explain_account_data">Twój profil, ustawienia i wersje robocze na Twoich domowych transmiterach.</string>
     <string name="relay_explain_community_chats">Transmitery, na których każda społeczność publikuje swoje plany.</string>
@@ -5178,8 +5157,7 @@
     <string name="route_podcasts">Podcasty</string>
     <string name="schedule_post_button_add">Zaplanuj post</string>
     <string name="schedule_post_button_remove">Anuluj planowanie</string>
-    <string name="schedule_post_warning_multi">Wpisy zaplanowane mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji.
-Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest aktywne. Włącz opcję „Zawsze włączone” w menu Ustawienia → Preferencje interfejsu użytkownika, aby zapewnić niezawodne planowanie zadań w tle.</string>
+    <string name="schedule_post_warning_multi">Wpisy zaplanowane mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji. Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest aktywne. Włącz opcję „Zawsze włączone” w menu Ustawienia → Preferencje interfejsu użytkownika, aby zapewnić niezawodne planowanie zadań w tle.</string>
     <string name="schedule_post_warning_single">Zaplanowane posty mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji. Aby zapewnić niezawodne planowanie zadań w tle, włącz opcję „Zawsze włączone” w Ustawieniach → Preferencje dotyczące niezawodnego planowania zadań w tle.</string>
     <string name="scheduled_posts">Zaplanowane posty</string>
     <string name="scheduled_posts_action_send_now">Wyślij teraz</string>
@@ -5792,7 +5770,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="other">%1$d sposoby płatności zostały usunięte</item>
     </plurals>
     <string name="backup_review_payments_explainer">Osoby, które Ci płacą, widzą tylko to, co znajduje się na tej liście.</string>
-    <string name="backup_review_places_gone"> miejsca zniknęły</string>
+    <string name="backup_review_places_gone">miejsca zniknęły</string>
     <string name="backup_review_places_you_follow">Miejsca które obserwujesz</string>
     <string name="backup_review_private_added_body">Są teraz zaszyfrowane, co prawdopodobnie wyjaśnia, gdzie podziały się powyższe elementy publiczne.</string>
     <string name="backup_review_private_added_title">Ustawiłeś te pozycje jako prywatne</string>

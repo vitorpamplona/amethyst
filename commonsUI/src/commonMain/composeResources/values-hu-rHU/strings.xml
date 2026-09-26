@@ -311,7 +311,7 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
     <string name="relay_monitor_rtt_open">Megnyitás</string>
-    <string name="relay_monitor_rtt_read">Olvasás </string>
+    <string name="relay_monitor_rtt_read">Olvasás</string>
     <string name="relay_monitor_rtt_write">Írás</string>
     <string name="relay_monitor_network">Hálózat</string>
     <string name="relay_monitor_relay_type">Típus</string>
@@ -461,8 +461,7 @@
     <string name="send_payment_receipt_section">Zap-igazolás</string>
     <string name="send_payment_receipt_clink">Közvetlen lightning-fizetés - nem lesz zapigazolás közzétéve a Nostr-on.</string>
     <string name="send_payment_receipt_onchain">Egy láncon belüli zapigazolás közzé lesz téve a Nostr-on, így a címzett megtalálhatja a kifizetést.</string>
-    <string name="send_payment_receipt_onchain_address">Fizetés közvetlenül a láncon belüli pénztárcából a profil megadott bitcoin-címére (%1$s) - nem lesz zapigazolás közzétéve.
-</string>
+    <string name="send_payment_receipt_onchain_address">Fizetés közvetlenül a láncon belüli pénztárcából a profil megadott bitcoin-címére (%1$s) - nem lesz zapigazolás közzétéve.</string>
     <string name="send_payment_receipt_cashu">A nutzap-esemény magát az ecasht kézbesíti, így az mindig közzé lesz téve.</string>
     <string name="send_payment_requesting_invoice">Számla kérése…</string>
     <string name="send_payment_requesting_invoice_nostr">Számla kérése a Nostr hálózaton keresztül…</string>
@@ -647,15 +646,8 @@
     <string name="mark_all_known_as_read">Az összes ismert megjelölése olvasottként</string>
     <string name="mark_all_new_as_read">Az összes új üzenet megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
-    <string name="account_backup_tips2_md">        ## Kulcs- és biztonsági mentési tippek
-        \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-vel kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
-        \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
-        \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni.
-        \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.
-    </string>
-    <string name="account_backup_tips3_md">        A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
-         \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
-    </string>
+    <string name="account_backup_tips2_md">## Kulcs- és biztonsági mentési tippek \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-vel kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet. \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik. \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni. \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.</string>
+    <string name="account_backup_tips3_md">A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható. \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.</string>
     <string name="backup_keys_nudge_title">Biztonsági mentés készítése a kulcsokról</string>
     <string name="backup_keys_nudge_body">A titkos kulcs megadása az egyetlen módja a fiók elérésének. Ha elveszíti, akkor soha nem tudja visszaszerezni. Mentse el biztonságos helyre most.</string>
     <string name="backup_keys_nudge_backup_now">Biztonsági mentés most</string>
@@ -779,7 +771,7 @@
     <string name="award_badge_remove_recipient">Eltávolítás</string>
     <string name="badge_untitled">Cím nélküli kitűző</string>
     <string name="badge_awardees_label">A kitűzőt %1$d érdemelte ki</string>
-    <string name="profile_badges_header">Kitűzők · %1$d </string>
+    <string name="profile_badges_header">Kitűzők · %1$d</string>
     <string name="profile_badges_description">Válassza ki, hogy a megszerzett kitűzők közül melyek jelenjenek meg a profilban.</string>
     <string name="profile_badges_empty">Ön még nem kapott kitűzőt.</string>
     <string name="profile_apps_header">Alkalmazások · %1$d</string>
@@ -1835,9 +1827,7 @@
     <string name="push_server_none_explainer">Push-értesítések letiltása</string>
     <string name="push_server_uses_app_explainer">%1$s alkalmazást használ</string>
     <string name="push_server_install_app">Push-értesítések beállítása</string>
-    <string name="push_server_install_app_description">        A push-értesítések fogadásához olyan alkalmazást telepítsen, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Ntfy](https://ntfy.sh/) alkalmazást.
-        A telepítés után a beállításokban válassza ki a használni kívánt alkalmazást.
-    </string>
+    <string name="push_server_install_app_description">A push-értesítések fogadásához olyan alkalmazást telepítsen, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Ntfy](https://ntfy.sh/) alkalmazást. A telepítés után a beállításokban válassza ki a használni kívánt alkalmazást.</string>
     <string name="thread_title">Bejegyzés</string>
     <string name="send_the_seller_a_message">Üzenet küldése az eladónak</string>
     <string name="hi_there_is_this_still_available">Tisztelt hölgyem / uram! Ez még aktuális?</string>
@@ -3124,7 +3114,7 @@
     <string name="app_notification_calls_channel_description">Értesítések a bejövő hang- és videóhívásokhoz</string>
     <string name="app_notification_calls_channel_name">Bejövő hívások</string>
     <string name="app_notification_chess_challenge_accepted">%1$s elfogadta az Ön sakk-kihívását</string>
-    <string name="app_notification_chess_channel_description">Értesítés a sakkjátékkal kapcsolatos eseményekre </string>
+    <string name="app_notification_chess_channel_description">Értesítés a sakkjátékkal kapcsolatos eseményekre</string>
     <string name="app_notification_chess_channel_name">Sakk</string>
     <string name="app_notification_chess_summary">Sakkfrissítések</string>
     <string name="app_notification_chess_your_turn">%1$s lépett - Ön következik</string>
@@ -3586,15 +3576,7 @@
     <string name="could_not_fetch_invoice_from_details">Nem sikerült lekérni a számlát a következőtől: %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Nem sikerült megnyitni a tömörített fájlt</string>
     <string name="couldnt_find_nwc_wallets">Nem található pénztárca</string>
-    <string name="couldnt_find_nwc_wallets_description">Az Amethyst nem talált olyan pénztárca-alkalmazást, amely támogatja a Nostr Wallet Connect (NWC) szolgáltatást.
-\n\nAmit tehet:
-\n\t1. NWC-támogatás ellenőrzése: Ellenőrizze, hogy a kívánt pénztárca-alkalmazás kompatibilis-e a Nostr Wallet Connect szolgáltatással.
-\n\t2. Kapcsolat létrehozása: Nyissa meg a pénztárcaalkalmazást, és hozzon létre egy új NWC-kapcsolatot.
-\n\t3. Kapcsolódás az Amethysthez: A pénztárcája általában három lehetőséget kínál:
-\n\t\t3.1 Automatikus kapcsolódás: Egy gomb az Amethyst automatikus megnyitásához és kapcsolódáshoz. Koppintson erre a gombra, nyissa meg az Amethyst alkalmazást, és mentse el az új képernyőn.
-\n\t\t3.2 Kézi kapcsolódás: Egy kapcsolódási cím, amelyet kimásolhat, és a képernyőn található beillesztés gombra koppintva közvetlenül beírhatja.
-\n\t\t3.3 QR-kód: A pénztárca létrehoz egy QR-kódot, amelyet a képernyőn található QR-kód gombról olvashat be.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Az Amethyst nem talált olyan pénztárca-alkalmazást, amely támogatja a Nostr Wallet Connect (NWC) szolgáltatást. \n\nAmit tehet: \n\t1. NWC-támogatás ellenőrzése: Ellenőrizze, hogy a kívánt pénztárca-alkalmazás kompatibilis-e a Nostr Wallet Connect szolgáltatással. \n\t2. Kapcsolat létrehozása: Nyissa meg a pénztárcaalkalmazást, és hozzon létre egy új NWC-kapcsolatot. \n\t3. Kapcsolódás az Amethysthez: A pénztárcája általában három lehetőséget kínál: \n\t\t3.1 Automatikus kapcsolódás: Egy gomb az Amethyst automatikus megnyitásához és kapcsolódáshoz. Koppintson erre a gombra, nyissa meg az Amethyst alkalmazást, és mentse el az új képernyőn. \n\t\t3.2 Kézi kapcsolódás: Egy kapcsolódási cím, amelyet kimásolhat, és a képernyőn található beillesztés gombra koppintva közvetlenül beírhatja. \n\t\t3.3 QR-kód: A pénztárca létrehoz egy QR-kódot, amelyet a képernyőn található QR-kód gombról olvashat be.</string>
     <string name="create">Létrehozás</string>
     <string name="d">n</string>
     <string name="danger_zone">Kritikus beállítások</string>
@@ -3884,7 +3866,7 @@
     <string name="kind_adventure_reading">Kalandos olvasmány</string>
     <string name="kind_adventure_scene">Kalandjelenet</string>
     <string name="kind_app_curation_set">Alkalmazáslista</string>
-    <string name="kind_app_recommendations">Ajánlott alkalmazások </string>
+    <string name="kind_app_recommendations">Ajánlott alkalmazások</string>
     <string name="kind_appointment">Találkozó</string>
     <string name="kind_apps">Alkalmazások</string>
     <string name="kind_appt_rsvp">Időpont-visszaigazolás</string>
@@ -4712,11 +4694,8 @@
     <string name="proxy_section">Proxyzott átjátszók</string>
     <string name="proxy_section_explainer">Összesítő átjátszók, amelyeket az alkalmazásnak használnia kell a hírfolyamok letöltéséhez, például filter.nostr.wine. Ez helyettesíti a kimeneti modellt, és az alkalmazás csak a listákban szereplő átjátszókhoz fog csatlakozni.</string>
     <string name="public_chat">Nyilvános csevegés</string>
-    <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki
-        részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
-        A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
-    <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
-        A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
+    <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára. A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
+    <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot. A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
     <string name="public_chat_relays_title">Átjátszók</string>
     <string name="public_chat_title">Nyilvános csevegés metaadatai</string>
     <string name="public_chats">Nyilvános csevegések</string>
@@ -4781,10 +4760,7 @@
     <string name="relay_auth_search_keywords">hitelesítés, átjátszó, aláírás, ellenőrzés, nip-42, azonosság</string>
     <string name="relay_auth_settings_title">Átjátszó-hitelesítés</string>
     <string name="relay_chat">Átjátszócsevegés</string>
-    <string name="relay_chat_explainer">Az átjátszócsevegések olyan csevegőcsoportok, amelyeket az otthoni átjátszó irányít.
-        Ezek mindenki számára láthatóak a Nostr-on, és bárki részt vehet rajtuk.
-        Remekül alkalmasak nyitott közösségek kialakítására bizonyos témák körül. Néhány ilyen csoport
-    rövid élettartamú, ezért a csevegési üzenetek idővel eltűnnek</string>
+    <string name="relay_chat_explainer">Az átjátszócsevegések olyan csevegőcsoportok, amelyeket az otthoni átjátszó irányít. Ezek mindenki számára láthatóak a Nostr-on, és bárki részt vehet rajtuk. Remekül alkalmasak nyitott közösségek kialakítására bizonyos témák körül. Néhány ilyen csoport rövid élettartamú, ezért a csevegési üzenetek idővel eltűnnek</string>
     <string name="relay_chat_title">Átjátszócsevegések</string>
     <string name="relay_explain_account_data">Saját profil, -beállítások és -piszkozatok a gazda-átjátszókon.</string>
     <string name="relay_explain_community_chats">Azok az átjátszók, amelyekre az egyes közösségek közzéteszik a terveiket.</string>

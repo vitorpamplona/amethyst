@@ -266,15 +266,8 @@
     <string name="mark_all_known_as_read">알려진 항목 모두 읽음 표시</string>
     <string name="mark_all_new_as_read">새 항목 모두 읽음 표시</string>
     <string name="mark_all_as_read">모두 읽음 표시</string>
-    <string name="account_backup_tips2_md">        ## 키 백업 및 보안 팁
-        \n\n계정은 비밀 키로 보호됩니다. 키는 **nsec1**로 시작하는 긴 문자열입니다. 이 비밀 키에 접근할 수 있는 누구든 게시물 작성 및 신원 변경이 가능합니다.
-        \n\n- 신뢰하지 않는 웹사이트나 소프트웨어에 비밀 키를 **입력하지** 마세요.
-        \n- Amethyst 개발자는 **절대** 비밀 키를 요청하지 않습니다.
-        \n- 계정 복구를 위해 비밀 키를 안전하게 백업해 **두세요**. 비밀번호 관리자 사용을 권장합니다.
-    </string>
-    <string name="account_backup_tips3_md">        추가 보안을 위해 비밀번호로 키를 암호화할 수 있습니다. 이 키는 **ncryptsec1**로 시작하며 비밀번호 없이는 사용할 수 없습니다.
-        \n\n비밀번호를 분실하면 키를 복구할 수 없습니다.
-    </string>
+    <string name="account_backup_tips2_md">## 키 백업 및 보안 팁 \n\n계정은 비밀 키로 보호됩니다. 키는 **nsec1**로 시작하는 긴 문자열입니다. 이 비밀 키에 접근할 수 있는 누구든 게시물 작성 및 신원 변경이 가능합니다. \n\n- 신뢰하지 않는 웹사이트나 소프트웨어에 비밀 키를 **입력하지** 마세요. \n- Amethyst 개발자는 **절대** 비밀 키를 요청하지 않습니다. \n- 계정 복구를 위해 비밀 키를 안전하게 백업해 **두세요**. 비밀번호 관리자 사용을 권장합니다.</string>
+    <string name="account_backup_tips3_md">추가 보안을 위해 비밀번호로 키를 암호화할 수 있습니다. 이 키는 **ncryptsec1**로 시작하며 비밀번호 없이는 사용할 수 없습니다. \n\n비밀번호를 분실하면 키를 복구할 수 없습니다.</string>
     <string name="encrypt_and_copy_my_secret_key">내 비밀 키 암호화 및 복사</string>
     <string name="badge_award_image_for">%1$s의 배지 수상 이미지</string>
     <string name="badge_award_image">"배지 수상 이미지</string>
@@ -958,9 +951,7 @@
     <string name="push_server_none_explainer">푸시 알림 비활성화</string>
     <string name="push_server_uses_app_explainer">앱 %1$s 사용</string>
     <string name="push_server_install_app">푸시 알림 설정</string>
-    <string name="push_server_install_app_description">        푸시 알림을 받으려면 [Ntfy](https://ntfy.sh/)와 같은 [Unified Push](https://unifiedpush.org/)를 지원하는 앱을 설치하세요.
-        설치 후 설정에서 사용할 앱을 선택하세요.
-    </string>
+    <string name="push_server_install_app_description">푸시 알림을 받으려면 [Ntfy](https://ntfy.sh/)와 같은 [Unified Push](https://unifiedpush.org/)를 지원하는 앱을 설치하세요. 설치 후 설정에서 사용할 앱을 선택하세요.</string>
     <string name="thread_title">스레드</string>
     <string name="send_the_seller_a_message">판매자에게 메시지 보내기</string>
     <string name="hi_there_is_this_still_available">안녕하세요, 아직 구매 가능한가요?</string>
@@ -2005,15 +1996,7 @@
     <string name="could_not_fetch_invoice_from_details">%1$s에서 인보이스를 가져올 수 없습니다: %2$s</string>
     <string name="could_not_open_the_compressed_file">압축 파일을 열 수 없습니다</string>
     <string name="couldnt_find_nwc_wallets">지갑을 찾을 수 없음</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst에서 Nostr Wallet Connect (NWC)를 지원하는 지갑 앱을 찾을 수 없습니다.
-\n\n할 수 있는 작업:
-\n\t1. NWC 지원 확인: 사용하려는 지갑 앱이 Nostr Wallet Connect와 호환되는지 다시 확인하세요.
-\n\t2. 연결 생성: 지갑 앱에서 새 NWC 연결을 생성하세요.
-\n\t3. Amethyst에 연결: 지갑에서 보통 세 가지 옵션을 제공합니다:
-\n\t\t3.1 자동 연결: Amethyst를 자동으로 열고 연결하는 버튼. 해당 버튼을 클릭하고 Amethyst를 열어 새 화면에서 저장을 누르세요.
-\n\t\t3.2 수동 연결: 연결 URI를 복사하고 이 화면의 붙여넣기 아이콘을 클릭하여 직접 입력하세요.
-\n\t\t3.3 QR 코드: 지갑이 QR 코드를 생성하면 이 화면의 QR 코드 버튼으로 읽을 수 있습니다.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst에서 Nostr Wallet Connect (NWC)를 지원하는 지갑 앱을 찾을 수 없습니다. \n\n할 수 있는 작업: \n\t1. NWC 지원 확인: 사용하려는 지갑 앱이 Nostr Wallet Connect와 호환되는지 다시 확인하세요. \n\t2. 연결 생성: 지갑 앱에서 새 NWC 연결을 생성하세요. \n\t3. Amethyst에 연결: 지갑에서 보통 세 가지 옵션을 제공합니다: \n\t\t3.1 자동 연결: Amethyst를 자동으로 열고 연결하는 버튼. 해당 버튼을 클릭하고 Amethyst를 열어 새 화면에서 저장을 누르세요. \n\t\t3.2 수동 연결: 연결 URI를 복사하고 이 화면의 붙여넣기 아이콘을 클릭하여 직접 입력하세요. \n\t\t3.3 QR 코드: 지갑이 QR 코드를 생성하면 이 화면의 QR 코드 버튼으로 읽을 수 있습니다.</string>
     <string name="create">만들기</string>
     <string name="d">일</string>
     <string name="danger_zone">위험 구역</string>
@@ -2653,11 +2636,8 @@
     <string name="proxy_section">프록시 Relay</string>
     <string name="proxy_section_explainer">filter.nostr.wine 같이 피드를 다운로드하는 데 앱이 사용해야 하는 집계 relay입니다. 이 설정은 아웃박스 모델을 대체하며 앱이 목록에 있는 relay에만 연결하도록 합니다.</string>
     <string name="public_chat">공개 채팅</string>
-    <string name="public_chat_explainer">공개 채팅은 Nostr의 모든 사람에게 공개되며
-        누구나 참여할 수 있습니다. 특정 주제에 관한 열린 커뮤니티에 적합합니다.
-        relay에서 게시물을 삭제하여 관리할 수 있습니다</string>
-    <string name="public_chat_relays_explainer">이 그룹을 호스팅하는 relay를 1~3개 입력하세요.
-        Nostr 클라이언트는 이 설정을 통해 메시지를 다운로드하고 전송할 위치를 파악합니다.</string>
+    <string name="public_chat_explainer">공개 채팅은 Nostr의 모든 사람에게 공개되며 누구나 참여할 수 있습니다. 특정 주제에 관한 열린 커뮤니티에 적합합니다. relay에서 게시물을 삭제하여 관리할 수 있습니다</string>
+    <string name="public_chat_relays_explainer">이 그룹을 호스팅하는 relay를 1~3개 입력하세요. Nostr 클라이언트는 이 설정을 통해 메시지를 다운로드하고 전송할 위치를 파악합니다.</string>
     <string name="public_chat_relays_title">relay</string>
     <string name="public_chat_title">공개 채팅 메타데이터</string>
     <string name="public_chats">공개 채팅</string>
@@ -2682,10 +2662,7 @@
     <string name="read_only_user">읽기 전용 사용자</string>
     <string name="record_a_message_description">길게 눌러 메시지를 녹음하세요</string>
     <string name="relay_chat">relay 채팅</string>
-    <string name="relay_chat_explainer">relay 채팅은 홈 relay가 관리하는 채팅 그룹입니다.
-        Nostr의 모든 사람에게 공개되며 누구나 참여할 수 있습니다.
-        특정 주제에 관한 열린 커뮤니티에 적합합니다. 일부 그룹은 임시적이라
-    채팅 메시지가 시간이 지나면 사라집니다</string>
+    <string name="relay_chat_explainer">relay 채팅은 홈 relay가 관리하는 채팅 그룹입니다. Nostr의 모든 사람에게 공개되며 누구나 참여할 수 있습니다. 특정 주제에 관한 열린 커뮤니티에 적합합니다. 일부 그룹은 임시적이라 채팅 메시지가 시간이 지나면 사라집니다</string>
     <string name="relay_chat_title">relay 채팅</string>
     <string name="relay_management_tab_events">이벤트</string>
     <string name="relay_management_tab_ips">IP</string>

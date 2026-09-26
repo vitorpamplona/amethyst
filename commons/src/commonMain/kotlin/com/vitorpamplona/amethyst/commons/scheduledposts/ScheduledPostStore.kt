@@ -377,7 +377,7 @@ class ScheduledPostStore(
         // Secure a pre-existing file up front (an older build may have left it at the
         // 0644 umask default) so it's owner-only even if nothing mutates the store
         // this session.
-        if (fileSystem.exists(storageFile)) restrictFileToOwner(storageFile, TAG)
+        if (storeFileExists()) restrictToOwner(storageFile)
         var dirty = purgeStale(nowSec())
         // Recover claims stranded by a crash-mid-publish so they aren't lost forever.
         if (recoverStuckClaimsLocked(nowSec())) dirty = true
@@ -426,10 +426,12 @@ class ScheduledPostStore(
         try {
             storageFile.parent?.let { fileSystem.createDirectories(it) }
             fileSystem.write(tmp) { writeUtf8(json.encodeToString(ScheduledPostFile(version = 1, posts = snapshot))) }
-            // Restrict to owner-only BEFORE the rename so the store is never briefly
+            // Restrict to owner-only BEFORE the rename, so the store file itself is never
             // world-readable. It holds pre-signed events + the account's pubkey, which
-            // must not leak to other local users on a shared machine.
-            restrictFileToOwner(tmp, TAG)
+            // must not leak to other local users on a shared machine. (The tmp file is
+            // created at the umask default and narrowed right after its write; the
+            // directory around it is owner-only on every host that uses this store.)
+            restrictToOwner(tmp)
             // Replaces an existing target, including on Windows, where a plain rename
             // onto an existing file fails.
             fileSystem.atomicMove(tmp, storageFile)
@@ -437,13 +439,38 @@ class ScheduledPostStore(
             Log.e(TAG, "Failed to persist scheduled posts to $storageFile", e)
             try {
                 fileSystem.delete(tmp)
-            } catch (e: Exception) {
-                Log.w(TAG) { "Failed to clean up temp file $tmp after persist exception: ${e.message}" }
+            } catch (cleanupError: Exception) {
+                Log.w(TAG, "Failed to clean up temp file $tmp after persist exception", cleanupError)
             }
         }
     }
 
-    private fun hasContent(): Boolean = (fileSystem.metadataOrNull(storageFile)?.size ?: 0L) > 0L
+    /**
+     * Permissions are a property of the real disk, so a caller that injects another
+     * [FileSystem] (an in-memory fake) gets no chmod aimed at a same-named real path.
+     */
+    private fun restrictToOwner(path: Path) {
+        if (fileSystem === platformFileSystem) restrictFileToOwner(path, TAG)
+    }
+
+    /**
+     * The store file's metadata, or null when there is none. A directory is not a store
+     * file. A symlink counts: okio's metadata does not follow links, so its size is the
+     * link's, and reading it (which does follow) decides whether there is anything in it.
+     * A stat that fails (EACCES on iOS, where File.exists() used to answer false) is "no
+     * file" rather than an exception out of the store.
+     */
+    private fun storeFileMetadata() =
+        try {
+            fileSystem.metadataOrNull(storageFile)?.takeIf { it.isRegularFile || it.symlinkTarget != null }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not stat $storageFile", e)
+            null
+        }
+
+    private fun storeFileExists(): Boolean = storeFileMetadata() != null
+
+    private fun hasContent(): Boolean = (storeFileMetadata()?.size ?: 0L) > 0L
 
     private fun readText(): String = fileSystem.read(storageFile) { readUtf8() }
 
