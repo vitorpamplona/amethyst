@@ -24,10 +24,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
@@ -59,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
@@ -155,8 +156,6 @@ fun CordnCreateGroupScreen(
         // leave it, so `remember` here would lose a half-typed name on the way
         // back from the draft.roster.
         val draft = rememberCordnGroupDraft(accountViewModel)
-
-        var coordinatorOpen by remember { mutableStateOf(false) }
         var creation by remember { mutableStateOf<CordnGroupCreation?>(null) }
         var error by remember { mutableStateOf<String?>(null) }
         val failureFallback = stringRes(R.string.cordn_create_failed)
@@ -165,19 +164,19 @@ fun CordnCreateGroupScreen(
         // Coordinators this account has never used, from their CEP-6
         // announcements. Not added to the account by looking: picking one here
         // is what commits to it, and `createGroup` opens the session.
-        var discovered by remember { mutableStateOf<CordnCoordinatorDiscovery.Result?>(null) }
         var discovering by remember { mutableStateOf(false) }
-        var showStale by remember { mutableStateOf(false) }
-        var showAllLive by remember { mutableStateOf(false) }
         val discoverFailed = stringRes(R.string.cordn_coordinators_discover_failed)
 
         // Offers this account already holds are not offers; they are the choices
         // above, and listing them twice would let the same coordinator be picked
         // from two places with different relays.
         val offers =
-            remember(discovered, known) {
+            remember(draft.discovered, known) {
                 val knownKeys = known.mapTo(mutableSetOf()) { it.pubKey }
-                discovered?.coordinators?.filter { it.pubKey !in knownKeys }.orEmpty()
+                draft.discovered
+                    ?.coordinators
+                    ?.filter { it.pubKey !in knownKeys }
+                    .orEmpty()
             }
 
         val choices = remember(known, offers) { known + offers.map { it.toConfig() } }
@@ -258,13 +257,13 @@ fun CordnCreateGroupScreen(
                 config = config,
                 coverage = chosenCoverage,
                 rosterSize = draft.roster.size,
-                expanded = coordinatorOpen,
-                onToggle = { coordinatorOpen = !coordinatorOpen },
+                expanded = draft.coordinatorOpen,
+                onToggle = { draft.coordinatorOpen = !draft.coordinatorOpen },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
 
-            if (coordinatorOpen) {
+            if (draft.coordinatorOpen) {
                 known.forEach { coordinator ->
                     CoordinatorChoice(
                         label = coordinatorDisplayName(coordinator.pubKey, coordinator.label, accountViewModel),
@@ -296,7 +295,7 @@ fun CordnCreateGroupScreen(
                 // text fields below would throw away focus and IME state mid-typing.
                 // Capping the rows keeps composition bounded without putting a form
                 // inside a recycler.
-                val shownLive = if (showAllLive) live else live.take(LIVE_PREVIEW)
+                val shownLive = if (draft.showAllLive) live else live.take(LIVE_PREVIEW)
 
                 shownLive.forEach { offer ->
                     CoordinatorChoice(
@@ -318,9 +317,9 @@ fun CordnCreateGroupScreen(
                 }
 
                 if (live.size > LIVE_PREVIEW) {
-                    TextButton(onClick = { showAllLive = !showAllLive }) {
+                    TextButton(onClick = { draft.showAllLive = !draft.showAllLive }) {
                         Text(
-                            if (showAllLive) {
+                            if (draft.showAllLive) {
                                 stringRes(R.string.cordn_coordinators_show_fewer)
                             } else {
                                 stringRes(R.string.cordn_coordinators_show_all, live.size)
@@ -330,9 +329,9 @@ fun CordnCreateGroupScreen(
                 }
 
                 if (stale.isNotEmpty()) {
-                    TextButton(onClick = { showStale = !showStale }) {
+                    TextButton(onClick = { draft.showStale = !draft.showStale }) {
                         Text(
-                            if (showStale) {
+                            if (draft.showStale) {
                                 stringRes(R.string.cordn_coordinators_hide_older)
                             } else {
                                 stringRes(R.string.cordn_coordinators_show_older, stale.size)
@@ -341,7 +340,7 @@ fun CordnCreateGroupScreen(
                     }
                 }
 
-                if (showStale && stale.isNotEmpty()) {
+                if (draft.showStale && stale.isNotEmpty()) {
                     Text(
                         text = stringRes(R.string.cordn_coordinators_stale_note),
                         style = MaterialTheme.typography.labelSmall,
@@ -387,7 +386,7 @@ fun CordnCreateGroupScreen(
                         error = null
                         scope.launch {
                             try {
-                                discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
+                                draft.discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                             } catch (e: Exception) {
                                 error = e.message ?: discoverFailed
                             } finally {
@@ -400,7 +399,7 @@ fun CordnCreateGroupScreen(
                     Text(stringRes(R.string.cordn_create_coordinator_discover))
                 }
 
-                discovered?.takeIf { offers.isEmpty() }?.let { result ->
+                draft.discovered?.takeIf { offers.isEmpty() }?.let { result ->
                     Text(
                         text =
                             if (result.unreachable.isEmpty()) {
@@ -611,13 +610,18 @@ private fun CoordinatorChoice(
         // Null on the "use a different one" row, which names no coordinator
         // yet, so there is no identity to show for it.
         if (pubKey != null) {
+            // Spacing goes outside, not in `pictureModifier`. That one is the
+            // INNER modifier: it styles the image within a box already fixed at
+            // `size`, which is why the sibling screen uses it for a border. An
+            // end padding there took 8.dp off the drawable's width and none off
+            // its height, so every coordinator's avatar drew as a 16x24 oval.
             UserPicture(
                 userHex = pubKey,
                 size = 24.dp,
-                pictureModifier = Modifier.padding(end = 8.dp),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+            Spacer(Modifier.width(8.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(

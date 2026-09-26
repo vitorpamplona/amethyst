@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -89,6 +90,24 @@ class CordnGroupDraft : ViewModel() {
     var pubKeyInput by mutableStateOf("")
     var relaysInput by mutableStateOf("")
 
+    /**
+     * How the coordinator section was left.
+     *
+     * Here rather than in the screen because the screen does not survive a
+     * trip to a profile, and the coordinator rows are the one place on this
+     * form you can tap through to one. Coming back to a collapsed picker with
+     * the discovery thrown away reads as having lost your work, and the
+     * discovery is a ~30-second round trip to every relay -- the most
+     * expensive thing on the page to have to do twice.
+     */
+    var coordinatorOpen by mutableStateOf(false)
+
+    /** The last discovery run, kept so returning does not mean running it again. */
+    var discovered by mutableStateOf<CordnCoordinatorDiscovery.Result?>(null)
+
+    var showStale by mutableStateOf(false)
+    var showAllLive by mutableStateOf(false)
+
     fun add(pubKey: HexKey) {
         if (pubKey !in roster) roster = roster + pubKey
     }
@@ -121,5 +140,9 @@ class CordnGroupDraft : ViewModel() {
         userPicked = false
         pubKeyInput = ""
         relaysInput = ""
+        coordinatorOpen = false
+        discovered = null
+        showStale = false
+        showAllLive = false
     }
 }
