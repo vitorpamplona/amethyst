@@ -34,15 +34,17 @@ object PdfFetcher {
      * responsible for closing the returned snapshot; while it's open the cache entry cannot be
      * evicted, so the underlying file stays valid for `PdfRenderer`.
      *
-     * Pass the app's Coil [diskCache] so PDFs share the same LRU eviction and disk budget as
-     * images.
+     * Pass the app's Coil disk cache so PDFs share the same LRU eviction and disk budget as
+     * images. It is a provider, read on the IO dispatcher: the app builds its cache lazily
+     * (statvfs, directory setup), and a card composing on a cold start must not do that on main.
      */
     suspend fun fetchSnapshot(
         url: String,
-        diskCache: DiskCache,
+        diskCache: () -> DiskCache,
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
+            val diskCache = diskCache()
             // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
             // contends on the global DiskLruCache lock, which Coil's cleanup pass holds across a
             // burst of unlink syscalls (see DeferredDeleteFileSystem) — calling it from a caller

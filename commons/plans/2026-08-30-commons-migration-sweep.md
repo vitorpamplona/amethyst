@@ -1501,3 +1501,26 @@ A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after th
 - **Two corrections to the MOVE-AFTER table above:**
   - `INav`/`Route` are no longer blockers: every ui file imports the commons ones.
   - `ui/note/types` is 111 files, not ~89, and "AVM threading" understates it: the hubs matter more than the parameter.
+
+### Follow-up in the same round: the chat bubble group, and the audit
+
+- **Moved to `commonsUI/…/commons/chats/ui`**, beside `ChatDivisor` and
+  `UserDisplayNameLayout`: `ChatBubbleLayout`, `ChatGroupPosition`, `JumboEmoji`,
+  `NewDateOrSubjectDivisor` and `AutoScrollToNewest`. `AutoScrollToNewest` and
+  `CHAT_GROUP_WINDOW_SECONDS` went from `internal` to public so the app can reach them.
+  Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of this one (no group
+  position, jumbo emoji, swipe-to-reply or reaction row). Replacing it is the Desktop
+  phase.
+- **Audit follow-ups:**
+  - `PdfFetcher` takes the disk cache as a provider, read on the IO dispatcher, so a PDF
+    card composing on a cold start doesn't build the app's lazy cache on the main thread.
+  - The two DM lists resolve `TimeAgoLabels` once per list instead of once per row.
+  - The iOS `DateSkeletonFormatter` rebuilds on a locale or time-zone change, like the
+    other actuals.
+  - `ScreenLayoutTest` pins the inclusive 600dp boundary.
+  - Two stale KDoc links and a same-package import are fixed.
+  - The generated baseline profile has its stable-name entries repointed:
+    `NowProviderKt`, and the five theme functions now in `AmethystThemeKt`. Its R8
+    lambda entries were already stale before this round (it still lists
+    `MarkDownStyleOnDark` under `ThemeKt`), so **regenerate the profile** after these
+    moves.

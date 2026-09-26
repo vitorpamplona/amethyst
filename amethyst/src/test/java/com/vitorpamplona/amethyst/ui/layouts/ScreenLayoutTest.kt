@@ -88,6 +88,10 @@ class ScreenLayoutTest {
     @Test
     fun compactWidthKeepsTheBottomBar() = assertStyle(NavigationStyle.BOTTOM_BAR, 599, 900)
 
+    // The Medium breakpoint is inclusive: exactly 600dp is no longer Compact.
+    @Test
+    fun exactlyAtTheMediumBreakpointRails() = assertStyle(NavigationStyle.NAV_RAIL, 600, 900)
+
     // ---- Notification panel ----
 
     @Test

@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.TimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -127,6 +128,8 @@ fun BuzzDmListScreen(
     // Hidden conversations stay collapsed behind a header — they are off Messages by the user's own
     // choice, so they must not compete with the live inbox; they only need to be *reachable* again.
     var showHidden by remember { mutableStateOf(false) }
+    // Resolved once for the list, not per row.
+    val timeLabels = rememberTimeAgoLabels()
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_dm_title), nav) },
@@ -149,7 +152,7 @@ fun BuzzDmListScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(rows, key = { it.channelId }) { row ->
-                    DmRowCard(row, isHidden = false, viewModel = viewModel, accountViewModel = accountViewModel, nav = nav)
+                    DmRowCard(row, isHidden = false, viewModel = viewModel, timeLabels = timeLabels, accountViewModel = accountViewModel, nav = nav)
                 }
                 if (hiddenRows.isNotEmpty()) {
                     item(key = "hidden-header") {
@@ -161,7 +164,7 @@ fun BuzzDmListScreen(
                     }
                     if (showHidden) {
                         items(hiddenRows, key = { "hidden-${it.channelId}" }) { row ->
-                            DmRowCard(row, isHidden = true, viewModel = viewModel, accountViewModel = accountViewModel, nav = nav)
+                            DmRowCard(row, isHidden = true, viewModel = viewModel, timeLabels = timeLabels, accountViewModel = accountViewModel, nav = nav)
                         }
                     }
                 }
@@ -211,6 +214,7 @@ private fun DmRowCard(
     row: BuzzDmListViewModel.DmRow,
     isHidden: Boolean,
     viewModel: BuzzDmListViewModel,
+    timeLabels: TimeAgoLabels,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -256,7 +260,7 @@ private fun DmRowCard(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = timeAgoShort(row.lastActivity, rememberTimeAgoLabels()),
+                text = timeAgoShort(row.lastActivity, timeLabels),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

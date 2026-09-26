@@ -196,7 +196,7 @@ private fun PdfViewerContent(
             try {
                 withContext(Dispatchers.IO) {
                     val snapshot =
-                        PdfFetcher.fetchSnapshot(content.url, Amethyst.instance.diskCache) { url ->
+                        PdfFetcher.fetchSnapshot(content.url, { Amethyst.instance.diskCache }) { url ->
                             accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                         }
                     try {

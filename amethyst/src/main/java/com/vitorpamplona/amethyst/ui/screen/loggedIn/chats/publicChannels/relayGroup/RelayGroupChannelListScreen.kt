@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.TimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -263,6 +264,8 @@ fun RelayGroupChannelListScreen(
     // as the workspace overflow menu (Add people / Invite), whose own doc notes "any member sees them,
     // the relay only serves the owner/admin ones."
     val myPubkey = accountViewModel.account.signer.pubKey
+    // Resolved once for the list, not per DM row.
+    val timeLabels = rememberTimeAgoLabels()
 
     val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
     LaunchedEffect(relay, isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
@@ -644,6 +647,7 @@ fun RelayGroupChannelListScreen(
                             BuzzDmInlineRow(
                                 row = row,
                                 myPubkey = myPubkey,
+                                timeLabels = timeLabels,
                                 isHidden = false,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
@@ -675,6 +679,7 @@ fun RelayGroupChannelListScreen(
                                 BuzzDmInlineRow(
                                     row = row,
                                     myPubkey = myPubkey,
+                                    timeLabels = timeLabels,
                                     isHidden = true,
                                     accountViewModel = accountViewModel,
                                     nav = nav,
@@ -828,6 +833,7 @@ private fun SectionAddButton(
 private fun BuzzDmInlineRow(
     row: BuzzDmListViewModel.DmRow,
     myPubkey: HexKey,
+    timeLabels: TimeAgoLabels,
     isHidden: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -885,7 +891,7 @@ private fun BuzzDmInlineRow(
         }
         if (row.lastActivity > 0) {
             Text(
-                text = timeAgoShort(row.lastActivity, rememberTimeAgoLabels()),
+                text = timeAgoShort(row.lastActivity, timeLabels),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

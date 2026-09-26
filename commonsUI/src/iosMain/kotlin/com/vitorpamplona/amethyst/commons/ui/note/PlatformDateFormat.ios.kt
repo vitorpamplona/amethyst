@@ -30,22 +30,41 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSLocale
+import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
+import platform.Foundation.defaultTimeZone
+import platform.Foundation.localeIdentifier
+import kotlin.concurrent.Volatile
 
 private fun dateOf(epochMillis: Long) = NSDate.dateWithTimeIntervalSince1970(epochMillis / 1000.0)
 
-/** NSDateFormatter is thread-safe for formatting on iOS 7+; the template picks the locale's order. */
+/**
+ * NSDateFormatter is thread-safe for formatting on iOS 7+; the template picks the locale's order.
+ * Rebuilt when the current locale or time zone changes, like the other actuals.
+ */
 actual class DateSkeletonFormatter actual constructor(
-    skeleton: String,
+    private val skeleton: String,
 ) {
-    private val formatter =
-        NSDateFormatter().apply {
-            locale = NSLocale.currentLocale
-            setLocalizedDateFormatFromTemplate(skeleton)
-        }
+    private class Cached(
+        val key: String,
+        val formatter: NSDateFormatter,
+    )
 
-    actual fun format(epochMillis: Long): String = formatter.stringFromDate(dateOf(epochMillis))
+    @Volatile private var cached: Cached? = null
+
+    actual fun format(epochMillis: Long): String {
+        val locale = NSLocale.currentLocale
+        val key = locale.localeIdentifier + "|" + NSTimeZone.defaultTimeZone.name
+        val formatter =
+            cached?.takeIf { it.key == key }?.formatter
+                ?: NSDateFormatter()
+                    .apply {
+                        this.locale = locale
+                        setLocalizedDateFormatFromTemplate(skeleton)
+                    }.also { cached = Cached(key, it) }
+        return formatter.stringFromDate(dateOf(epochMillis))
+    }
 }
 
 actual fun calendarYearAndDay(epochMillis: Long): Int {

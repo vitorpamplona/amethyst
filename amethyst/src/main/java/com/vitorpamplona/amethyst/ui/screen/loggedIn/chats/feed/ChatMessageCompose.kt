@@ -45,6 +45,9 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
+import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
@@ -60,8 +63,6 @@ import com.vitorpamplona.amethyst.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote

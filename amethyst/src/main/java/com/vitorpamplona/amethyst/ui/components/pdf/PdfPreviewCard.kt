@@ -158,7 +158,7 @@ private fun LoadedPdfPreviewCard(
         value =
             try {
                 PdfFetcher
-                    .fetchSnapshot(content.url, Amethyst.instance.diskCache) { url ->
+                    .fetchSnapshot(content.url, { Amethyst.instance.diskCache }) { url ->
                         accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                     }.use { snapshot ->
                         withContext(Dispatchers.IO) {

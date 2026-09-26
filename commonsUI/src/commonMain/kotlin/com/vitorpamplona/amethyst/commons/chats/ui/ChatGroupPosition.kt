@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
+package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -88,7 +88,7 @@ fun chatBubbleShapeFor(
     }
 
 /** Messages more than this far apart never group, even from the same author. */
-internal const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
+const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
 
 /**
  * Event kinds that don't render as regular bubbles (zaps, raids, clips) or that
