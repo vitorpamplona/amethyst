@@ -375,5 +375,5 @@ fun timeAgoShort(
     labels: TimeAgoLabels,
 ): String {
     if (time == null) return " "
-    return relativeTimeSpanShort(time * 1000, TimeUtils.nowMillis(), labels.now) { timeAgoWith(time, labels, prefix = "") }
+    return relativeTimeSpanShortOrNull(time * 1000, TimeUtils.nowMillis(), labels.now) ?: timeAgoWith(time, labels, prefix = "")
 }

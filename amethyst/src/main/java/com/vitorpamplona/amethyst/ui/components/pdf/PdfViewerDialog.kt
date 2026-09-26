@@ -82,6 +82,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -223,7 +224,14 @@ private fun PdfViewerContent(
     val handleForDispose = handleState
     DisposableEffect(handleForDispose) {
         onDispose {
-            handleForDispose?.close()
+            // Off the main thread: closing the cache snapshot takes Coil's global DiskLruCache
+            // lock, which its cleanup pass holds across bursts of unlinks. Under the render mutex,
+            // so a page render still in flight finishes before the renderer is closed under it.
+            handleForDispose?.let { handle ->
+                Amethyst.instance.applicationIOScope.launch {
+                    handle.mutex.withLock { handle.close() }
+                }
+            }
         }
     }
 

@@ -61,8 +61,6 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 // Hard ceiling on the inline thumbnail bitmap, in pixels. Prevents OOM on very tall/large pages.
 private const val THUMBNAIL_MAX_DIM_PX = 1600
@@ -158,12 +156,12 @@ private fun LoadedPdfPreviewCard(
         value =
             try {
                 PdfFetcher
-                    .fetchSnapshot(content.url, { Amethyst.instance.diskCache }) { url ->
-                        accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
-                    }.use { snapshot ->
-                        withContext(Dispatchers.IO) {
-                            renderFirstPage(snapshot.data.toFile(), targetWidthPx)
-                        }
+                    .useSnapshot(
+                        url = content.url,
+                        diskCache = { Amethyst.instance.diskCache },
+                        okHttpClient = { url -> accountViewModel.httpClientBuilder.okHttpClientForPreview(url) },
+                    ) { snapshot ->
+                        renderFirstPage(snapshot.data.toFile(), targetWidthPx)
                     }.also { result ->
                         // Same cache the image and video paths use, so a PDF that has been rendered
                         // once lays out at its real shape on every later visit instead of growing

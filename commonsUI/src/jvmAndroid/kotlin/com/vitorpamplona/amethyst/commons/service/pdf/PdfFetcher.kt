@@ -42,39 +42,63 @@ object PdfFetcher {
         url: String,
         diskCache: () -> DiskCache,
         okHttpClient: (String) -> OkHttpClient,
-    ): DiskCache.Snapshot =
-        withContext(Dispatchers.IO) {
-            val diskCache = diskCache()
-            // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
-            // contends on the global DiskLruCache lock, which Coil's cleanup pass holds across a
-            // burst of unlink syscalls (see DeferredDeleteFileSystem) — calling it from a caller
-            // that happens to be on the main thread stalls the frame for that whole burst, and the
-            // hit path is exactly the one a feed takes when a PDF card scrolls back into view.
-            diskCache.openSnapshot(url)?.let { return@withContext it }
+    ): DiskCache.Snapshot = withContext(Dispatchers.IO) { openOrDownload(url, diskCache, okHttpClient) }
 
-            val editor = diskCache.openEditor(url) ?: throw IOException("Unable to open cache editor for $url")
-            try {
-                val request =
-                    Request
-                        .Builder()
-                        .url(url)
-                        .get()
-                        .build()
+    /** The fetch itself. Callers run it on the IO dispatcher. */
+    private suspend fun openOrDownload(
+        url: String,
+        diskCache: () -> DiskCache,
+        okHttpClient: (String) -> OkHttpClient,
+    ): DiskCache.Snapshot {
+        val cache = diskCache()
+        // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
+        // contends on the global DiskLruCache lock, which Coil's cleanup pass holds across a
+        // burst of unlink syscalls (see DeferredDeleteFileSystem) — calling it from a caller
+        // that happens to be on the main thread stalls the frame for that whole burst, and the
+        // hit path is exactly the one a feed takes when a PDF card scrolls back into view.
+        cache.openSnapshot(url)?.let { return it }
 
-                okHttpClient(url).newCall(request).executeAsync().use { response ->
-                    if (!response.isSuccessful) {
-                        throw IOException("PDF download failed: ${response.code}")
-                    }
-                    diskCache.fileSystem.write(editor.data) {
-                        val bytes = writeAll(response.body.source())
-                        if (bytes == 0L) throw IOException("PDF download failed: empty response body")
-                    }
+        val editor = cache.openEditor(url) ?: throw IOException("Unable to open cache editor for $url")
+        try {
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .get()
+                    .build()
+
+            okHttpClient(url).newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("PDF download failed: ${response.code}")
                 }
-
-                editor.commitAndOpenSnapshot() ?: throw IOException("Unable to commit cache editor for $url")
-            } catch (t: Throwable) {
-                runCatching { editor.abort() }
-                throw t
+                cache.fileSystem.write(editor.data) {
+                    val bytes = writeAll(response.body.source())
+                    if (bytes == 0L) throw IOException("PDF download failed: empty response body")
+                }
             }
+
+            return editor.commitAndOpenSnapshot() ?: throw IOException("Unable to commit cache editor for $url")
+        } catch (t: Throwable) {
+            runCatching { editor.abort() }
+            throw t
+        }
+    }
+
+    /**
+     * Fetches like [fetchSnapshot], runs [block] on the snapshot, and closes it, all on the IO
+     * dispatcher. Prefer this to `fetchSnapshot(...).use { }` from a main-thread caller: there the
+     * close would run on main, and closing takes the same global DiskLruCache lock as opening.
+     * The snapshot is created by the last non-suspending step of the fetch and handed straight
+     * to `use`, inside one `withContext`, so a cancellation cannot land between the two and leak
+     * it open (which returning through [fetchSnapshot]'s own `withContext` could).
+     */
+    suspend fun <T> useSnapshot(
+        url: String,
+        diskCache: () -> DiskCache,
+        okHttpClient: (String) -> OkHttpClient,
+        block: (DiskCache.Snapshot) -> T,
+    ): T =
+        withContext(Dispatchers.IO) {
+            openOrDownload(url, diskCache, okHttpClient).use(block)
         }
 }

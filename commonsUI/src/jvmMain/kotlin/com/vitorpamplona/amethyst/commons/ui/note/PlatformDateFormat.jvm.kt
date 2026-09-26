@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -58,17 +57,31 @@ actual class DateSkeletonFormatter actual constructor(
     }
 }
 
-@Composable
-actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String =
-    remember {
-        val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
-        val format: (Long) -> String = { epochMillis -> formatter.format(Instant.ofEpochMilli(epochMillis)) }
-        format
-    }
+private class CachedTimeOfDay(
+    val locale: Locale,
+    val zone: ZoneId,
+    val formatter: DateTimeFormatter,
+)
 
-actual fun relativeTimeSpanShort(
+@Volatile private var cachedTimeOfDay: CachedTimeOfDay? = null
+
+/** One formatter for every item, rebuilt only when the locale or zone changes. */
+private val timeOfDay: (Long) -> String = { epochMillis ->
+    val locale = Locale.getDefault()
+    val zone = ZoneId.systemDefault()
+    val formatter =
+        cachedTimeOfDay?.takeIf { it.locale == locale && it.zone == zone }?.formatter
+            ?: DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zone).also {
+                cachedTimeOfDay = CachedTimeOfDay(locale, zone, it)
+            }
+    formatter.format(Instant.ofEpochMilli(epochMillis))
+}
+
+@Composable
+actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String = timeOfDay
+
+actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,
     nowMillis: Long,
     nowLabel: String,
-    fallback: () -> String,
-): String = fallback()
+): String? = null

@@ -25,7 +25,8 @@ import androidx.compose.runtime.Composable
 /**
  * Formats instants with a Unicode LDML date skeleton ("yMMMd", "MMMd", "yMMM"), letting the
  * platform pick the default locale's field order ("MMM d, y" in en-US, "d MMM y" in en-GB).
- * Safe to call from any thread. Rebuilds itself when the default locale changes.
+ * Safe to call from any thread. Rebuilds itself when the default locale changes (the JVM actual
+ * also on a time-zone change; Android and iOS keep the zone they were built with).
  */
 expect class DateSkeletonFormatter(
     skeleton: String,
@@ -37,20 +38,19 @@ expect class DateSkeletonFormatter(
 expect fun calendarYearAndDay(epochMillis: Long): Int
 
 /**
- * A time-of-day formatter ("14:32" / "2:32 PM") that follows the platform's own 12/24-hour
- * preference, which on Android is a system setting rather than a locale property.
+ * A time-of-day formatter ("14:32" / "2:32 PM"). Android and iOS follow the system 12/24-hour
+ * setting; the JVM follows the locale. Identity-stable, so it can key a `remember`, and cheap to
+ * call for every item in a feed: platforms whose formatter is costly share one cached instance.
  */
 @Composable
 expect fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String
 
 /**
  * The platform's abbreviated relative span ("5 min. ago", "Yesterday"), [nowLabel] for an
- * instant that rounds to now or lies ahead, and [fallback] where the platform has no such
- * formatter.
+ * instant that rounds to now or lies ahead, or null where the platform has no such formatter.
  */
-expect fun relativeTimeSpanShort(
+expect fun relativeTimeSpanShortOrNull(
     epochMillis: Long,
     nowMillis: Long,
     nowLabel: String,
-    fallback: () -> String,
-): String
+): String?

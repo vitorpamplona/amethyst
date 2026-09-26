@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarUnitDay
 import platform.Foundation.NSCalendarUnitYear
@@ -30,10 +29,8 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSLocale
-import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
-import platform.Foundation.defaultTimeZone
 import platform.Foundation.localeIdentifier
 import kotlin.concurrent.Volatile
 
@@ -41,7 +38,9 @@ private fun dateOf(epochMillis: Long) = NSDate.dateWithTimeIntervalSince1970(epo
 
 /**
  * NSDateFormatter is thread-safe for formatting on iOS 7+; the template picks the locale's order.
- * Rebuilt when the current locale or time zone changes, like the other actuals.
+ * Rebuilt when the current locale changes, as on Android. The time zone is the one in effect when
+ * it was built: iOS caches the system zone until `NSTimeZone.resetSystemTimeZone()`, so keying
+ * on it would cost two lookups per call and still not notice a change.
  */
 actual class DateSkeletonFormatter actual constructor(
     private val skeleton: String,
@@ -55,7 +54,7 @@ actual class DateSkeletonFormatter actual constructor(
 
     actual fun format(epochMillis: Long): String {
         val locale = NSLocale.currentLocale
-        val key = locale.localeIdentifier + "|" + NSTimeZone.defaultTimeZone.name
+        val key = locale.localeIdentifier
         val formatter =
             cached?.takeIf { it.key == key }?.formatter
                 ?: NSDateFormatter()
@@ -75,21 +74,22 @@ actual fun calendarYearAndDay(epochMillis: Long): Int {
     return year * 1000 + day
 }
 
-@Composable
-actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String =
-    remember {
-        val formatter =
-            NSDateFormatter().apply {
-                dateStyle = NSDateFormatterNoStyle
-                timeStyle = NSDateFormatterShortStyle
-            }
-        val format: (Long) -> String = { epochMillis -> formatter.stringFromDate(dateOf(epochMillis)) }
-        format
+// NSDateFormatter is costly to build, so every feed item shares this one instead of each
+// composing its own. It follows the system 12/24-hour setting (the short time style does).
+private val timeOfDayFormatter by lazy {
+    NSDateFormatter().apply {
+        dateStyle = NSDateFormatterNoStyle
+        timeStyle = NSDateFormatterShortStyle
     }
+}
 
-actual fun relativeTimeSpanShort(
+private val timeOfDay: (Long) -> String = { epochMillis -> timeOfDayFormatter.stringFromDate(dateOf(epochMillis)) }
+
+@Composable
+actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String = timeOfDay
+
+actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,
     nowMillis: Long,
     nowLabel: String,
-    fallback: () -> String,
-): String = fallback()
+): String? = null

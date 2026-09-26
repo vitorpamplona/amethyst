@@ -60,12 +60,11 @@ actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String {
     return remember(context) { { epochMillis -> DateFormat.getTimeFormat(context).format(Date(epochMillis)) } }
 }
 
-actual fun relativeTimeSpanShort(
+actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,
     nowMillis: Long,
     nowLabel: String,
-    fallback: () -> String,
-): String {
+): String? {
     val humanReadable =
         DateUtils
             .getRelativeTimeSpanString(

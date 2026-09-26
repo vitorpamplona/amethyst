@@ -1439,7 +1439,7 @@ functional bugs. The follow-ups:
 
 | What | To | The blocker, and how it went |
 |---|---|---|
-| `ScreenLayout` tier logic, `CappedScreenContent`, the pane widths | `commonsUI/…/ui/layouts/ScreenLayout.kt` | `material3-window-size-class` (app-only): its width breakpoints (Medium ≥ 600dp, Expanded ≥ 840dp) are inlined, and `ScreenLayoutTest`'s 17 cases pass against them. `LocalConfiguration` stays in the app, which asks the shared `rememberScreenLayoutSpec(widthDp, heightDp)`, so Desktop can supply its own window size. |
+| `ScreenLayout` tier logic, `CappedScreenContent`, the pane widths | `commonsUI/…/ui/layouts/ScreenLayout.kt` | `material3-window-size-class` (app-only): its width breakpoints (Medium ≥ 600dp, Expanded ≥ 840dp) are inlined, and `ScreenLayoutTest` (18 cases, now in commonsUI jvmTest) passes against them. `LocalConfiguration` stays in the app, which asks the shared `rememberScreenLayoutSpec(widthDp, heightDp)`, so Desktop can supply its own window size. |
 | `animatedViewerChromeInset`, `rememberViewerControlsVisibility` | `commonsUI/…/ui/components/ViewerChrome.kt` | They sat in a file full of Android window code. Only `ImmersiveSystemBarsEffect` (Window/insets controller) stays. |
 | `SlidingCarousel` | `commonsUI/…/ui/components` | needed the inset above |
 | `AudioWaveformReadOnly` | `commonsUI/…/ui/components` | two enums from the Android-only audiowaveform library, now local enums with the same values |
@@ -1472,12 +1472,13 @@ Desktop still has its own `ToggleableTimeAgoText` and the older `commons/…/uti
 
 A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after this round:
 
-- **80 files have no blocker left.** Many are headless and belong in `commons`, not `commonsUI`:
-  - filter assemblers and `*LastRead`;
-  - `NewMessageTagger`, `SplitConversor`, `PubKeyFormatter`, `SettingsCatalog`;
-  - the Tor status/dialog VM;
-  - `ChatBubbleLayout` + `ChatGroupPosition` + `JumboEmoji` + `NewDateOrSubjectDivisor` + `AutoScrollToNewest`.
-  - The chat bubble set is the next obvious batch: Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of it.
+- **80 files have no blocker left.**
+  - Many are headless and belong in `commons`, not `commonsUI`: the filter assemblers and
+    `*LastRead`, `NewMessageTagger`, `SplitConversor`, `PubKeyFormatter`, `SettingsCatalog`,
+    and the Tor status/dialog VM.
+  - The Compose ones include the chat bubble set (`ChatBubbleLayout`, `ChatGroupPosition`,
+    `JumboEmoji`, `NewDateOrSubjectDivisor`, `AutoScrollToNewest`). It moved to `commonsUI`
+    in the follow-up below. Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of it.
 - **`AccountViewModel` is the wall:**
   - 892 files touch it, and 310 touch nothing else app-side. Yet swapping it for an interface frees only 76 files by itself, because the rest call hub composables that are blocked themselves.
   - The ui files use 210 distinct members of it. The note renderers use 28.
@@ -1515,12 +1516,40 @@ A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after th
   - `PdfFetcher` takes the disk cache as a provider, read on the IO dispatcher, so a PDF
     card composing on a cold start doesn't build the app's lazy cache on the main thread.
   - The two DM lists resolve `TimeAgoLabels` once per list instead of once per row.
-  - The iOS `DateSkeletonFormatter` rebuilds on a locale or time-zone change, like the
-    other actuals.
+  - The iOS `DateSkeletonFormatter` rebuilds on a locale change, as Android's does. (The
+    JVM one also keys on the time zone; iOS caches its system zone until reset, so keying on
+    it there would cost lookups and still not notice.)
   - `ScreenLayoutTest` pins the inclusive 600dp boundary.
   - Two stale KDoc links and a same-package import are fixed.
   - The generated baseline profile has its stable-name entries repointed:
     `NowProviderKt`, and the five theme functions now in `AmethystThemeKt`. Its R8
     lambda entries were already stale before this round (it still lists
-    `MarkDownStyleOnDark` under `ThemeKt`), so **regenerate the profile** after these
-    moves.
+    `MarkDownStyleOnDark` under `ThemeKt`), and the new theme root
+    (`AmethystThemeKt;->AmethystMaterialTheme`, `isDarkTheme`) has no entries at all, so
+    **regenerate the profile** after these moves.
+
+### Second audit, and one Desktop decision
+
+- **Fixed:**
+  - `PdfPreviewCard` closed its cache snapshot on the main thread, after `withContext(IO)`
+    returned. That was older than this branch. Closing takes the same global DiskLruCache
+    lock as opening, so `PdfFetcher.useSnapshot` now fetches, runs the block and closes, all
+    in one IO block, leaving no suspension point for cancellation to leak through.
+  - The PDF viewer's `onDispose` now closes its handle on the app IO scope, under the
+    render mutex.
+  - JVM and iOS built a time-of-day formatter per feed item; they now share one cached
+    instance. `NSDateFormatter` is costly to build.
+  - `timeAgoShort` no longer allocates an unused fallback lambda per tick on Android.
+  - The iOS skeleton formatter keys on the locale only, like Android. iOS caches its system
+    zone until reset, so keying on the zone cost lookups and still never saw a change.
+  - New tests: `JumboEmojiTest` (counts, ZWJ/skin tone/flag/keycap sequences, bubble
+    shapes). `ScreenLayoutTest` moved to commonsUI jvmTest, beside the code it tests.
+- **Desktop needs `jdk.localedata` before it uses these formatters.**
+  - `desktopApp/build.gradle.kts` `nativeDistributions.modules(...)` doesn't include it,
+    so the packaged runtime carries only en/root CLDR data.
+  - `DateTimeFormatter.ofLocalizedPattern` then gives en-GB `Jan 5, 2024` and de-DE
+    `2024 Jan 5`, and the JDK tests (full runtime) can't see it.
+  - Desktop's existing `java.time` formatting (`DesktopScheduleAtPicker`) already has the
+    same gap.
+  - Adding the module costs about +28 MB to the unpacked runtime. That is a packaging
+    call, left for the Desktop phase.

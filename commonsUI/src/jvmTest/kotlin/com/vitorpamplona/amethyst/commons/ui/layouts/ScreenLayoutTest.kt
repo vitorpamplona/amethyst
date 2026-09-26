@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.layouts
+package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
-import com.vitorpamplona.amethyst.commons.ui.layouts.decideNavigationStyle
-import com.vitorpamplona.amethyst.commons.ui.layouts.hasRoomForNotificationPanel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
