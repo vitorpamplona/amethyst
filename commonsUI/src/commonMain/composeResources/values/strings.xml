@@ -5389,6 +5389,12 @@
     <string name="browser_pill_site_settings_none">Nothing allowed yet</string>
     <string name="browser_pill_access">What it can access</string>
     <string name="browser_pill_access_desc">Your keys never leave Amethyst</string>
+    <string name="browser_pill_access_keys_desc">Every sign, publish, upload or payment goes through your approval</string>
+    <string name="browser_pill_access_none">No special access</string>
+    <string name="browser_pill_access_none_desc">It runs sandboxed and can't act on your account</string>
+    <string name="browser_pill_access_manage">Manage permissions</string>
+    <string name="browser_pill_access_nsite">nSite · sandboxed</string>
+    <string name="browser_pill_access_napplet">nApplet · sandboxed</string>
     <string name="browser_pill_console">Console</string>
     <string name="browser_pill_security_https">Secure connection</string>
     <string name="browser_pill_security_http">Not secure</string>

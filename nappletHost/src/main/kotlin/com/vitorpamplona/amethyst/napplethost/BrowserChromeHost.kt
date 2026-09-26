@@ -47,6 +47,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserChromeTheme
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill
@@ -101,6 +102,15 @@ class BrowserChromeHost(
         fun onPanelsChanged() {}
     }
 
+    /** What a sandboxed app was launched with, for [showAccessInfo]. */
+    class AccessInfo(
+        val title: String,
+        val isWebsite: Boolean,
+        val capabilities: List<String>,
+        val torOn: Boolean?,
+        val onManagePermissions: (() -> Unit)?,
+    )
+
     /** A page's JS dialog waiting for an answer. */
     class PendingDialog(
         val type: PageDialogType,
@@ -137,6 +147,7 @@ class BrowserChromeHost(
     var dialog by mutableStateOf<PendingDialog?>(null)
     var permissionPrompt by mutableStateOf<PendingPermission?>(null)
     private var pageInfoOpen by mutableStateOf(false)
+    private var accessInfo by mutableStateOf<AccessInfo?>(null)
     private var certificate by mutableStateOf<CertificateInfo?>(null)
 
     private var topView: ComposeView? = null
@@ -201,6 +212,11 @@ class BrowserChromeHost(
     fun appendConsole(line: ConsoleLine) {
         if (console.size >= MAX_CONSOLE_LINES) console.removeAt(0)
         console.add(line)
+    }
+
+    /** "What it can access" for a sandboxed nSite or nApplet. */
+    fun showAccessInfo(info: AccessInfo) {
+        accessInfo = info
     }
 
     /** Page info for the page on screen, with its certificate when it has one. */
@@ -327,6 +343,27 @@ class BrowserChromeHost(
                         pending.answer(false, true)
                     },
                 )
+            }
+        }
+        accessInfo?.let { info ->
+            Dialog(onDismissRequest = { accessInfo = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    AccessInfoSheet(
+                        title = info.title,
+                        isWebsite = info.isWebsite,
+                        capabilities = info.capabilities,
+                        torOn = info.torOn,
+                        onManagePermissions =
+                            info.onManagePermissions?.let { manage ->
+                                {
+                                    accessInfo = null
+                                    manage()
+                                }
+                            },
+                        onDone = { accessInfo = null },
+                        modifier = Modifier.widthIn(max = 560.dp),
+                    )
+                }
             }
         }
         if (pageInfoOpen) {

@@ -33,3 +33,13 @@ interface ConsoleBridge {
 
     fun clearConsoleLogs()
 }
+
+/** Maps a provider's console level (WebView's `ConsoleMessage.MessageLevel` name) onto the chrome's. */
+fun consoleLevelOf(level: String): ConsoleLine.Level =
+    when (level) {
+        "ERROR" -> ConsoleLine.Level.ERROR
+        "WARNING" -> ConsoleLine.Level.WARNING
+        "DEBUG" -> ConsoleLine.Level.DEBUG
+        "TIP" -> ConsoleLine.Level.INFO
+        else -> ConsoleLine.Level.LOG
+    }

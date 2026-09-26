@@ -249,8 +249,13 @@ is gone.
   `EmbeddedPageDialogs`, `ConsoleLogEntry` and `BrowserWebTools.pageInfo`, plus the Android strings only
   they used.
 
-Still open:
-- The sandboxed apps' "What it can access" is still a platform `AlertDialog`. It lists launch
-  capabilities, not browser state.
-- The embedded nsite/napplet tab has no find or text-size plumbing yet (`hasFind` / `hasTextSize` are
-  off there).
+**Sandboxed apps, embedded and full screen alike:**
+- An embedded nSite is labelled as an nSite, not "Sandboxed app", and gets the Tor row. Switching the
+  route saves it in `NappletNetworkRegistry` and rebuilds the session, as the full-screen host relaunches.
+- "What it can access" is `AccessInfoSheet`: the launch capabilities, the keys-stay-in-Amethyst row, the
+  route (nSites), and Manage permissions. It replaces both the platform `AlertDialog` and the embedded
+  tab's `AccessDialog`.
+- The embedded tab has find, text size and the console. `NappletEmbedContract` gained `MSG_FIND`,
+  `MSG_FIND_NEXT`, `MSG_FIND_RESULT`, `MSG_SET_TEXT_ZOOM` and `MSG_CONSOLE_LOG`, which
+  `NappletHostService` serves the same way `NappletBrowserService` does. Load and HTTP errors show up as
+  console errors, as they do full screen.

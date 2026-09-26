@@ -238,3 +238,20 @@ fun PageInfoPreview() {
         }
     }
 }
+
+@Preview
+@Composable
+fun AccessInfoPreview() {
+    PreviewFrame {
+        Box(Modifier.padding(16.dp).width(380.dp)) {
+            AccessInfoSheet(
+                title = "Habla",
+                isWebsite = true,
+                capabilities = listOf("Sign events as you", "Publish to your relays", "Upload files"),
+                torOn = true,
+                onManagePermissions = {},
+                onDone = {},
+            )
+        }
+    }
+}

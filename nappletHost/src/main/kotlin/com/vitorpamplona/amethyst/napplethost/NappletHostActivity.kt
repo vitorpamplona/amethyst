@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.napplethost
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -213,9 +212,9 @@ class NappletHostActivity : ComponentActivity() {
     private val backCallback =
         object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (chrome?.handleBack() == true) {
-                    Unit
-                } else if (this@NappletHostActivity::webView.isInitialized && !webViewGone && webView.canGoBack()) {
+                // The chrome first (open pill, find), then the applet's own history.
+                if (chrome?.handleBack() == true) return
+                if (this@NappletHostActivity::webView.isInitialized && !webViewGone && webView.canGoBack()) {
                     webView.goBack()
                 } else {
                     isEnabled = false
@@ -1047,18 +1046,15 @@ class NappletHostActivity : ComponentActivity() {
 
     /** Lists, in plain language, exactly which capabilities this napplet was launched with. */
     private fun showAccessDialog() {
-        val body =
-            if (capabilityLabels.isEmpty()) {
-                getString(R.string.napplet_chrome_static_site)
-            } else {
-                capabilityLabels.joinToString("\n") { "•  $it" } + "\n\n" + getString(R.string.napplet_chrome_keys_safe)
-            }
-        AlertDialog
-            .Builder(this)
-            .setTitle(getString(R.string.napplet_chrome_access_title, barTitle()))
-            .setMessage(body)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        chrome?.showAccessInfo(
+            BrowserChromeHost.AccessInfo(
+                title = barTitle(),
+                isWebsite = profile == HostProfile.WEBSITE,
+                capabilities = capabilityLabels,
+                torOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
+                onManagePermissions = if (brokerMessenger != null) ::openPermissions else null,
+            ),
+        )
     }
 
     /**

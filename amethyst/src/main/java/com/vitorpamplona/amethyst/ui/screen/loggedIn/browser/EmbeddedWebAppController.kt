@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.consoleLevelOf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
 import java.util.concurrent.atomic.AtomicLong
 
@@ -525,13 +526,3 @@ class EmbeddedWebAppController(
         private const val MAX_CONSOLE_LOGS = 200
     }
 }
-
-/** Maps the provider's console level (WebView's `ConsoleMessage.MessageLevel` name) onto the chrome's. */
-private fun consoleLevelOf(level: String): ConsoleLine.Level =
-    when (level) {
-        "ERROR" -> ConsoleLine.Level.ERROR
-        "WARNING" -> ConsoleLine.Level.WARNING
-        "DEBUG" -> ConsoleLine.Level.DEBUG
-        "TIP" -> ConsoleLine.Level.INFO
-        else -> ConsoleLine.Level.LOG
-    }

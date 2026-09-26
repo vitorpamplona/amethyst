@@ -89,6 +89,8 @@ class BrowserPillRenderTest {
 
     @Test fun pageInfo() = render("11-page-info", 820, 1250) { PageInfoPreview() }
 
+    @Test fun accessInfo() = render("12-access-info", 820, 610) { AccessInfoPreview() }
+
     private companion object {
         const val SETTLE_FRAMES = 12
         const val FRAME_MILLIS = 60L
