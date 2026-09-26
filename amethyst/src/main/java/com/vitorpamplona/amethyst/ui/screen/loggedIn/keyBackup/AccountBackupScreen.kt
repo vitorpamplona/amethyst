@@ -29,6 +29,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,16 +46,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -74,6 +77,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -91,9 +95,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypt
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypt_again
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_body
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_password
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_password_mismatch
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_repeat_password
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_saved_hint
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypted_title
+import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypting
 import com.vitorpamplona.amethyst.commons.resources.account_backup_headline
 import com.vitorpamplona.amethyst.commons.resources.account_backup_intro
 import com.vitorpamplona.amethyst.commons.resources.account_backup_qr_code
@@ -374,108 +384,221 @@ private fun EncryptedKeyCard(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
+    var expanded by remember { mutableStateOf(false) }
     var password by remember { mutableStateOf("") }
+    var repeated by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
-    var qrCode by remember { mutableStateOf<String?>(null) }
+    var encrypted by remember { mutableStateOf<String?>(null) }
+    var showQr by remember { mutableStateOf(false) }
 
-    // NIP-49 runs scrypt, which takes a noticeable moment: keep it off the main thread.
-    fun encryptThen(onEncrypted: suspend (String) -> Unit) {
-        val privKey = accountViewModel.account.settings.keyPair.privKey ?: return
-        val currentPassword = password
-        working = true
-        scope.launch {
-            val encrypted =
-                withContext(Dispatchers.Default) {
-                    runCatching { Nip49().encrypt(privKey.toHexKey(), currentPassword) }.getOrNull()
+    // Never leave the encrypted key or the typed password around while in the background.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        encrypted = null
+        showQr = false
+    }
+
+    // A typo in the password makes the backup permanently useless, so it must be typed twice.
+    val mismatch = repeated.isNotEmpty() && repeated != password
+    val canEncrypt = password.isNotBlank() && repeated == password && !working
+
+    fun encrypt() {
+        if (!canEncrypt) return
+        gate.withAccess {
+            val privKey = accountViewModel.account.settings.keyPair.privKey ?: return@withAccess
+            val currentPassword = password
+            working = true
+            // NIP-49 runs scrypt, which takes a noticeable moment: keep it off the main thread.
+            scope.launch {
+                val result =
+                    withContext(Dispatchers.Default) {
+                        runCatching { Nip49().encrypt(privKey.toHexKey(), currentPassword) }.getOrNull()
+                    }
+                working = false
+                if (result != null) {
+                    encrypted = result
+                } else {
+                    Toast.makeText(context, loadStringRes(Res.string.failed_to_encrypt_key), Toast.LENGTH_SHORT).show()
                 }
-            working = false
-            if (encrypted != null) {
-                onEncrypted(encrypted)
-            } else {
-                Toast.makeText(context, loadStringRes(Res.string.failed_to_encrypt_key), Toast.LENGTH_SHORT).show()
             }
         }
     }
-
-    val canEncrypt = password.isNotBlank() && !working
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(Modifier.padding(16.dp)) {
-            CardTitle(MaterialSymbols.Lock, stringRes(Res.string.account_backup_encrypted_title))
-
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                text = stringRes(Res.string.account_backup_encrypted_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
+        Column {
+            Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .semantics { contentType = ContentType.NewPassword },
-                value = password,
-                onValueChange = { password = it },
-                singleLine = true,
-                label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
-                keyboardOptions =
-                    KeyboardOptions(
-                        autoCorrectEnabled = false,
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done,
-                    ),
-                trailingIcon = {
-                    IconButton(onClick = { showPassword = !showPassword }) {
-                        Icon(
-                            symbol = if (showPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                            contentDescription = stringRes(if (showPassword) Res.string.hide_password else Res.string.show_password),
+                        .clickable { expanded = !expanded }
+                        .padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = if (expanded) 8.dp else 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    CardTitle(MaterialSymbols.Lock, stringRes(Res.string.account_backup_encrypted_title))
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringRes(Res.string.account_backup_encrypted_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 28.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    symbol = if (expanded) MaterialSymbols.KeyboardArrowUp else MaterialSymbols.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                    val encryptedValue = encrypted
+                    if (encryptedValue == null) {
+                        val visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation()
+
+                        OutlinedTextField(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .semantics { contentType = ContentType.NewPassword },
+                            value = password,
+                            onValueChange = { password = it },
+                            singleLine = true,
+                            label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    autoCorrectEnabled = false,
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Next,
+                                ),
+                            trailingIcon = {
+                                IconButton(onClick = { showPassword = !showPassword }) {
+                                    Icon(
+                                        symbol = if (showPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                                        contentDescription = stringRes(if (showPassword) Res.string.hide_password else Res.string.show_password),
+                                    )
+                                }
+                            },
+                            visualTransformation = visualTransformation,
                         )
-                    }
-                },
-                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            )
 
-            Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    enabled = canEncrypt,
-                    onClick = {
-                        gate.withAccess {
-                            encryptThen { encrypted ->
-                                clipboard.setText(encrypted)
-                                Toast.makeText(context, loadStringRes(Res.string.secret_key_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                        OutlinedTextField(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .semantics { contentType = ContentType.NewPassword },
+                            value = repeated,
+                            onValueChange = { repeated = it },
+                            singleLine = true,
+                            label = { Text(stringRes(Res.string.account_backup_encrypted_repeat_password)) },
+                            isError = mismatch,
+                            supportingText =
+                                if (mismatch) {
+                                    { Text(stringRes(Res.string.account_backup_encrypted_password_mismatch)) }
+                                } else {
+                                    null
+                                },
+                            trailingIcon =
+                                if (canEncrypt) {
+                                    { Icon(MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                } else {
+                                    null
+                                },
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    autoCorrectEnabled = false,
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            keyboardActions = KeyboardActions(onDone = { encrypt() }),
+                            visualTransformation = visualTransformation,
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        FilledTonalButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = canEncrypt,
+                            onClick = ::encrypt,
+                        ) {
+                            if (working) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringRes(Res.string.account_backup_encrypting))
+                            } else {
+                                ButtonContent(MaterialSymbols.Lock, stringRes(Res.string.account_backup_encrypt))
                             }
                         }
-                    },
-                ) {
-                    ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    enabled = canEncrypt,
-                    onClick = { gate.withAccess { encryptThen { qrCode = it } } },
-                ) {
-                    ButtonContent(MaterialSymbols.QrCode2, stringRes(Res.string.account_backup_qr_code))
+                    } else {
+                        Text(
+                            text = encryptedValue,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(12.dp),
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = stringRes(Res.string.account_backup_encrypted_saved_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilledTonalButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    scope.launch {
+                                        clipboard.setText(encryptedValue)
+                                        Toast.makeText(context, loadStringRes(Res.string.secret_key_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            ) {
+                                ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
+                            }
+                            FilledTonalButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { showQr = true },
+                            ) {
+                                ButtonContent(MaterialSymbols.QrCode2, stringRes(Res.string.account_backup_qr_code))
+                            }
+                        }
+
+                        TextButton(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            onClick = {
+                                encrypted = null
+                                password = ""
+                                repeated = ""
+                            },
+                        ) {
+                            Text(stringRes(Res.string.account_backup_encrypt_again))
+                        }
+                    }
                 }
             }
         }
     }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { qrCode = null }
-
-    qrCode?.let {
-        ShowKeyQRDialog(it, onClose = { qrCode = null })
+    encrypted?.let {
+        if (showQr) {
+            ShowKeyQRDialog(it, onClose = { showQr = false })
+        }
     }
 }
 

@@ -666,7 +666,13 @@
     <string name="account_backup_qr_code">QR code</string>
     <string name="account_backup_encrypted_title">Password-protected copy</string>
     <string name="account_backup_encrypted_password">Password</string>
-    <string name="account_backup_encrypted_body">Locks your key with a password into an ncryptsec1… that only works together with that password. Forget the password and this copy is useless.</string>
+    <string name="account_backup_encrypted_body">An ncryptsec1… that only works with your password.</string>
+    <string name="account_backup_encrypted_repeat_password">Repeat password</string>
+    <string name="account_backup_encrypted_password_mismatch">Passwords don't match</string>
+    <string name="account_backup_encrypt">Encrypt key</string>
+    <string name="account_backup_encrypting">Encrypting…</string>
+    <string name="account_backup_encrypted_saved_hint">Safe to keep in a password manager or cloud notes: it can't be opened without the password, and a forgotten password can't be recovered.</string>
+    <string name="account_backup_encrypt_again">Use a different password</string>
     <string name="account_backup_tip_storage">Keep the paper somewhere only you can find it, or save the key in a password manager.</string>
     <string name="account_backup_tip_trust">Never paste your key into websites or apps you don't trust.</string>
     <string name="account_backup_tip_developers">Amethyst developers will never ask for your key.</string>
