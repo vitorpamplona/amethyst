@@ -185,6 +185,13 @@ class NappletProtocolJsonTest {
     }
 
     @Test
+    fun uploadAcceptsUnpaddedBase64() {
+        // java.util.Base64 decoded "SGk" (no '=') as "Hi"; the commonMain decoder must too.
+        val up = NappletProtocolJson.decodeRequest("""{"type":"upload.upload","request":{"dataBase64":"SGk"}}""") as NappletRequest.UploadBlob
+        assertEquals("Hi", up.bytes.decodeToString())
+    }
+
+    @Test
     fun unknownTypeDecodesToNull() {
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","id":"1"}"""))
         // keys.signEvent is not a real domain method (keys = keyboard actions, not signing).

@@ -41,10 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.ui.CoordinatorHealthRow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -52,6 +50,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_count
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_down_note
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_manage
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_start
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -106,14 +112,14 @@ fun CordnGroupListScreen(
                 IconButton(onClick = { nav.nav(Route.CordnCoordinators) }) {
                     Icon(
                         symbol = MaterialSymbols.Dns,
-                        contentDescription = stringRes(R.string.cordn_groups_manage),
+                        contentDescription = stringRes(Res.string.cordn_groups_manage),
                         modifier = Modifier.size(22.dp),
                     )
                 }
                 IconButton(onClick = { nav.nav(Route.CordnCreateGroup) }) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.cordn_groups_start),
+                        contentDescription = stringRes(Res.string.cordn_groups_start),
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -122,8 +128,8 @@ fun CordnGroupListScreen(
     ) { padding ->
         if (runtime == null) {
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -148,8 +154,8 @@ fun CordnGroupListScreen(
 
         if (sections.isEmpty()) {
             EmptyState(
-                title = stringRes(R.string.cordn_groups_none),
-                description = stringRes(R.string.cordn_groups_none_detail),
+                title = stringRes(Res.string.cordn_groups_none),
+                description = stringRes(Res.string.cordn_groups_none_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -230,7 +236,7 @@ private fun CoordinatorSection(
                         },
                 )
                 Text(
-                    text = pluralStringRes(LocalContext.current, R.plurals.cordn_groups_count, groupCount, groupCount),
+                    text = pluralStringRes(Res.plurals.cordn_groups_count, groupCount, groupCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -248,7 +254,7 @@ private fun CoordinatorSection(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = stringRes(R.string.cordn_groups_down_note),
+                    text = stringRes(Res.string.cordn_groups_down_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

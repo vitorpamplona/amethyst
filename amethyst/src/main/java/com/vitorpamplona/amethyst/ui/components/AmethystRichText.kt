@@ -52,6 +52,12 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
+import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions

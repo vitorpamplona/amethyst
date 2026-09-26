@@ -18,31 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.layouts.listItem
+package com.vitorpamplona.amethyst.commons.ui.layouts.listItem
 
-import androidx.annotation.VisibleForTesting
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
@@ -55,116 +46,19 @@ import androidx.compose.ui.layout.MultiContentMeasurePolicy
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.profile_banner
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
-import com.vitorpamplona.amethyst.ui.layouts.listItem.ListTokens.ListItemContainerElevation
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.NewItemsBubble
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.ListTokens.ListItemContainerElevation
+import kotlin.jvm.JvmInline
 import kotlin.math.max
 
 /**
  * This is a copy of Material3's ListItemLayout.kt file, with the only change being the padding change from 16.dp to 10.dp
  */
-
-private const val PREVIEW_AUTHOR = "This is my author"
-private const val PREVIEW_MESSAGE = "This is a message from this person"
-
-@Composable
-@Preview
-fun ChannelNamePreview() {
-    ThemeComparisonColumn {
-        Column {
-            ChatHeaderLayout(
-                channelPicture = {
-                    Image(
-                        painter = painterRes(R.drawable.github, 1),
-                        contentDescription = stringRes(id = Res.string.profile_banner),
-                        contentScale = ContentScale.FillWidth,
-                    )
-                },
-                firstRow = {
-                    Text(PREVIEW_AUTHOR, Modifier.weight(1f))
-                    TimeAgo(TimeUtils.now())
-                },
-                secondRow = {
-                    Text(PREVIEW_MESSAGE, Modifier.weight(1f))
-                    NewItemsBubble()
-                },
-                onClick = {},
-            )
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            SlimListItem(
-                headlineContent = {
-                    Row(verticalAlignment = CenterVertically) {
-                        Text(PREVIEW_AUTHOR, Modifier.weight(1f))
-                        TimeAgo(TimeUtils.now())
-                    }
-                },
-                supportingContent = {
-                    Row(verticalAlignment = CenterVertically) {
-                        Text(PREVIEW_MESSAGE, Modifier.weight(1f))
-                        Spacer(modifier = Height4dpModifier)
-                        NewItemsBubble()
-                    }
-                },
-                leadingContent = {
-                    Image(
-                        painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = Res.string.profile_banner),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Size55Modifier,
-                    )
-                },
-            )
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            ListItem(
-                headlineContent = {
-                    Row(verticalAlignment = CenterVertically) {
-                        Text(PREVIEW_AUTHOR, Modifier.weight(1f))
-                        TimeAgo(TimeUtils.now())
-                    }
-                },
-                supportingContent = {
-                    Row(verticalAlignment = CenterVertically) {
-                        Text(PREVIEW_MESSAGE, Modifier.weight(1f))
-                        Spacer(modifier = Height4dpModifier)
-                        NewItemsBubble()
-                    }
-                },
-                leadingContent = {
-                    Image(
-                        painter = painterRes(R.drawable.github, 2),
-                        contentDescription = stringRes(id = Res.string.profile_banner),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Size55Modifier,
-                    )
-                },
-            )
-
-            HorizontalDivider(thickness = DividerThickness)
-        }
-    }
-}
 
 @Composable
 fun SlimListItem(
@@ -688,22 +582,22 @@ object ListTokens {
 
 // Container related defaults
 // TODO: Make sure these values stay up to date until replaced with tokens.
-@VisibleForTesting internal val ListItemVerticalPadding = 8.dp
+internal val ListItemVerticalPadding = 8.dp
 
-@VisibleForTesting internal val ListItemThreeLineVerticalPadding = 12.dp
+internal val ListItemThreeLineVerticalPadding = 12.dp
 
-@VisibleForTesting internal val ListItemStartPadding = 10.dp
+internal val ListItemStartPadding = 10.dp
 
-@VisibleForTesting internal val ListItemEndPadding = 10.dp
-
-// Icon related defaults.
-// TODO: Make sure these values stay up to date until replaced with tokens.
-@VisibleForTesting internal val LeadingContentEndPadding = Modifier.padding(end = 10.dp)
+internal val ListItemEndPadding = 10.dp
 
 // Icon related defaults.
 // TODO: Make sure these values stay up to date until replaced with tokens.
-@VisibleForTesting internal val SupportingContentTopPadding = Modifier.padding(top = 2.dp)
+internal val LeadingContentEndPadding = Modifier.padding(end = 10.dp)
+
+// Icon related defaults.
+// TODO: Make sure these values stay up to date until replaced with tokens.
+internal val SupportingContentTopPadding = Modifier.padding(top = 2.dp)
 
 // Trailing related defaults.
 // TODO: Make sure these values stay up to date until replaced with tokens.
-@VisibleForTesting internal val TrailingContentStartPadding = Modifier.padding(start = 10.dp)
+internal val TrailingContentStartPadding = Modifier.padding(start = 10.dp)

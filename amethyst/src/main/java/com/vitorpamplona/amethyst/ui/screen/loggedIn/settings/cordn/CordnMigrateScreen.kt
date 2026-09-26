@@ -47,9 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_cancel_desc
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_code_note
@@ -119,8 +120,8 @@ fun CordnMigrateScreen(
     ) { padding ->
         if (runtime == null) {
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold

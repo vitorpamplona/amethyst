@@ -82,7 +82,7 @@ fun runHeadlessPublish(): Int {
 }
 
 private fun headlessDrain(log: (String) -> Unit): Int {
-    val store = ScheduledPostStore(File(scheduledDir(), ScheduledPostStore.FILE_NAME))
+    val store = ScheduledPostStore(File(scheduledDir(), ScheduledPostStore.FILE_NAME).path)
 
     // Build a plain OkHttp client for websockets — no Tor, no proxy. Headless mode
     // reads no settings, so we cannot know Tor preferences; scheduled posts that

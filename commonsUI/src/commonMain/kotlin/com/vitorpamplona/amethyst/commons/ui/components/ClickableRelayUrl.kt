@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.MaterialTheme
@@ -29,43 +29,33 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import kotlinx.coroutines.launch
 
-/**
- * Renders a Concord invite link (`…/invite/<naddr>#<fragment>`) inline as a
- * tappable link that opens the redeem flow ([Route.ConcordInvite], which fetches +
- * unlocks the bundle and joins). Long-press copies the full link. Falls back to
- * plain text if the literal can't be parsed (detection should guarantee it does).
- */
 @Composable
-fun ClickableConcordInviteLink(
-    linkText: String,
+fun ClickableRelayUrl(
+    relayUrl: String,
     nav: INav,
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
-
-    val parsed = remember(linkText) { ConcordActions.parseInviteLink(linkText) }
-
-    if (parsed == null) {
-        Text(text = linkText)
-        return
-    }
-
     val clickableModifier =
-        remember(linkText) {
-            Modifier.combinedClickable(
-                onLongClick = { scope.launch { clipboardManager.setText(linkText) } },
-                onClick = { nav.nav(Route.ConcordInvite(linkText)) },
-            )
+        remember(relayUrl) {
+            Modifier
+                .combinedClickable(
+                    onLongClick = {
+                        scope.launch {
+                            clipboardManager.setText(relayUrl)
+                        }
+                    },
+                    onClick = { nav.nav(Route.RelayInfo(relayUrl)) },
+                )
         }
 
     Text(
-        text = linkText,
+        text = relayUrl,
         modifier = clickableModifier,
         color = MaterialTheme.colorScheme.primary,
         overflow = TextOverflow.MiddleEllipsis,

@@ -87,7 +87,32 @@ fun ClickableEmail(
         textDecoration = if (underline) TextDecoration.Underline else null,
         modifier =
             modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
-                runCatching { uriHandler.openUri("mailto:$display") }
+                // '%' is legal in an address but starts an escape in a mailto: URI (RFC 6068).
+                runCatching { uriHandler.openUri("mailto:" + display.replace("%", "%25")) }
+            },
+    )
+}
+
+/**
+ * A primary-colored clickable phone number that opens the platform dialer via
+ * [LocalUriHandler] (`tel:`). Strips a leading `tel:` from the display text.
+ * [underline] + hover cursor are the Desktop mouse-first affordances.
+ */
+@Composable
+fun ClickablePhone(
+    number: String,
+    modifier: Modifier = Modifier,
+    underline: Boolean = false,
+) {
+    val uriHandler = LocalUriHandler.current
+    val display = remember(number) { number.removePrefix("tel:") }
+    Text(
+        text = display,
+        color = MaterialTheme.colorScheme.primary,
+        textDecoration = if (underline) TextDecoration.Underline else null,
+        modifier =
+            modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
+                runCatching { uriHandler.openUri("tel:$display") }
             },
     )
 }

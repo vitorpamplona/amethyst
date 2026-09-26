@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
+import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav

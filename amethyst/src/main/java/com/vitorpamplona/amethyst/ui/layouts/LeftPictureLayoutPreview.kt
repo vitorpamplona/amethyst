@@ -21,18 +21,11 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -43,10 +36,10 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
+import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -103,48 +96,4 @@ fun LeftPictureLayoutPreviewCard() {
         },
         onBottomRow = { Text("This is my Moderator List") },
     )
-}
-
-@Composable
-fun LeftPictureLayout(
-    onImage: @Composable () -> Unit,
-    onTitleRow: @Composable RowScope.() -> Unit,
-    onDescription: @Composable () -> Unit,
-    onBottomRow: @Composable RowScope.() -> Unit,
-    imageFraction: Float = 0.25f,
-) {
-    Row(Modifier.aspectRatio(ratio = 1 / imageFraction)) {
-        Column(
-            modifier = Modifier.fillMaxWidth(imageFraction).aspectRatio(ratio = 1f),
-        ) {
-            onImage()
-        }
-
-        Spacer(modifier = DoubleHorzSpacer)
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                onTitleRow()
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                onDescription()
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                onBottomRow()
-            }
-        }
-    }
 }

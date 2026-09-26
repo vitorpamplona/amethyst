@@ -18,30 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.util
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import okio.Path
 
-@Composable
-fun ClickablePhone(phone: String) {
-    val context = LocalContext.current
-
-    ClickableTextPrimary(
-        text = phone,
-        onClick = { context.dial(phone) },
-    )
-}
-
-fun Context.dial(phone: String) {
-    try {
-        val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null))
-        startActivity(intent)
-    } catch (t: Throwable) {
-        // TODO: Handle potential exceptions
-    }
-}
+/**
+ * Restricts the file at [path] to owner read/write (`0600`), best-effort. Never throws.
+ *
+ * Silent where the filesystem has no POSIX permissions (Windows), where the user profile's
+ * ACLs apply instead; logs under [tag] when a POSIX filesystem refuses.
+ */
+expect fun restrictFileToOwner(
+    path: Path,
+    tag: String,
+)

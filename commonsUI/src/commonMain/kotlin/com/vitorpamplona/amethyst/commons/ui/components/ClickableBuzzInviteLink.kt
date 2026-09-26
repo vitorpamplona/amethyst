@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.MaterialTheme
@@ -32,30 +32,41 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import kotlinx.coroutines.launch
 
+/**
+ * Renders a Buzz workspace invite link (`https://<host>/invite/<token>`) inline as a tappable
+ * link that opens the in-app join flow ([Route.BuzzInvite], which confirms the workspace and
+ * hands off to the `window.nostr` browser for the policy + NIP-98 claim) instead of the
+ * external browser. Long-press copies the full link. Falls back to plain text if the literal
+ * can't be parsed (detection should guarantee it does).
+ */
 @Composable
-fun ClickableRelayUrl(
-    relayUrl: String,
+fun ClickableBuzzInviteLink(
+    linkText: String,
     nav: INav,
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
+
+    val parsed = remember(linkText) { BuzzInviteLink.parse(linkText) }
+
+    if (parsed == null) {
+        Text(text = linkText)
+        return
+    }
+
     val clickableModifier =
-        remember(relayUrl) {
-            Modifier
-                .combinedClickable(
-                    onLongClick = {
-                        scope.launch {
-                            clipboardManager.setText(relayUrl)
-                        }
-                    },
-                    onClick = { nav.nav(Route.RelayInfo(relayUrl)) },
-                )
+        remember(linkText) {
+            Modifier.combinedClickable(
+                onLongClick = { scope.launch { clipboardManager.setText(linkText) } },
+                onClick = { nav.nav(Route.BuzzInvite(linkText)) },
+            )
         }
 
     Text(
-        text = relayUrl,
+        text = linkText,
         modifier = clickableModifier,
         color = MaterialTheme.colorScheme.primary,
         overflow = TextOverflow.MiddleEllipsis,

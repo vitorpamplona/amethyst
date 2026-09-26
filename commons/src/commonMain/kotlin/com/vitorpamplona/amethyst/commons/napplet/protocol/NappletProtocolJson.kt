@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -37,7 +38,7 @@ import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 /**
  * Marshals the KMP-pure [NappletRequest] / [NappletResponse] types to and from the wire the
@@ -45,10 +46,10 @@ import java.util.Base64
  * (`@napplet/shim` / `@napplet/nap`): requests are `{ "type": "<domain>.<action>", "id", ...fields }`
  * and replies are `{ "type": "<domain>.<action>.result", "id", ...fields }`.
  *
- * Lives in `commons/jvmAndroid` (not in any single front end) because the wire contract is identical
+ * Lives in `commons/commonMain` (not in any single front end) because the wire contract is identical
  * across hosts: the Android `:napplet` WebView host and a future desktop host both marshal through
- * here. It depends only on `quartz` (Event/Filter), kotlinx.serialization, and `java.util.Base64`
- * (available on Android API 26+ and the JVM) — no platform-UI or process APIs.
+ * here. It depends only on `quartz` (Event/Filter), kotlinx.serialization and `kotlin.io.encoding`
+ * — no platform-UI or process APIs.
  *
  * This is the only place the boundary parses untrusted applet input, so it is deliberately
  * strict: an unrecognized `type` decodes to `null` (the broker denies it) and a malformed/short
@@ -57,6 +58,11 @@ import java.util.Base64
  */
 object NappletProtocolJson {
     private val json = Json { ignoreUnknownKeys = true }
+
+    // Accepts unpadded input, as java.util.Base64's decoder did before this moved to commonMain.
+    // One difference remains: non-zero pad bits ("SGl=") are rejected where Java ignored them.
+    // Browsers' btoa/readAsDataURL never produce those, so only a hand-crafted payload hits it.
+    private val lenientBase64 = Base64.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
 
     /** The `type` discriminant of a request envelope, used to build the matching `.result` type. */
     fun readType(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("type")
@@ -166,7 +172,7 @@ object NappletProtocolJson {
                     kind = t.kindOf(),
                     tags = decodeTags(t),
                     content = t.str("content") ?: "",
-                    createdAt = t["created_at"]?.jsonPrimitive?.long ?: (System.currentTimeMillis() / 1000),
+                    createdAt = t["created_at"]?.jsonPrimitive?.long ?: TimeUtils.now(),
                 )
             }
             // NIP-07 nip44.encrypt/decrypt: crypto only, no publish. `peer` is the counterparty
@@ -194,7 +200,7 @@ object NappletProtocolJson {
                 // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
                 val request = o.getValue("request").jsonObject
                 NappletRequest.UploadBlob(
-                    bytes = Base64.getDecoder().decode(request.req("dataBase64")),
+                    bytes = lenientBase64.decode(request.req("dataBase64")),
                     contentType = request.str("mimeType") ?: "application/octet-stream",
                     filename = request.str("filename"),
                 )
@@ -275,7 +281,7 @@ object NappletProtocolJson {
                 }
                 is NappletResponse.Bytes -> {
                     put("ok", true)
-                    put("bytes", Base64.getEncoder().encodeToString(response.bytes))
+                    put("bytes", Base64.encode(response.bytes))
                     put("mime", response.contentType)
                 }
                 is NappletResponse.ResourceInfo -> {
@@ -301,7 +307,7 @@ object NappletProtocolJson {
                                 put("url", item.url)
                                 put("ok", item.resource != null)
                                 item.resource?.let {
-                                    put("bytes", Base64.getEncoder().encodeToString(it.bytes))
+                                    put("bytes", Base64.encode(it.bytes))
                                     put("mime", it.contentType)
                                 }
                                 item.error?.let { put("error", it) }

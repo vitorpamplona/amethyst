@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.MaterialTheme
@@ -29,45 +29,39 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupInviteLink
 import kotlinx.coroutines.launch
 
 /**
- * Renders a NIP-29 group invite link (`<relay>'<groupId>[?code=<code>]`, the Wisp/0xchat
- * form) inline as a tappable link that opens the group. If the literal can't be parsed
- * (it always should, since detection produced it) it falls back to plain text.
+ * Renders a Concord invite link (`…/invite/<naddr>#<fragment>`) inline as a
+ * tappable link that opens the redeem flow ([Route.ConcordInvite], which fetches +
+ * unlocks the bundle and joins). Long-press copies the full link. Falls back to
+ * plain text if the literal can't be parsed (detection should guarantee it does).
  */
 @Composable
-fun ClickableRelayGroupLink(
+fun ClickableConcordInviteLink(
     linkText: String,
     nav: INav,
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    val invite = remember(linkText) { GroupInviteLink.parse(linkText) }
+    val parsed = remember(linkText) { ConcordActions.parseInviteLink(linkText) }
 
-    if (invite == null) {
+    if (parsed == null) {
         Text(text = linkText)
         return
     }
 
     val clickableModifier =
         remember(linkText) {
-            Modifier
-                .combinedClickable(
-                    onLongClick = {
-                        scope.launch {
-                            clipboardManager.setText(linkText)
-                        }
-                    },
-                    onClick = {
-                        nav.nav(Route.RelayGroup(invite.groupId, invite.relayUrl.url, inviteCode = invite.code))
-                    },
-                )
+            Modifier.combinedClickable(
+                onLongClick = { scope.launch { clipboardManager.setText(linkText) } },
+                onClick = { nav.nav(Route.ConcordInvite(linkText)) },
+            )
         }
 
     Text(

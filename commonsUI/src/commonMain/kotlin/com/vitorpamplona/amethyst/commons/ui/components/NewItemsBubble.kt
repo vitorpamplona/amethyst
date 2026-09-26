@@ -18,24 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
-import com.vitorpamplona.amethyst.commons.model.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.theme.newItemBubbleModifier
 
-@Stable
-sealed class ChannelFeedState {
-    object Loading : ChannelFeedState()
-
-    class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<Channel>>,
-    ) : ChannelFeedState()
-
-    object Empty : ChannelFeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : ChannelFeedState()
+/** The small dot that marks a row with unread items. */
+@Composable
+fun NewItemsBubble() {
+    Box(MaterialTheme.colorScheme.newItemBubbleModifier)
 }

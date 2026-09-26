@@ -48,13 +48,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -63,6 +61,53 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.backup_review_allowed_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_concord_body
+import com.vitorpamplona.amethyst.commons.resources.backup_review_demoted_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_dropped_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_encrypted_added
+import com.vitorpamplona.amethyst.commons.resources.backup_review_encrypted_changed
+import com.vitorpamplona.amethyst.commons.resources.backup_review_encrypted_cleared
+import com.vitorpamplona.amethyst.commons.resources.backup_review_feed
+import com.vitorpamplona.amethyst.commons.resources.backup_review_hashtags_you_follow
+import com.vitorpamplona.amethyst.commons.resources.backup_review_joined
+import com.vitorpamplona.amethyst.commons.resources.backup_review_kept
+import com.vitorpamplona.amethyst.commons.resources.backup_review_left
+import com.vitorpamplona.amethyst.commons.resources.backup_review_left_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_listed_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_moved_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new_count_caption
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_newly_blocked
+import com.vitorpamplona.amethyst.commons.resources.backup_review_no_longer_blocked
+import com.vitorpamplona.amethyst.commons.resources.backup_review_offer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_offers_gone
+import com.vitorpamplona.amethyst.commons.resources.backup_review_payment_targets_gone
+import com.vitorpamplona.amethyst.commons.resources.backup_review_payments_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_places_gone
+import com.vitorpamplona.amethyst.commons.resources.backup_review_places_you_follow
+import com.vitorpamplona.amethyst.commons.resources.backup_review_receiving_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_saved
+import com.vitorpamplona.amethyst.commons.resources.backup_review_searching_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_service
+import com.vitorpamplona.amethyst.commons.resources.backup_review_service_followers
+import com.vitorpamplona.amethyst.commons.resources.backup_review_service_rank
+import com.vitorpamplona.amethyst.commons.resources.backup_review_service_topics
+import com.vitorpamplona.amethyst.commons.resources.backup_review_services_changed
+import com.vitorpamplona.amethyst.commons.resources.backup_review_services_changed_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_still_blocked
+import com.vitorpamplona.amethyst.commons.resources.backup_review_storing_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_topics_gone
+import com.vitorpamplona.amethyst.commons.resources.backup_review_trust_warning
+import com.vitorpamplona.amethyst.commons.resources.backup_review_trusted_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_unblocked
+import com.vitorpamplona.amethyst.commons.resources.backup_review_unblocked_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_untrusted_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_wallet_body
+import com.vitorpamplona.amethyst.commons.resources.backup_type_communities
+import com.vitorpamplona.amethyst.commons.resources.backup_type_public_chats
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -118,6 +163,9 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEve
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * Per-event layouts for the account's other lists: each relay list framed by what it is
@@ -142,8 +190,8 @@ internal fun LazyListScope.listDiffItems(
         is TrustProviderListDiff -> trustProviderItems(diff, conflict, accountViewModel, nav)
         is PaymentTargetsDiff -> paymentTargetItems(diff, conflict)
         is Bolt12OfferListDiff -> offerItems(diff, conflict)
-        is CashuWalletDiff -> encryptedOnlyItems(MaterialSymbols.AccountBalanceWallet, diff.wallet, R.string.backup_review_wallet_body)
-        is ConcordCommunityListDiff -> encryptedOnlyItems(MaterialSymbols.Groups, diff.communities, R.string.backup_review_concord_body)
+        is CashuWalletDiff -> encryptedOnlyItems(MaterialSymbols.AccountBalanceWallet, diff.wallet, Res.string.backup_review_wallet_body)
+        is ConcordCommunityListDiff -> encryptedOnlyItems(MaterialSymbols.Groups, diff.communities, Res.string.backup_review_concord_body)
         else -> return false
     }
     return true
@@ -193,15 +241,15 @@ private fun fateColor(fate: ItemFate): Color {
 
 private fun <T> LazyListScope.countTiles(
     items: List<Pair<T, ItemFate>>,
-    removedCaption: Int,
-    addedCaption: Int,
+    removedCaption: StringResource,
+    addedCaption: StringResource,
 ) {
     item(key = "count-tiles", contentType = "tiles") {
         val tones = conflictTones()
         Row(Pad.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile(items.count { it.second == ItemFate.DROPPED }.toString(), stringRes(removedCaption), tones.removed, Modifier.weight(1f))
             StatTile(items.count { it.second == ItemFate.ADDED }.toString(), stringRes(addedCaption), tones.added, Modifier.weight(1f))
-            StatTile(items.count { it.second == ItemFate.KEPT || it.second == ItemFate.CHANGED }.toString(), stringRes(R.string.backup_review_kept), tones.kept, Modifier.weight(1f))
+            StatTile(items.count { it.second == ItemFate.KEPT || it.second == ItemFate.CHANGED }.toString(), stringRes(Res.string.backup_review_kept), tones.kept, Modifier.weight(1f))
         }
     }
 }
@@ -218,20 +266,20 @@ private fun LazyListScope.privateItemsCard(change: ContentChange) {
 /** How a relay list's rows are presented: its icon and what a kept or dropped relay is called. */
 private class RelayFraming(
     val icon: MaterialSymbol,
-    val keptTag: Int,
-    val droppedTag: Int = R.string.backup_review_dropped_tag,
+    val keptTag: StringResource,
+    val droppedTag: StringResource = Res.string.backup_review_dropped_tag,
 )
 
 private fun framingOf(type: BackupEventType): RelayFraming =
     when (type) {
-        BackupEventType.DM_RELAYS -> RelayFraming(MaterialSymbols.Mail, R.string.backup_review_receiving_tag)
-        BackupEventType.KEY_PACKAGE_RELAYS -> RelayFraming(MaterialSymbols.Key, R.string.backup_review_listed_tag)
-        BackupEventType.SEARCH_RELAYS -> RelayFraming(MaterialSymbols.Search, R.string.backup_review_searching_tag)
-        BackupEventType.INDEXER_RELAYS -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_listed_tag)
-        BackupEventType.RELAY_FEEDS -> RelayFraming(MaterialSymbols.CellTower, R.string.backup_review_listed_tag)
-        BackupEventType.PRIVATE_OUTBOX_RELAYS -> RelayFraming(MaterialSymbols.Lock, R.string.backup_review_storing_tag)
-        BackupEventType.TRUSTED_RELAYS -> RelayFraming(MaterialSymbols.Shield, R.string.backup_review_trusted_tag, R.string.backup_review_untrusted_tag)
-        else -> RelayFraming(MaterialSymbols.Dns, R.string.backup_review_listed_tag)
+        BackupEventType.DM_RELAYS -> RelayFraming(MaterialSymbols.Mail, Res.string.backup_review_receiving_tag)
+        BackupEventType.KEY_PACKAGE_RELAYS -> RelayFraming(MaterialSymbols.Key, Res.string.backup_review_listed_tag)
+        BackupEventType.SEARCH_RELAYS -> RelayFraming(MaterialSymbols.Search, Res.string.backup_review_searching_tag)
+        BackupEventType.INDEXER_RELAYS -> RelayFraming(MaterialSymbols.Dns, Res.string.backup_review_listed_tag)
+        BackupEventType.RELAY_FEEDS -> RelayFraming(MaterialSymbols.CellTower, Res.string.backup_review_listed_tag)
+        BackupEventType.PRIVATE_OUTBOX_RELAYS -> RelayFraming(MaterialSymbols.Lock, Res.string.backup_review_storing_tag)
+        BackupEventType.TRUSTED_RELAYS -> RelayFraming(MaterialSymbols.Shield, Res.string.backup_review_trusted_tag, Res.string.backup_review_untrusted_tag)
+        else -> RelayFraming(MaterialSymbols.Dns, Res.string.backup_review_listed_tag)
     }
 
 private fun savedRelaysOf(event: Event): List<NormalizedRelayUrl> =
@@ -277,8 +325,8 @@ private fun RelayFateRow(
         when (fate) {
             ItemFate.KEPT -> framing.keptTag
             ItemFate.DROPPED -> framing.droppedTag
-            ItemFate.ADDED -> R.string.backup_review_new_tag
-            ItemFate.CHANGED -> R.string.backup_review_demoted_tag
+            ItemFate.ADDED -> Res.string.backup_review_new_tag
+            ItemFate.CHANGED -> Res.string.backup_review_demoted_tag
         }
     Row(
         Pad
@@ -320,14 +368,14 @@ private fun LazyListScope.blockedRelayItems(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Icon(symbol = MaterialSymbols.LockOpen, contentDescription = null, tint = tones.changed, modifier = Modifier.size(44.dp))
                 Column {
-                    Text(stringRes(R.string.backup_review_unblocked, unblocked.size.toString()), fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = tones.changed)
-                    Text(stringRes(R.string.backup_review_unblocked_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                    Text(stringRes(Res.string.backup_review_unblocked, unblocked.size.toString()), fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold, color = tones.changed)
+                    Text(stringRes(Res.string.backup_review_unblocked_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }
         }
     }
     if (unblocked.isNotEmpty()) {
-        item(key = "unblocked-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_review_no_longer_blocked), Pad.padding(top = 18.dp)) }
+        item(key = "unblocked-caption", contentType = "caption") { SectionCaption(stringRes(Res.string.backup_review_no_longer_blocked), Pad.padding(top = 18.dp)) }
         items(unblocked, key = { "unblocked-" + it.url }, contentType = { "relay-row" }) { url ->
             val tones = conflictTones()
             Row(
@@ -346,12 +394,12 @@ private fun LazyListScope.blockedRelayItems(
                     Icon(symbol = MaterialSymbols.LockOpen, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
                 }
                 Text(url.url.removePrefix("wss://").removeSuffix("/"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                StatusTag(stringRes(R.string.backup_review_allowed_tag), tones.changed)
+                StatusTag(stringRes(Res.string.backup_review_allowed_tag), tones.changed)
             }
         }
     }
     if (newlyBlocked.isNotEmpty()) {
-        item(key = "newly-blocked-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_review_newly_blocked), Pad.padding(top = 18.dp)) }
+        item(key = "newly-blocked-caption", contentType = "caption") { SectionCaption(stringRes(Res.string.backup_review_newly_blocked), Pad.padding(top = 18.dp)) }
         items(newlyBlocked, key = { "newly-blocked-" + it.url }, contentType = { "relay-row" }) { url ->
             RelayFateRow(url, ItemFate.ADDED, framingOf(BackupEventType.BLOCKED_RELAYS), nav)
         }
@@ -359,7 +407,7 @@ private fun LazyListScope.blockedRelayItems(
     if (stillBlocked.isNotEmpty()) {
         item(key = "still-blocked", contentType = "chips") {
             Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionCaption(stringRes(R.string.backup_review_still_blocked))
+                SectionCaption(stringRes(Res.string.backup_review_still_blocked))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     stillBlocked.forEach { url ->
                         Row(
@@ -392,7 +440,7 @@ private fun <T> LazyListScope.spaceGrid(
     key: (T) -> String,
     content: @Composable (T, ItemFate, Modifier) -> Unit,
 ) {
-    countTiles(items, R.string.backup_review_left, R.string.backup_review_joined)
+    countTiles(items, Res.string.backup_review_left, Res.string.backup_review_joined)
     items(items.chunked(2), key = { keyPrefix + key(it.first().first) }, contentType = { "space-row" }) { row ->
         Row(Pad.padding(top = 10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { (item, fate) -> content(item, fate, Modifier.weight(1f)) }
@@ -436,9 +484,9 @@ private fun SpaceTile(
         }
         val tag =
             when (fate) {
-                ItemFate.DROPPED -> R.string.backup_review_left_tag to tones.removed
-                ItemFate.ADDED -> R.string.backup_review_new_tag to tones.added
-                ItemFate.CHANGED -> R.string.backup_review_moved_tag to tones.changed
+                ItemFate.DROPPED -> Res.string.backup_review_left_tag to tones.removed
+                ItemFate.ADDED -> Res.string.backup_review_new_tag to tones.added
+                ItemFate.CHANGED -> Res.string.backup_review_moved_tag to tones.changed
                 ItemFate.KEPT -> null
             }
         tag?.let { (res, color) -> StatusTag(stringRes(res), color, Modifier.align(Alignment.TopEnd)) }
@@ -459,7 +507,7 @@ private fun LazyListScope.publicChatItems(
             val current = state?.channel ?: channel
             SpaceTile(
                 name = current.toBestDisplayName(),
-                subtitle = stringRes(R.string.backup_type_public_chats),
+                subtitle = stringRes(Res.string.backup_type_public_chats),
                 robot = tag.eventId,
                 picture = channel.profilePicture(),
                 fate = fate,
@@ -525,7 +573,7 @@ private fun AddressableSpaceTile(
             }
         SpaceTile(
             name = name ?: address.dTag.ifBlank { address.toValue().toShortDisplay() },
-            subtitle = stringRes(if (address.kind == AppDefinitionEvent.KIND) R.string.backup_review_feed else R.string.backup_type_communities),
+            subtitle = stringRes(if (address.kind == AppDefinitionEvent.KIND) Res.string.backup_review_feed else Res.string.backup_type_communities),
             robot = address.toValue(),
             picture = picture,
             fate = fate,
@@ -543,7 +591,7 @@ private fun LazyListScope.ephemeralRoomItems(
 ) {
     val saved = (conflict.saved as? EphemeralChatListEvent)?.publicRooms().orEmpty()
     val rooms = fates(saved, diff.rooms) { it }
-    countTiles(rooms, R.string.backup_review_left, R.string.backup_review_joined)
+    countTiles(rooms, Res.string.backup_review_left, Res.string.backup_review_joined)
     items(rooms, key = { "room-" + it.first.toKey() }, contentType = { "room-row" }) { (room, fate) -> RoomRow(room, fate, nav) }
     privateItemsCard(diff.privateItems)
 }
@@ -582,8 +630,8 @@ private fun RoomRow(
             )
         }
         when (fate) {
-            ItemFate.DROPPED -> StatusTag(stringRes(R.string.backup_review_left_tag), color)
-            ItemFate.ADDED -> StatusTag(stringRes(R.string.backup_review_new_tag), color)
+            ItemFate.DROPPED -> StatusTag(stringRes(Res.string.backup_review_left_tag), color)
+            ItemFate.ADDED -> StatusTag(stringRes(Res.string.backup_review_new_tag), color)
             else -> {}
         }
     }
@@ -602,11 +650,11 @@ private fun LazyListScope.topicItems(
     nav: INav,
 ) {
     val topics = fates(saved, diff) { it.lowercase() }
-    countTiles(topics, if (isPlace) R.string.backup_review_places_gone else R.string.backup_review_topics_gone, R.string.backup_review_new_count_caption)
+    countTiles(topics, if (isPlace) Res.string.backup_review_places_gone else Res.string.backup_review_topics_gone, Res.string.backup_review_new_count_caption)
     item(key = "topic-cloud", contentType = "cloud") {
         val tones = conflictTones()
         Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCaption(stringRes(if (isPlace) R.string.backup_review_places_you_follow else R.string.backup_review_hashtags_you_follow))
+            SectionCaption(stringRes(if (isPlace) Res.string.backup_review_places_you_follow else Res.string.backup_review_hashtags_you_follow))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                 topics.forEach { (topic, fate) ->
                     val color = fateColor(fate)
@@ -706,15 +754,15 @@ private fun LazyListScope.trustProviderItems(
                     Icon(symbol = MaterialSymbols.Group, contentDescription = null, tint = tones.changed)
                 }
                 Column {
-                    Text(stringRes(R.string.backup_review_services_changed, affected.toString(), services.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
-                    Text(stringRes(R.string.backup_review_services_changed_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                    Text(stringRes(Res.string.backup_review_services_changed, affected.toString(), services.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(stringRes(Res.string.backup_review_services_changed_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }
         }
     }
     item(key = "trust-header", contentType = "table-header") {
         Row(Pad.padding(top = 16.dp, bottom = 4.dp).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(R.string.backup_review_service, R.string.backup_review_saved, R.string.backup_review_new).forEachIndexed { index, res ->
+            listOf(Res.string.backup_review_service, Res.string.backup_review_saved, Res.string.backup_review_new).forEachIndexed { index, res ->
                 Text(stringRes(res).uppercase(), Modifier.weight(if (index == 0) 1.1f else 1f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.placeholderText)
             }
         }
@@ -732,7 +780,7 @@ private fun LazyListScope.trustProviderItems(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(symbol = MaterialSymbols.Warning, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
-            Text(stringRes(R.string.backup_review_trust_warning), style = MaterialTheme.typography.bodySmall, color = tones.changed)
+            Text(stringRes(Res.string.backup_review_trust_warning), style = MaterialTheme.typography.bodySmall, color = tones.changed)
         }
     }
     privateItemsCard(diff.privateItems)
@@ -771,9 +819,9 @@ private fun ServiceTableRow(
 @Composable
 private fun serviceLabel(type: String): String =
     when (type) {
-        "rank" -> stringRes(R.string.backup_review_service_rank)
-        "followers" -> stringRes(R.string.backup_review_service_followers)
-        "t" -> stringRes(R.string.backup_review_service_topics)
+        "rank" -> stringRes(Res.string.backup_review_service_rank)
+        "followers" -> stringRes(Res.string.backup_review_service_followers)
+        "t" -> stringRes(Res.string.backup_review_service_topics)
         else -> type.replace('_', ' ').replaceFirstChar { it.uppercase() }
     }
 
@@ -826,7 +874,7 @@ private fun LazyListScope.paymentTargetItems(
 ) {
     val saved = (conflict.saved as? PaymentTargetsEvent)?.paymentTargets().orEmpty()
     val targets = fates(saved, diff.targets) { it }
-    moneyHero(targets.count { it.second == ItemFate.DROPPED }, R.plurals.backup_review_payment_targets_gone)
+    moneyHero(targets.count { it.second == ItemFate.DROPPED }, Res.plurals.backup_review_payment_targets_gone)
     items(targets, key = { "target-" + it.first.type + ":" + it.first.authority }, contentType = { "money-row" }) { (target, fate) -> PaymentTargetRow(target, fate) }
 }
 
@@ -836,15 +884,15 @@ private fun LazyListScope.offerItems(
 ) {
     val saved = (conflict.saved as? Bolt12OfferListEvent)?.offers().orEmpty()
     val offers = fates(saved, diff.offers) { it }
-    moneyHero(offers.count { it.second == ItemFate.DROPPED }, R.plurals.backup_review_offers_gone)
+    moneyHero(offers.count { it.second == ItemFate.DROPPED }, Res.plurals.backup_review_offers_gone)
     items(offers, key = { "offer-" + it.first }, contentType = { "money-row" }) { (offer, fate) ->
-        MoneyRow(stringRes(R.string.backup_review_offer), offer.toShortDisplay(prefixSize = 4), fate)
+        MoneyRow(stringRes(Res.string.backup_review_offer), offer.toShortDisplay(prefixSize = 4), fate)
     }
 }
 
 private fun LazyListScope.moneyHero(
     dropped: Int,
-    headline: Int,
+    headline: PluralStringResource,
 ) {
     item(key = "money-hero", contentType = "hero") {
         val tones = conflictTones()
@@ -856,7 +904,7 @@ private fun LazyListScope.moneyHero(
                 }
                 Column {
                     Text(pluralStringResource(headline, dropped, dropped), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold, color = color)
-                    Text(stringRes(R.string.backup_review_payments_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                    Text(stringRes(Res.string.backup_review_payments_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }
         }
@@ -902,8 +950,8 @@ private fun MoneyRow(
             )
         }
         when (fate) {
-            ItemFate.DROPPED -> StatusTag(stringRes(R.string.backup_review_dropped_tag), color)
-            ItemFate.ADDED -> StatusTag(stringRes(R.string.backup_review_new_tag), color)
+            ItemFate.DROPPED -> StatusTag(stringRes(Res.string.backup_review_dropped_tag), color)
+            ItemFate.ADDED -> StatusTag(stringRes(Res.string.backup_review_new_tag), color)
             else -> {}
         }
     }
@@ -916,15 +964,15 @@ private fun MoneyRow(
 private fun LazyListScope.encryptedOnlyItems(
     icon: MaterialSymbol,
     change: ContentChange,
-    body: Int,
+    body: StringResource,
 ) {
     item(key = "encrypted-hero", contentType = "hero") {
         val tones = conflictTones()
         val (color, headline) =
             when (change) {
-                ContentChange.CLEARED -> tones.removed to R.string.backup_review_encrypted_cleared
-                ContentChange.ADDED -> tones.added to R.string.backup_review_encrypted_added
-                else -> tones.changed to R.string.backup_review_encrypted_changed
+                ContentChange.CLEARED -> tones.removed to Res.string.backup_review_encrypted_cleared
+                ContentChange.ADDED -> tones.added to Res.string.backup_review_encrypted_added
+                else -> tones.changed to Res.string.backup_review_encrypted_changed
             }
         Column(Pad.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             TintedPanel(color.copy(alpha = 0.12f)) {
