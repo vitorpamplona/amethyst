@@ -9,4 +9,96 @@
     <string name="browser_file_chooser_title">Choose a file</string>
     <!-- Shown when the device has no app that can hand a file back to the page. -->
     <string name="browser_file_chooser_unavailable">No app available to pick a file</string>
+    <!-- Browser top pill (shared by the embedded tab and the full-screen browser) -->
+    <string name="browser_action_back">Back</string>
+    <string name="browser_action_forward">Forward</string>
+    <string name="browser_action_reload">Reload</string>
+    <string name="browser_action_stop">Stop loading</string>
+    <string name="browser_action_favorite_add">Add to favorites</string>
+    <string name="browser_action_favorite_remove">Remove from favorites</string>
+    <string name="browser_action_share">Share…</string>
+    <string name="browser_action_back_to_app">Back to %1$s</string>
+    <string name="browser_action_copy_link">Copy link</string>
+    <string name="browser_action_edit_address">Edit address</string>
+    <string name="browser_action_find_in_page">Find in page</string>
+    <string name="browser_action_text_size">Text size</string>
+    <string name="browser_action_text_size_value">%1$d%%</string>
+    <string name="browser_action_text_smaller">Smaller text</string>
+    <string name="browser_action_text_larger">Larger text</string>
+    <string name="browser_action_desktop_site">Desktop site</string>
+    <string name="browser_action_add_to_home">Add to Home screen</string>
+    <string name="browser_action_open_in_browser_app">Open in another browser</string>
+    <string name="browser_action_open_full_screen">Open full screen</string>
+    <string name="browser_action_tor_on">Loads over Tor</string>
+    <string name="browser_action_tor_off">Loads over the open web</string>
+    <string name="browser_action_access_info">What it can access</string>
+    <string name="browser_action_site_settings">Site settings &amp; permissions</string>
+    <string name="browser_action_close">Close</string>
+    <string name="browser_section_privacy">Privacy</string>
+    <string name="browser_section_developer">Developer</string>
+    <string name="browser_security_tor">Onion-routed over Tor</string>
+    <string name="browser_security_https">Secure connection</string>
+    <string name="browser_security_http">Not secure</string>
+    <string name="browser_security_sandbox">Sandboxed app</string>
+    <string name="browser_link_copied">Link copied</string>
+    <string name="browser_no_other_browser">No other browser installed</string>
+
+    <!-- Find in page -->
+    <string name="browser_find_hint">Find in page</string>
+    <string name="browser_find_count">%1$d/%2$d</string>
+    <string name="browser_find_previous">Previous match</string>
+    <string name="browser_find_next">Next match</string>
+    <string name="browser_find_close">Close find in page</string>
+
+    <!-- Page-originated JavaScript dialogs (alert / confirm / prompt / beforeunload) -->
+    <string name="browser_js_dialog_title">%1$s says</string>
+    <string name="browser_js_dialog_title_generic">This page says</string>
+    <string name="browser_js_dialog_block">Block dialogs from this page</string>
+    <string name="browser_js_leave_title">Leave site?</string>
+    <string name="browser_js_leave_message">Changes you made may not be saved.</string>
+    <string name="browser_js_leave">Leave</string>
+
+    <!-- Downloads and sharing -->
+    <string name="browser_download_started">Downloading %1$s…</string>
+    <string name="browser_download_saved">Saved %1$s to Downloads</string>
+    <string name="browser_download_failed">Couldn\'t download %1$s</string>
+    <string name="browser_share_chooser">Share</string>
+
+    <!-- Page info -->
+    <string name="browser_page_info_title">Page info</string>
+    <string name="browser_page_info_https">Your connection to this site is encrypted.</string>
+    <string name="browser_page_info_http">Your connection to this site is not encrypted. Don\'t enter passwords or payment details.</string>
+    <string name="browser_page_info_tor">This site loads over Tor. The site can\'t see your IP address.</string>
+    <string name="browser_page_info_open_web">This site loads over the open web. The site can see your IP address.</string>
+    <string name="browser_page_info_certificate">Certificate issued to %1$s by %2$s, valid until %3$s.</string>
+    <string name="browser_page_info_permissions">Permissions</string>
+    <string name="browser_page_info_clear_data">Clear site data</string>
+    <string name="browser_site_data_cleared">Site data cleared</string>
+
+    <!-- Site permissions (camera / microphone / location) -->
+    <string name="browser_permission_title">%1$s wants to</string>
+    <string name="browser_permission_camera">Use your camera</string>
+    <string name="browser_permission_microphone">Use your microphone</string>
+    <string name="browser_permission_location">Know your approximate location</string>
+    <string name="browser_permission_allow">Allow</string>
+    <string name="browser_permission_block">Block</string>
+    <string name="browser_permission_system_denied">Amethyst doesn\'t have Android\'s permission for this. Allow it in system settings.</string>
+    <string name="browser_permission_ask">Ask</string>
+    <string name="browser_permission_allowed">Allowed</string>
+    <string name="browser_permission_blocked">Blocked</string>
+    <string name="browser_permission_section">Site permissions</string>
+
+    <!-- Long-press menu -->
+    <string name="browser_ctx_open_new_window">Open in new window</string>
+    <string name="browser_ctx_copy_link">Copy link address</string>
+    <string name="browser_ctx_share_link">Share link</string>
+    <string name="browser_ctx_download_image">Download image</string>
+    <string name="browser_ctx_copy_image_link">Copy image address</string>
+
+    <!-- Home screen shortcuts -->
+    <string name="browser_home_shortcut_unsupported">Your launcher doesn\'t support shortcuts</string>
+
+    <!-- Renderer crash -->
+    <string name="browser_renderer_gone">This page stopped working</string>
+    <string name="browser_renderer_gone_reload">Reload</string>
 </resources>
