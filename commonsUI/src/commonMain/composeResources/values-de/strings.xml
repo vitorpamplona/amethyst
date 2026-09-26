@@ -211,7 +211,7 @@
     <string name="copy_user_id">Benutzer-ID kopieren</string>
     <string name="unblock_user">Benutzer freigeben</string>
     <string name="user_is_blocked_hidden">Dieser Nutzer ist blockiert/stummgeschaltet. Seine Beiträge sind ausgeblendet.</string>
-    <string name="npub_hex_username">Npub, Hex, Benutzername </string>
+    <string name="npub_hex_username">Npub, Hex, Benutzername</string>
     <string name="clear">Löschen</string>
     <string name="app_logo">App-Logo</string>
     <string name="nsec_npub_hex_private_key">Nsec / Npub / Hex-Privatschlüssel</string>
@@ -219,9 +219,7 @@
     <string name="show_password">Passwort anzeigen</string>
     <string name="i_accept_the">Ich akzeptiere die </string>
     <string name="terms_of_use">Nutzungsbedingungen</string>
-    <string name="acceptance_of_terms_is_required">Die Akzept
-
-anz der Bedingungen ist erforderlich</string>
+    <string name="acceptance_of_terms_is_required">Die Akzept anz der Bedingungen ist erforderlich</string>
     <string name="login">Anmeldung</string>
     <string name="sign_up">Anmelden</string>
     <string name="create_account">Konto erstellen</string>
@@ -261,13 +259,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="mark_all_known_as_read">Alle als bekannt markieren</string>
     <string name="mark_all_new_as_read">Alle als neu markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
-    <string name="account_backup_tips2_md">    ## Schlüsselsicherheits-Tipps
-    \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern.
-    \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen.
-    \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen.
-    \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md">    Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden.
-    \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.</string>
+    <string name="account_backup_tips2_md">## Schlüsselsicherheits-Tipps \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern. \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen. \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen. \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
+    <string name="account_backup_tips3_md">Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden. \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.</string>
     <string name="encrypt_and_copy_my_secret_key">Verschlüsseln und kopieren Sie meinen geheimen Schlüssel</string>
     <string name="badge_award_image_for">Auszeichnungsbild für %1$s</string>
     <string name="badge_award_image">Auszeichnungsbild</string>
@@ -960,9 +953,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="push_server_none_explainer">Push-Benachrichtigungen deaktivieren</string>
     <string name="push_server_uses_app_explainer">Verwendet die App %1$s</string>
     <string name="push_server_install_app">Push-Benachrichtigungen einrichten</string>
-    <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Ntfy](https://ntfy.sh/).
-        Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.
-    </string>
+    <string name="push_server_install_app_description">Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Ntfy](https://ntfy.sh/). Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.</string>
     <string name="thread_title">Faden</string>
     <string name="send_the_seller_a_message">Dem Verkäufer eine Nachricht senden</string>
     <string name="hi_there_is_this_still_available">Hallo, ist das noch verfügbar?</string>
@@ -2064,14 +2055,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_fetch_invoice_from_details">Rechnung konnte nicht von %1$s abgerufen werden: %2$s</string>
     <string name="could_not_open_the_compressed_file">Konnte die komprimierte Datei nicht öffnen</string>
     <string name="couldnt_find_nwc_wallets">Wallet nicht gefunden</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst konnte keine Wallet-Apps finden, die Nostr Wallet Connect (NWC) unterstützen.
-\n\nWas du tun kannst:
-\n\t1. NWC-Unterstützung überprüfen: Stelle sicher, dass deine bevorzugte Wallet-App mit Nostr Wallet Connect kompatibel ist.
-\n\t2. Verbindung erstellen: Öffne deine Wallet-App und erstelle eine neue NWC-Verbindung.
-\n\t3. Mit Amethyst verknüpfen: Deine Wallet bietet normalerweise drei Optionen:
-\n\t\t3.1 Automatische Verknüpfung: Eine Schaltfläche zum automatischen Öffnen und Verbinden mit Amethyst. Klicke darauf, öffne Amethyst und speichere auf dem neuen Bildschirm.
-\n\t\t3.2 Manuelle Verknüpfung: Eine Verbindungs-URI, die du kopieren und über das Einfügesymbol auf diesem Bildschirm einfügen kannst.
-\n\t\t3.3 QR-Code: Die Wallet erstellt einen QR-Code, den du über die QR-Schaltfläche auf diesem Bildschirm scannen kannst.</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst konnte keine Wallet-Apps finden, die Nostr Wallet Connect (NWC) unterstützen. \n\nWas du tun kannst: \n\t1. NWC-Unterstützung überprüfen: Stelle sicher, dass deine bevorzugte Wallet-App mit Nostr Wallet Connect kompatibel ist. \n\t2. Verbindung erstellen: Öffne deine Wallet-App und erstelle eine neue NWC-Verbindung. \n\t3. Mit Amethyst verknüpfen: Deine Wallet bietet normalerweise drei Optionen: \n\t\t3.1 Automatische Verknüpfung: Eine Schaltfläche zum automatischen Öffnen und Verbinden mit Amethyst. Klicke darauf, öffne Amethyst und speichere auf dem neuen Bildschirm. \n\t\t3.2 Manuelle Verknüpfung: Eine Verbindungs-URI, die du kopieren und über das Einfügesymbol auf diesem Bildschirm einfügen kannst. \n\t\t3.3 QR-Code: Die Wallet erstellt einen QR-Code, den du über die QR-Schaltfläche auf diesem Bildschirm scannen kannst.</string>
     <string name="create">Erstellen</string>
     <string name="d">t</string>
     <string name="danger_zone">Gefahrenzone</string>
@@ -2274,9 +2258,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
     <string name="illegal_behavior">Illegales Verhalten</string>
-    <string name="image_saved_to_the_gallery">Bild in der Gal
-
-erie gespeichert</string>
+    <string name="image_saved_to_the_gallery">Bild in der Gal erie gespeichert</string>
     <string name="impersonation">Vortäuschung</string>
     <string name="import_follows_search_keywords">Kontakte, folgen, Folgeliste, importieren</string>
     <string name="inbox_relays_title">Eingehende Relays</string>
@@ -2777,11 +2759,8 @@ erie gespeichert</string>
     <string name="proxy_section">Proxy-Relays</string>
     <string name="proxy_section_explainer">Aggregator-Relays wie filter.nostr.wine, von denen die App deine Feeds herunterlädt</string>
     <string name="public_chat">Öffentlicher Chat</string>
-    <string name="public_chat_explainer">Öffentliche Chats sind für jeden auf Nostr sichtbar und jeder
-        kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen.
-        Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
-    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen.
-        Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
+    <string name="public_chat_explainer">Öffentliche Chats sind für jeden auf Nostr sichtbar und jeder kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen. Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
+    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen. Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
     <string name="public_chat_relays_title">Relais</string>
     <string name="public_chat_title">Öffentliche Chat Metadaten</string>
     <string name="public_chats">Öffentliche Chats</string>
@@ -2808,10 +2787,7 @@ erie gespeichert</string>
     <string name="read_only_user">Nur-Lese-Benutzer</string>
     <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>
     <string name="relay_chat">Relay-Chat</string>
-    <string name="relay_chat_explainer">Relaischats sind Chatgruppen, die von ihrem Home-Relais gesteuert werden.
-        Sie sind für jeden auf Nostr sichtbar und jeder kann an ihnen teilnehmen.
-        Sie eignen sich hervorragend für offene Communities rund um bestimmte Themen. Einige dieser Gruppen sind kurzsichtig
-    und daher verschwinden Chat-Nachrichten im Laufe der Zeit</string>
+    <string name="relay_chat_explainer">Relaischats sind Chatgruppen, die von ihrem Home-Relais gesteuert werden. Sie sind für jeden auf Nostr sichtbar und jeder kann an ihnen teilnehmen. Sie eignen sich hervorragend für offene Communities rund um bestimmte Themen. Einige dieser Gruppen sind kurzsichtig und daher verschwinden Chat-Nachrichten im Laufe der Zeit</string>
     <string name="relay_chat_title">Relay-Chats</string>
     <string name="relay_management_tab_events">Ereignisse</string>
     <string name="relay_management_tab_ips">IPs</string>

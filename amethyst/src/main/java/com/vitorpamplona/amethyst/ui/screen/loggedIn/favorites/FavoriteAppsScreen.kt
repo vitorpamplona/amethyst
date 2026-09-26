@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -72,9 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -94,7 +93,8 @@ fun FavoriteAppsScreen(
 ) {
     val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
     val context = LocalContext.current
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so a tap launches immediately instead of showing
     // "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
@@ -126,7 +126,7 @@ fun FavoriteAppsScreen(
             FavoriteAppsGrid(
                 apps = apps,
                 onOpen = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
-                onRemove = { FavoriteAppsRegistry.remove(it.id) },
+                onRemove = { Amethyst.instance.favoriteApps.remove(it.id) },
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -189,12 +189,13 @@ internal fun FavoriteAppCell(
     // For a plain web favorite, prefer the favicon captured when its site was opened; an nsite/napplet uses
     // the verified icon blob bundled in its own content. Observing the key set recomputes the model as a
     // captured favicon arrives.
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val iconKeys by Amethyst.instance.browserIcons.keys
+        .collectAsStateWithLifecycle()
     val faviconModel =
         when (app) {
             is FavoriteApp.WebApp ->
                 remember(app, iconKeys) {
-                    OmniboxInput.hostOf(app.url)?.let(BrowserIconRegistry::iconModelFor)
+                    OmniboxInput.hostOf(app.url)?.let(Amethyst.instance.browserIcons::iconModelFor)
                 }
             is FavoriteApp.NostrApp -> rememberNappletIconModel(app.coordinate)
         }

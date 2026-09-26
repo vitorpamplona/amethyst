@@ -26,9 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -60,7 +60,8 @@ private const val MANIFEST_OFFLINE_FALLBACK_MS = 2_000L
  */
 @Composable
 fun FavoriteAppManifestPreloader(accountViewModel: AccountViewModel) {
-    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val favorites by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val coordinates =
         remember(favorites) {
             favorites.filterIsInstance<FavoriteApp.NostrApp>().map { it.coordinate }
@@ -91,7 +92,7 @@ private fun WatchFavoriteManifest(
     LaunchedEffect(event?.id) {
         val resolved = event ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            FavoriteAppsRegistry.cacheManifest(coordinate, resolved.toJson())
+            Amethyst.instance.favoriteApps.cacheManifest(coordinate, resolved.toJson())
         }
     }
 
@@ -103,7 +104,7 @@ private fun WatchFavoriteManifest(
         delay(MANIFEST_OFFLINE_FALLBACK_MS)
         if (LocalCache.getAddressableNoteIfExists(coordinate)?.event != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val cached = FavoriteAppsRegistry.cachedManifest(coordinate) ?: return@withContext
+            val cached = Amethyst.instance.favoriteApps.cachedManifest(coordinate) ?: return@withContext
             Event.fromJsonOrNull(cached)?.let { LocalCache.justConsume(it, null, false) }
         }
     }

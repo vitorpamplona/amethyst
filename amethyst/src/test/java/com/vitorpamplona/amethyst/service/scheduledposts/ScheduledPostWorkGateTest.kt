@@ -57,7 +57,7 @@ class ScheduledPostWorkGateTest {
         decisions.clear()
     }
 
-    private fun newStore() = ScheduledPostStore(file)
+    private fun newStore() = ScheduledPostStore(file.path)
 
     private fun TestScope.startGate(store: ScheduledPostStore) =
         ScheduledPostWorkGate(

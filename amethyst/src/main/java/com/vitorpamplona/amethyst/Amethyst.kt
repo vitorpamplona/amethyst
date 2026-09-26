@@ -25,9 +25,6 @@ import android.content.ComponentCallbacks2
 import android.os.Build
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
@@ -143,13 +140,13 @@ class Amethyst : Application() {
         WorkerThreadPriorityGovernor.start(this)
 
         // Hydrate the device-local favorite-apps list (main process only; the sandbox never reads it).
-        FavoriteAppsRegistry.init(this)
+        instance.favoriteApps.init()
 
         // Hydrate the device-local browser visit history (main process only; feeds the omnibox suggestions).
-        BrowserHistoryRegistry.init(this)
+        instance.browserHistory.init()
 
         // Index device-local captured favicons (main process only; decorates favorites + suggestions).
-        BrowserIconRegistry.init(this)
+        instance.browserIcons.init()
 
         // Warm the global-settings prefs off-main so the first (deliberately synchronous) read of
         // them does not hit disk on the main thread. See LocalPreferences.warmGlobalSettings.

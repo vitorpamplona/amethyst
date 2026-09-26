@@ -467,17 +467,17 @@ class Account(
     // redeemed by this key and the relay grants membership to it alone — and this set makes the
     // relay first-party for NIP-42 (see AuthCoordinator.isFirstParty), so a device-global set would
     // hand every other logged-in account an automatic login on a workspace it never joined.
-    // Restored/persisted per account by BuzzWorkspacePreferences (see AccountCacheState).
+    // Restored/persisted per account by BuzzWorkspaceStore (see AccountCacheState).
     val buzzWorkspaces = BuzzWorkspaces()
 
     // The Buzz channels THIS account pinned. A star says which channels this user wants at the top
     // of the community view, so a shared set let one account reorder and badge every other one's
-    // channel list. Restored/persisted per account by BuzzChannelStarPreferences.
+    // channel list. Restored/persisted per account by BuzzChannelStarStore.
     val buzzChannelStars = BuzzChannelStars()
 
     // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
     // AUTH so the relay grants virtual membership. Restored/persisted per account by
-    // BuzzAttestationPreferences.
+    // BuzzAttestationStore.
     val buzzAttestation = BuzzHeldAttestations(pubKey)
 
     // The relays this account approved by answering the NIP-42 prompt *without* the "remember"
@@ -769,7 +769,7 @@ class Account(
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
 
     // Anonymous, per-geohash throwaway identities for Bitchat-interoperable location chats.
-    val geohashIdentity = GeohashChatIdentityState(signer)
+    val geohashIdentity = GeohashChatIdentityState(signer, scope)
 
     val muteListDecryptionCache = MuteListDecryptionCache(signer)
     val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)

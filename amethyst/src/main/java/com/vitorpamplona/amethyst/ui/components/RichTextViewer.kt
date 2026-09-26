@@ -102,6 +102,12 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
+import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard

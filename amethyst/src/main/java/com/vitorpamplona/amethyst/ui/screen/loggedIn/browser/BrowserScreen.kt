@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
@@ -101,11 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryEntry
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -154,9 +151,12 @@ private fun BrowserLauncher(
 ) {
     val context = LocalContext.current
     val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
-    val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
+    val history by Amethyst.instance.browserHistory.history
+        .collectAsStateWithLifecycle()
+    val iconKeys by Amethyst.instance.browserIcons.keys
+        .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so tapping one launches immediately instead of
     // showing "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
@@ -235,10 +235,10 @@ private fun BrowserLauncher(
         label: String,
     ) {
         val id = "url:$url"
-        if (FavoriteAppsRegistry.isFavorite(id)) {
-            FavoriteAppsRegistry.remove(id)
+        if (Amethyst.instance.favoriteApps.isFavorite(id)) {
+            Amethyst.instance.favoriteApps.remove(id)
         } else {
-            FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
+            Amethyst.instance.favoriteApps.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
         }
     }
 
@@ -290,7 +290,7 @@ private fun BrowserLauncher(
                     historyUrls = historyUrls,
                     onOpen = { open(it.url) },
                     onToggleFavorite = { toggleFavorite(it.url, it.label) },
-                    onRemoveFromHistory = { BrowserHistoryRegistry.remove(it) },
+                    onRemoveFromHistory = { Amethyst.instance.browserHistory.remove(it) },
                     modifier = contentModifier,
                 )
             else -> {
@@ -306,11 +306,11 @@ private fun BrowserLauncher(
                     nsites = followedNsites,
                     napplets = followedNapplets,
                     onOpenApp = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
-                    onRemoveApp = { FavoriteAppsRegistry.remove(it.id) },
-                    onAddApp = { FavoriteAppsRegistry.add(it) },
+                    onRemoveApp = { Amethyst.instance.favoriteApps.remove(it.id) },
+                    onAddApp = { Amethyst.instance.favoriteApps.add(it) },
                     onOpenUrl = { open(it) },
                     onToggleRecentFavorite = { entry -> toggleFavorite(entry.url, entry.title.ifBlank { entry.host }) },
-                    onRemoveRecent = { BrowserHistoryRegistry.remove(it) },
+                    onRemoveRecent = { Amethyst.instance.browserHistory.remove(it) },
                     modifier = contentModifier,
                 )
             }
@@ -571,7 +571,7 @@ private fun SuggestedRow(
     onClick: () -> Unit,
     onAddFavorite: () -> Unit,
 ) {
-    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(BrowserIconRegistry::iconModelFor) }
+    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(Amethyst.instance.browserIcons::iconModelFor) }
     Row(
         modifier =
             Modifier
@@ -798,7 +798,7 @@ private fun SiteIcon(
     iconKeys: Set<String>,
     modifier: Modifier = Modifier,
 ) {
-    val model = remember(host, iconKeys) { BrowserIconRegistry.iconModelFor(host) }
+    val model = remember(host, iconKeys) { Amethyst.instance.browserIcons.iconModelFor(host) }
     val symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.Public
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     if (model == null) {

@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 
 /**
  * A star toggle that pins/unpins an nsite or napplet (a [FavoriteApp.NostrApp]) by its addressable
@@ -47,16 +47,17 @@ fun FavoriteToggleButton(
     label: String,
     iconUrl: String? = null,
 ) {
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val id = "nostr:$coordinate"
     val isFavorite = remember(apps, id) { apps.any { it.id == id } }
 
     IconButton(
         onClick = {
             if (isFavorite) {
-                FavoriteAppsRegistry.remove(id)
+                Amethyst.instance.favoriteApps.remove(id)
             } else {
-                FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, label, System.currentTimeMillis(), iconUrl))
+                Amethyst.instance.favoriteApps.add(FavoriteApp.NostrApp(coordinate, label, System.currentTimeMillis(), iconUrl))
             }
         },
     ) {

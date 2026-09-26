@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.desktop.chess
 import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStorage
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessLobbyLogic
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.CompletedGame
 import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGame
+import com.vitorpamplona.amethyst.commons.nip64Chess.desktopChessDismissedGamesStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -60,7 +60,7 @@ class DesktopChessViewModelNew(
     private val publisher = DesktopChessPublisher(account, relayManager)
     private val fetcher = DesktopRelayFetcher(relayManager, account.pubKeyHex)
     private val metadataProvider = DesktopMetadataProvider(userMetadataCache)
-    private val dismissedStorage = ChessDismissedGamesStorage.create()
+    private val dismissedStorage = desktopChessDismissedGamesStore()
 
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =

@@ -19,7 +19,7 @@ doc is the map: what already works for free, what desktop must build, and the de
   `NappletIdentity`, `NappletRequest`/`NappletResponse`, the permissions `Ledger`/`Store`/`GrantState`,
   and the gateway **interfaces** (`NappletRelayGateway`, `NappletStorage`, `NappletWalletGateway`,
   `NappletResourceGateway`, `NappletUploadGateway`, `NappletIdentityGateway`, `NappletConsentPrompt`).
-- **`NappletProtocolJson`** (`commons/jvmAndroid`) — the wire codec. Desktop's host marshals through
+- **`NappletProtocolJson`** (`commons/commonMain`) — the wire codec. Desktop's host marshals through
   the same object, so request/result/push shapes can never drift between platforms.
 
 **The web contract (`commons/commonMain/composeResources/files/napplet/` + `NappletWebContract`)** —

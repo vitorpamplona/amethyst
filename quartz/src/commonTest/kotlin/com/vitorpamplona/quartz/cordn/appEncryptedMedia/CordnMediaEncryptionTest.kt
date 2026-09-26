@@ -69,7 +69,7 @@ class CordnMediaEncryptionTest {
     }
 
     @Test
-    fun `renaming a file breaks it, because the name is authenticated`() {
+    fun `renaming a file breaks it because the name is authenticated`() {
         val sealed = roundTrip(name = "photo.jpg")
 
         assertFailsWith<Exception> {
@@ -180,7 +180,7 @@ class CordnMediaEncryptionTest {
     }
 
     @Test
-    fun `the display hints round-trip, including the waveform`() {
+    fun `the display hints round-trip including the waveform`() {
         // The recorder measures amplitudes and the composer preview already
         // draws them; without somewhere to put them they were dropped at upload
         // and the sender's own voice note came back bar-less.
@@ -207,7 +207,7 @@ class CordnMediaEncryptionTest {
     }
 
     @Test
-    fun `a hint that is absent or malformed costs the hint, not the attachment`() {
+    fun `a hint that is absent or malformed costs the hint rather than the attachment`() {
         // Every one of these is optional, so a reader that cannot make sense of
         // one must still be able to fetch and open the file.
         val tag = CordnMediaTag.build(roundTrip(), url = "https://b.example.com/b")

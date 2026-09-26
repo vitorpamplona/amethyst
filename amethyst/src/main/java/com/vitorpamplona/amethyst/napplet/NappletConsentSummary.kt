@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -62,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_upload
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
@@ -95,7 +95,7 @@ class NappletConsentSummary(
         val (title, iconUrl) =
             if (identity.authorPubKey == "browser") {
                 val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-                host to BrowserIconRegistry.iconModelFor(host)
+                host to Amethyst.instance.browserIcons.iconModelFor(host)
             } else {
                 resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
             }

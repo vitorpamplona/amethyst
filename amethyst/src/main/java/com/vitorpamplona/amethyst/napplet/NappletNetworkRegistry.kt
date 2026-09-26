@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,7 +34,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
-private val Context.nappletNetworkDataStore by preferencesDataStore(name = "napplet_network")
+/**
+ * The per-napplet routing file, on the app-wide holder rather than a `Context` delegate.
+ * Same path the delegate resolved to, so nothing migrates.
+ *
+ * Main process only: [Amethyst.instance] is deliberately unset in the
+ * `:napplet` sandbox.
+ */
+private val nappletNetworkDataStore: DataStore<Preferences>
+    get() = Amethyst.instance.appStores.getDataStore("napplet_network")
 
 /**
  * Per-nSite network-routing preference: whether a site's traffic goes through **Tor** (the default)
@@ -69,7 +79,7 @@ object NappletNetworkRegistry {
         appContext = ctx
         hydration =
             scope.launch {
-                ctx.nappletNetworkDataStore.data.first().asMap().forEach { (key, value) ->
+                nappletNetworkDataStore.data.first().asMap().forEach { (key, value) ->
                     // putIfAbsent: never clobber a choice made in this session before hydration finished.
                     modes.putIfAbsent(key.name, value != OPEN_WEB)
                 }
@@ -95,9 +105,9 @@ object NappletNetworkRegistry {
         useTor: Boolean,
     ) {
         modes[coordinate] = useTor
-        val ctx = appContext ?: return
+        appContext ?: return
         scope.launch {
-            ctx.nappletNetworkDataStore.edit { it[stringPreferencesKey(coordinate)] = if (useTor) TOR else OPEN_WEB }
+            nappletNetworkDataStore.edit { it[stringPreferencesKey(coordinate)] = if (useTor) TOR else OPEN_WEB }
         }
     }
 }

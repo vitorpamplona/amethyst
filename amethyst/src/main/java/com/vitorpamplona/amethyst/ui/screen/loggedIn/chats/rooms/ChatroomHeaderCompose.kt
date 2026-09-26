@@ -106,7 +106,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_server_label
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
 import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
+import com.vitorpamplona.amethyst.commons.ui.components.NewItemsBubble
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -118,7 +120,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.commons.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -126,7 +127,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
-import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
@@ -1376,9 +1376,4 @@ private fun TimeAgo(channelLastTime: Long?) {
         style = TimeAgoStyle.Dotted,
         color = MaterialTheme.colorScheme.grayText,
     )
-}
-
-@Composable
-fun NewItemsBubble() {
-    Box(MaterialTheme.colorScheme.newItemBubbleModifier)
 }

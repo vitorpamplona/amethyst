@@ -96,11 +96,13 @@ import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.service.OnlineChecker
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastManager
@@ -115,7 +117,6 @@ import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
-import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
@@ -141,7 +142,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent

@@ -64,7 +64,7 @@ class CordnMessageKindsTest {
     }
 
     @Test
-    fun `the numbers are cordn-web's, and differ from Marmot's on purpose`() {
+    fun `the numbers are cordn-web's and differ from Marmot's on purpose`() {
         // Pinned because they are the interop surface with the only other cordn
         // client, and because two of them disagree with Marmot (1009 edit, no
         // pin) by decision rather than accident.
@@ -170,7 +170,7 @@ class CordnMessageKindsTest {
     // ---- inbound -------------------------------------------------------
 
     @Test
-    fun `a reaction needs kind 7, e p k, and content`() {
+    fun `a reaction needs kind 7 with e p k and content`() {
         val good = CordnMessageReferences.reactionTags(target())
         assertNotNull(CordnMessageReferences.reaction(7, "+", good))
 
@@ -210,7 +210,7 @@ class CordnMessageKindsTest {
     }
 
     @Test
-    fun `an edit needs kind 1010, an e tag, and text`() {
+    fun `an edit needs kind 1010 with an e tag and text`() {
         val tags = CordnMessageReferences.editTags(target())
         assertEquals("1".repeat(64), assertNotNull(CordnMessageReferences.edit(1010, "new", tags)).targetId)
 
@@ -230,7 +230,7 @@ class CordnMessageKindsTest {
     }
 
     @Test
-    fun `a pin needs kind 1011, an e tag, and a known op`() {
+    fun `a pin needs kind 1011 with an e tag and a known op`() {
         assertEquals(
             PinOp.ADD,
             assertNotNull(CordnMessageReferences.pin(1011, CordnMessageReferences.pinTags(target(), PinOp.ADD))).op,
