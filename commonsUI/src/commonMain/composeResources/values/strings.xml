@@ -2911,6 +2911,7 @@
     <string name="community_rules_violation_wot_gate_failed">You don't pass this community's web-of-trust requirements.</string>
     <string name="community_rules_violation_stale_rules">The latest community rules document was rejected as stale.</string>
     <string name="marmot_groups_title">Marmot Groups</string>
+    <string name="cordn_groups_title">Cordn Groups</string>
     <string name="marmot_create_group">Create Group</string>
     <string name="marmot_create_group_title">Create Marmot Group</string>
     <string name="marmot_create_group_footer">A new MLS group will be created. You can add members after.</string>
@@ -5320,6 +5321,136 @@
         <item quantity="one">%1$d new message</item>
         <item quantity="other">%1$d new messages</item>
     </plurals>
+
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <string name="cordn_badge_coordinator">Coordinator group</string>
+    <string name="cordn_badge_coordinator_desc">Delivered by a coordinator, not by relays</string>
+
+    <string name="cordn_exposure_title">What this coordinator can see</string>
+    <string name="cordn_exposure_subtitle">A coordinator is one server that carries every message in this group, in order. That is a different trade from relays — worth knowing before you treat this like any other chat.</string>
+    <string name="cordn_exposure_dimension_content">Message contents</string>
+    <string name="cordn_exposure_dimension_membership">Who is in the group</string>
+    <string name="cordn_exposure_dimension_messaging">Who sends what</string>
+    <string name="cordn_exposure_level_none">Unreadable</string>
+    <string name="cordn_exposure_level_pseudonymous">Under a throwaway key</string>
+    <string name="cordn_exposure_level_identified">Tied to your real account</string>
+    <string name="cordn_exposure_details">Details</string>
+    <string name="cordn_exposure_coordinator">Coordinator %1$s</string>
+    <string name="cordn_exposure_differs">This is not the same exposure as a Marmot group, where no single operator holds the whole conversation.</string>
+
+    <string name="cordn_note_membership">Joining names real accounts at both ends, so the coordinator knows who is in this group.</string>
+    <string name="cordn_note_linked">One throwaway key sends and fetches for every group you have here, so the coordinator can tell they are all you.</string>
+    <string name="cordn_note_history">One operator holds the complete, ordered history of every group it carries.</string>
+    <string name="cordn_note_publication">The key package you published is a signed record that this account uses cordn, and the coordinator can hand it to anyone.</string>
+    <string name="cordn_note_sizes">Messages are not padded, so the coordinator sees how long each one is.</string>
+    <string name="cordn_note_encryption_bug">This client is not encrypting to the coordinator. That is a bug — please report it.</string>
+
+    <string name="cordn_health_unknown">Not contacted yet</string>
+    <string name="cordn_health_ok">Responding</string>
+    <string name="cordn_health_down">Not responding</string>
+    <string name="cordn_health_failures">%1$d failed attempts in a row</string>
+
+    <string name="cordn_link_explainer">Paste a cordn1… link someone shared with you to see which coordinator carries that group, and what that operator would learn about you if you joined.</string>
+    <string name="cordn_link_field">cordn1…</string>
+    <string name="cordn_link_inspect">Inspect</string>
+    <string name="cordn_link_paste">Paste</string>
+    <string name="cordn_link_clear">Clear</string>
+    <string name="cordn_link_invalid">That is not a cordn group link: %1$s</string>
+    <string name="cordn_link_group_id">Group id</string>
+    <string name="cordn_link_coordinator">Coordinator</string>
+    <string name="cordn_link_relays">Reachable through</string>
+    <string name="cordn_link_no_coordinator">This link names no coordinator, so it cannot be followed on its own. Ask whoever sent it which coordinator carries the group.</string>
+    <string name="cordn_link_not_joinable">Inspecting a link does not join anything, and holding one does not make you a member.</string>
+
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <string name="cordn_link_title">Cordn group link</string>
+    <string name="cordn_link_search_keywords">cordn coordinator group link invite mls chat metadata privacy exposure</string>
+    <string name="cordn_coordinators_title">Cordn coordinators</string>
+    <string name="cordn_coordinators_search_keywords">cordn coordinator add remove purge health server mls chat ordering</string>
+    <string name="cordn_keypackages_title">Cordn key packages</string>
+    <string name="cordn_keypackages_search_keywords">cordn key package publish invite last resort coordinator mls</string>
+    <string name="cordn_backup_title">Cordn backup</string>
+    <string name="cordn_backup_search_keywords">cordn backup restore export import passphrase groups recovery</string>
+    <string name="chat_type_cordn_title">Cordn groups</string>
+    <string name="chat_type_cordn_desc">End-to-end encrypted groups ordered by a coordinator you choose, instead of by relays.</string>
+
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <string name="cordn_group_untitled">Group %1$s</string>
+    <string name="cordn_group_no_messages_yet">No messages yet</string>
+    <string name="cordn_group_via_coordinator">Cordn group, carried by %1$s</string>
+    <string name="cordn_preview_deleted">Message deleted</string>
+    <string name="cordn_preview_voice_note">Voice note</string>
+    <string name="cordn_preview_photo">Photo</string>
+    <string name="cordn_preview_video">Video</string>
+    <string name="cordn_preview_file">File</string>
+    <string name="new_conversation_cordn_title">Cordn group</string>
+    <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>
+    <string name="new_conversation_cordn_chip">Coordinated</string>
+    <string name="new_conversation_cordn_best">Best for teams that want one reliable ordering of the conversation.</string>
+    <string name="new_conversation_cordn_cta">Create Cordn group</string>
+    <string name="new_conversation_cordn_pro_1">End-to-end encrypted with MLS — the coordinator can never read a message.</string>
+    <string name="new_conversation_cordn_pro_2">One agreed order for everyone, so history cannot be reshuffled by a bad clock.</string>
+    <string name="new_conversation_cordn_con_1">The coordinator learns who is in the group and when you talk, even though it cannot read what you say.</string>
+    <string name="cordn_invitations_entry">Invited to a cordn group?</string>
+    <string name="cordn_invitations_entry_action">Review invitations</string>
+
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <string name="cordn_hub_title">Cordn</string>
+    <string name="cordn_hub_search_keywords" translatable="false">cordn coordinator group mls chat migrate backup key package link move device</string>
+    <string name="cordn_hub_explainer">Groups delivered by a coordinator you choose, instead of by relays.</string>
+    <string name="cordn_hub_link">Inspect a group link</string>
+    <string name="cordn_hub_link_desc">See what a cordn1… link points at before you act on it</string>
+    <string name="cordn_migrate_section_send">Move off this phone</string>
+    <string name="cordn_migrate_section_receive">Take over from another phone</string>
+    <string name="cordn_keypackages_section">Published key packages</string>
+    <string name="cordn_link_section_input">The link</string>
+    <string name="cordn_coordinators_section_yours">Coordinators you use</string>
+    <string name="cordn_coordinators_section_discover">Announcing themselves</string>
+    <string name="cordn_coordinators_section_manual">Add one by hand</string>
+    <string name="cordn_backup_section_passphrase">Passphrase</string>
+    <string name="cordn_backup_section_export">Make a backup</string>
+    <string name="cordn_backup_section_restore">Restore from a backup</string>
+    <string name="cordn_hub_section_service">The coordinator</string>
+    <string name="cordn_hub_section_device">This device</string>
+    <string name="cordn_hub_coordinators">Coordinators</string>
+    <string name="cordn_hub_coordinators_desc">The servers that carry your groups</string>
+    <string name="cordn_hub_keypackages">Key packages</string>
+    <string name="cordn_hub_keypackages_desc">What lets people add you to a group</string>
+    <string name="cordn_hub_backup">Backup and restore</string>
+    <string name="cordn_hub_backup_desc">A passphrase-encrypted file you keep</string>
+    <string name="cordn_hub_migrate">Move to a new phone</string>
+    <string name="cordn_hub_migrate_desc">Hand your groups to a device you are switching to</string>
+
+    <string name="cordn_migrate_title">Move to a new phone</string>
+    <string name="cordn_migrate_search_keywords" translatable="false">cordn migrate move new phone device transfer handoff switch qr</string>
+    <string name="cordn_migrate_explainer">Your cordn groups live on this device. Moving them takes one code: this phone publishes them, the new phone reads them, and this phone stops.</string>
+    <string name="cordn_migrate_sign_in_first">Sign in with the same account on the new phone first. This moves your groups, never your key.</string>
+    <string name="cordn_migrate_export">Start the handoff</string>
+    <string name="cordn_migrate_exporting">Publishing…</string>
+    <string name="cordn_migrate_scan_this">Scan this on the new phone</string>
+    <string name="cordn_migrate_code_note">The code is only a pointer. Anyone who photographs it learns nothing — what it points at is encrypted to you.</string>
+    <string name="cordn_migrate_handed_off">This device has handed its groups over</string>
+    <string name="cordn_migrate_handed_off_desc">It has stopped sending and receiving, because two phones sending from one group would break it for everyone in it. Your groups are still on this device and nothing was deleted.</string>
+    <string name="cordn_migrate_cancel">Take this device back</string>
+    <string name="cordn_migrate_cancel_desc">Use this if the move did not finish. Only do it if the new phone has not started sending.</string>
+    <string name="cordn_migrate_receive">Receive from another phone</string>
+    <string name="cordn_migrate_scan">Scan the code</string>
+    <string name="cordn_migrate_paste">or paste it</string>
+    <string name="cordn_migrate_import">Bring the groups here</string>
+    <string name="cordn_migrate_importing">Fetching…</string>
+    <string name="cordn_migrate_replaces_warning">This replaces any cordn groups already on this phone. They cannot be merged.</string>
+    <string name="cordn_migrate_done">%1$d groups moved</string>
+    <string name="cordn_migrate_no_groups">There are no cordn groups on this device to move.</string>
+    <string name="cordn_migrate_no_server">Set a media server first — the encrypted documents need somewhere to sit while the other phone fetches them.</string>
+    <string name="cordn_migrate_exposure_title">What leaves this device</string>
+    <string name="cordn_migrate_exposure_body">Your group state is encrypted and uploaded to your media server so the other phone can fetch it. It is unreadable to that server, which sees only a size and a time. Delete the blobs afterwards if you want nothing left behind.</string>
     <string name="sno_object_title">3D object</string>
     <string name="sno_object_details">%1$d vertices · %2$d faces</string>
     <string name="sno_object_unreadable">This 3D object could not be read (rule %1$s)</string>

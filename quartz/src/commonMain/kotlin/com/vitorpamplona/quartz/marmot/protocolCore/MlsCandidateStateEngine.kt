@@ -20,13 +20,17 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
-import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
-import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
+import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.framing.ContentType
+import com.vitorpamplona.quartz.mls.framing.MlsMessage
+import com.vitorpamplona.quartz.mls.framing.PublicMessage
+import com.vitorpamplona.quartz.mls.framing.WireFormat
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupPolicy
+import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -43,7 +47,21 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * "roll it back afterwards" is the kind of thing that works until the day an
  * exception escapes halfway through.
  */
-class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
+class MlsCandidateStateEngine(
+    /**
+     * The rules a restored group is judged by.
+     *
+     * Passed on EVERY restore below, and that is the whole point of naming it
+     * here. `MlsGroup.restore` defaults to [MlsGroupPolicy.Permissive], whose
+     * `authorizeCommit` is a no-op — so a restore that forgets the policy
+     * turns [isAuthorized] into a function that returns true for every commit
+     * it can parse. The MIP-03 gate and the admin-depletion guard used to live
+     * inside `MlsGroup` and could not be left out; since they moved behind
+     * this seam, leaving it out is a silent authorization bypass rather than a
+     * compile error. It is a constructor parameter so a test can see it.
+     */
+    private val policy: MlsGroupPolicy = MarmotGroupPolicy,
+) : CandidateStateEngine<MlsGroupState> {
     /**
      * Identity of a retained state.
      *
@@ -68,7 +86,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
         if (pubMsg.epoch != state.groupContext.epoch) return false
 
         return try {
-            MlsGroup.restore(state).verifyPublicMessageCommitMembershipTag(pubMsg)
+            MlsGroup.restore(state, policy).verifyPublicMessageCommitMembershipTag(pubMsg)
         } catch (_: Exception) {
             false
         }
@@ -81,7 +99,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
         try {
             // A clone, so the retained snapshot is untouched no matter how this
             // attempt ends.
-            val group = MlsGroup.restore(state)
+            val group = MlsGroup.restore(state, policy)
             group.processFramedCommit(commit)
             group.saveState()
         } catch (_: Exception) {
@@ -94,7 +112,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
     ): ByteArray? {
         val pubMsg = publicMessageOrNull(commit) ?: return null
         return try {
-            MlsGroup.restore(parent).memberIdentity(pubMsg.sender.leafIndex)
+            MlsGroup.restore(parent, policy).memberIdentity(pubMsg.sender.leafIndex)
         } catch (_: Exception) {
             null
         }
@@ -113,7 +131,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
     ): Boolean {
         val pubMsg = publicMessageOrNull(commit) ?: return false
         return try {
-            val group = MlsGroup.restore(parent)
+            val group = MlsGroup.restore(parent, policy)
             // A group that names no admins yet is bootstrapping; the gate is
             // open there for the same reason the local path leaves it open.
             if (group.currentAdminIdentities().isEmpty()) return true
@@ -129,7 +147,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
     ): TipPriority {
         val pubMsg = publicMessageOrNull(commit) ?: return TipPriority.ORDINARY
         return try {
-            val group = MlsGroup.restore(parent)
+            val group = MlsGroup.restore(parent, policy)
             // Privileged exactly when the rule that applies REQUIRES an active
             // admin. A commit a non-admin could also have made is ordinary even
             // when an admin happened to send it.
@@ -145,7 +163,7 @@ class MlsCandidateStateEngine : CandidateStateEngine<MlsGroupState> {
             // is strict, so malformed or unsorted component bytes throw rather
             // than producing a lenient value. An admin policy that named nobody
             // would also fail its own constructor.
-            val group = MlsGroup.restore(resulting)
+            val group = MlsGroup.restore(resulting, policy)
             // Decoding the component set IS the validation: every component
             // decoder is strict, so malformed, unsorted or duplicated bytes
             // throw rather than yielding a lenient value, and an admin policy

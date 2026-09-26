@@ -103,6 +103,8 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -465,6 +467,8 @@ class EventFactory {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordChatEditEvent.KIND -> ConcordChatEditEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                CvmServerAnnouncementEvent.KIND -> CvmServerAnnouncementEvent(id, pubKey, createdAt, tags, content, sig)
+                CvmToolsListEvent.KIND -> CvmToolsListEvent(id, pubKey, createdAt, tags, content, sig)
                 AgentTurnMetricEvent.KIND -> AgentTurnMetricEvent(id, pubKey, createdAt, tags, content, sig)
                 EngramEvent.KIND -> EngramEvent(id, pubKey, createdAt, tags, content, sig)
                 AgentProfileEvent.KIND -> AgentProfileEvent(id, pubKey, createdAt, tags, content, sig)

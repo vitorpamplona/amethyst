@@ -37,7 +37,7 @@ Executable spec: the test suites in
 `quartz/src/commonTest/.../store/sqlite/` (`BasicTest`, `ReplaceableTest`, `AddressableTest`,
 `DeletionTest`, `ExpirationTest`, `RightToVanishTest`, `SearchTest`, `SearchRelevanceOrderTest`,
 `MergeQueryCorrectnessTest`, `TagMergeCorrectnessTest`, `QueryAssemblerTest`,
-`SnapshotIdsForNegentropyTest`, `FilterMatcherTest`, …). If a rule here ever contradicts a test,
+`SnapshotIdsForNegentropyTest`, `FilterMatcherTest`, `InsertOutcomeClassificationTest`, …). If a rule here ever contradicts a test,
 the test wins — and this file has a bug to fix.
 
 ## Kind classes (used throughout)
@@ -189,6 +189,21 @@ back alone and reports `Rejected(reason)`; the rest commit. If the **outer commi
 entry is treated as `Rejected` (the `IEventStore.batchInsert` contract). Outcomes are returned
 in input order; OK frames pair by event id, not order.
 
+**STORE-W09 — a failed row is classified against the database, not against the driver's
+exception text.** `SQLiteEventStore.classifyRowError` rolls the row's savepoint back and then
+asks the connection (which now shows pre-insert state): id already present → `DUPLICATE`;
+a stored version that beats this one at the replaceable/addressable coordinate (the exact
+complement of the supersession predicate in W01/W02) → `SUPERSEDED`; otherwise `Failed`.
+Message text is only a fast path and a fallback for trigger RAISEs (`blocked:`, `not allowed`),
+which leave no database-visible trace. This matters because the message is driver-specific —
+the bundled JVM driver writes `UNIQUE constraint failed: event_headers.id`, Android's throws an
+`android.database.SQLException` with a **null** message — so a text-only classifier answered
+`OK false` on Android for events the store already held. Corollary: re-offering a stored
+replaceable/addressable event **byte-for-byte** is `DUPLICATE`, not `SUPERSEDED` (it violates
+both indexes and only the id answer is driver-independent); a stale *different* version is
+still `SUPERSEDED`. Both carry the `duplicate:` prefix, so the relay reply is `OK true` either
+way.
+
 ---
 
 ## Deletion lifecycle — NIP-09 / NIP-62 (STORE-D)
@@ -323,6 +338,11 @@ non-itemizable cases).
 
 Add one line per behavior change, newest first: `YYYY-MM-DD <short sha> <rule id> — what changed`.
 
+- 2026-09-18 (pending) W09, W01/W02 — insert-failure classification now queries the database
+  instead of parsing the driver's exception message (Android's is null, so duplicates were
+  reported as `Failed`/`OK false`). A byte-for-byte re-offer of a stored replaceable/addressable
+  event now reports `DUPLICATE` where the JVM driver previously reported `SUPERSEDED`; both are
+  `duplicate:` → `OK true`, so the wire answer is unchanged.
 - 2026-08-04 (baseline) — rules F01–F13, W01–W08, D01–D08, C01, S01–S06, N01 written from the
   code at the time this skill was introduced. Changes before this date are not itemized;
   archaeology starts at `git log` on `nip01Core/store/`.

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip17Dm.files
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -64,6 +65,14 @@ class ChatMessageEncryptedFileHeaderEvent(
     fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
 
     fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
+
+    /**
+     * The amplitude ladder a voice recording carries, when the sender attached
+     * one. Read-only: nothing in this app writes it on a kind 15 yet, but the
+     * renderer draws real bars instead of a bare transport the moment a client
+     * that does shows up.
+     */
+    fun waveform() = tags.firstNotNullOfOrNull(WaveformTag::parse)?.wave
 
     fun thumbhash() = tags.firstNotNullOfOrNull(ThumbhashTag::parse)
 

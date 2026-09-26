@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quic.tls
 
-import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
-import com.vitorpamplona.quartz.marmot.mls.crypto.X25519KeyPair
+import com.vitorpamplona.quartz.mls.crypto.X25519
+import com.vitorpamplona.quartz.mls.crypto.X25519KeyPair
 import com.vitorpamplona.quic.QuicCodecException
 import com.vitorpamplona.quic.QuicReader
 import com.vitorpamplona.quic.QuicWriter

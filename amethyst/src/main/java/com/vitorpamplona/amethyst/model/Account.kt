@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
 import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
+import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
@@ -207,8 +208,8 @@ import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -377,8 +378,17 @@ class Account(
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
+    /**
+     * Where cordn keeps its encrypted group state, or null to run without it.
+     *
+     * A directory rather than a built runtime, because `CordnRuntime` needs
+     * this account's [scope] and that only exists once the account does.
+     * Nothing about it is shared with Marmot's stores above — cordn has its
+     * own, by the §3.1 rule in `amethyst/plans/2026-09-19-cordn-ui.md`.
+     */
+    val cordnFilesDir: java.io.File? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
-    val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
+    val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     /**
      * Durable publish obligations. Null means publish-before-apply does not
@@ -944,6 +954,24 @@ class Account(
     val broadcaster = EventBroadcaster(this)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
+
+    /**
+     * cordn, for this account, or null when no directory was supplied.
+     *
+     * Built here for the same reason [marmotManager] is: it needs [scope].
+     * Opening coordinators and starting their sync loops is a separate,
+     * suspending step ([CordnRuntime.start]) — constructing this touches no
+     * network and no coordinator learns anything from it.
+     */
+    val cordnRuntime: CordnRuntime? =
+        cordnFilesDir?.let {
+            CordnRuntime(
+                accountSigner = signer,
+                client = client,
+                filesDir = it,
+                scope = scope,
+            )
+        }
 
     val marmotManager: MarmotManager? =
         mlsGroupStateStore?.let {
@@ -3884,6 +3912,19 @@ class Account(
         // Doing this in start() rather than in the state's own init { } closes
         // the race where a publish would land on a half-built Account.
         cashuWalletState.start { event -> sendLiterallyEverywhere(event) }
+
+        // Reopen the cordn coordinators this account used last time.
+        //
+        // Deliberately its own launch rather than a branch of Marmot's block
+        // below: the two protocols are independent by design (§3.1 of
+        // amethyst/plans/2026-09-19-cordn-ui.md), and a cordn coordinator that
+        // is down must not delay Marmot's restore, or the reverse. Failures
+        // are already contained per coordinator inside start().
+        cordnRuntime?.let { runtime ->
+            scope.launch(Dispatchers.IO) {
+                runtime.restore()
+            }
+        }
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {

@@ -680,6 +680,65 @@ also carried on-relay as an encrypted kind:13302.
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
 | `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
 
+### cordn (MLS over an MCP coordinator)
+
+MLS group chat where delivery is one **coordinator** — an MCP server reached
+over ContextVM — instead of relays. State lives under
+`~/.amy/<account>/cordn/`, encrypted with a key at
+`~/.amy/<account>/cordn/blob.key`; the coordinator list is encrypted beside it.
+
+Two things shape every verb:
+
+- **A `gid` is unique only within one coordinator** (`spec/00.md` §4), so
+  `--coordinator` is part of a group's address. Every live verb takes
+  `[--coordinator PK] [--relay URL[,URL…]]`, and you can leave them off only
+  while exactly one coordinator is remembered. A coordinator has no address
+  besides its pubkey (§8.5), which is why its relays have to be remembered
+  rather than looked up.
+- **Delivery is pulled, not pushed.** A CLI run is a process and cannot hold a
+  subscription, so `amy cordn fetch` drains what the cursor has not seen and
+  exits. Nothing arrives while amy is not running; the coordinator holds the
+  ordered stream until asked.
+
+| Command | What it does |
+|---|---|
+| `amy cordn coordinator add --coordinator PK --relay URL[,URL…] [--label L]` | Remember a coordinator. Local only — nothing is announced to it. |
+| `amy cordn coordinator list` | Coordinators this account knows, with their relays. |
+| `amy cordn coordinator info` | The MCP `initialize` handshake. Every field is a claim the coordinator signed with the key that was already answering (§8.5) — the pubkey is the identity, the name is what an operator typed. |
+| `amy cordn coordinator forget --coordinator PK` | Drop it from the list. Local: the group state on disk is kept, and so is anything the coordinator holds. |
+| `amy cordn keypackage publish [--last-resort] [--count N]` | Publish KeyPackages. **Attributable** (§8.4): a signed, re-servable record that this npub uses cordn here. |
+| `amy cordn keypackage list` | Ours on the coordinator, and whether this device holds the private half that could open the Welcome one produces. |
+| `amy cordn keypackage withdraw --kp-ref REF[,REF…] \| --all` | Remove them. Does not undo the exposure — that already happened. |
+| `amy cordn group create --name N [--about A] [--gid GID] [--admin PK[,PK…]] [--icon I] [--image URL]` | Create a group. The `gid` is ours to choose and the coordinator never interprets it (§4); random unless given. No `--admin` means egalitarian **permanently** (`spec/01.md` §5.3). |
+| `amy cordn group list` | Groups on this coordinator, with epoch and member count. |
+| `amy cordn group info [--gid GID]` | Metadata, members, the shareable `cordn1…` ref, and what this coordinator learns about the group. |
+| `amy cordn invite --pubkey PK [--gid GID] [--kp-ref REF]` | Take their KeyPackage, verify the publication payload binds it to that npub, commit, and leave a Welcome. |
+| `amy cordn request --gid GID \| --ref cordn1…` | Ask to join. Publishes a KeyPackage first if none exists. Attributable (§8.1), and asking is not joining. |
+| `amy cordn requests list` | Who is asking to join a group we hold. |
+| `amy cordn requests accept --pubkey PK \| --all` / `decline` | Answer them. Any member may — `admin_pubkeys` is presentation metadata with nothing enforcing it (§5.3). |
+| `amy cordn welcomes` | Open every pending invitation **without joining**: a Welcome is opaque until processed, so the gid, name and members can only be shown after opening it. |
+| `amy cordn join --gid GID \| --all` / `decline` | Accept or refuse one. |
+| `amy cordn send --text "…" [--gid GID]` | A kind-9 chat message. |
+| `amy cordn send [--reply-to ID \| --react-to ID \| --edit ID \| --delete ID \| --pin ID \| --unpin ID] --to-author PK [--to-kind N]` | Annotate a message. `--to-author` is required because an annotation's tags name the target's author and kind, not just its id, and amy keeps no message store. |
+| `amy cordn fetch` | Drain the stream and print it: messages, epoch changes, echoes, and anything undecryptable (reported, not hidden — it is a gap in a conversation). |
+| `amy cordn ref encode --gid GID [--coordinator PK] [--relay URL[,URL…]]` | Build a `cordn1…` group reference. |
+| `amy cordn ref decode REF` | Read one back. |
+| `amy cordn exposure --coordinator PK [--groups N] [--published]` | What a coordinator would learn, before joining anything (§8). |
+
+> A group ref is a **locator, not an invitation**: holding one lets you ask to
+> join, it does not make you a member, and nothing obliges anyone to answer.
+
+Two live harnesses, neither wired into any build — read
+[`tests/cordn/stack.sh`](tests/cordn/stack.sh) first, it boots an unlicensed
+reference coordinator:
+
+- [`tests/cordn/tier-b.sh`](tests/cordn/tier-b.sh) — amy against amy through
+  the reference coordinator. Proves the transport and the coordinator client.
+- [`tests/cordn/interop-client.sh`](tests/cordn/interop-client.sh) — amy and
+  the reference client (`@cordn/cli`, MIT) in one group. Proves the MLS layer
+  against a second implementation, in both directions, including a
+  public-framed Commit of ours that their engine has to apply.
+
 ### Geochat (Bitchat geohash channels)
 
 Bitchat-interoperable public location chat: ephemeral kind:20000 events

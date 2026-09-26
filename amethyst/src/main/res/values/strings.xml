@@ -305,6 +305,250 @@
 
 
 
+    <string name="cordn_groups_manage">Coordinators</string>
+    <string name="cordn_groups_down_note">Nothing is arriving from these groups. Amethyst keeps retrying.</string>
+    <string name="cordn_groups_none">No cordn groups yet</string>
+    <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
+    <string name="cordn_groups_start">Start one</string>
+    <string name="cordn_group_unavailable">This group is not available. Its coordinator may have been removed.</string>
+    <string name="cordn_group_info">Group info</string>
+    <string name="cordn_message_deleted">Message deleted</string>
+    <string name="cordn_message_edited">edited</string>
+    <string name="cordn_action_go_to_message">Go to message</string>
+    <string name="cordn_delete_confirm_title">Withdraw message</string>
+    <string name="cordn_delete_confirm_body">Everyone in the group will see this message as withdrawn, and Amethyst will stop showing its text. The coordinator still holds the encrypted copy it was sent as, and anyone who already read it has already read it.</string>
+    <string name="cordn_delivery_accepted">Accepted by the coordinator</string>
+    <string name="cordn_message_details_title">Message details</string>
+    <string name="cordn_message_details_sent_at">Sent</string>
+    <string name="cordn_message_details_cursor">Cursor</string>
+    <string name="cordn_message_details_coordinator">Coordinator</string>
+    <string name="cordn_composer_hint">Message</string>
+    <string name="cordn_action_reply">Reply</string>
+    <string name="cordn_action_edit">Edit</string>
+    <string name="cordn_action_delete">Delete</string>
+    <string name="cordn_action_pin">Pin</string>
+    <string name="cordn_pinned_previous">Previous pinned message</string>
+    <string name="cordn_pinned_next">Next pinned message</string>
+    <string name="cordn_pinned_show_all">Show all pinned messages</string>
+    <string name="cordn_pinned_title">Pinned messages</string>
+    <string name="cordn_pinned_by">Pinned by %1$s</string>
+    <plurals name="cordn_pinned_count">
+        <item quantity="one">%1$d pinned message in this group</item>
+        <item quantity="other">%1$d pinned messages in this group</item>
+    </plurals>
+    <string name="cordn_action_unpin">Unpin</string>
+    <string name="cordn_action_editing">Editing your message</string>
+    <string name="cordn_media_upload_failed">Could not send that file.</string>
+    <string name="cordn_send_failed">That did not send.</string>
+    <string name="cordn_send_no_session">This group\'s coordinator is not open, so nothing can be sent yet.</string>
+    <string name="cordn_media_download_failed">Could not open that file.</string>
+    <string name="cordn_media_no_server">No media server is set for this account, so there is nowhere to put the file. Pick one in Settings.</string>
+    <string name="cordn_media_unreadable">That file could not be read.</string>
+    <string name="cordn_voice_record">Record a voice note</string>
+    <string name="cordn_voice_stop">Stop and send</string>
+    <string name="cordn_voice_play">Play voice note</string>
+    <string name="cordn_backup_explainer">Your nsec cannot bring cordn groups back. A cordn group lives as encryption state on this device and an ordered stream on a coordinator that cannot read it — lose the device without a backup and the group is gone, including everything already said in it.</string>
+    <string name="cordn_backup_passphrase">Passphrase</string>
+    <string name="cordn_backup_contents_title">What is in the file</string>
+    <string name="cordn_backup_contents_body">Your group encryption keys, your key packages, and every message in those groups. Anyone who opens it can read the conversations. The passphrase is the only thing protecting it once it leaves Amethyst.</string>
+    <string name="cordn_backup_export">Export</string>
+    <string name="cordn_backup_exported">Backup saved.</string>
+    <string name="cordn_backup_restore_title">Restore</string>
+    <string name="cordn_backup_restore_body">Restoring replaces the cordn groups on this device with the ones in the file. It is for a phone that has taken over from another — not a way to use the same groups on two devices at once.</string>
+    <string name="cordn_backup_restore">Restore</string>
+    <string name="cordn_backup_restore_confirm_title">Replace this device\'s cordn groups?</string>
+    <string name="cordn_backup_restore_confirm_body">Every cordn group now on this device will be removed and replaced by the ones in the file.\n\nDo not restore onto a second phone while the first is still in use. Both would hold the same group keys, and once both have sent a message the group breaks for everyone — silently, and with no way back.</string>
+    <string name="cordn_backup_restored">Restored.</string>
+    <string name="cordn_backup_failed">That did not work. Check the passphrase and the file.</string>
+    <string name="cordn_send">Send</string>
+    <string name="cordn_info_coordinator">Coordinator</string>
+    <string name="cordn_info_coordinator_key">Coordinator key</string>
+    <string name="cordn_info_coordinator_nprofile">Coordinator link</string>
+    <string name="cordn_info_copy_nprofile">Copy the coordinator\'s nprofile</string>
+    <string name="cordn_info_gid">Group id</string>
+    <string name="cordn_info_epoch">Epoch</string>
+    <string name="cordn_info_members">Members</string>
+    <string name="cordn_info_egalitarian">This group has no admins: everyone can add, remove and rename, permanently.</string>
+    <string name="cordn_info_technical">Technical details</string>
+    <string name="cordn_create_title">New Cordn group</string>
+    <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
+    <string name="cordn_create_people_none">Nobody yet &#8212; tap to add people</string>
+    <string name="cordn_create_people_empty">Nobody added yet. A group can be created empty and invitations sent later, but naming people now is what shows which coordinator can reach them.</string>
+    <string name="cordn_create_people_done">Done</string>
+    <string name="cordn_create_you">You, always an admin</string>
+    <string name="cordn_create_step_name">Name it</string>
+    <string name="cordn_create_step_people">Who is in it</string>
+    <string name="cordn_create_step_where">Where it lives</string>
+    <string name="cordn_create_step_admins">Who can add and remove</string>
+    <string name="cordn_create_add_member">Add someone</string>
+    <string name="cordn_create_people_note">Naming people now is what tells us which coordinator can reach them. Each one gets a Welcome left on that coordinator, which they pick up next time they open their app.</string>
+    <string name="cordn_create_reach_unknown">Not checked yet</string>
+    <string name="cordn_create_reach_none">No key on any coordinator you use</string>
+    <string name="cordn_create_egalitarian">Everyone can add and remove</string>
+    <string name="cordn_create_admin">Admin</string>
+    <string name="cordn_create_no_coordinator">No coordinator chosen</string>
+    <string name="cordn_create_coordinator_change">Change</string>
+    <string name="cordn_create_coordinator_hide">Done</string>
+    <string name="cordn_create_coverage_unknown">Not checked &#8212; picking it will ask</string>
+    <string name="cordn_create_coverage_all">Reaches all %1$d of your people</string>
+    <string name="cordn_create_coverage_partial">Reaches %1$d of %2$d &#8212; the rest would be left out</string>
+    <string name="cordn_create_outcome_title">The group exists</string>
+    <string name="cordn_create_outcome_explainer">Each invitation is a Welcome left on the coordinator, so they can fail one at a time. Nobody has been notified: they see it next time they open their app.</string>
+    <string name="cordn_create_outcome_no_welcome">Added to the group, but the invitation did not reach them &#8212; try again from the group screen</string>
+    <string name="cordn_create_outcome_waiting">Waiting for them</string>
+    <string name="cordn_create_outcome_failed">The coordinator refused the invitation</string>
+    <string name="cordn_create_outcome_skipped">No key here, so no Welcome could be left</string>
+    <string name="cordn_create_outcome_link">Send a link</string>
+    <string name="cordn_create_outcome_open">Open the chat</string>
+    <string name="cordn_create_coordinator">Coordinator</string>
+    <string name="cordn_create_coordinator_discover">Find coordinators</string>
+    <string name="cordn_create_coordinator_new">Another coordinator</string>
+    <string name="cordn_create_coordinator_pubkey">Coordinator public key (hex or npub)</string>
+    <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
+    <string name="cordn_create_name">Group name</string>
+    <string name="cordn_create_description">Description (optional)</string>
+    <string name="cordn_create_egalitarian_note">Everyone in the group can invite, remove members and change its details. Any member can name admins later, which ends that.</string>
+    <string name="cordn_create_admin_only_me">Only I manage this group</string>
+    <string name="cordn_admin_action_failed">That change could not be made.</string>
+    <string name="cordn_info_remove_member">Remove</string>
+    <string name="cordn_info_remove_confirm_title">Remove from group?</string>
+    <string name="cordn_info_remove_confirm_body">%1$s stops receiving messages from here. They keep what they have already read, and this cannot be undone — they would have to be invited again.</string>
+    <string name="cordn_info_edit_details">Edit details</string>
+    <string name="cordn_info_save">Save</string>
+    <string name="cordn_create_admin_only_me_on">Only you can invite, remove members or change the group\'s details. You can hand that to someone else later.</string>
+    <string name="cordn_create_action">Create group</string>
+    <string name="cordn_create_failed">The group could not be created.</string>
+    <string name="cordn_invitations_title">Cordn invitations</string>
+    <string name="cordn_invitations_explainer">Checked when you open this screen, and at no other time — asking a coordinator whether anyone invited you tells it you are here, so Amethyst does not do it in the background.</string>
+    <string name="cordn_invitations_refresh">Check again</string>
+    <string name="cordn_invitations_accept">Join</string>
+    <string name="cordn_invitations_decline">Decline</string>
+    <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_chat_yesterday">Yesterday</string>
+    <string name="cordn_chat_unread_divider">New messages</string>
+    <string name="cordn_chat_empty_title">No messages yet</string>
+    <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
+    <string name="cordn_reactions_title">Reactions</string>
+    <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
+    <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
+    <string name="cordn_coordinators_discover_action">Look for coordinators</string>
+    <string name="cordn_coordinators_discover_add">Add</string>
+    <string name="cordn_coordinators_discover_failed">Could not read announcements</string>
+    <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
+    <string name="cordn_coordinators_discover_unheard">Nothing found, and %1$d of your relays did not answer.</string>
+    <string name="cordn_coordinators_discover_seen">Announced %1$s ago</string>
+    <string name="cordn_coordinators_discover_seen_on">Last announced %1$s</string>
+    <string name="cordn_coordinators_relays">%1$s</string>
+    <string name="cordn_coordinators_relays_more">%1$s +%2$d more</string>
+    <string name="cordn_coordinators_show_all">Show all %1$d</string>
+    <string name="cordn_coordinators_show_fewer">Show fewer</string>
+    <string name="cordn_coordinators_show_older">Show %1$d that stopped announcing</string>
+    <string name="cordn_coordinators_hide_older">Hide the ones that stopped announcing</string>
+    <string name="cordn_coordinators_stale_note">These have not announced in over a month. Creating a group on one that has gone away will fail.</string>
+    <string name="cordn_info_add_member">Add someone</string>
+    <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
+    <string name="cordn_info_has_key_package">Can be added on this coordinator</string>
+    <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
+    <string name="cordn_exposure_open">What this coordinator can see</string>
+    <string name="cordn_exposure_close">Got it</string>
+    <string name="cordn_admin_someone">That person</string>
+    <string name="cordn_admin_no_key_package">%1$s has not published a key package to this coordinator, so they cannot be added yet. Ask them to open cordn on this coordinator first.</string>
+    <string name="cordn_admin_wrong_key_package">This coordinator served a key package that belongs to someone else, so %1$s was not added. Nothing was changed.</string>
+    <string name="cordn_admin_no_welcome">%1$s could not be given a way into the group, so the add was abandoned.</string>
+    <string name="cordn_admin_not_a_member">%1$s is not in this group.</string>
+    <string name="cordn_admin_no_self_remove">You cannot remove yourself from a cordn group.</string>
+    <string name="cordn_admin_coordinator_silent">The coordinator did not answer, so nothing was changed. Try again in a moment.</string>
+    <string name="cordn_info_add_member_none">Nobody found by that name.</string>
+    <string name="cordn_info_admin_badge">Admin</string>
+    <string name="cordn_invitations_members_more">+%1$d more</string>
+    <string name="cordn_invitations_via">Through %1$s</string>
+    <string name="cordn_invitations_none">No invitations waiting.</string>
+    <string name="cordn_invitations_no_coordinators">You have no coordinator open. cordn invitations arrive through a coordinator, so there is nowhere to look yet.</string>
+    <string name="cordn_invitations_unreachable">%1$s did not answer</string>
+    <string name="cordn_invitations_skipped">An invitation was left for another device</string>
+    <string name="cordn_invitations_load_failed">Could not read invitations.</string>
+    <string name="cordn_link_request">Ask to join this group</string>
+    <string name="cordn_link_request_disclosure">This publishes a key package under your own account key and tells the coordinator you want into this group — whether or not anyone answers.</string>
+    <string name="cordn_link_request_sent">Asked. A member of the group has to add you; the invitation will show up under cordn invitations.</string>
+    <string name="cordn_link_request_failed">Could not ask to join.</string>
+    <string name="cordn_requests_title">Requests to join</string>
+    <string name="cordn_requests_check">Check for requests</string>
+    <string name="cordn_requests_none">Nobody is waiting to join.</string>
+    <string name="cordn_requests_accept">Add</string>
+    <string name="cordn_requests_decline">Dismiss</string>
+    <string name="cordn_requests_admin_only">Only an admin can accept. In a group with no admins, that is everyone.</string>
+    <string name="cordn_requests_failed">Could not read the requests.</string>
+    <string name="cordn_link_scan">Scan</string>
+    <string name="cordn_share_title">Share this group</string>
+    <string name="cordn_share_explainer">Anyone with this link can ask to join. An admin still has to let them in.</string>
+    <string name="cordn_share_copy">Copy link</string>
+    <string name="cordn_share_copied">Copied</string>
+    <string name="cordn_coordinators_explainer">A coordinator orders one group\'s messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>
+    <string name="cordn_coordinators_none">No coordinators yet.</string>
+    <string name="cordn_coordinators_add_action">Add</string>
+    <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
+    <string name="cordn_coordinators_label">A name for it (yours, optional)</string>
+    <string name="cordn_coordinators_relays_label">Answers on</string>
+    <string name="cordn_coordinators_key">Coordinator key</string>
+    <string name="cordn_coordinators_copy_key">Copy the coordinator\'s npub</string>
+    <string name="cordn_coordinators_more">More actions</string>
+    <string name="cordn_coordinators_rename">Rename</string>
+    <string name="cordn_coordinators_label_note">This name is yours and stays on this device. A coordinator cannot prove a name, so it is never asked for one.</string>
+    <string name="cordn_coordinators_identify">Ask who it is</string>
+    <string name="cordn_coordinators_server">Says it is: %1$s</string>
+    <string name="cordn_coordinators_server_silent">Answered, but named nothing.</string>
+    <string name="cordn_coordinators_server_claim">A coordinator\'s name and version are strings it chose. Its public key is the only thing that identifies it.</string>
+    <string name="cordn_coordinators_health_ok">Answering.</string>
+    <string name="cordn_coordinators_health_retrying">A call failed; retrying.</string>
+    <string name="cordn_coordinators_health_down">Not answering — %1$d calls in a row have failed. Groups on it are not syncing.</string>
+    <string name="cordn_coordinators_health_unknown">Nothing asked of it yet.</string>
+    <string name="cordn_coordinators_remove">Remove</string>
+    <string name="cordn_coordinators_purge">Purge</string>
+    <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
+    <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
+    <string name="cordn_keypackages_explainer">Others can only add you to a cordn group by taking a key package you published to that coordinator. cordn has no other place to keep one, so with none published nobody can invite you — and nothing tells them why.</string>
+    <plurals name="cordn_create_unreachable_count">
+        <item quantity="one">%1$d person cannot be reached by any coordinator you use</item>
+        <item quantity="other">%1$d people cannot be reached by any coordinator you use</item>
+    </plurals>
+    <plurals name="cordn_groups_count">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
+    </plurals>
+    <plurals name="cordn_create_reach_count">
+        <item quantity="one">Reachable on %1$d coordinator</item>
+        <item quantity="other">Reachable on %1$d coordinators</item>
+    </plurals>
+    <plurals name="cordn_create_admin_count">
+        <item quantity="one">%1$d person can add and remove</item>
+        <item quantity="other">%1$d people can add and remove</item>
+    </plurals>
+    <plurals name="cordn_create_action_invite">
+        <item quantity="one">Create and invite %1$d person</item>
+        <item quantity="other">Create and invite %1$d people</item>
+    </plurals>
+    <plurals name="cordn_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+    <plurals name="cordn_keypackages_summary">
+        <item quantity="one">%1$d single-use package available.</item>
+        <item quantity="other">%1$d single-use packages available.</item>
+    </plurals>
+    <string name="cordn_keypackages_last_resort_yes">A last-resort package is published, so an invitation can still be made once the single-use ones run out.</string>
+    <string name="cordn_keypackages_last_resort_no">No last-resort package. Once the single-use ones run out, invitations fail.</string>
+    <plurals name="cordn_keypackages_orphans">
+        <item quantity="one">%1$d package this device cannot open</item>
+        <item quantity="other">%1$d packages this device cannot open</item>
+    </plurals>
+    <string name="cordn_keypackages_orphans_body">The coordinator will hand these to anyone inviting you, but the private half is not on this device — it belongs to another install. If that install is gone, an invitation using one of these produces a welcome nobody can ever open.</string>
+    <string name="cordn_keypackages_withdraw_orphans">Withdraw those</string>
+    <string name="cordn_keypackages_disclosure">Publishing signs a record under your own account key. That coordinator then knows this account exists and is invitable — permanently, and whether or not anyone invites you.</string>
+    <string name="cordn_keypackages_publish">Publish one</string>
+    <string name="cordn_keypackages_publish_last_resort">Publish last-resort</string>
+    <string name="cordn_keypackages_withdraw_all">Withdraw all</string>
+    <string name="cordn_keypackages_topup_note">Once you have published here, Amethyst quietly replaces packages as they are used up. It never publishes the first one for you.</string>
+    <string name="cordn_keypackages_failed">Could not read the key packages.</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_flag_forum">Forum channel</string>
     <string name="buzz_channel_flag_forum_desc">Threaded posts instead of a chat timeline. This cannot be changed later.</string>
@@ -568,8 +812,6 @@
 
     <!-- Marmot (MLS) group chats -->
 
-    <string name="app_name_debug" translatable="false">Amy Debug</string>
-    <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
 
     <!-- Buzz workflow run board -->
 
@@ -582,7 +824,6 @@
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
-    <string name="health_connect_rationale_activity_label">Health Connect and Amethyst</string>
 
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
@@ -650,6 +891,18 @@
     <string name="voice_post">Voice Post</string>
     <string name="voice_reply">Voice Reply</string>
     <string name="pow_kind_report">Report</string>
+
+    <!-- Emoji packs -->
+    <string name="app_name_debug" translatable="false">Amy Debug</string>
+    <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
+    <string name="health_connect_rationale_activity_label">Health Connect and Amethyst</string>
+
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
+    <plurals name="cordn_invitations_members">
+        <item quantity="one">%1$d person is already in this group</item>
+        <item quantity="other">%1$d people are already in this group</item>
+    </plurals>
     <string name="private_message">Private Message</string>
     <string name="pow_kind_chat_message">Chat message</string>
     <string name="nest_notification_broadcasting">Nest — Live</string>
@@ -996,4 +1249,8 @@
     <string name="backup_profile_field_birthday">Birthday</string>
     <string name="backup_profile_field_clink_offer">CLINK offer</string>
     <string name="backup_profile_field_bot">Bot flag</string>
+    <plurals name="cordn_info_admins_kept">
+        <item quantity="one">The group\'s %1$d admin stays as it is.</item>
+        <item quantity="other">The group\'s %1$d admins stay as they are.</item>
+    </plurals>
 </resources>

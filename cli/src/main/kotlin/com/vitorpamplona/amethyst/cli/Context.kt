@@ -377,6 +377,13 @@ class Context(
      */
     val cashu: CashuContext by lazy { CashuContext(this) }
 
+    /**
+     * cordn wiring (coordinator registry, MLS groups, key packages) — see
+     * [CordnContext]. Lazy for the same reason: a run that never says `cordn`
+     * opens no ContextVM transport and writes no blob key.
+     */
+    val cordn: CordnContext by lazy { CordnContext(this) }
+
     /** See [CashuContext.ops]. */
     fun cashuOps(): CashuWalletOps = cashu.ops()
 

@@ -20,8 +20,13 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
+import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
+import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
+import com.vitorpamplona.quartz.marmot.groups.currentGroupState
+import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
+import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
+import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
@@ -47,7 +52,7 @@ class CurrentProfileAuthorizationTest {
         creator: ByteArray,
         admins: List<ByteArray>,
     ): MlsGroup {
-        val group = MlsGroup.create(creator)
+        val group = MlsGroup.create(creator, policy = MarmotGroupPolicy)
         val dictionary =
             MarmotGroupState.buildDictionary(
                 adminPolicy = AdminPolicyV1.of(admins),
@@ -79,7 +84,7 @@ class CurrentProfileAuthorizationTest {
         val alice = currentProfileGroup(aliceAccount, listOf(aliceAccount))
         val bobBundle = alice.createKeyPackage(bobAccount, ByteArray(0))
         val add = alice.addMember(bobBundle.keyPackage.toTlsBytes())
-        val bob = MlsGroup.processWelcome(add.welcomeBytes!!, bobBundle)
+        val bob = MlsGroup.processWelcome(add.welcomeBytes!!, bobBundle, policy = MarmotGroupPolicy)
 
         assertTrue(!bob.isLocalAdmin())
         assertEquals(setOf(aliceAccount.toHexKey()), bob.currentAdminIdentities())
