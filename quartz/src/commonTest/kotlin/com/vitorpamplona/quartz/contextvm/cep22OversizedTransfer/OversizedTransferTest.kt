@@ -76,7 +76,7 @@ class OversizedTransferTest {
     }
 
     @Test
-    fun `CVM-22-02 assembles out-of-order chunks by progress, not arrival order`() {
+    fun `CVM-22-02 assembles out-of-order chunks by progress rather than arrival order`() {
         // Relays may reorder. `progress` is the canonical assembly index.
         val frames = sender().frame(token, payload)
         val start = frames.first()
