@@ -582,7 +582,7 @@ private fun attachmentLabelFor(tags: TagArray): StringResource {
  * is on the room. Reading the Note would render an empty row forever.
  */
 @Composable
-private fun CordnGroupRoomCompose(
+internal fun CordnGroupRoomCompose(
     chatroom: CordnGroupChatroom,
     accountViewModel: AccountViewModel,
     nav: INav,

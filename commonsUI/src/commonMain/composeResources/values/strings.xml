@@ -2911,6 +2911,7 @@
     <string name="community_rules_violation_wot_gate_failed">You don't pass this community's web-of-trust requirements.</string>
     <string name="community_rules_violation_stale_rules">The latest community rules document was rejected as stale.</string>
     <string name="marmot_groups_title">Marmot Groups</string>
+    <string name="cordn_groups_title">Cordn Groups</string>
     <string name="marmot_create_group">Create Group</string>
     <string name="marmot_create_group_title">Create Marmot Group</string>
     <string name="marmot_create_group_footer">A new MLS group will be created. You can add members after.</string>
