@@ -48,18 +48,28 @@ class Nip49 {
         val key = SCrypt.scrypt(normalizedPassword, encryptedInfo.salt, n, 8, 1, 32)
         val m = ByteArray(32)
 
-        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfDecrypt(
-            m,
-            key,
-            encryptedInfo.encryptedKey,
-            byteArrayOf(encryptedInfo.keySecurity),
-            encryptedInfo.nonce,
-            key,
-        )
+        try {
+            // The Poly1305 tag is what tells a wrong password apart. Inspecting the output
+            // instead (e.g. "any byte > 0") rejects valid keys whose bytes are all >= 0x80.
+            val authenticated =
+                LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfDecrypt(
+                    m,
+                    key,
+                    encryptedInfo.encryptedKey,
+                    byteArrayOf(encryptedInfo.keySecurity),
+                    encryptedInfo.nonce,
+                    key,
+                )
 
-        check(m.any { it > 0 }) { "Incorrect password" }
+            check(authenticated) { "Incorrect password" }
 
-        return m.toHexKey()
+            return m.toHexKey()
+        } finally {
+            // NIP-49: the symmetric key should be zeroed and discarded after use.
+            key.fill(0)
+            normalizedPassword.fill(0)
+            m.fill(0)
+        }
     }
 
     fun encrypt(
@@ -84,18 +94,28 @@ class Nip49 {
         val key = SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
         val ciphertext = ByteArray(48)
 
-        // byte[] c, long[] cLen,
-        // byte[] m, long mLen,
-        // byte[] ad, long adLen,
-        // byte[] nSec, byte[] nPub, byte[] k
-        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfEncrypt(
-            ciphertext,
-            secretKey,
-            byteArrayOf(ksb),
-            key,
-            nonce,
-            key,
-        )
+        try {
+            // byte[] c, long[] cLen,
+            // byte[] m, long mLen,
+            // byte[] ad, long adLen,
+            // byte[] nSec, byte[] nPub, byte[] k
+            val encrypted =
+                LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfEncrypt(
+                    ciphertext,
+                    secretKey,
+                    byteArrayOf(ksb),
+                    key,
+                    nonce,
+                    key,
+                )
+            // Never hand back an ncryptsec of an untouched (all-zero) buffer: it would be a
+            // backup that no password can ever open.
+            check(encrypted) { "Failed to encrypt the key" }
+        } finally {
+            // NIP-49: the symmetric key should be zeroed and discarded after use.
+            key.fill(0)
+            normalizedPassword.fill(0)
+        }
 
         return EncryptedInfo(
             EncryptedInfo.V,
