@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
@@ -43,7 +44,6 @@ import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
-import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink

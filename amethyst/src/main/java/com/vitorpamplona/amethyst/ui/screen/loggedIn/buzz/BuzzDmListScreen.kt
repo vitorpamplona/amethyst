@@ -82,15 +82,15 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_dm_more
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
@@ -256,7 +256,7 @@ private fun DmRowCard(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = timeAgoShort(row.lastActivity, stringRes(Res.string.now)),
+                text = timeAgoShort(row.lastActivity, rememberTimeAgoLabels()),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

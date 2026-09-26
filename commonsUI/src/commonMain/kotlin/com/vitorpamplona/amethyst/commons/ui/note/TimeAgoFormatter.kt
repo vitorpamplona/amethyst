@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import android.content.Context
-import android.text.format.DateFormat
-import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
@@ -46,52 +43,23 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import org.jetbrains.compose.resources.StringResource
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 import kotlin.math.round
 
-// Skeletons follow Unicode LDML — DateFormat.getBestDateTimePattern picks the
-// correct locale-specific ordering (e.g. "MMM d, y" in en-US vs "d MMM y" in en-GB).
+// Skeletons follow Unicode LDML: the platform picks the locale-specific ordering
+// (e.g. "MMM d, y" in en-US vs "d MMM y" in en-GB). See [DateSkeletonFormatter].
 private const val YEAR_SKELETON = "yMMMd"
 private const val MONTH_SKELETON = "MMMd"
 private const val YEAR_NO_DAY_SKELETON = "yMMM"
 
-/**
- * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale].
- *
- * `SimpleDateFormat` is mutable and not thread-safe, and these formatters are
- * read from both the UI thread (composition) and background coroutines
- * (e.g. `LocalCache.justVerify` logging failed event verifications). A bare
- * `var` shared across threads would race on the formatter's internal Calendar.
- * Using `ThreadLocal` gives each thread its own instance — no locks, no
- * allocation per call, and we rebuild lazily on locale change.
- */
-private class LocaleAwareFormatter(
-    private val skeleton: String,
-) {
-    private val cache = ThreadLocal<Pair<Locale, SimpleDateFormat>>()
-
-    fun get(): SimpleDateFormat {
-        val current = Locale.getDefault()
-        val cached = cache.get()
-        if (cached != null && cached.first == current) return cached.second
-        val fresh = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, skeleton), current)
-        cache.set(current to fresh)
-        return fresh
-    }
-}
-
-private val yearFormatter = LocaleAwareFormatter(YEAR_SKELETON)
-private val monthFormatter = LocaleAwareFormatter(MONTH_SKELETON)
-private val yearNoDayFormatter = LocaleAwareFormatter(YEAR_NO_DAY_SKELETON)
+private val yearFormatter = DateSkeletonFormatter(YEAR_SKELETON)
+private val monthFormatter = DateSkeletonFormatter(MONTH_SKELETON)
+private val yearNoDayFormatter = DateSkeletonFormatter(YEAR_NO_DAY_SKELETON)
 
 /**
  * The handful of unit labels the relative formatters splice into their output.
  *
  * Resolved once in composition so the formatters themselves can stay ordinary
- * functions. [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] builds its text
+ * functions. [com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo] builds its text
  * inside a `derivedStateOf`, which is not a composable scope, so a @Composable
  * formatter could not be called from there at all.
  */
@@ -133,8 +101,8 @@ fun timeAgoWith(
     val timeDifference = TimeUtils.now() - time
 
     return when {
-        timeDifference > TimeUtils.ONE_YEAR -> prefix + yearFormatter.get().format(time * 1000)
-        timeDifference > TimeUtils.ONE_MONTH -> prefix + monthFormatter.get().format(time * 1000)
+        timeDifference > TimeUtils.ONE_YEAR -> prefix + yearFormatter.format(time * 1000)
+        timeDifference > TimeUtils.ONE_MONTH -> prefix + monthFormatter.format(time * 1000)
         timeDifference > TimeUtils.ONE_DAY -> prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + labels.days
         timeDifference > TimeUtils.ONE_HOUR -> prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + labels.hours
         timeDifference > TimeUtils.ONE_MINUTE -> prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + labels.minutes
@@ -142,10 +110,13 @@ fun timeAgoWith(
     }
 }
 
-/** Plain-function core of [timeAbsolute], callable outside composition. */
+/**
+ * Plain-function core of [timeAbsolute], callable outside composition. [timeOfDay] comes
+ * from [rememberTimeOfDayFormatter].
+ */
 fun timeAbsoluteWith(
     time: Long?,
-    context: Context,
+    timeOfDay: (epochMillis: Long) -> String,
     never: String,
     prefix: String = " • ",
 ): String {
@@ -153,43 +124,39 @@ fun timeAbsoluteWith(
     if (time == 0L) return prefix + never
 
     val timeMs = time * 1000
-    val now = Calendar.getInstance()
-    val then = Calendar.getInstance().apply { timeInMillis = timeMs }
+    val now = calendarYearAndDay(TimeUtils.nowMillis())
+    val then = calendarYearAndDay(timeMs)
 
-    val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
-    val sameDay = sameYear && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
+    val sameYear = now / 1000 == then / 1000
+    val sameDay = now == then
 
-    val timeOfDay = DateFormat.getTimeFormat(context).format(Date(timeMs))
+    val timeOfDay = timeOfDay(timeMs)
 
     return when {
         sameDay -> prefix + timeOfDay
-        sameYear -> prefix + monthFormatter.get().format(timeMs) + ", " + timeOfDay
-        else -> prefix + yearFormatter.get().format(timeMs)
+        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.format(timeMs)
     }
 }
 
 /**
  * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
  * granularity from how far away the timestamp is:
- *   - same day → time only (locale + system 12/24-hr aware via [DateFormat.getTimeFormat])
+ *   - same day → time only (locale + system 12/24-hr aware via [rememberTimeOfDayFormatter])
  *   - same year → "Jan 5, 14:32" / "5 Jan 14:32" / "Jan 5, 2:32 PM" (locale + system aware)
  *   - older    → "Jan 5, 2024" / "5 Jan 2024" (locale aware)
  *
- * Used by [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] when the user
+ * Used by [com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo] when the user
  * taps the relative timestamp to reveal the absolute one.
  */
 @Composable
 fun timeAbsolute(
     time: Long?,
-    context: Context,
     prefix: String = " • ",
-): String = timeAbsoluteWith(time, context, stringRes(Res.string.never), prefix)
+): String = timeAbsoluteWith(time, rememberTimeOfDayFormatter(), stringRes(Res.string.never), prefix)
 
 @Composable
-fun timeAbsoluteNoDot(
-    time: Long?,
-    context: Context,
-): String = timeAbsolute(time, context, prefix = "")
+fun timeAbsoluteNoDot(time: Long?): String = timeAbsolute(time, prefix = "")
 
 @Composable
 fun timeAgo(
@@ -210,11 +177,11 @@ fun timeAgoNoDot(time: Long?): String {
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            yearFormatter.get().format(time * 1000)
+            yearFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            monthFormatter.get().format(time * 1000)
+            monthFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -244,11 +211,11 @@ fun timeAgoNoDotNoDay(time: Long?): String {
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            yearNoDayFormatter.get().format(time * 1000)
+            yearNoDayFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            monthFormatter.get().format(time * 1000)
+            monthFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -278,11 +245,11 @@ fun timeAheadNoDot(time: Long?): String {
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            yearFormatter.get().format(time * 1000)
+            yearFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            monthFormatter.get().format(time * 1000)
+            monthFormatter.format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -314,9 +281,9 @@ fun dateFormatter(
     val timeDifference = TimeUtils.now() - time
 
     return if (timeDifference > TimeUtils.ONE_YEAR) {
-        yearFormatter.get().format(time * 1000)
+        yearFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
-        monthFormatter.get().format(time * 1000)
+        monthFormatter.format(time * 1000)
     } else {
         today
     }
@@ -394,28 +361,19 @@ fun lastSeenSentence(time: Long?): String {
             }
         }
 
-    val dateText = yearFormatter.get().format(time * 1000)
+    val dateText = yearFormatter.format(time * 1000)
 
     return stringRes(Res.string.last_seen_on_date, dateText, durationText)
 }
 
+/**
+ * "5 min. ago" style on platforms that have an abbreviated relative-span formatter (Android's
+ * DateUtils), the compact relative form ("5m") elsewhere.
+ */
 fun timeAgoShort(
-    mills: Long?,
-    stringForNow: String,
+    time: Long?,
+    labels: TimeAgoLabels,
 ): String {
-    if (mills == null) return " "
-
-    var humanReadable =
-        DateUtils
-            .getRelativeTimeSpanString(
-                mills * 1000,
-                System.currentTimeMillis(),
-                DateUtils.MINUTE_IN_MILLIS,
-                DateUtils.FORMAT_ABBREV_ALL,
-            ).toString()
-    if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
-        humanReadable = stringForNow
-    }
-
-    return humanReadable
+    if (time == null) return " "
+    return relativeTimeSpanShort(time * 1000, TimeUtils.nowMillis(), labels.now) { timeAgoWith(time, labels, prefix = "") }
 }

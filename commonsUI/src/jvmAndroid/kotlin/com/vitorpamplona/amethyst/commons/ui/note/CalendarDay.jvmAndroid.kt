@@ -18,16 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.layouts
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
-import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
-import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
+import java.util.Calendar
 
-/** Android's window size is the configuration's, which already excludes system decorations. */
-@Composable
-fun rememberScreenLayoutSpec(): ScreenLayoutSpec {
-    val configuration = LocalConfiguration.current
-    return rememberScreenLayoutSpec(configuration.screenWidthDp, configuration.screenHeightDp)
+actual fun calendarYearAndDay(epochMillis: Long): Int {
+    val calendar = Calendar.getInstance().apply { timeInMillis = epochMillis }
+    return calendar.get(Calendar.YEAR) * 1000 + calendar.get(Calendar.DAY_OF_YEAR)
 }

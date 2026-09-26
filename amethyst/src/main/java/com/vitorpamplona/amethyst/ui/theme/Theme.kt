@@ -21,98 +21,31 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
-import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
-import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueDark
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentBlueLight
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenDark
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentGreenLight
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentOrangeDark
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentOrangeLight
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentPinkDark
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentPinkLight
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentRedDark
-import com.vitorpamplona.amethyst.commons.ui.theme.AccentRedLight
-import com.vitorpamplona.amethyst.commons.ui.theme.Purple200
-import com.vitorpamplona.amethyst.commons.ui.theme.Purple500
-import com.vitorpamplona.amethyst.commons.ui.theme.Shapes
-import com.vitorpamplona.amethyst.commons.ui.theme.Teal200
-import com.vitorpamplona.amethyst.commons.ui.theme.Typography
-import com.vitorpamplona.amethyst.commons.ui.theme.amethystDarkColorScheme
-import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColorScheme
+import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
+import com.vitorpamplona.amethyst.commons.ui.theme.amethystDarkColors
+import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColors
+import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
-import com.vitorpamplona.amethyst.commons.ui.theme.withFontFamily
-
-// The accent color (primary/secondary/tertiary) is user-selectable in Settings -> Accent Color.
-// Purple keeps the original Amethyst look (purple primary + teal secondary). Every other accent
-// uses its single hue across primary and secondary for a cohesive single-color theme.
-private fun accentPrimary(
-    accent: AccentColorType,
-    dark: Boolean,
-): Color =
-    when (accent) {
-        AccentColorType.PURPLE -> if (dark) Purple200 else Purple500
-        AccentColorType.BLUE -> if (dark) AccentBlueDark else AccentBlueLight
-        AccentColorType.GREEN -> if (dark) AccentGreenDark else AccentGreenLight
-        AccentColorType.ORANGE -> if (dark) AccentOrangeDark else AccentOrangeLight
-        AccentColorType.RED -> if (dark) AccentRedDark else AccentRedLight
-        AccentColorType.PINK -> if (dark) AccentPinkDark else AccentPinkLight
-    }
-
-private fun accentSecondary(
-    accent: AccentColorType,
-    dark: Boolean,
-): Color = if (accent == AccentColorType.PURPLE) Teal200 else accentPrimary(accent, dark)
-
-// Representative colour for an accent option, used by the Settings accent-picker swatches — the
-// same primary the theme would apply for the given light/dark mode, so the swatch previews the
-// real result.
-fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dark)
-
-private fun darkColors(accent: AccentColorType): ColorScheme =
-    amethystDarkColorScheme(
-        primary = accentPrimary(accent, dark = true),
-        secondary = accentSecondary(accent, dark = true),
-        inversePrimary = accentPrimary(accent, dark = false),
-    )
-
-private fun lightColors(accent: AccentColorType): ColorScheme =
-    amethystLightColorScheme(
-        primary = accentPrimary(accent, dark = false),
-        secondary = accentSecondary(accent, dark = false),
-        inversePrimary = accentPrimary(accent, dark = true),
-    )
 
 val chartLightColors =
     VicoTheme(
@@ -155,6 +88,10 @@ fun AmethystTheme(content: @Composable () -> Unit) {
     AmethystTheme(theme, accentColor, fontFamily, fontSize, displaySettings, content)
 }
 
+/**
+ * The shared [AmethystMaterialTheme] plus what only Android has: the system status and
+ * navigation bars, tinted to match.
+ */
 @Composable
 fun AmethystTheme(
     prefTheme: ThemeType,
@@ -168,44 +105,22 @@ fun AmethystTheme(
     // MODIFY_DAY_NIGHT_MODE, which this app does not declare, so the call silently no-ops — and it
     // ran on every recomposition of the theme, writing device state from inside composition. The
     // in-app choice is applied through the colour scheme below, which is what actually took effect.
-    val darkTheme =
-        when (prefTheme) {
-            ThemeType.DARK -> true
-            ThemeType.LIGHT -> false
-            else -> isSystemInDarkTheme()
-        }
+    val darkTheme = isDarkTheme(prefTheme)
     val colors =
         remember(darkTheme, accentColor) {
-            if (darkTheme) darkColors(accentColor) else lightColors(accentColor)
+            if (darkTheme) amethystDarkColors(accentColor) else amethystLightColors(accentColor)
         }
 
-    val resolvedFontFamily = remember(fontFamily) { fontFamily.toFontFamily() }
-    val typography = remember(fontFamily) { Typography.withFontFamily(resolvedFontFamily) }
-
-    val density = LocalDensity.current
-    val scaledDensity =
-        remember(density, fontSize) {
-            Density(density.density, density.fontScale * fontSize.scale)
-        }
-
-    MaterialTheme(
-        colorScheme = colors,
-        typography = typography,
-        shapes = Shapes,
-        content = {
-            ProvideAppIcons {
-                CompositionLocalProvider(
-                    LocalDensity provides scaledDensity,
-                    // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
-                    LocalProfilePictureCache provides true,
-                    LocalDisplaySettings provides displaySettings,
-                    // Performance mode turns decorative animations (crossfades) off app-wide.
-                    LocalAnimationsEnabled provides !displaySettings.performanceMode,
-                    LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = resolvedFontFamily)),
-                    content = content,
-                )
-            }
-        },
+    AmethystMaterialTheme(
+        darkTheme = darkTheme,
+        accentColor = accentColor,
+        fontFamily = fontFamily,
+        fontSize = fontSize,
+        displaySettings = displaySettings,
+        // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
+        profilePictureCache = true,
+        colors = colors,
+        content = content,
     )
 
     val view = LocalView.current
@@ -226,13 +141,3 @@ fun AmethystTheme(
         }
     }
 }
-
-// Maps the user-selected font preference to a Compose [FontFamily].
-// SYSTEM returns null so the platform default is used unchanged.
-fun FontFamilyType.toFontFamily(): FontFamily? =
-    when (this) {
-        FontFamilyType.SYSTEM -> null
-        FontFamilyType.SANS_SERIF -> FontFamily.SansSerif
-        FontFamilyType.SERIF -> FontFamily.Serif
-        FontFamilyType.MONOSPACE -> FontFamily.Monospace
-    }

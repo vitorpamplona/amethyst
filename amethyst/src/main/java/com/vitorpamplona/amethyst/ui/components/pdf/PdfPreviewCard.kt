@@ -44,16 +44,19 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.graphics.createBitmap
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.service.pdf.PdfFetcher
+import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
@@ -155,7 +158,7 @@ private fun LoadedPdfPreviewCard(
         value =
             try {
                 PdfFetcher
-                    .fetchSnapshot(content.url) { url ->
+                    .fetchSnapshot(content.url, Amethyst.instance.diskCache) { url ->
                         accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                     }.use { snapshot ->
                         withContext(Dispatchers.IO) {
@@ -325,12 +328,6 @@ internal fun cappedRenderSize(
     val w = (pageWidth * scale).toInt().coerceAtLeast(1)
     val h = (pageHeight * scale).toInt().coerceAtLeast(1)
     return w to h
-}
-
-internal fun extractFilename(url: String): String {
-    val afterQuery = url.substringBefore('?').substringBefore('#')
-    val name = afterQuery.substringAfterLast('/', afterQuery)
-    return if (name.isBlank()) url else name
 }
 
 internal fun pageCountLabel(pageCount: Int): String = if (pageCount == 1) "1 page" else "$pageCount pages"

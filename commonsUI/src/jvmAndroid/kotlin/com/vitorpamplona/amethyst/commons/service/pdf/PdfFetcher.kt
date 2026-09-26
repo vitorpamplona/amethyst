@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.pdf
+package com.vitorpamplona.amethyst.commons.service.pdf
 
 import coil3.disk.DiskCache
-import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -35,15 +34,15 @@ object PdfFetcher {
      * responsible for closing the returned snapshot; while it's open the cache entry cannot be
      * evicted, so the underlying file stays valid for `PdfRenderer`.
      *
-     * Reuses the Coil disk cache (`Amethyst.instance.diskCache`) so PDFs share the same LRU
-     * eviction and disk budget as images.
+     * Pass the app's Coil [diskCache] so PDFs share the same LRU eviction and disk budget as
+     * images.
      */
     suspend fun fetchSnapshot(
         url: String,
+        diskCache: DiskCache,
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
-            val diskCache = Amethyst.instance.diskCache
             // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
             // contends on the global DiskLruCache lock, which Coil's cleanup pass holds across a
             // burst of unlink syscalls (see DeferredDeleteFileSystem) — calling it from a caller

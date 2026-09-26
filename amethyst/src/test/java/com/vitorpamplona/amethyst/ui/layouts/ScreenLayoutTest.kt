@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.layouts
 
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.layouts.decideNavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.layouts.hasRoomForNotificationPanel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

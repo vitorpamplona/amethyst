@@ -95,8 +95,8 @@ import com.vitorpamplona.amethyst.commons.resources.backup_conflict_count_remove
 import com.vitorpamplona.amethyst.commons.resources.backup_conflict_title
 import com.vitorpamplona.amethyst.commons.resources.backup_review_changed_by_other_app
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff

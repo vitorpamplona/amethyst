@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_dm_see_all_count
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_create_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_import_loading
-import com.vitorpamplona.amethyst.commons.resources.now
 import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_empty
 import com.vitorpamplona.amethyst.commons.resources.relay_group_channels_not_nip29
 import com.vitorpamplona.amethyst.commons.resources.relay_group_create_title
@@ -100,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -109,7 +110,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
@@ -885,7 +885,7 @@ private fun BuzzDmInlineRow(
         }
         if (row.lastActivity > 0) {
             Text(
-                text = timeAgoShort(row.lastActivity, stringRes(Res.string.now)),
+                text = timeAgoShort(row.lastActivity, rememberTimeAgoLabels()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

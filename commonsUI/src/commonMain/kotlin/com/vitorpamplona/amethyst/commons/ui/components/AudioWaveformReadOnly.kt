@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
@@ -45,8 +45,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
-import com.linc.audiowaveform.model.AmplitudeType
-import com.linc.audiowaveform.model.WaveformAlignment
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -204,3 +202,9 @@ internal fun Iterable<Float>.normalize(
 }
 
 private fun Int.safeDiv(value: Int): Float = if (value == 0) 0F else this / value.toFloat()
+
+/** Where each bar sits in the row. Same values as the audiowaveform library's enum, which is Android-only. */
+enum class WaveformAlignment { Top, Center, Bottom }
+
+/** How a bucket of samples becomes one bar. Same values as the audiowaveform library's enum. */
+enum class AmplitudeType { Avg, Min, Max }
