@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.appId
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.assets
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.channel
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.version
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -70,14 +71,19 @@ class ReleaseArtifactSetEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(title(), description(), searchableReleaseNotes()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        visitor.visit(searchableReleaseNotes())
     }
+
+    // Only NIP-82 releases carry release notes in `content`. A NIP-51 set may keep
+    // encrypted private items there, which must never reach the index.
+    private fun searchableReleaseNotes() = if (isNip82SoftwareRelease()) content.ifBlank { null } else null
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 

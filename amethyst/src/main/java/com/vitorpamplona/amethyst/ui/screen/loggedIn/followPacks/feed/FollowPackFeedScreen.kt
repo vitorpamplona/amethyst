@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.Follow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

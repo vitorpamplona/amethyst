@@ -60,11 +60,11 @@ fun RenderWikiContent(
 ) {
     val noteEvent = note.event as? WikiArticleEvent ?: return
 
-    WikiNoteHeader(noteEvent, note, accountViewModel, nav)
+    WikiArticleHeader(noteEvent, note, accountViewModel, nav)
 }
 
 @Composable
-private fun WikiNoteHeader(
+private fun WikiArticleHeader(
     noteEvent: WikiArticleEvent,
     note: Note,
     accountViewModel: AccountViewModel,

@@ -103,10 +103,10 @@ private object ActivityCardPreviewData {
         }
     }
 
-    fun lnZapNote(): Note {
+    fun zapReceiptNote(): Note {
         val id = "d".repeat(64)
         // Receipts are signed by the lightning provider; the preview skips the
-        // embedded request and feeds the decrypted card to RenderLnZapCard directly.
+        // embedded request and feeds the decrypted card to RenderZapReceiptCard directly.
         return Note(id).apply {
             event = null
             author = null
@@ -171,12 +171,12 @@ fun EmojiReactionActivityCardPreview() {
 
 @Preview
 @Composable
-fun LnZapActivityCardPreview() {
+fun ZapReceiptActivityCardPreview() {
     val accountViewModel = mockAccountViewModel()
 
     ThemeComparisonColumn {
-        RenderLnZapCard(
-            note = ActivityCardPreviewData.lnZapNote(),
+        RenderZapReceiptCard(
+            note = ActivityCardPreviewData.zapReceiptNote(),
             card =
                 ZapAmountCommentNotification(
                     user = LocalCache.getOrCreateUser(ActivityCardPreviewData.senderHex),

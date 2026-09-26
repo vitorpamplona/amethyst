@@ -17,7 +17,7 @@ origin: desktopApp/plans/2026-05-12-wallet-zapping-phase1-2-plan.md
 
 1. **mockk callback capture**: Use `slot<(Event, NormalizedRelayUrl) -> Unit>()` + `capture(slot)` to intercept relay subscription callbacks and feed simulated wallet responses
 2. **GlobalScope.launch problem**: NwcPaymentHandler uses `GlobalScope.launch(Dispatchers.IO)` inside callbacks — tests need real time via `withTimeout(5.seconds)` to await (or refactor to inject scope)
-3. **LnZapPaymentResponseEvent.createResponse()** exists — build real encrypted test responses with deterministic keys, no need to mock encryption
+3. **NwcResponseEvent.createResponse()** exists — build real encrypted test responses with deterministic keys, no need to mock encryption
 4. **runTest auto-advances virtual time** — timeout tests resolve instantly without real delays
 5. **Codebase prefers anonymous objects** over mockk for complex interfaces (see RelayConnectionManagerTest)
 
@@ -35,7 +35,7 @@ methods, wallet column state management, and zap dialog logic.
 | NIP-47 URI parsing | quartz | `Nip47WalletConnectTest.kt` | Complete |
 | NWC request serialization | quartz | `RequestTest.kt` (50+ cases) | Complete |
 | NWC response parsing | quartz | `ResponseTest.kt` (50+ cases) | Complete |
-| NWC event encryption | quartz | `LnZapPaymentRequestEventTest.kt` | Complete |
+| NWC event encryption | quartz | `NwcRequestEventTest.kt` | Complete |
 | Alby interop | quartz | `AlbyInteropTest.kt` (60+ cases) | Complete |
 | Account management | desktopApp | `AccountManager*Test.kt` (5 files) | Complete |
 | Cache pipeline | desktopApp | `DesktopCachePipelineTest.kt` | Complete |
@@ -187,9 +187,9 @@ class NwcPaymentHandlerTest {
 
 **Challenge:** The `subscribeOnRelay` callback runs asynchronously. Tests
 must capture the `onEvent` lambda and invoke it with a simulated
-`LnZapPaymentResponseEvent`. This requires building encrypted response
+`NwcResponseEvent`. This requires building encrypted response
 events using the wallet's signer — similar to
-`quartz/nip47WalletConnect/LnZapPaymentRequestEventTest.kt`.
+`quartz/nip47WalletConnect/NwcRequestEventTest.kt`.
 
 **Alternative (simpler):** If capturing the relay callback is too complex,
 extract the response processing logic into a testable pure function and
@@ -349,7 +349,7 @@ class NwcRpcIntegrationTest {
         val requestEvent = client.getBalance()
 
         // 2. Verify request is properly encrypted
-        assertEquals(LnZapPaymentRequestEvent.KIND, requestEvent.kind)
+        assertEquals(NwcRequestEvent.KIND, requestEvent.kind)
         assertTrue(requestEvent.content.isNotBlank())
 
         // 3. Wallet decrypts and verifies method
@@ -357,7 +357,7 @@ class NwcRpcIntegrationTest {
         assertIs<GetBalanceMethod>(decryptedRequest)
 
         // 4. Wallet builds encrypted response
-        val responseEvent = LnZapPaymentResponseEvent.create(
+        val responseEvent = NwcResponseEvent.create(
             request = requestEvent,
             response = GetBalanceSuccessResponse(
                 result = GetBalanceSuccessResponse.GetBalanceResult(balance = 125000),
@@ -429,7 +429,7 @@ extraction needed).
 | Mocking relay callback is complex | Medium | Extract response processing into pure function, test that directly |
 | Compose state testing without Compose | Medium | Extract state holder class (Option A) |
 | `formatSats` is private | Low | Change to `internal` visibility |
-| Encrypted response building may need quartz test utils | Low | Use same pattern as `LnZapPaymentRequestEventTest.kt` |
+| Encrypted response building may need quartz test utils | Low | Use same pattern as `NwcRequestEventTest.kt` |
 
 ## Sources
 
@@ -437,4 +437,4 @@ extraction needed).
 - NIP-47 protocol tests: `quartz/src/commonTest/.../nip47WalletConnect/` (13 files)
 - Test framework: kotlin.test + mockk 1.14.9 + kotlinx-coroutines-test 1.10.2
 - Mock pattern: `AccountManagerBunkerLoginTest.kt` (relaxed mockk + coEvery)
-- Crypto test pattern: `LnZapPaymentRequestEventTest.kt` (deterministic KeyPair)
+- Crypto test pattern: `NwcRequestEventTest.kt` (deterministic KeyPair)

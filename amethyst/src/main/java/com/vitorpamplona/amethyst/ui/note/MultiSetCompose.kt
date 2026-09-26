@@ -106,7 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
@@ -841,7 +841,7 @@ fun ObserveAndRenderBoxedUserCards(
     accountViewModel: AccountViewModel,
     subscribe: Boolean = true,
 ) {
-    val score by observeUserContactCardsScore(user, accountViewModel, subscribe)
+    val score by observeUserAssertionsScore(user, accountViewModel, subscribe)
 
     score?.let {
         Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {

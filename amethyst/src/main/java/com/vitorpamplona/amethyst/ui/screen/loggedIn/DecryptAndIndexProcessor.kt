@@ -68,10 +68,10 @@ class EventProcessor(
     private val draftHandler = DraftEventHandler(account, cache)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
-    private val sealHandler = SealedRumorEventHandler(account, cache, this)
+    private val sealHandler = SealEventHandler(account, cache, this)
 
-    private val zapRequest = LnZapRequestEventHandler(account.privateZapsDecryptionCache)
-    private val zapEvent = LnZapEventHandler(account.privateZapsDecryptionCache)
+    private val zapRequest = ZapRequestEventHandler(account.privateZapsDecryptionCache)
+    private val zapEvent = ZapReceiptEventHandler(account.privateZapsDecryptionCache)
 
     private val groupEventHandler = GroupEventHandler(account, cache)
 
@@ -389,7 +389,7 @@ class GiftWrapEventHandler(
 /**
  * Shared Marmot Welcome handler used by both [GiftWrapEventHandler]
  * (in case a Welcome arrives directly inside a kind:1059 with no Seal
- * layer) and [SealedRumorEventHandler] (the actual production path —
+ * layer) and [SealEventHandler] (the actual production path —
  * Welcomes are wrapped GiftWrap → Seal → Welcome per
  * [com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap]).
  */
@@ -453,7 +453,7 @@ private suspend fun processMarmotWelcomeFlow(
     }
 }
 
-class SealedRumorEventHandler(
+class SealEventHandler(
     private val account: Account,
     private val cache: LocalCache,
     private val eventProcessor: EventProcessor,
@@ -465,14 +465,14 @@ class SealedRumorEventHandler(
     ) {
         val rumorId = event.innerEventId
         if (rumorId == null) {
-            processNewSealedRumor(event, eventNote, publicNote)
+            processNewSeal(event, eventNote, publicNote)
         } else {
             // Replayed seal: re-link the rumor to its delivering envelope so
             // broadcast can republish the wrap after a cache rebuild.
             // publicNote is the outermost event of this unwrap chain — the
             // kind-1059 wrap normally, the seal itself when it arrived bare.
             publicNote.event?.let { envelope -> cache.getOrCreateNote(rumorId).recordRumorHost(envelope) }
-            processExistingSealedRumor(rumorId, publicNote)
+            processExistingSeal(rumorId, publicNote)
         }
     }
 
@@ -488,7 +488,7 @@ class SealedRumorEventHandler(
         }
     }
 
-    private suspend fun processNewSealedRumor(
+    private suspend fun processNewSeal(
         event: SealEvent,
         eventNote: Note,
         publicNote: Note,
@@ -524,7 +524,7 @@ class SealedRumorEventHandler(
         eventNote.flowSet?.metadata?.invalidateData()
     }
 
-    private suspend fun processExistingSealedRumor(
+    private suspend fun processExistingSeal(
         rumorId: String,
         publicNote: Note,
     ) {
@@ -536,7 +536,7 @@ class SealedRumorEventHandler(
     }
 }
 
-class LnZapRequestEventHandler(
+class ZapRequestEventHandler(
     val decryptionCache: PrivateZapCache,
 ) : EventHandler<ZapRequestEvent> {
     override suspend fun add(
@@ -559,7 +559,7 @@ class LnZapRequestEventHandler(
     }
 }
 
-class LnZapEventHandler(
+class ZapReceiptEventHandler(
     val decryptionCache: PrivateZapCache,
 ) : EventHandler<ZapReceiptEvent> {
     override suspend fun delete(

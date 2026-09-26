@@ -31,7 +31,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -59,7 +59,7 @@ class BookmarkGroupMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
-    var bookmarkGroup by mutableStateOf<LabeledBookmarkList?>(null)
+    var bookmarkGroup by mutableStateOf<BookmarkSet?>(null)
     val isNewList by derivedStateOf { bookmarkGroup == null }
 
     val name = mutableStateOf(TextFieldValue())
@@ -83,7 +83,7 @@ class BookmarkGroupMetadataViewModel : ViewModel() {
     }
 
     fun load(dTag: String) {
-        bookmarkGroup = account.labeledBookmarkLists.getBookmarkList(dTag)
+        bookmarkGroup = account.bookmarkSets.getBookmarkList(dTag)
         name.value = TextFieldValue(bookmarkGroup?.title ?: "")
         picture.value = TextFieldValue(bookmarkGroup?.image ?: "")
         description.value = TextFieldValue(bookmarkGroup?.description ?: "")
@@ -95,14 +95,14 @@ class BookmarkGroupMetadataViewModel : ViewModel() {
         accountViewModel.launchSigner {
             val bookmarkGroup = bookmarkGroup
             if (bookmarkGroup == null) {
-                accountViewModel.account.labeledBookmarkLists.addLabeledBookmarkList(
+                accountViewModel.account.bookmarkSets.addBookmarkSet(
                     listName = name.value.text,
                     listDescription = description.value.text,
                     listImage = picture.value.text,
                     account = accountViewModel.account,
                 )
             } else {
-                accountViewModel.account.labeledBookmarkLists.updateMetadata(
+                accountViewModel.account.bookmarkSets.updateMetadata(
                     listName = name.value.text,
                     listDescription = description.value.text,
                     listImage = picture.value.text,

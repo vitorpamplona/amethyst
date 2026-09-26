@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

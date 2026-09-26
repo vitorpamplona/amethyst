@@ -43,16 +43,16 @@ class PrivateZapCache(
         decryptionCache.remove(event)
     }
 
-    override fun cachedPrivateZap(event: ZapRequestEvent): LnZapPrivateEvent? = decryptionCache[event]?.cached()
+    override fun cachedPrivateZap(event: ZapRequestEvent): PrivateZapEvent? = decryptionCache[event]?.cached()
 
     override suspend fun decryptPrivateZap(event: ZapRequestEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class PrivateZapDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<ZapRequestEvent, LnZapPrivateEvent>(signer) {
+) : DecryptCache<ZapRequestEvent, PrivateZapEvent>(signer) {
     override suspend fun decryptAndParse(
         event: ZapRequestEvent,
         signer: NostrSigner,
-    ): LnZapPrivateEvent = signer.decryptZapEvent(event)
+    ): PrivateZapEvent = signer.decryptZapEvent(event)
 }

@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.desktop.followpacks.BulkFollowAction
 import com.vitorpamplona.amethyst.desktop.followpacks.BulkFollowPreview
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

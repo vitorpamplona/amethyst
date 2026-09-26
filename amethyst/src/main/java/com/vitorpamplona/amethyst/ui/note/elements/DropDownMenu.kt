@@ -281,7 +281,7 @@ fun observeBookmarksFollowsAndAccount(
         accountViewModel.account.bookmarkState.bookmarks,
         accountViewModel.account.pinState.pinnedEventIdSet,
         accountViewModel.showSensitiveContent(),
-        accountViewModel.account.emoji.getEmojiPackSelectionFlow(),
+        accountViewModel.account.emoji.getEmojiListFlow(),
     ) { follows, bookmarks, pinnedIds, showSensitiveContent, emojiSelectionState ->
         val isEmojiPackInMyList =
             if (noteIdForEmoji != null) {
@@ -312,7 +312,7 @@ fun observeBookmarksFollowsAndAccount(
                 isEmojiPackInMyList =
                     noteIdForEmoji?.let {
                         accountViewModel.account.emoji
-                            .getEmojiPackSelection()
+                            .getEmojiList()
                             ?.isTaggedAddressableNote(it) == true
                     } ?: false,
             ),

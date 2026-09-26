@@ -81,7 +81,7 @@ object WelcomeGiftWrap {
 
         // Step 2: Create a Rumor from the unsigned event and seal it (kind:13)
         val rumor = Rumor.create(welcomeRumor)
-        val sealedRumor =
+        val sealEvent =
             SealEvent.create(
                 rumor = rumor,
                 encryptTo = recipientPubKey,
@@ -90,7 +90,7 @@ object WelcomeGiftWrap {
 
         // Step 3: Gift wrap (kind:1059) with an ephemeral key to the recipient
         return GiftWrapEvent.create(
-            event = sealedRumor,
+            event = sealEvent,
             recipientPubKey = recipientPubKey,
         )
     }

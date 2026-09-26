@@ -379,7 +379,7 @@ class MarmotInboundProcessor(
     /**
      * Process a WelcomeEvent after NIP-59 gift wrap unwrapping.
      *
-     * Called by the platform layer after unwrapping a GiftWrap → SealedRumor → WelcomeEvent.
+     * Called by the platform layer after unwrapping a GiftWrap → Seal → WelcomeEvent.
      *
      * Flow:
      * 1. Extract welcome bytes and KeyPackage event ID

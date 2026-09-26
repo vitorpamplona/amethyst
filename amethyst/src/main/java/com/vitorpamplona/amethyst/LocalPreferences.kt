@@ -62,7 +62,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
@@ -599,7 +599,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
                     putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
                     putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupRelayFeedsList)
+                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupFavoriteRelayList)
                     putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
                     putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
 
@@ -613,9 +613,9 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, settings.backupPrivateHomeRelayList)
                     putOrRemove(PrefKeys.LATEST_APP_SPECIFIC_DATA, settings.backupAppSpecificData)
 
-                    putOrRemove(PrefKeys.LATEST_CHANNEL_LIST, settings.backupChannelList)
+                    putOrRemove(PrefKeys.LATEST_CHANNEL_LIST, settings.backupPublicChatList)
                     putOrRemove(PrefKeys.LATEST_COMMUNITY_LIST, settings.backupCommunityList)
-                    putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupHashtagList)
+                    putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupInterestList)
                     putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
@@ -827,15 +827,15 @@ object LocalPreferences {
                     val latestNip65RelayListStr = getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)
                     val latestSearchRelayListStr = getString(PrefKeys.LATEST_SEARCH_RELAY_LIST, null)
                     val latestIndexRelayListStr = getString(PrefKeys.LATEST_INDEX_RELAY_LIST, null)
-                    val latestRelayFeedsListStr = getString(PrefKeys.LATEST_RELAY_FEEDS_LIST, null)
+                    val latestFavoriteRelayListStr = getString(PrefKeys.LATEST_RELAY_FEEDS_LIST, null)
                     val latestBlockedRelayListStr = getString(PrefKeys.LATEST_BLOCKED_RELAY_LIST, null)
                     val latestTrustedRelayListStr = getString(PrefKeys.LATEST_TRUSTED_RELAY_LIST, null)
                     val latestMuteListStr = getString(PrefKeys.LATEST_MUTE_LIST, null)
                     val latestPrivateHomeRelayListStr = getString(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, null)
                     val latestAppSpecificDataStr = getString(PrefKeys.LATEST_APP_SPECIFIC_DATA, null)
-                    val latestChannelListStr = getString(PrefKeys.LATEST_CHANNEL_LIST, null)
+                    val latestPublicChatListStr = getString(PrefKeys.LATEST_CHANNEL_LIST, null)
                     val latestCommunityListStr = getString(PrefKeys.LATEST_COMMUNITY_LIST, null)
-                    val latestHashtagListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
+                    val latestInterestListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
                     val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
                     val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
@@ -891,15 +891,15 @@ object LocalPreferences {
                     val latestNip65RelayList = async { parseEventOrNull<AdvertisedRelayListEvent>(latestNip65RelayListStr) }
                     val latestSearchRelayList = async { parseEventOrNull<SearchRelayListEvent>(latestSearchRelayListStr) }
                     val latestIndexRelayList = async { parseEventOrNull<IndexerRelayListEvent>(latestIndexRelayListStr) }
-                    val latestRelayFeedsList = async { parseEventOrNull<FavoriteRelayListEvent>(latestRelayFeedsListStr) }
+                    val latestFavoriteRelayList = async { parseEventOrNull<FavoriteRelayListEvent>(latestFavoriteRelayListStr) }
                     val latestBlockedRelayList = async { parseEventOrNull<BlockedRelayListEvent>(latestBlockedRelayListStr) }
                     val latestTrustedRelayList = async { parseEventOrNull<TrustedRelayListEvent>(latestTrustedRelayListStr) }
                     val latestMuteList = async { parseEventOrNull<MuteListEvent>(latestMuteListStr) }
                     val latestPrivateHomeRelayList = async { parseEventOrNull<PrivateOutboxRelayListEvent>(latestPrivateHomeRelayListStr) }
                     val latestAppSpecificData = async { parseEventOrNull<AppSpecificDataEvent>(latestAppSpecificDataStr) }
-                    val latestChannelList = async { parseEventOrNull<PublicChatListEvent>(latestChannelListStr) }
+                    val latestPublicChatList = async { parseEventOrNull<PublicChatListEvent>(latestPublicChatListStr) }
                     val latestCommunityList = async { parseEventOrNull<CommunityListEvent>(latestCommunityListStr) }
-                    val latestHashtagList = async { parseEventOrNull<InterestListEvent>(latestHashtagListStr) }
+                    val latestInterestList = async { parseEventOrNull<InterestListEvent>(latestInterestListStr) }
                     val latestGeohashList = async { parseEventOrNull<GeohashListEvent>(latestGeohashListStr) }
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestRelayGroupList = async { parseEventOrNull<SimpleGroupListEvent>(latestRelayGroupListStr) }
@@ -947,15 +947,15 @@ object LocalPreferences {
                     val latestNip65RelayListResolved = latestNip65RelayList.await()
                     val latestSearchRelayListResolved = latestSearchRelayList.await()
                     val latestIndexRelayListResolved = latestIndexRelayList.await()
-                    val latestRelayFeedsListResolved = latestRelayFeedsList.await()
+                    val latestFavoriteRelayListResolved = latestFavoriteRelayList.await()
                     val latestBlockedRelayListResolved = latestBlockedRelayList.await()
                     val latestTrustedRelayListResolved = latestTrustedRelayList.await()
                     val latestMuteListResolved = latestMuteList.await()
                     val latestPrivateHomeRelayListResolved = latestPrivateHomeRelayList.await()
                     val latestAppSpecificDataResolved = latestAppSpecificData.await()
-                    val latestChannelListResolved = latestChannelList.await()
+                    val latestPublicChatListResolved = latestPublicChatList.await()
                     val latestCommunityListResolved = latestCommunityList.await()
-                    val latestHashtagListResolved = latestHashtagList.await()
+                    val latestInterestListResolved = latestInterestList.await()
                     val latestGeohashListResolved = latestGeohashList.await()
                     val latestEphemeralListResolved = latestEphemeralList.await()
                     val latestRelayGroupListResolved = latestRelayGroupList.await()
@@ -1049,15 +1049,15 @@ object LocalPreferences {
                         backupDMRelayList = latestDmRelayListResolved,
                         backupSearchRelayList = latestSearchRelayListResolved,
                         backupIndexRelayList = latestIndexRelayListResolved,
-                        backupRelayFeedsList = latestRelayFeedsListResolved,
+                        backupFavoriteRelayList = latestFavoriteRelayListResolved,
                         backupBlockedRelayList = latestBlockedRelayListResolved,
                         backupTrustedRelayList = latestTrustedRelayListResolved,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayListResolved,
                         backupMuteList = latestMuteListResolved,
                         backupAppSpecificData = latestAppSpecificDataResolved,
-                        backupChannelList = latestChannelListResolved,
+                        backupPublicChatList = latestPublicChatListResolved,
                         backupCommunityList = latestCommunityListResolved,
-                        backupHashtagList = latestHashtagListResolved,
+                        backupInterestList = latestInterestListResolved,
                         backupGeohashList = latestGeohashListResolved,
                         backupEphemeralChatList = latestEphemeralListResolved,
                         backupRelayGroupList = latestRelayGroupListResolved,

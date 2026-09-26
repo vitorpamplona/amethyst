@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.desktop.followpacks.FollowPackEditor
 import com.vitorpamplona.amethyst.desktop.followpacks.FollowPacksState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 /**
  * Search-all view for follow packs.

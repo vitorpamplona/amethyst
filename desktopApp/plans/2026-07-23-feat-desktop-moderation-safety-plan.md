@@ -30,7 +30,7 @@ cruxes**, de-risking the whole feature:
    → Crux 2 resolved: reuse `invalidateData()`, don't invent a bus.
 3. **Concrete APIs confirmed** (see Research Insights under Technical Approach):
    `MuteListEvent.create/add/remove(MuteTag, isPrivate, signer)` where `MuteTag ∈
-   {UserTag, HashtagTag(word), EventTag(thread)}`; `PeopleListEvent.addUser/
+   {UserTag, HashtagTag(word), EventTag(thread)}`; `FollowSetEvent.addUser/
    removeUser` for blocks; publish via `signer.sign(template)` +
    `relayManager.broadcastToAll(signed)` (precedent `reactToNote`/`repostNote` in
    `desktopApp/.../ui/NoteActions.kt`).
@@ -85,7 +85,7 @@ enforcement, reusing quartz protocol and the existing spam-collapse reveal:
   `isAcceptable`, so DMs get filtered for free once the predicate is real.
 - **Actions:** `hideUser`/`showUser`/`blockUser`/`hideWord`/`hideThread` on
   `DesktopIAccount` build → sign → publish an updated `MuteListEvent`/
-  `PeopleListEvent`.
+  `FollowSetEvent`.
 - **Report:** `report(note|user, type, comment)` reuses quartz `ReportEvent.build`
   (kind 1984) + `ReportType`, published to the account's public + private outbox
   (match Android). New `ReportNoteDialog` ported to desktop Compose, wired into
@@ -103,7 +103,7 @@ enforcement, reusing quartz protocol and the existing spam-collapse reveal:
 flowchart TD
     subgraph relays[Relays]
       K10000[kind 10000 MuteListEvent - encrypted]
-      K10001[kind 10001 PeopleListEvent - block]
+      K10001[kind 10001 FollowSetEvent - block]
       K1068[content notes, some content-warning tagged]
     end
     K10000 & K10001 --> SUB[Main.kt account subscription]
@@ -130,7 +130,7 @@ flowchart TD
 | Report types | `ReportType` enum (SPAM/PROFANITY/IMPERSONATION/NUDITY/ILLEGAL/MALWARE/VIOLENCE/…) | `quartz/.../nip56Reports/ReportType.kt` |
 | CW detection | `Event.isSensitiveOrNSFW()`, `contentWarningReason()` | `quartz/.../nip36SensitiveContent/EventExt.kt` |
 | Hidden check | `Note.isHiddenFor(liveHiddenUsers)` (users+words+threads) | `quartz/.../Note.kt` |
-| Mute/block events | `MuteListEvent` (10000), `PeopleListEvent` (10001) | `quartz/.../nip51Lists/…` |
+| Mute/block events | `MuteListEvent` (10000), `FollowSetEvent` (10001) | `quartz/.../nip51Lists/…` |
 | Reveal primitive | `SpamCheckedNoteRender` `forceReveal` + `rememberSaveable(id)` | `desktopApp/.../ui/note/SpamCheckedNoteRender.kt` |
 
 ### Android references to port
@@ -183,7 +183,7 @@ MuteListEvent.remove(earlierVersion, mute, signer)                              
 // reading private entries requires the signer:
 earlierVersion.privateTags(signer)  // throws SignerExceptions.UnauthorizedDecryptionException on read-only
 // block (kind 10001)
-PeopleListEvent.addUser(...) / removeUser(...)
+FollowSetEvent.addUser(...) / removeUser(...)
 ```
 MuteTag subtypes: `UserTag` (pubkey), `HashtagTag` (word), `EventTag` (thread
 root). Enforcement then reads these via `Note.isHiddenFor(liveHiddenUsers)`.

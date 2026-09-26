@@ -43,9 +43,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -162,14 +162,14 @@ class TopNavFilterState(
 
     val livePeopleListsFlow: Flow<List<FeedDefinition>> =
         combine(
-            account.peopleLists.peopleListNotes,
-            account.followLists.followListNotes,
+            account.followSets.peopleListNotes,
+            account.starterPacks.starterPackNotes,
             ::mergePeopleLists,
         ).onStart {
             emit(
                 mergePeopleLists(
-                    account.peopleLists.peopleListNotes.value,
-                    account.followLists.followListNotes.value,
+                    account.followSets.peopleListNotes.value,
+                    account.starterPacks.starterPackNotes.value,
                 ),
             )
         }
@@ -247,10 +247,10 @@ class TopNavFilterState(
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveInterestFlows: Flow<List<FeedDefinition>> =
         combine(
-            account.hashtagList.flow,
+            account.interestList.flow,
             account.geohashList.flow,
             account.communityList.flowNotes,
-            account.relayFeedsList.flow,
+            account.favoriteRelayList.flow,
             combine(
                 account.favoriteAlgoFeedsList.flowNotes,
                 account.interestSets.listFeedFlow,
@@ -261,10 +261,10 @@ class TopNavFilterState(
         }.onStart {
             emit(
                 mergeInterests(
-                    account.hashtagList.flow.value,
+                    account.interestList.flow.value,
                     account.geohashList.flow.value,
                     account.communityList.flowNotes.value,
-                    account.relayFeedsList.flow.value,
+                    account.favoriteRelayList.flow.value,
                     account.favoriteAlgoFeedsList.flowNotes.value,
                     account.interestSets.listFeedFlow.value,
                 ),

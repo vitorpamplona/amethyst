@@ -93,7 +93,7 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
 import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.channels
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -102,8 +102,8 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
@@ -133,11 +133,11 @@ internal fun LazyListScope.listDiffItems(
 ): Boolean {
     when (val diff = conflict.diff) {
         is RelayListDiff -> relayListItems(diff, conflict, nav)
-        is ChannelListDiff -> publicChatItems(diff, conflict, accountViewModel, nav)
+        is PublicChatListDiff -> publicChatItems(diff, conflict, accountViewModel, nav)
         is CommunityListDiff -> communityItems(diff, conflict, accountViewModel, nav)
         is EphemeralChatListDiff -> ephemeralRoomItems(diff, conflict, nav)
         is FavoriteAlgoFeedsListDiff -> favoriteFeedItems(diff, conflict, accountViewModel, nav)
-        is HashtagListDiff -> topicItems(diff.hashtags, (conflict.saved as? InterestListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false, nav)
+        is InterestListDiff -> topicItems(diff.hashtags, (conflict.saved as? InterestListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false, nav)
         is GeohashListDiff -> topicItems(diff.geohashes, (conflict.saved as? GeohashListEvent)?.publicGeohashes().orEmpty(), diff.privateItems, isPlace = true, nav)
         is TrustProviderListDiff -> trustProviderItems(diff, conflict, accountViewModel, nav)
         is PaymentTargetsDiff -> paymentTargetItems(diff, conflict)
@@ -446,7 +446,7 @@ private fun SpaceTile(
 }
 
 private fun LazyListScope.publicChatItems(
-    diff: ChannelListDiff,
+    diff: PublicChatListDiff,
     conflict: ReplaceableBackupConflict,
     accountViewModel: AccountViewModel,
     nav: INav,

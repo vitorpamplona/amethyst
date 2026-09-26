@@ -31,7 +31,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -83,7 +83,7 @@ class FollowPackMetadataViewModel : ViewModel() {
     }
 
     fun load(dTag: String) {
-        peopleList = account.followLists.selectList(dTag)
+        peopleList = account.starterPacks.selectList(dTag)
         name.value = TextFieldValue(peopleList?.title ?: "")
         picture.value = TextFieldValue(peopleList?.image ?: "")
         description.value = TextFieldValue(peopleList?.description ?: "")
@@ -94,14 +94,14 @@ class FollowPackMetadataViewModel : ViewModel() {
             val peopleList = peopleList
             if (peopleList == null) {
                 val newListIdentifier =
-                    accountViewModel.account.followLists.addFollowList(
+                    accountViewModel.account.starterPacks.addFollowList(
                         name = name.value.text,
                         desc = description.value.text,
                         image = picture.value.text,
                         account = accountViewModel.account,
                     )
             } else {
-                accountViewModel.account.followLists.updateMetadata(
+                accountViewModel.account.starterPacks.updateMetadata(
                     name = name.value.text,
                     desc = description.value.text,
                     image = picture.value.text,

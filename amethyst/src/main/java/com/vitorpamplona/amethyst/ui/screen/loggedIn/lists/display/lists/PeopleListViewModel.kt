@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -57,7 +57,7 @@ class PeopleListViewModel : ViewModel() {
         selectedDTag
             .transformLatest {
                 emitAll(
-                    account.peopleLists.selectListFlow(it).flowOn(Dispatchers.IO),
+                    account.followSets.selectListFlow(it).flowOn(Dispatchers.IO),
                 )
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -79,23 +79,23 @@ class PeopleListViewModel : ViewModel() {
     }
 
     suspend fun deleteFollowSet() {
-        account.peopleLists.deleteFollowSet(selectedDTag.value, account)
+        account.followSets.deleteFollowSet(selectedDTag.value, account)
     }
 
-    fun loadNote(): AddressableNote? = account.peopleLists.getPeopleListNote(selectedDTag.value)
+    fun loadNote(): AddressableNote? = account.followSets.getPeopleListNote(selectedDTag.value)
 
     suspend fun removeUserFromSet(
         user: User,
         isPrivate: Boolean,
     ) {
-        account.peopleLists.removeUserFromSet(user, isPrivate, selectedDTag.value, account)
+        account.followSets.removeUserFromSet(user, isPrivate, selectedDTag.value, account)
     }
 
     suspend fun addUserToSet(
         user: User,
         isPrivate: Boolean,
     ) {
-        account.peopleLists.addUserToSet(user, selectedDTag.value, isPrivate, account)
+        account.followSets.addUserToSet(user, selectedDTag.value, isPrivate, account)
     }
 
     fun hasUserFlow(

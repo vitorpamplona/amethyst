@@ -101,7 +101,7 @@ class NotificationDispatcher(
         private const val TAG = "NotificationDispatcher"
 
         // The dispatcher observes the *final* notification payload kinds.
-        // GiftWrap/EphemeralGiftWrap (1059/21059) and SealedRumor (13) are NOT
+        // GiftWrap/EphemeralGiftWrap (1059/21059) and Seal (13) are NOT
         // listed here — by the time we care, Account.newNotesPreProcessor has
         // already unwrapped them and inserted the inner payload into LocalCache,
         // which fires the observer a second time on the inner event.
@@ -235,8 +235,8 @@ class NotificationDispatcher(
                             if (event is WakeUpEvent) return@predicate true
 
                             // getNoteIfExists(event) — not (event.id) — so
-                            // AddressableEvent kinds (LongTextNote, WikiNote,
-                            // LiveChess*, VideoHorizontal/Vertical) resolve to
+                            // AddressableEvent kinds (LongFormContent, WikiArticle,
+                            // LiveChess*, AddressableNormalVideo/AddressableShortVideo) resolve to
                             // their address-keyed replaceable note. The id-keyed
                             // version note has its replyTo moved away during
                             // insertion (LocalCache.consumeBaseReplaceable), so

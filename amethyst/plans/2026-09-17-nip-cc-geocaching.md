@@ -83,7 +83,7 @@ The listing event is mostly existing tags wearing a new kind number:
 | `r`             | `nip51Lists/tags/RelayTag` (`"r"`)                                       |
 | `a`             | `nip01Core/tags/aTag/ATag` (curation list + found log)                   |
 | `title`, `description` (37517) | `nip51Lists/tags/TitleTag`, `.../DescriptionTag`          |
-| embedded 7517   | `Event.fromJson(...)` (same trick `LnZapEvent.zapRequest()` uses)        |
+| embedded 7517   | `Event.fromJson(...)` (same trick `ZapReceiptEvent.zapRequest()` uses)        |
 | signature check | `Event.verifySignature()` in `nip01Core/crypto/EventExt.kt`              |
 | kind 1111 logs  | `nip22Comments/CommentEvent` **as-is** — it already models `A/K/P` + `a/k/p` addressable root+parent (`rootAddress()`, `replyAddress()`, `hasRootAddress()`). Only the `t` log-type vocabulary is new. |
 | required-tag gate | `containsAllTagNamesWithValues(REQUIRED_FIELDS)`, as `ClassifiedsEvent.isWellFormed()` does |

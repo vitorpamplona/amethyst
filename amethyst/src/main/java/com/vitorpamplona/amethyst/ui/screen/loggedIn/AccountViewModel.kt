@@ -202,7 +202,7 @@ import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
@@ -2144,11 +2144,11 @@ class AccountViewModel(
 
     fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
-    fun updateContactCardPetName(
+    fun updateUserAssertionPetName(
         user: User,
         petName: String?,
         summary: String?,
-    ) = launchSigner { account.updateContactCardPetName(user.pubkeyHex, petName, summary) }
+    ) = launchSigner { account.updateUserAssertionPetName(user.pubkeyHex, petName, summary) }
 
     fun hide(word: String) = launchSigner { account.hideWord(word) }
 

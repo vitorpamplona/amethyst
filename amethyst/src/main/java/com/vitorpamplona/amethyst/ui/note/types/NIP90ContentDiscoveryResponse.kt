@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 
 @Composable
-fun RenderNIP90ContentDiscoveryResponse(
+fun RenderDvmContentDiscoveryResponse(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,

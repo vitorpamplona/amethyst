@@ -58,7 +58,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
@@ -331,7 +331,7 @@ class DesktopLocalCache : ICacheProvider {
             }
 
             is LongFormContentEvent -> {
-                consumeLongTextNote(event, relay)
+                consumeLongFormContent(event, relay)
             }
 
             is BookmarkListEvent -> {
@@ -343,7 +343,7 @@ class DesktopLocalCache : ICacheProvider {
             }
 
             is StarterPackEvent -> {
-                consumeFollowList(event)
+                consumeStarterPack(event)
             }
 
             is CommentEvent -> {
@@ -355,7 +355,7 @@ class DesktopLocalCache : ICacheProvider {
             }
 
             is DmRelayListEvent -> {
-                consumeChatMessageRelayList(event, relay)
+                consumeDmRelayList(event, relay)
             }
 
             is BlossomServersEvent -> {
@@ -435,7 +435,7 @@ class DesktopLocalCache : ICacheProvider {
      * indexer fan-out. Mirrors [consumeAdvertisedRelayList]; emits nothing to
      * the event stream because the UI doesn't render kind 10050s directly.
      */
-    private fun consumeChatMessageRelayList(
+    private fun consumeDmRelayList(
         event: DmRelayListEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
@@ -738,7 +738,7 @@ class DesktopLocalCache : ICacheProvider {
      * Consumes a kind 30023 long-form text note event.
      * Creates Note in cache like TextNoteEvent.
      */
-    private fun consumeLongTextNote(
+    private fun consumeLongFormContent(
         event: LongFormContentEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
@@ -788,7 +788,7 @@ class DesktopLocalCache : ICacheProvider {
     private val _followPackVersion = MutableStateFlow(0L)
     val followPackVersion: StateFlow<Long> = _followPackVersion.asStateFlow()
 
-    private fun consumeFollowList(event: StarterPackEvent): Boolean {
+    private fun consumeStarterPack(event: StarterPackEvent): Boolean {
         val address = event.address()
         val addressableNote = getOrCreateAddressableNote(address)
         val author = getOrCreateUser(event.pubKey)

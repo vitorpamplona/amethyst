@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 class BlockPeopleListState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val decryptionCache: PeopleListDecryptionCache,
+    val decryptionCache: FollowSetDecryptionCache,
     val scope: CoroutineScope,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self

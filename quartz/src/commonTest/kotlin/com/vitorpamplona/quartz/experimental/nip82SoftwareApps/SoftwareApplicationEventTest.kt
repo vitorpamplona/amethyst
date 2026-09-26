@@ -208,6 +208,32 @@ class SoftwareApplicationEventTest {
     }
 
     @Test
+    fun searchIndex_includesReleaseNotesOnlyForNip82() {
+        val nip82 =
+            ReleaseArtifactSetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags = arrayOf(arrayOf("d", "com.example.app@1.0.0"), arrayOf("i", "com.example.app"), arrayOf("version", "1.0.0")),
+                content = "Fixed the crash on startup",
+                sig = "",
+            )
+        assertEquals("Fixed the crash on startup", nip82.indexableContent())
+
+        // A NIP-51 set can carry encrypted private items in content: never index it.
+        val nip51 =
+            ReleaseArtifactSetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags = arrayOf(arrayOf("d", "some-uuid"), arrayOf("title", "My Release")),
+                content = "ciphertext?iv=abc",
+                sig = "",
+            )
+        assertEquals("My Release", nip51.indexableContent())
+    }
+
+    @Test
     fun parses_realWorldAmethystEvent() {
         // Real NIP-82 event published for Amethyst — used as a regression fixture so renderer
         // changes are caught against a known-good event seen on the wire.

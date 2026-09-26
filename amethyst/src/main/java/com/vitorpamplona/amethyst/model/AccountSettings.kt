@@ -68,7 +68,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
@@ -208,15 +208,15 @@ class AccountSettings(
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
-    var backupRelayFeedsList: FavoriteRelayListEvent? = null,
+    var backupFavoriteRelayList: FavoriteRelayListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
-    var backupChannelList: PublicChatListEvent? = null,
+    var backupPublicChatList: PublicChatListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
-    var backupHashtagList: InterestListEvent? = null,
+    var backupInterestList: InterestListEvent? = null,
     var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
@@ -1084,13 +1084,13 @@ class AccountSettings(
             is Bolt12OfferListEvent -> updateBolt12Offers(incoming)
             is SearchRelayListEvent -> updateSearchRelayList(incoming)
             is IndexerRelayListEvent -> updateIndexRelayList(incoming)
-            is FavoriteRelayListEvent -> updateRelayFeedList(incoming)
+            is FavoriteRelayListEvent -> updateFavoriteRelayList(incoming)
             is BlockedRelayListEvent -> updateBlockedRelayList(incoming)
             is TrustedRelayListEvent -> updateTrustedRelayList(incoming)
             is PrivateOutboxRelayListEvent -> updatePrivateHomeRelayList(incoming)
-            is PublicChatListEvent -> updateChannelListTo(incoming)
+            is PublicChatListEvent -> updatePublicChatListTo(incoming)
             is GeohashListEvent -> updateGeohashListTo(incoming)
-            is InterestListEvent -> updateHashtagListTo(incoming)
+            is InterestListEvent -> updateInterestListTo(incoming)
             is FavoriteAlgoFeedsListEvent -> updateFavoriteAlgoFeedsListTo(incoming)
             is CommunityListEvent -> updateCommunityListTo(incoming)
             is EphemeralChatListEvent -> updateEphemeralChatListTo(incoming)
@@ -1284,11 +1284,11 @@ class AccountSettings(
         }
     }
 
-    fun updateRelayFeedList(newRelayFeedList: FavoriteRelayListEvent?) {
-        if (newRelayFeedList == null) return
+    fun updateFavoriteRelayList(newFavoriteRelayList: FavoriteRelayListEvent?) {
+        if (newFavoriteRelayList == null) return
 
-        if (backupGuard.accept(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
-            backupRelayFeedsList = newRelayFeedList
+        if (backupGuard.accept(backupFavoriteRelayList, newFavoriteRelayList, isEmpty = newFavoriteRelayList.tags.isEmpty()) { updateFavoriteRelayList(newFavoriteRelayList) }) {
+            backupFavoriteRelayList = newFavoriteRelayList
             saveAccountSettings()
         }
     }
@@ -1320,13 +1320,13 @@ class AccountSettings(
         }
     }
 
-    override fun channelList() = backupChannelList
+    override fun publicChatList() = backupPublicChatList
 
-    override fun updateChannelListTo(newChannelList: PublicChatListEvent?) {
-        if (newChannelList == null) return
+    override fun updatePublicChatListTo(newPublicChatList: PublicChatListEvent?) {
+        if (newPublicChatList == null) return
 
-        if (backupGuard.accept(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
-            backupChannelList = newChannelList
+        if (backupGuard.accept(backupPublicChatList, newPublicChatList, isEmpty = newPublicChatList.tags.isEmpty()) { updatePublicChatListTo(newPublicChatList) }) {
+            backupPublicChatList = newPublicChatList
             saveAccountSettings()
         }
     }
@@ -1340,11 +1340,11 @@ class AccountSettings(
         }
     }
 
-    fun updateHashtagListTo(newHashtagList: InterestListEvent?) {
-        if (newHashtagList == null) return
+    fun updateInterestListTo(newInterestList: InterestListEvent?) {
+        if (newInterestList == null) return
 
-        if (backupGuard.accept(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {
-            backupHashtagList = newHashtagList
+        if (backupGuard.accept(backupInterestList, newInterestList, isEmpty = newInterestList.tags.isEmpty()) { updateInterestListTo(newInterestList) }) {
+            backupInterestList = newInterestList
             saveAccountSettings()
         }
     }

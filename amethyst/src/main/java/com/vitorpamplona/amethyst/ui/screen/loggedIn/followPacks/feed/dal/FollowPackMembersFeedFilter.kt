@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.checkGetOrCreateUser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 class FollowPackMembersFeedFilter(
     val followPackNote: AddressableNote,

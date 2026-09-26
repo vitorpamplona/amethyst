@@ -44,13 +44,13 @@ Open Desktop Messages for this pubkey via the existing deck-column pattern.
   (`ShareMenu.kt:56`) shape. No auth required; own + others.
 
 ## Action 3 — Add to follow-pack (kind 39089) — mostly REUSE
-- **Picker source:** `FollowPacksState.allPacks: StateFlow<List<FollowListEvent>>`
+- **Picker source:** `FollowPacksState.allPacks: StateFlow<List<StarterPackEvent>>`
   (`followpacks/FollowPacksState.kt:84`) — zero-packs returns `emptyList()`.
-- **Add member:** `FollowListEvent.add(earlierVersion, person = UserTag(pubKey, relayHint), signer)`
-  (`quartz nip51Lists/followList/FollowListEvent.kt:116`; `UserTag` from `muteList/tags/UserTag.kt:35`).
+- **Add member:** `StarterPackEvent.add(earlierVersion, person = UserTag(pubKey, relayHint), signer)`
+  (`quartz nip51Lists/starterPack/StarterPackEvent.kt:116`; `UserTag` from `muteList/tags/UserTag.kt:35`).
   Publish via `relayManager.broadcastToAll(event)` + `cache.consume(event, relay, wasVerified=false)`
   (pattern in `FollowPackDetailScreen.kt:178-192`).
-- **Thin `commons/actions/FollowPackActions.kt`** = pure builder wrapping `FollowListEvent.add`
+- **Thin `commons/actions/FollowPackActions.kt`** = pure builder wrapping `StarterPackEvent.add`
   (returns the signed event; desktop layer publishes). No hand-rolled tag assembly.
 - **Zero-packs → offer "Create new pack"** (reuse `FollowPackEditor`); no dead-end modal.
 - **Stale-list guard:** disable until the target pack's current 39089 has loaded (`add` onto a stale
@@ -58,33 +58,33 @@ Open Desktop Messages for this pubkey via the existing deck-column pattern.
 - **Modal caveat:** the picker must NOT use `rememberSubscription` (broken in AlertDialog); the
   `allPacks` StateFlow is already hoisted, so read it directly.
 
-## Action 4 — Block (`PeopleListEvent` kind 30000, d=`mute`)
+## Action 4 — Block (`FollowSetEvent` kind 30000, d=`mute`)
 **Much of this already exists on moderation-safety — Block is mostly wiring, mirroring mute.**
 
 > **Revision of parent's "extract to commons" default:** moderation-safety keeps the *mute* write
 > **inline** on `DesktopIAccount.updateMuteList` (not a commons builder). To avoid the architecture
 > reviewer's "two parallel patterns" smell, Block should be **inline and symmetric with mute** — NOT
-> a `commons/actions/BlockActions.kt`. The quartz `PeopleListEvent.addUser` IS the shared builder; a
+> a `commons/actions/BlockActions.kt`. The quartz `FollowSetEvent.addUser` IS the shared builder; a
 > commons wrapper adds nothing. (If a commons home is later wanted, extract mute + block *together*.)
 
 **Already present (REUSE, no changes):**
-- `PeopleListEvent` (quartz `nip51Lists/peopleList/PeopleListEvent.kt`): `KIND=30000`,
+- `FollowSetEvent` (quartz `nip51Lists/followSet/FollowSetEvent.kt`): `KIND=30000`,
   `BLOCK_LIST_D_TAG="mute"`, `createBlockAddress(pubKey)`;
   `addUser(earlierVersion, pubKeyHex, relayHint, isPrivate, signer)`,
   `removeUser(earlierVersion, pubKeyHex, isUserPrivate, signer)`, `remove/removeAll`.
-- `PeopleListDecryptionCache(signer)` (commons) — `userIdSet(event)` merges public+private,
+- `FollowSetDecryptionCache(signer)` (commons) — `userIdSet(event)` merges public+private,
   **fail-closed** (`privateTags` → null / `UnauthorizedDecryptionException` on read-only).
 - `DesktopHiddenUsersState` **already loads the own kind-30000 block list**
-  (`blockListNote = cache.getOrCreateAddressableNote(PeopleListEvent.createBlockAddress(signer.pubKey))`).
+  (`blockListNote = cache.getOrCreateAddressableNote(FollowSetEvent.createBlockAddress(signer.pubKey))`).
 - `publishAndConfirmDetailed(event, relays, timeout): Map<relay,Boolean>` (quartz
   `NostrClientPublishExt.kt`); `DmSendTracker.sendBatch` shows the confirmed-publish + status pattern.
 
 **WIRE (new, small):**
-- `DesktopHiddenUsersState.currentBlockList(): PeopleListEvent?` — mirror the existing
-  `currentMuteList()` (`blockListNote.event as? PeopleListEvent`).
+- `DesktopHiddenUsersState.currentBlockList(): FollowSetEvent?` — mirror the existing
+  `currentMuteList()` (`blockListNote.event as? FollowSetEvent`).
 - `DesktopIAccount.blockUser(pubkeyHex)` / `unblockUser(pubkeyHex)` + private
   `updateBlockList(tag, isPrivate, add)` — **mirror `updateMuteList` exactly**: load
-  `currentBlockList()`, `PeopleListEvent.addUser/removeUser` (or `create` **only if null**),
+  `currentBlockList()`, `FollowSetEvent.addUser/removeUser` (or `create` **only if null**),
   `localCache.justConsumeMyOwnEvent(event)` (optimistic), then publish.
 - Publish Block via **`publishAndConfirmDetailed`** (Block is security-relevant; Desktop NIP-42 AUTH
   is partial so fire-and-forget `broadcastToAll` — what `publishModeration` uses for mute — risks
@@ -106,7 +106,7 @@ moderation-safety already merges mute ∪ block: `DesktopHiddenUsersState.assemb
 ## Acceptance criteria
 - [ ] DM opens the correct 1:1 room (`ChatroomKey(setOf(pubkey))` + `selectRoom`); graceful when target has no inbox relays / read-only.
 - [ ] Share yields a valid `npub` / `nostr:` link via `toNpub()`/`toNProfile()` + `copyToClipboard`.
-- [ ] Add-to-list adds to a chosen pack (39089, `FollowListEvent.add`) and persists; zero-packs offers create-new; disabled until pack loaded.
+- [ ] Add-to-list adds to a chosen pack (39089, `StarterPackEvent.add`) and persists; zero-packs offers create-new; disabled until pack loaded.
 - [ ] Block (30000, d=`mute`) hides user across feeds/threads/replies/profile (via existing `LiveHiddenUsers`); Unblock reverses.
 - [ ] Block round-trip preserves prior private entries (test mirrors `MuteListEventTest.add_eventTagPreservesPriorUserAndWordTags`); disabled until `currentBlockList()` loaded; decrypt-fail is fail-closed.
 - [ ] Block publish confirmed via `publishAndConfirmDetailed` (not fire-and-forget); optimistic UI rolls back on total failure.
@@ -117,7 +117,7 @@ moderation-safety already merges mute ∪ block: `DesktopHiddenUsersState.assemb
 ## Open questions
 1. **Block write location:** inline on `DesktopIAccount` symmetric with mute (recommended, overrides parent's "extract to commons") — confirm, or still want a `commons/actions` home (then extract mute+block together)?
 2. Fold Block into a combined "block & mute" (Android-style dialog) or keep standalone? (parent Open Q #1) — note enforcement effect is identical since `LiveHiddenUsers` already unions both.
-3. Add-member to a 39089 pack: `FollowListEvent.add` inline in `FollowPackActions` builder — any existing desktop add-member path to prefer? (agent found none.)
+3. Add-member to a 39089 pack: `StarterPackEvent.add` inline in `FollowPackActions` builder — any existing desktop add-member path to prefer? (agent found none.)
 
 ### Resolved by research
 - ✅ moderation-safety already loads the own kind-30000 list and unions mute ∪ block in `LiveHiddenUsers` — **enforcement needs no new code** (retires parent Open Q #3 / #6).
@@ -127,9 +127,9 @@ moderation-safety already merges mute ∪ block: `DesktopHiddenUsersState.assemb
 - Parent plan. Branch `origin/feat/desktop-moderation-safety`: `DesktopIAccount.kt` (`updateMuteList`,
   `hideUser/showUser`, `publishModeration`, header menu ~L350-390), `DesktopHiddenUsersState.kt`
   (`currentMuteList`, loads block via `createBlockAddress`, `assemble()`).
-- quartz `nip51Lists/peopleList/PeopleListEvent.kt` (KIND 30000, d=`mute`, `addUser/removeUser`),
-  commons `PeopleListDecryptionCache.kt`, commons `IAccount.kt` (`LiveHiddenUsers.isUserHidden`),
+- quartz `nip51Lists/followSet/FollowSetEvent.kt` (KIND 30000, d=`mute`, `addUser/removeUser`),
+  commons `FollowSetDecryptionCache.kt`, commons `IAccount.kt` (`LiveHiddenUsers.isUserHidden`),
   quartz `NostrClientPublishExt.kt` (`publishAndConfirm`/`Detailed`), `DmSendTracker.kt`.
-- Packs/DM/share: `followpacks/FollowPacksState.kt` (`allPacks`), quartz `FollowListEvent.kt`
+- Packs/DM/share: `followpacks/FollowPacksState.kt` (`allPacks`), quartz `StarterPackEvent.kt`
   (`add`), `ChatroomKey.kt`, `ui/chats/ChatroomListState.kt` (`selectRoom`, `fetchMetadataIfNeeded`),
   `ShareMenu.kt` (`copyToClipboard`), `nip19Bech32/ByteArrayExt.kt` (`toNpub`/`toNProfile`).

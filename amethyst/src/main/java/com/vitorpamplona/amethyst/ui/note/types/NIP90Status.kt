@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 
 @Composable
-fun RenderNIP90Status(
+fun RenderDvmStatus(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,

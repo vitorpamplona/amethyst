@@ -62,8 +62,8 @@ data class AccountBootstrapEvents(
     val keyPackageRelayList: KeyPackageRelayListEvent,
     val searchRelayList: SearchRelayListEvent,
     val indexerRelayList: IndexerRelayListEvent,
-    val channelList: PublicChatListEvent,
-    val relayFeedsList: FavoriteRelayListEvent,
+    val publicChatList: PublicChatListEvent,
+    val favoriteRelayList: FavoriteRelayListEvent,
 ) {
     /** All nine signed events in publication order. */
     fun all(): List<com.vitorpamplona.quartz.nip01Core.core.Event> =
@@ -75,8 +75,8 @@ data class AccountBootstrapEvents(
             keyPackageRelayList,
             searchRelayList,
             indexerRelayList,
-            channelList,
-            relayFeedsList,
+            publicChatList,
+            favoriteRelayList,
         )
 }
 
@@ -109,6 +109,6 @@ fun bootstrapAccountEvents(
         keyPackageRelayList = KeyPackageRelayListEvent.create(DefaultNIP65RelaySet.toList(), signer),
         searchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), signer),
         indexerRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), signer),
-        channelList = PublicChatListEvent.create(emptyList(), DefaultChannels, signer),
-        relayFeedsList = FavoriteRelayListEvent.create(DefaultGlobalRelays, signer),
+        publicChatList = PublicChatListEvent.create(emptyList(), DefaultChannels, signer),
+        favoriteRelayList = FavoriteRelayListEvent.create(DefaultGlobalRelays, signer),
     )

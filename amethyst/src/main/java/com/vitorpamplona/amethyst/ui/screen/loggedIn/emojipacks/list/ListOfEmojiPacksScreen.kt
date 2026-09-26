@@ -315,7 +315,7 @@ private fun EmojiListToggleRow(
     LoadAddressableNote(packAddress) {
         it?.let { packNote ->
             LoadAddressableNote(
-                accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+                accountViewModel.account.emoji.getEmojiListAddress(),
             ) { selectionNote ->
                 selectionNote?.let { usersEmojiList ->
                     val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {

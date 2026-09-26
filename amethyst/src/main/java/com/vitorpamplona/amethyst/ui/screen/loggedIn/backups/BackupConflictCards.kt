@@ -65,10 +65,10 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
@@ -130,12 +130,12 @@ private fun headlineOf(
             is MetadataDiff -> plural(R.plurals.backup_card_profile_lost_fields, counts.removed)
             is AdvertisedRelayListDiff -> plural(R.plurals.backup_card_nip65_lost, diff.relays.removed.size)
             is RelayListDiff -> relayListHeadline(conflict.eventType, diff.relays.removed.size)
-            is ChannelListDiff -> plural(R.plurals.backup_card_leave_chats, diff.channels.removed.size)
+            is PublicChatListDiff -> plural(R.plurals.backup_card_leave_chats, diff.channels.removed.size)
             is CommunityListDiff -> plural(R.plurals.backup_card_leave_communities, diff.communities.removed.size)
             is EphemeralChatListDiff -> plural(R.plurals.backup_card_leave_rooms, diff.rooms.removed.size)
             is SimpleGroupListDiff -> plural(R.plurals.backup_card_leave_groups, diff.groups.removed.size)
             is FavoriteAlgoFeedsListDiff -> plural(R.plurals.backup_card_feeds_removed, diff.feeds.removed.size)
-            is HashtagListDiff -> plural(R.plurals.backup_card_hashtags_unfollowed, diff.hashtags.removed.size)
+            is InterestListDiff -> plural(R.plurals.backup_card_hashtags_unfollowed, diff.hashtags.removed.size)
             is GeohashListDiff -> plural(R.plurals.backup_card_places_unfollowed, diff.geohashes.removed.size)
             is TrustProviderListDiff -> plural(R.plurals.backup_card_trust_services_changed, diff.providers.removed.size + diff.providers.changed.size)
             is NutzapInfoDiff ->
@@ -162,7 +162,7 @@ private fun headlineOf(
         when {
             diff is ContactListDiff -> R.plurals.backup_card_and_followed
             diff is MuteListDiff -> R.plurals.backup_card_and_muted
-            diff is ChannelListDiff || diff is CommunityListDiff || diff is EphemeralChatListDiff || diff is SimpleGroupListDiff -> R.plurals.backup_card_and_joined
+            diff is PublicChatListDiff || diff is CommunityListDiff || diff is EphemeralChatListDiff || diff is SimpleGroupListDiff -> R.plurals.backup_card_and_joined
             conflict.eventType == BackupEventType.BLOCKED_RELAYS -> R.plurals.backup_card_and_blocked
             else -> R.plurals.backup_card_and_added
         }
@@ -182,12 +182,12 @@ private fun addedToHeadlinedList(
         is MuteListDiff -> diff.publicMutes.added.size
         is AdvertisedRelayListDiff -> diff.relays.added.size
         is RelayListDiff -> if (relayListHasHeadline(type)) diff.relays.added.size else 0
-        is ChannelListDiff -> diff.channels.added.size
+        is PublicChatListDiff -> diff.channels.added.size
         is CommunityListDiff -> diff.communities.added.size
         is EphemeralChatListDiff -> diff.rooms.added.size
         is SimpleGroupListDiff -> diff.groups.added.size
         is FavoriteAlgoFeedsListDiff -> diff.feeds.added.size
-        is HashtagListDiff -> diff.hashtags.added.size
+        is InterestListDiff -> diff.hashtags.added.size
         is GeohashListDiff -> diff.geohashes.added.size
         is NutzapInfoDiff -> if (diff.p2pkPubkey == null) diff.mints.added.size else 0
         is PaymentTargetsDiff -> diff.targets.added.size

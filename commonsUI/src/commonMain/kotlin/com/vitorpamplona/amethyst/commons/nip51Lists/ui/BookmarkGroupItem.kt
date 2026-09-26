@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_articles_btn_label
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_clone_btn_label
@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 @Composable
 fun BookmarkGroupItem(
     modifier: Modifier = Modifier,
-    bookmarkList: LabeledBookmarkList,
+    bookmarkList: BookmarkSet,
     onClick: (bookmarkItemType: BookmarkType) -> Unit,
     onRename: () -> Unit,
     onDescriptionChange: () -> Unit,

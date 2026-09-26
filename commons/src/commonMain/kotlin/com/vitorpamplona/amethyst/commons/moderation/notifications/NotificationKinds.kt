@@ -111,7 +111,7 @@ object NotificationKinds {
         myPubKeyHex: HexKey,
         isTargetAuthoredByMe: (targetNoteId: HexKey) -> Boolean = { false },
     ): Boolean {
-        // Own events never notify — except zap receipts (LnZap/Nutzap/Onchain)
+        // Own events never notify — except zap receipts (ZapReceipt/Nutzap/Onchain)
         // which are signed by the LNURL provider or the payer, not by us.
         if (event.pubKey == myPubKeyHex &&
             event !is ZapReceiptEvent &&

@@ -358,7 +358,7 @@ private fun EmojiSelector(
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiListAddress(),
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->

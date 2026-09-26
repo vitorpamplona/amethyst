@@ -5,7 +5,7 @@ expression. **Update this file in the same PR as any change to the searchable se
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-09-17.
 
 Counts: 137 concrete classes covering 140 kind values (`GitStatusEvent` spans 4 kinds;
-kind 30063 has a collision — see the footnote). File paths are under
+kind 30063 is shared by two NIPs — see the footnote). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
 Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
@@ -74,10 +74,10 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 12473 | BirdexEvent | experimental/birdstar | `(listOfNotNull(summary()) + speciesNames())` NL |
 | 15128 | RootSiteEvent | nip5aStaticWebsites | `listOfNotNull(title(), description())` NL |
 | 15129 | RootNappletEvent | nip5dNapplets | `listOfNotNull(title(), description())` NL |
-| 30000 | FollowSetEvent | nip51Lists/peopleList | `listOfNotNull(titleOrName(), description())` NL |
+| 30000 | FollowSetEvent | nip51Lists/followSet | `listOfNotNull(titleOrName(), description())` NL |
 | 30001 | OldBookmarkListEvent | nip51Lists/bookmarkList | `listOfNotNull(title())` NL |
 | 30002 | RelaySetEvent | nip51Lists/relaySets | `listOfNotNull(title(), description())` NL |
-| 30003 | BookmarkSetEvent | nip51Lists/labeledBookmarkList | `listOfNotNull(titleOrName(), description())` NL |
+| 30003 | BookmarkSetEvent | nip51Lists/bookmarkSet | `listOfNotNull(titleOrName(), description())` NL |
 | 30004 | ArticleCurationSetEvent | nip51Lists/articleCurationSet | `listOfNotNull(title(), description())` NL |
 | 30005 | VideoCurationSetEvent | nip51Lists/videoCurationSet | `listOfNotNull(title(), description())` NL |
 | 30006 | PictureCurationSetEvent | nip51Lists/pictureCurationSet | `listOfNotNull(title(), description())` NL |
@@ -91,7 +91,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30030 | EmojiPackEvent | nip30CustomEmoji/pack | `listOfNotNull(titleOrName(), description(), content)` NL |
 | 30054 | Podcasting20EpisodeEvent | nipXXPodcasting20/episode | `(listOfNotNull(title(), description(), content) + topics())` NL |
 | 30055 | Podcasting20TrailerEvent | nipXXPodcasting20/trailer | `listOfNotNull(title(), content)` NL |
-| 30063 | ReleaseArtifactSetEvent † | nip51Lists/releaseArtifactSet | `listOfNotNull(title(), description())` NL |
+| 30063 | ReleaseArtifactSetEvent † | nip51Lists/releaseArtifactSet | `listOfNotNull(title(), description(), content if NIP-82)` NL |
 | 30175 | PersonaEvent | buzz/apPersonas | `personaOrNull()?.let { listOfNotNull(it.displayName, it.systemPrompt).joinToString("\n") } ?: ""` |
 | 30176 | TeamEvent | buzz/teams | `teamOrNull()?.let { listOfNotNull(it.name, it.description, it.instructions).joinToString("\n") } ?: ""` |
 | 30177 | ManagedAgentEvent | buzz/managedAgents | `agentOrNull()?.let { listOfNotNull(it.name, it.systemPrompt).joinToString("\n") } ?: ""` |
@@ -138,7 +138,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 38192 | Ps1SaveEvent | experimental/ps1saves | `listOfNotNull(summary(), saveTitle(), region(), filename())` NL |
 | 38383 | P2POrderEvent | nip69P2pOrderEvents | `(listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")` (SP) |
 | 39000 | GroupMetadataEvent | nip29RelayGroups/metadata | `listOfNotNull(name(), about())` NL |
-| 39089 | StarterPackEvent | nip51Lists/followList | `listOfNotNull(title(), description())` NL |
+| 39089 | StarterPackEvent | nip51Lists/starterPack | `listOfNotNull(title(), description())` NL |
 | 39092 | MediaStarterPackEvent | nip51Lists/mediaStarterPack | `listOfNotNull(title(), description())` NL |
 | 39307 | TextTrackEvent | nip71Video/textTrack | `content` (the WebVTT cue text) |
 | 39701 | WebBookmarkEvent | nipB0WebBookmarks | `listOfNotNull(title(), description())` NL |
@@ -150,10 +150,10 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 45003 | ForumCommentEvent | buzz/forum | `content` |
 | 48106 | HuddleGuidelinesEvent | buzz/huddles | `content` |
 
-† **Kind 30063 collision:** `experimental/nip82SoftwareApps/release/SoftwareReleaseEvent` also
-declares `KIND = 30063` and implements `SearchableEvent` (`content`), but `EventFactory` maps
-30063 to `ReleaseArtifactSetEvent`, so on every store path kind 30063 indexes
-`title()\ndescription()`. If the factory mapping ever changes, this table changes with it.
+† **Kind 30063 is shared** by NIP-51 release artifact sets and NIP-82 software releases, and
+`ReleaseArtifactSetEvent` parses both. It indexes `title()` and `description()`, plus `content`
+(the release notes) only when the event carries the NIP-82 `i` + `version` tags — a NIP-51 set
+may hold encrypted private items in `content`, which must never be indexed.
 
 ## Abstract bases (no kind of their own)
 

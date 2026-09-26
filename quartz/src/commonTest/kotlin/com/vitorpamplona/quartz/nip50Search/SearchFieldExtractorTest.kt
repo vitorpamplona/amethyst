@@ -153,7 +153,7 @@ class SearchFieldExtractorTest {
     }
 
     @Test
-    fun contactCardsDecomposeIntoPetnameSummaryAndTopics() {
+    fun userAssertionsDecomposeIntoPetnameSummaryAndTopics() {
         // A provider's petname for a person is that provider's NAME for them,
         // so it lands where kind 0's name does. topics() reads `t` tags, so
         // the tiers() funnel carries them once, as hashtags.
@@ -177,7 +177,7 @@ class SearchFieldExtractorTest {
     }
 
     @Test
-    fun contactCardsCarryTopicsEvenWithNoPublicPetname() {
+    fun userAssertionsCarryTopicsEvenWithNoPublicPetname() {
         // THE SHAPE THIS LIBRARY ITSELF PUBLISHES: build() puts petname and
         // summary in the NIP-44 content, so a card's only public text is its
         // topics. They must still reach the backend -- through the hashtag
@@ -189,7 +189,7 @@ class SearchFieldExtractorTest {
     }
 
     @Test
-    fun contactCardsWithNoPublicTextExtractNothing() {
+    fun userAssertionsWithNoPublicTextExtractNothing() {
         // The petname and summary of a private card live in the NIP-44
         // encrypted content, which is never indexed -- so a card carrying only
         // scores has nothing to search.

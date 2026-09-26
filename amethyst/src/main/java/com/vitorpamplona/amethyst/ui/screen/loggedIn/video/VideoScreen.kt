@@ -200,7 +200,7 @@ fun VideoFeedLoaded(
                 }
 
                 item.event is FileMetadataEvent -> {
-                    FileHeaderCardCompose(item, accountViewModel, nav)
+                    FileMetadataCardCompose(item, accountViewModel, nav)
 
                     HorizontalDivider(
                         thickness = DividerThickness,

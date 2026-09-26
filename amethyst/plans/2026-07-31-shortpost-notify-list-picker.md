@@ -41,9 +41,9 @@ storm.
 |---|---|
 | The chip row + "Add" chip | `ui/note/creators/notify/Notifying.kt` (`Notifying`, `NotifyUserChip`, `AddUserChip`) |
 | Audience state | `ShortNotePostViewModel.pTags: List<User>?`, `mutedNotifies: Set<HexKey>`, `activeNotifies()`, `addToReplyList(user)` |
-| My NIP-51 people lists (kind 30000, public **and** decrypted private members) | `account.peopleLists.uiListFlow: StateFlow<List<PeopleList>>` (`model/nip51Lists/peopleList/PeopleListsState.kt`) |
-| My follow packs (kind 39089, public members) | `account.followLists.uiListFlow` (`model/nip51Lists/peopleList/FollowListsState.kt`) |
-| `PeopleList` UI model (`title`, `image`, `publicMembers`, `privateMembers` as `Set<User>`) | `model/nip51Lists/peopleList/PeopleList.kt` |
+| My NIP-51 people lists (kind 30000, public **and** decrypted private members) | `account.peopleLists.uiListFlow: StateFlow<List<PeopleList>>` (`model/nip51Lists/followSets/FollowSetsState.kt`) |
+| My follow packs (kind 39089, public members) | `account.followLists.uiListFlow` (`model/nip51Lists/followSets/StarterPacksState.kt`) |
+| `PeopleList` UI model (`title`, `image`, `publicMembers`, `privateMembers` as `Set<User>`) | `model/nip51Lists/followSets/PeopleList.kt` |
 | Two-column list catalog rendering | `ui/screen/loggedIn/lists/memberEdit/FollowListAndPackAndUserView.kt` — same "Follow sets" + "Discover follows" sectioning |
 | Multi-select member review (count header, select-all checkbox, per-user row, confirm button) | `ui/screen/loggedIn/newUser/ImportFollowListPickFollowsScreen.kt` (`PreviewList` / `FollowEntryRow`) |
 | Bottom-sheet picker shell w/ search field | `ui/screen/loggedIn/chats/publicChannels/relayGroup/RelayGroupParentPicker.kt` |

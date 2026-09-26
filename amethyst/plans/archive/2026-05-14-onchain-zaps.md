@@ -94,7 +94,7 @@ Section labels: "Bitcoin" and "Lightning".
 ## Subscription edits — extend existing kind lists
 
 No new assemblers. Add `OnchainZapEvent.KIND` (8333) to the existing
-`LnZapEvent.KIND` (9735) sites:
+`ZapReceiptEvent.KIND` (9735) sites:
 
 | File | Edit |
 |---|---|
@@ -109,7 +109,7 @@ No new assemblers. Add `OnchainZapEvent.KIND` (8333) to the existing
 
 ## Display path — fold into `Note.zapsAmount`
 
-Today: `LocalCache.consume(LnZapEvent)` → `Note.addZap()` → `Note.updateZapTotal()`
+Today: `LocalCache.consume(ZapReceiptEvent)` → `Note.addZap()` → `Note.updateZapTotal()`
 sums lightning amounts into `Note.zapsAmount`, which `ReactionsRow` /
 `ObserveZapAmountText` / `SlidingAnimationAmount` render. We add onchain zap
 sats to the same `Note.zapsAmount` — no UI changes required.
@@ -118,7 +118,7 @@ sats to the same `Note.zapsAmount` — no UI changes required.
   - Add `var onchainZaps = mapOf<...>()` (separate map from `zaps`).
   - Extend `updateZapTotal()` to add **verified** onchain sats. Unverified or
     pending tx amounts are NOT counted.
-- `amethyst/.../model/LocalCache.kt` (after the `consume(LnZapEvent)` block ~line 1667)
+- `amethyst/.../model/LocalCache.kt` (after the `consume(ZapReceiptEvent)` block ~line 1667)
   - New `consume(event: OnchainZapEvent)` handler.
   - Reject self-zap.
   - Enqueue verification against the configured `OnchainBackend`.

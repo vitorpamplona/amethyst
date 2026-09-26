@@ -34,7 +34,7 @@ and what remains as future work.
 2. **Private mute/block leak via `identity.getMutes`/`getBlocked`.** These read
    `muteList.flow` / `blockPeopleList.flow`, which contain **decrypted private** entries.
    Now they read the events' **public** tags only (`MuteListEvent.publicMutes()`,
-   `PeopleListEvent.publicUsersIdSet()`).
+   `FollowSetEvent.publicUsersIdSet()`).
 
 3. **Silent "allow-always" actions + UI-redress.** Added persistent **trusted chrome**
    (a sandbox bar the applet can't draw over: shield + name + tap-to-see "what it can

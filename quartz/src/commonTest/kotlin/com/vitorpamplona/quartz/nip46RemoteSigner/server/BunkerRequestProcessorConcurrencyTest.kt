@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
@@ -101,7 +101,7 @@ class BunkerRequestProcessorConcurrencyTest {
             fromPublicKey: HexKey,
         ) = ""
 
-        override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = throw NotImplementedError()
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
 

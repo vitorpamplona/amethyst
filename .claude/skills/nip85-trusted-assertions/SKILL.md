@@ -92,8 +92,8 @@ The same kind serves two roles, distinguished **by author**:
 2. **The account's own contact cards (nicknames, NIP-81-style)** — signed by the account,
    one per target user. The petname, summary, and their NIP-30 emoji mappings **always live in
    the NIP-44 encrypted content, never in public tags** (`UserAssertionEvent.build`/
-   `updatePetNameAndSummary` strip stray public copies; asserted by `ContactCardPetNameTest`).
-   `commons/.../ContactCardsState.kt` keys everything on `author == account` and ignores
+   `updatePetNameAndSummary` strip stray public copies; asserted by `UserAssertionPetNameTest`).
+   `commons/.../UserAssertionsState.kt` keys everything on `author == account` and ignores
    provider cards.
 
 ## Tag vocabulary and value semantics
@@ -225,8 +225,8 @@ card's `a`-tag (`30382:<provider>:<target>`).
 
 - **Publisher**: `quartz/.../experimental/graperank/GrapeRankPublisher.kt` (canonical 30382
   writer), `cli/.../graperank/` (`amy graperank register|unregister|providers|publish`).
-- **Client model**: `commons/.../model/nip85TrustedAssertions/` (`ContactCardsState`,
-  `UserCardsCache`, `ContactCardDecryptionCache`, `TrustProviderListDecryptionCache`),
+- **Client model**: `commons/.../model/nip85TrustedAssertions/` (`UserAssertionsState`,
+  `UserCardsCache`, `UserAssertionDecryptionCache`, `TrustProviderListDecryptionCache`),
   `amethyst/.../model/trustedAssertions/TrustProviderListState.kt`.
 - **Relay plumbing**: `commons/.../relayClient/assemblers/ContactCardFilters.kt`,
   `amethyst/.../reqCommand/user/watchers/UserCardsSubAssembler.kt`.

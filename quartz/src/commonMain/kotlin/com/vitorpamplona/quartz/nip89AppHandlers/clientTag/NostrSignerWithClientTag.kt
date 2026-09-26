@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 /**
@@ -94,7 +94,7 @@ class NostrSignerWithClientTag(
         fromPublicKey: HexKey,
     ): String = inner.nip44Decrypt(ciphertext, fromPublicKey)
 
-    override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = inner.decryptZapEvent(event)
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = inner.decryptZapEvent(event)
 
     override suspend fun deriveKey(nonce: HexKey): HexKey = inner.deriveKey(nonce)
 

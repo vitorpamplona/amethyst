@@ -49,9 +49,9 @@ class AccountPreferenceStores(
         val latestMuteList = stringPreferencesKey("latestMuteList")
         val latestPrivateHomeRelayList = stringPreferencesKey("latestPrivateHomeRelayList")
         val latestAppSpecificData = stringPreferencesKey("latestAppSpecificData")
-        val latestChannelList = stringPreferencesKey("latestChannelList")
+        val latestPublicChatList = stringPreferencesKey("latestChannelList")
         val latestCommunityList = stringPreferencesKey("latestCommunityList")
-        val latestHashtagList = stringPreferencesKey("latestHashtagList")
+        val latestInterestList = stringPreferencesKey("latestHashtagList")
         val latestGeohashList = stringPreferencesKey("latestGeohashList")
         val latestEphemeralChatList = stringPreferencesKey("latestEphemeralChatList")
 

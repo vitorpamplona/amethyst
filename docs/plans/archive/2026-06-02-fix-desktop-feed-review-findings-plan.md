@@ -39,8 +39,8 @@ Eight parallel agents resolved all 5 open questions and surfaced 3 plan revision
   debounce.
 - **Q4 — NoteActions.kt:264 formatSats:** sats, safe to swap to
   `amount.toZapAmount()`. Inputs are hardcoded preset amounts (line 111
-  `ZAP_AMOUNTS = listOf(21L, 100L, ...)`) and `LnZapEvent.amount` which is
-  already sats (`LnZapEvent.kt:69`).
+  `ZAP_AMOUNTS = listOf(21L, 100L, ...)`) and `ZapReceiptEvent.amount` which is
+  already sats (`ZapReceiptEvent.kt:69`).
 - **Q5 — WalletColumnScreen.kt:979 formatSats:** intentional. Wallet shows
   precise balance with locale-aware grouping (`1,000,000`). Leave + add
   `// intentional` comment to prevent future drift.
@@ -378,7 +378,7 @@ zapCount = if (note.zapsAmount > BigDecimal.ZERO) showAmount(note.zapsAmount) el
 
 **Edit:** `NoteActions.kt:264` — swap to `amount.toZapAmount()`. Verified
 sats (not msats): inputs are `ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)`
-at line 111 + `LnZapEvent.amount` which is sats per `LnZapEvent.kt:69`.
+at line 111 + `ZapReceiptEvent.amount` which is sats per `ZapReceiptEvent.kt:69`.
 **Delete the private `formatSats` fun if no remaining references** (run
 `grep -n formatSats desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/NoteActions.kt` after swap).
 

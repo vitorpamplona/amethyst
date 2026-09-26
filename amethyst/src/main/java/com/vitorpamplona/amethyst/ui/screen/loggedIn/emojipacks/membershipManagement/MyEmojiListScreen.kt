@@ -79,7 +79,7 @@ fun MyEmojiListScreen(
     nav: INav,
 ) {
     LoadAddressableNote(
-        address = accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+        address = accountViewModel.account.emoji.getEmojiListAddress(),
     ) { selectionNote ->
         selectionNote?.let {
             MyEmojiListView(

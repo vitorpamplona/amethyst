@@ -290,14 +290,13 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
@@ -307,6 +306,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -327,9 +327,9 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
-import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
+import com.vitorpamplona.quartz.nip57Zaps.validate.ZapReceiptValidator
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -2252,7 +2252,7 @@ open class EventCache :
         val new = consumeBaseReplaceable(event, relay, wasVerified)
         if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupRolesEvent
-            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateSupportedRoles(it) }
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateGroupRoles(it) }
         }
         return new
     }
@@ -2712,18 +2712,18 @@ open class EventCache :
 
         if (cachedInfo != null) {
             val result =
-                LnZapReceiptValidator.validate(
+                ZapReceiptValidator.validate(
                     receipt = event,
                     expectedNostrPubkey = cachedInfo.nostrPubkey,
                     expectedLnurl = recipientLnurl,
                 )
-            if (result is LnZapReceiptValidator.Result.Invalid &&
-                result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+            if (result is ZapReceiptValidator.Result.Invalid &&
+                result.reason != ZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
             ) {
                 Log.w("ZP") { "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}" }
                 return false
             }
-            if (result is LnZapReceiptValidator.Result.Invalid) {
+            if (result is ZapReceiptValidator.Result.Invalid) {
                 Log.w("ZP") { "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)" }
             }
 
@@ -2759,18 +2759,18 @@ open class EventCache :
                     return@launch
                 }
                 val result =
-                    LnZapReceiptValidator.validate(
+                    ZapReceiptValidator.validate(
                         receipt = event,
                         expectedNostrPubkey = info.nostrPubkey,
                         expectedLnurl = recipientLnurl,
                     )
-                if (result is LnZapReceiptValidator.Result.Invalid &&
-                    result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+                if (result is ZapReceiptValidator.Result.Invalid &&
+                    result.reason != ZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
                 ) {
                     Log.w("ZP") { "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}" }
                     return@launch
                 }
-                if (result is LnZapReceiptValidator.Result.Invalid) {
+                if (result is ZapReceiptValidator.Result.Invalid) {
                     Log.w("ZP") { "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)" }
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }

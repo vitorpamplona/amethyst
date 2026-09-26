@@ -139,7 +139,7 @@ class NotificationKindsTest {
             sig = someSig,
         )
 
-    private fun privateDm(
+    private fun encryptedDm(
         author: String,
         pTag: String = me,
     ): EncryptedDmEvent =
@@ -266,9 +266,9 @@ class NotificationKindsTest {
 
     @Test
     fun myOwnZapReceiptStillAccepted() {
-        // LnZap receipts are signed by the LNURL provider, not by us,
+        // ZapReceipt receipts are signed by the LNURL provider, not by us,
         // so `pubKey == me` never applies — but even if it did the
-        // helper explicitly allows LnZap/Nutzap/OnchainZap own-events.
+        // helper explicitly allows ZapReceipt/Nutzap/OnchainZap own-events.
         assertTrue(acceptsFor(zapReceipt(pTag = me)))
     }
 
@@ -280,8 +280,8 @@ class NotificationKindsTest {
     // DMs --------------------------------------------------------------------
 
     @Test
-    fun privateDmAccepted() {
-        assertTrue(acceptsFor(privateDm(author = alice)))
+    fun encryptedDmAccepted() {
+        assertTrue(acceptsFor(encryptedDm(author = alice)))
     }
 
     @Test

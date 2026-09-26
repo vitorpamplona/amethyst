@@ -140,18 +140,18 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayContactList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
-import com.vitorpamplona.amethyst.ui.note.types.DisplayRelayFeedsList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayStarterPack
 import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.EmptyState
-import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.FileMetadataDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
@@ -180,6 +180,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderCyberspaceBag
+import com.vitorpamplona.amethyst.ui.note.types.RenderDvmContentDiscoveryResponse
+import com.vitorpamplona.amethyst.ui.note.types.RenderDvmStatus
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderEntityRating
 import com.vitorpamplona.amethyst.ui.note.types.RenderExternalReaction
@@ -200,14 +202,11 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
-import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
-import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
-import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
@@ -257,21 +256,22 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeAcceptance
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiMergeRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiRedirect
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
+import com.vitorpamplona.amethyst.ui.note.types.RenderZapReceipt
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderAppCurationSet
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderArticleCurationSet
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderBookmarkList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderBookmarkSet
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderFavoriteAlgoFeedsList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGeohashList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGitAuthorList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGitRepositoryList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGoodWikiAuthorList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderGoodWikiRelayList
-import com.vitorpamplona.amethyst.ui.note.types.lists.RenderHashtagList
+import com.vitorpamplona.amethyst.ui.note.types.lists.RenderInterestList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderInterestSet
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderKindMuteSet
-import com.vitorpamplona.amethyst.ui.note.types.lists.RenderLabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMediaFollowList
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMediaStarterPack
 import com.vitorpamplona.amethyst.ui.note.types.lists.RenderMuteList
@@ -367,21 +367,20 @@ import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
@@ -392,6 +391,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -1192,7 +1192,7 @@ private fun RenderNoteRow(
         }
 
         is ZapReceiptEvent -> {
-            RenderLnZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            RenderZapReceipt(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is NutzapEvent -> {
@@ -1220,7 +1220,7 @@ private fun RenderNoteRow(
         }
 
         is StarterPackEvent -> {
-            DisplayFollowList(baseNote, true, accountViewModel, nav)
+            DisplayStarterPack(baseNote, true, accountViewModel, nav)
         }
 
         is ContactListEvent -> {
@@ -1252,7 +1252,7 @@ private fun RenderNoteRow(
         }
 
         is FavoriteRelayListEvent -> {
-            DisplayRelayFeedsList(baseNote, backgroundColor, accountViewModel, nav)
+            DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is IndexerRelayListEvent -> {
@@ -1551,7 +1551,7 @@ private fun RenderNoteRow(
         }
 
         is DvmContentDiscoveryResponseEvent -> {
-            RenderNIP90ContentDiscoveryResponse(
+            RenderDvmContentDiscoveryResponse(
                 baseNote,
                 makeItShort,
                 canPreview,
@@ -1563,7 +1563,7 @@ private fun RenderNoteRow(
         }
 
         is DvmStatusEvent -> {
-            RenderNIP90Status(
+            RenderDvmStatus(
                 baseNote,
                 accountViewModel,
                 nav,
@@ -1641,7 +1641,7 @@ private fun RenderNoteRow(
         }
 
         is FileMetadataEvent -> {
-            FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+            FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         }
 
         // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
@@ -1880,7 +1880,7 @@ private fun RenderNoteRow(
         }
 
         is BookmarkSetEvent -> {
-            RenderLabeledBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            RenderBookmarkSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is ArticleCurationSetEvent -> {
@@ -1924,7 +1924,7 @@ private fun RenderNoteRow(
         }
 
         is InterestListEvent -> {
-            RenderHashtagList(baseNote, backgroundColor, accountViewModel, nav)
+            RenderInterestList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is InterestSetEvent -> {

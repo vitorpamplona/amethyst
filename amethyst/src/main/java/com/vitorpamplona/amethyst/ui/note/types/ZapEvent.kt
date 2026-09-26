@@ -97,7 +97,7 @@ fun RenderZappedPost(
 }
 
 @Composable
-fun RenderLnZap(
+fun RenderZapReceipt(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
@@ -108,7 +108,7 @@ fun RenderLnZap(
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
 
-    RenderLnZapCard(
+    RenderZapReceiptCard(
         note = note,
         card = card,
         recipientKey = zapEvent.zappedAuthor().firstOrNull(),
@@ -120,7 +120,7 @@ fun RenderLnZap(
 }
 
 @Composable
-fun RenderLnZapCard(
+fun RenderZapReceiptCard(
     note: Note,
     card: ZapAmountCommentNotification,
     recipientKey: String?,

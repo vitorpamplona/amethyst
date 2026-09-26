@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.desktop.model
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.stateIn
  * feeds to [com.vitorpamplona.amethyst.commons.model.Note.isHiddenFor].
  *
  * Both lists carry a mix of public tags and an NIP-44-encrypted private section;
- * the shared [MuteListDecryptionCache]/[PeopleListDecryptionCache] handle the
+ * the shared [MuteListDecryptionCache]/[FollowSetDecryptionCache] handle the
  * async decrypt (and are no-ops for read-only accounts, which simply see the
  * public portion). The result is exposed as a hot [StateFlow] so feeds can
  * re-filter live: when the list events change (or decryption resolves), a new
@@ -65,7 +65,7 @@ class DesktopHiddenUsersState(
     private val showSensitiveContent: StateFlow<Boolean?> = MutableStateFlow(null),
 ) {
     private val muteCache = MuteListDecryptionCache(signer)
-    private val blockCache = PeopleListDecryptionCache(signer)
+    private val blockCache = FollowSetDecryptionCache(signer)
 
     // Strong refs so the GC keeps these addressable notes (and their decrypt caches) alive.
     private val muteListNote = cache.getOrCreateAddressableNote(MuteListEvent.createAddress(signer.pubKey))

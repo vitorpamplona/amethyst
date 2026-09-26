@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 @Composable
-fun FileHeaderDisplay(
+fun FileMetadataDisplay(
     note: Note,
     roundedCorner: Boolean,
     contentScale: ContentScale,
@@ -53,7 +53,7 @@ fun FileHeaderDisplay(
     // which viewer happens to render it, so an NSFW-tagged archive stays behind the same gate.
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
         if (content == null) {
-            FileHeaderAttachmentCard(event, fullUrl, mimeType)
+            FileMetadataAttachmentCard(event, fullUrl, mimeType)
         } else {
             ZoomableContentView(
                 content = content,
@@ -70,7 +70,7 @@ fun FileHeaderDisplay(
  *
  * Kind 1063 is a *generic* file container — its `m` tag can name any type, so unlike a NIP-71
  * video event the kind itself asserts nothing about how to render the payload. A null here means
- * the file belongs in [FileHeaderAttachmentCard] rather than being pushed into the video player.
+ * the file belongs in [FileMetadataAttachmentCard] rather than being pushed into the video player.
  */
 internal fun FileMetadataEvent.toMediaContent(
     note: Note,
@@ -128,7 +128,7 @@ internal fun FileMetadataEvent.toMediaContent(
 
 /** The link card a kind-1063 header falls back to when [toMediaContent] returns null. */
 @Composable
-internal fun FileHeaderAttachmentCard(
+internal fun FileMetadataAttachmentCard(
     event: FileMetadataEvent,
     url: String,
     mimeType: String?,

@@ -23,7 +23,7 @@ Upstream re-architected the same subsystem but **also completed the model-sharin
 - `watchers/UserWatcherSubAssembler.kt` — commons `BaseEoseManager`; reads `account.indexerRelayList.flow.value`; calls `filterUserMetadataForKey(...)`.
 - `watchers/FilterUserMetadataForKey.kt` — emits `ExplainedFilter(PROFILE_METADATA, …)`; reads `LocalCache.relayHints.hintsForKey(...)` **statically** (the one non-injected cache ref).
 - `watchers/UserReportsSubAssembler.kt` — commons `SingleSubEoseManager`; reads `account.declaredFollowsPerOutboxRelay.value`, `account.userProfile().pubkeyHex`.
-- `watchers/UserCardsSubAssembler.kt` — commons `SingleSubEoseManager`; reads `account.homeRelays.flow.value`, `account.trustProviderList.liveUserRankProvider`, `…liveUserFollowerCount`, `account.userProfile().pubkeyHex`; emits `filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(...)` (already in commons `assemblers/ContactCardFilters.kt`).
+- `watchers/UserCardsSubAssembler.kt` — commons `SingleSubEoseManager`; reads `account.homeRelays.flow.value`, `account.trustProviderList.liveUserRankProvider`, `…liveUserFollowerCount`, `account.userProfile().pubkeyHex`; emits `filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay(...)` (already in commons `assemblers/ContactCardFilters.kt`).
 
 ### Event side — `amethyst/.../reqCommand/event/`
 - `EventFinderFilterAssembler.kt` — `EventFinderQueryState(note, override val account: Account) : AccountScopedQuery`; groups `NoteEventLoaderSubAssembler`, `EventWatcherSubAssembler`, `AddressableAuthorRelayLoaderSubAssembler(cache, ::allKeys, userFinder)`.

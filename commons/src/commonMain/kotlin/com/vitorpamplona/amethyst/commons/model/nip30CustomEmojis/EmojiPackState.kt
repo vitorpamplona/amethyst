@@ -53,13 +53,13 @@ class EmojiPackState(
     )
 
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
-    val emojiPackListNote = cache.getOrCreateAddressableNote(getEmojiPackSelectionAddress())
+    val emojiPackListNote = cache.getOrCreateAddressableNote(getEmojiListAddress())
 
-    fun getEmojiPackSelectionAddress() = EmojiListEvent.createAddress(signer.pubKey)
+    fun getEmojiListAddress() = EmojiListEvent.createAddress(signer.pubKey)
 
-    fun getEmojiPackSelection(): EmojiListEvent? = emojiPackListNote.event as? EmojiListEvent
+    fun getEmojiList(): EmojiListEvent? = emojiPackListNote.event as? EmojiListEvent
 
-    fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = emojiPackListNote.flow().metadata.stateFlow
+    fun getEmojiListFlow(): StateFlow<NoteState> = emojiPackListNote.flow().metadata.stateFlow
 
     fun convertEmojiSelectionPack(selection: EmojiListEvent?): List<StateFlow<NoteState>>? =
         selection?.taggedAddresses()?.map {
@@ -71,11 +71,11 @@ class EmojiPackState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<List<StateFlow<NoteState>>?> =
-        getEmojiPackSelectionFlow()
+        getEmojiListFlow()
             .transformLatest {
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiListEvent))
             }.onStart {
-                emit(convertEmojiSelectionPack(getEmojiPackSelection()))
+                emit(convertEmojiSelectionPack(getEmojiList()))
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -115,7 +115,7 @@ class EmojiPackState(
                 emit(
                     mergePackWithPrivate(
                         convertEmojiSelectionPack(
-                            getEmojiPackSelection(),
+                            getEmojiList(),
                         )?.map { it.value }?.toTypedArray() ?: emptyArray(),
                     ),
                 )
@@ -149,7 +149,7 @@ class EmojiPackState(
 
         val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot build event hint for this emoji pack.")
 
-        val usersEmojiList = getEmojiPackSelection()
+        val usersEmojiList = getEmojiList()
         return if (usersEmojiList == null) {
             val template = EmojiListEvent.build(listOf(eventHint))
             signer.sign(template)
@@ -160,7 +160,7 @@ class EmojiPackState(
     }
 
     suspend fun removeEmojiPack(emojiPack: Note): EmojiListEvent? {
-        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("No emoji pack selection exists to remove from.")
+        val usersEmojiList = getEmojiList() ?: throw IllegalArgumentException("No emoji pack selection exists to remove from.")
 
         val emojiPackEvent = emojiPack.event
         if (emojiPackEvent !is EmojiPackEvent) return null

@@ -44,9 +44,9 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 interface PublicChatListRepository {
-    fun channelList(): PublicChatListEvent?
+    fun publicChatList(): PublicChatListEvent?
 
-    fun updateChannelListTo(newChannelList: PublicChatListEvent?)
+    fun updatePublicChatListTo(newPublicChatList: PublicChatListEvent?)
 }
 
 class PublicChatListState(
@@ -57,22 +57,22 @@ class PublicChatListState(
     val settings: PublicChatListRepository,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
-    val publicChatListNote = cache.getOrCreateAddressableNote(getChannelListAddress())
+    val publicChatListNote = cache.getOrCreateAddressableNote(getPublicChatListAddress())
 
-    fun getChannelListAddress() = PublicChatListEvent.createAddress(signer.pubKey)
+    fun getPublicChatListAddress() = PublicChatListEvent.createAddress(signer.pubKey)
 
-    fun getChannelListFlow(): StateFlow<NoteState> = publicChatListNote.flow().metadata.stateFlow
+    fun getPublicChatListFlow(): StateFlow<NoteState> = publicChatListNote.flow().metadata.stateFlow
 
-    fun getChannelList(): PublicChatListEvent? = publicChatListNote.event as? PublicChatListEvent
+    fun getPublicChatList(): PublicChatListEvent? = publicChatListNote.event as? PublicChatListEvent
 
     suspend fun publicChatListWithBackup(note: Note): Set<ChannelTag> {
-        val event = note.event as? PublicChatListEvent ?: settings.channelList()
+        val event = note.event as? PublicChatListEvent ?: settings.publicChatList()
         return event?.let { decryptionCache.channelSet(it) } ?: emptySet()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<ChannelTag>> =
-        getChannelListFlow()
+        getPublicChatListFlow()
             .transformLatest { noteState ->
                 emit(publicChatListWithBackup(noteState.note))
             }.onStart {
@@ -112,7 +112,7 @@ class PublicChatListState(
             )
 
     suspend fun follow(channel: PublicChatChannel): PublicChatListEvent {
-        val publicChatList = getChannelList()
+        val publicChatList = getPublicChatList()
 
         return if (publicChatList == null) {
             PublicChatListEvent.create(ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
@@ -122,7 +122,7 @@ class PublicChatListState(
     }
 
     suspend fun follow(channels: List<PublicChatChannel>): PublicChatListEvent {
-        val publicChatList = getChannelList()
+        val publicChatList = getPublicChatList()
 
         val channelTags = channels.map { ChannelTag(it.idHex, it.relayHintUrl()) }
         return if (publicChatList == null) {
@@ -133,7 +133,7 @@ class PublicChatListState(
     }
 
     suspend fun unfollow(channel: PublicChatChannel): PublicChatListEvent? {
-        val publicChatList = getChannelList()
+        val publicChatList = getPublicChatList()
 
         return if (publicChatList != null) {
             PublicChatListEvent.remove(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), signer)
@@ -143,7 +143,7 @@ class PublicChatListState(
     }
 
     init {
-        settings.channelList()?.let { event ->
+        settings.publicChatList()?.let { event ->
             Log.d("AccountRegisterObservers") { "Loading saved channel list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
@@ -153,10 +153,10 @@ class PublicChatListState(
 
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
-            getChannelListFlow().collect {
+            getPublicChatListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Channel List for ${signer.pubKey}" }
                 (it.note.event as? PublicChatListEvent)?.let {
-                    settings.updateChannelListTo(it)
+                    settings.updatePublicChatListTo(it)
                 }
             }
         }

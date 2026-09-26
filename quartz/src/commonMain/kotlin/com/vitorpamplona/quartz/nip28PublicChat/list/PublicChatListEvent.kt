@@ -50,11 +50,11 @@ class PublicChatListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<ChannelListDiff>,
+    DiffableEvent<PublicChatListDiff>,
     EventHintProvider {
-    override fun diffFrom(older: Event): ChannelListDiff? {
+    override fun diffFrom(older: Event): PublicChatListDiff? {
         if (older !is PublicChatListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
-        return ChannelListDiff(
+        return PublicChatListDiff(
             ListDiff.of(older.tags.channels(), tags.channels(), { it.eventId }, { a, b -> a.relay == b.relay }),
             privateItemsChangeFrom(older),
         )

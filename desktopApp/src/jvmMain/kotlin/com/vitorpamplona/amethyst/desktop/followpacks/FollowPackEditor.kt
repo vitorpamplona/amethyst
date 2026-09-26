@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.followpacks
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 /**
  * Lightweight helpers for follow-pack viewing actions.

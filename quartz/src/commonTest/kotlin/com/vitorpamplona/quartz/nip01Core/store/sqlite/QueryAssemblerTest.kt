@@ -980,7 +980,7 @@ class QueryAssemblerTest : BaseDBTest() {
         }
 
     @Test
-    fun testContactCardDownloadFromTrustedKeys() =
+    fun testUserAssertionDownloadFromTrustedKeys() =
         forEachDB { db ->
             val filter =
                 Filter(

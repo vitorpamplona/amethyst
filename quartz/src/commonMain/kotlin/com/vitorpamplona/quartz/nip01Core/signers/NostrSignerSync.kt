@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
@@ -129,7 +129,7 @@ class NostrSignerSync(
         )
     }
 
-    fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
+    fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
 
     /**
      * NIP-BC `sign_psbt`: sign the key-path P2TR inputs of [psbtHex] this key

@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 /**
@@ -98,7 +98,7 @@ class PoWNostrSigner(
         fromPublicKey: HexKey,
     ): String = signer.nip44Decrypt(ciphertext, fromPublicKey)
 
-    override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = signer.decryptZapEvent(event)
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = signer.decryptZapEvent(event)
 
     override suspend fun deriveKey(nonce: HexKey): HexKey = signer.deriveKey(nonce)
 

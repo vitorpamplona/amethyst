@@ -178,10 +178,10 @@ This keeps the *policy* (who gets notified) exactly where it is and isolates the
 
 | Kind(s) | Category | Style | Accent / icon | Title → Body | Actions |
 | --- | --- | --- | --- | --- | --- |
-| NIP-17 `ChatMessageEvent` (14), file (15), NIP-04 `PrivateDmEvent` (4), Marmot group | DIRECT_MESSAGE | `MessagingStyle` + Conversation shortcut + Bubble | blue-green / `chat` | sender → message | Reply, Mark-read |
+| NIP-17 `ChatMessageEvent` (14), file (15), NIP-04 `EncryptedDmEvent` (4), Marmot group | DIRECT_MESSAGE | `MessagingStyle` + Conversation shortcut + Bubble | blue-green / `chat` | sender → message | Reply, Mark-read |
 | `TextNoteEvent`(1)/`CommentEvent`(1111)/`ChannelMessageEvent`(42) **reply to me** | REPLY | `MessagingStyle` (parent as prior message) | purple / `reply` | "X replied" → excerpt (+ quoted parent) | Reply, View thread, Mute thread |
 | Same kinds, **mention/quote only** | MENTION | plain (BigText) | purple / `alternate_email` | "X mentioned you" → excerpt | View, Mute thread |
-| `LnZapEvent`(9735) | ZAP | **colorized** amount card (BigText) | gold / `bolt` | "⚡ 2,100 sats from X" → zap comment + zapped-note excerpt | Zap back, View |
+| `ZapReceiptEvent`(9735) | ZAP | **colorized** amount card (BigText) | gold / `bolt` | "⚡ 2,100 sats from X" → zap comment + zapped-note excerpt | Zap back, View |
 | `NutzapEvent`(9321) *(new)* | ZAP | colorized amount card | gold / `bolt` (cashu tint) | "🥜 X nutzapped you 2,100 sats" → … | Zap back, View |
 | `OnchainZapEvent`(8333) *(new)* | ZAP | colorized amount card | gold / `bolt` | "⛓ X sent an onchain zap" → … | View |
 | `ReactionEvent`(7) | REACTION | aggregated `InboxStyle` | heart-red / `favorite` | "🤙 X & N others liked your post" → note excerpt | Like back, View |
@@ -189,7 +189,7 @@ This keeps the *policy* (who gets notified) exactly where it is and isolates the
 | `PictureEvent`(20)/`VideoNormal`/`Short`/`Vertical`/`Horizontal` | MEDIA | `BigPictureStyle` | purple / `image` | "X shared a photo/video" → caption, image inline | View |
 | `PollEvent`/`ZapPollEvent` | MENTION | plain | purple / `ballot` | "X asked a question" → poll title | Vote, View |
 | `HighlightEvent`(9802) | ARTICLE | plain | purple / `format_quote` | "X highlighted your article" → highlighted text | View |
-| `LongTextNoteEvent`(30023)/`WikiNoteEvent`(30818) | ARTICLE | plain | purple / `article` | "X mentioned you in an article" → title | View |
+| `LongFormContentEvent`(30023)/`WikiArticleEvent`(30818) | ARTICLE | plain | purple / `article` | "X mentioned you in an article" → title | View |
 | `GitIssueEvent`/`GitPatchEvent`/`GitPullRequestEvent`/`…Update` | CODE | plain | slate / `merge` | "X opened an issue/PR" → subject | View |
 | `BadgeAwardEvent`(8) *(new)* | BADGE | `BigPictureStyle` (badge art) | gold / `award_star` | "You earned a badge" → badge name, image | View |
 | `LiveChessGameAcceptEvent`/`LiveChessMoveEvent` | CHESS | plain | brown / `chess` | "X accepted your challenge" / "your turn" | Open board |

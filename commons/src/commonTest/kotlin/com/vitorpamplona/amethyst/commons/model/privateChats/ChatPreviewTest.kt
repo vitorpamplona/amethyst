@@ -37,7 +37,7 @@ class ChatPreviewTest {
 
     private val ciphertext = "0tyoSVovKSK9uDKLUVMs137TD0b+vz+fjoJN+gG3Bk4=?iv=6r6yPQ=="
 
-    private fun privateDm(
+    private fun encryptedDm(
         author: String = other,
         recipient: String = me,
     ) = EncryptedDmEvent(
@@ -63,7 +63,7 @@ class ChatPreviewTest {
 
     @Test
     fun nip04DmCarriesCiphertext() {
-        assertTrue(privateDm().hasEncryptedContent())
+        assertTrue(encryptedDm().hasEncryptedContent())
     }
 
     @Test
@@ -129,14 +129,14 @@ class ChatPreviewTest {
     fun decryptedDmRendersThePlaintext() {
         assertEquals(
             ChatPreview.Body("hi!"),
-            chatPreviewOf(privateDm(), decrypted = "hi!", myPubKey = me, canDecrypt = true),
+            chatPreviewOf(encryptedDm(), decrypted = "hi!", myPubKey = me, canDecrypt = true),
         )
     }
 
     /** The regression under test: the raw base64 blob must never become the preview. */
     @Test
     fun pendingDmNeverFallsThroughToCiphertext() {
-        val preview = chatPreviewOf(privateDm(), decrypted = null, myPubKey = me, canDecrypt = true)
+        val preview = chatPreviewOf(encryptedDm(), decrypted = null, myPubKey = me, canDecrypt = true)
 
         assertEquals(ChatPreview.Decrypting, preview)
         assertFalse(preview is ChatPreview.Body)
@@ -146,7 +146,7 @@ class ChatPreviewTest {
     fun readOnlyAccountCannotEverDecrypt() {
         assertEquals(
             ChatPreview.Undecryptable,
-            chatPreviewOf(privateDm(), decrypted = null, myPubKey = me, canDecrypt = false),
+            chatPreviewOf(encryptedDm(), decrypted = null, myPubKey = me, canDecrypt = false),
         )
     }
 
@@ -155,7 +155,7 @@ class ChatPreviewTest {
         assertEquals(
             ChatPreview.Undecryptable,
             chatPreviewOf(
-                privateDm(author = other, recipient = stranger),
+                encryptedDm(author = other, recipient = stranger),
                 decrypted = null,
                 myPubKey = me,
                 canDecrypt = true,
@@ -168,7 +168,7 @@ class ChatPreviewTest {
         assertEquals(
             ChatPreview.Decrypting,
             chatPreviewOf(
-                privateDm(author = me, recipient = other),
+                encryptedDm(author = me, recipient = other),
                 decrypted = null,
                 myPubKey = me,
                 canDecrypt = true,

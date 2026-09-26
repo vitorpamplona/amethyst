@@ -87,7 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.DvmContentDiscoveryFeedViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -263,22 +263,22 @@ fun PrepareViewContentDiscoveryModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel =
+    val resultFeedViewModel: DvmContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
-            factory = NIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
+            factory = DvmContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
         )
 
     LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
         resultFeedViewModel.invalidateData()
     }
 
-    RenderNostrNIP90ContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
+    RenderNostrDvmContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
 }
 
 @Composable
-fun RenderNostrNIP90ContentDiscoveryScreen(
-    resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel,
+fun RenderNostrDvmContentDiscoveryScreen(
+    resultFeedViewModel: DvmContentDiscoveryFeedViewModel,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
