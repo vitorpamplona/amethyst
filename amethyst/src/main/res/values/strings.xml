@@ -305,6 +305,8 @@
 
 
 
+    <string name="cordn_groups_manage">Coordinators</string>
+    <string name="cordn_groups_down_note">Nothing is arriving from these groups. Amethyst keeps retrying.</string>
     <string name="cordn_groups_none">No cordn groups yet</string>
     <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
     <string name="cordn_groups_start">Start one</string>
@@ -504,6 +506,10 @@
     <plurals name="cordn_create_unreachable_count">
         <item quantity="one">%1$d person cannot be reached by any coordinator you use</item>
         <item quantity="other">%1$d people cannot be reached by any coordinator you use</item>
+    </plurals>
+    <plurals name="cordn_groups_count">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
     </plurals>
     <plurals name="cordn_create_reach_count">
         <item quantity="one">Reachable on %1$d coordinator</item>
