@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupInfoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashChatsScreen
@@ -730,6 +731,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.CordnGroupInfo> {
             CordnGroupInfoScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
         }
+        composableFromEnd<Route.CordnGroupList> { CordnGroupListScreen(accountViewModel, nav) }
         composableFromBottom<Route.CordnCreateGroup> { CordnCreateGroupScreen(accountViewModel, nav) }
         composableFromBottom<Route.CordnCreateGroupMembers> { CordnCreateMembersScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnInvitations> { CordnInvitationsScreen(accountViewModel, nav) }

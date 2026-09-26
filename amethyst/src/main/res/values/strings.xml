@@ -305,6 +305,9 @@
 
 
 
+    <string name="cordn_groups_none">No cordn groups yet</string>
+    <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
+    <string name="cordn_groups_start">Start one</string>
     <string name="cordn_group_unavailable">This group is not available. Its coordinator may have been removed.</string>
     <string name="cordn_group_info">Group info</string>
     <string name="cordn_message_deleted">Message deleted</string>

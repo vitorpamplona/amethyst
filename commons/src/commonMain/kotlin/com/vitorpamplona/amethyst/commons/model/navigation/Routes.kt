@@ -653,6 +653,8 @@ sealed class Route {
         val gid: String,
     ) : Route()
 
+    @Serializable object CordnGroupList : Route()
+
     @Serializable object CordnCreateGroup : Route()
 
     @Serializable object CordnCreateGroupMembers : Route()
