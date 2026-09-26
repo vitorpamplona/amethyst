@@ -27,12 +27,27 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
+import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
+import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
@@ -40,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
@@ -52,33 +68,28 @@ import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
+import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
-import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
-import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
-import com.vitorpamplona.amethyst.model.preferences.BuzzWorkspacePreferences
-import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.RelayGroupDeletionPreferences
-import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.sharedPreferencesDataStore
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
-import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
-import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
+import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_LOG_STORE
+import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderLogMigrations
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
+import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigrations
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
@@ -93,13 +104,11 @@ import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServ
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
-import com.vitorpamplona.amethyst.service.pow.PowJobStore
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
@@ -198,6 +207,7 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class AppModules(
@@ -229,19 +239,55 @@ class AppModules(
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
+    /**
+     * The app-wide DataStore files — the ones that belong to the install rather
+     * than to an account. [AccountPreferenceStores] is the same idea keyed by
+     * npub.
+     *
+     * This replaces the `Context.preferencesDataStore` delegate these stores
+     * used to share. Same paths — `AppPreferenceStores.file` reproduces
+     * `filesDir/datastore/<name>.preferences_pb` exactly — so nothing migrates
+     * and a rollback finds its data where it left it. What it buys is that the
+     * stores themselves live in `commonMain`, where a desktop or CLI front end
+     * can say where its data lives instead of needing a `Context`.
+     *
+     * The shared_settings migration is attached here, to the file, because
+     * eight stores share it and DataStore runs a file's migrations once, on
+     * whichever store opens it first.
+     */
+    val appStores by lazy {
+        AppPreferenceStores(
+            rootFilesDir = { appContext.filesDir.toOkioPath() },
+            migrations = { name ->
+                when {
+                    name == AppPreferenceStores.SHARED_SETTINGS -> UiSettingsStore.migrations { LocalPreferences.loadSharedSettings() }
+                    // One file per account, so the migration is per name rather than a constant.
+                    name.startsWith(CashuPreferences.FILE_PREFIX) ->
+                        listOf(CashuPreferences.legacyMigration(appContext, name.removePrefix(CashuPreferences.FILE_PREFIX)))
+                    name == CALENDAR_REMINDER_SETTINGS_STORE -> calendarReminderSettingsMigrations(appContext)
+                    name == CALENDAR_REMINDER_LOG_STORE -> calendarReminderLogMigrations(appContext)
+                    else -> emptyList()
+                }
+            },
+        )
+    }
+
+    /** The file UI, Tor, Namecoin, OTS and the Buzz stores all share. */
+    val sharedSettingsStore get() = appStores.sharedSettings()
+
     // Pre-load both preference DataStores in parallel on IO threads.
     // Both constructors use runBlocking internally, so starting them concurrently
     // reduces total blocking time from (torPrefs + uiPrefs) to ~max(torPrefs, uiPrefs).
     private val uiPrefsDeferred =
         applicationIOScope.async {
-            val prefs = UiSharedPreferences.uiPreferences(appContext) ?: UiSettings()
-            UiSharedPreferences(prefs, appContext, applicationIOScope)
+            val prefs = UiSharedPreferences.uiPreferences(sharedSettingsStore) ?: UiSettings()
+            UiSharedPreferences(prefs, sharedSettingsStore, appContext, applicationIOScope)
         }
 
     private val torPrefsDeferred =
         applicationIOScope.async {
-            val prefs = TorSharedPreferences.torPreferences(appContext) ?: TorSettings()
-            TorSharedPreferences(prefs, appContext, applicationIOScope)
+            val prefs = TorSettingsStore.torPreferences(sharedSettingsStore) ?: TorSettings()
+            TorSettingsStore(prefs, sharedSettingsStore, applicationIOScope)
         }
 
     // Blocking load of UI Preferences to avoid theme/language blinking
@@ -252,20 +298,26 @@ class AppModules(
 
     // Blocking load of Tor Settings to avoid connection leaks
     val torPrefs by lazy {
-        Log.d("AppModules", "TorSharedPreferences Init")
+        Log.d("AppModules", "TorSettingsStore Init")
         runBlocking { torPrefsDeferred.await() }
     }
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
     val namecoinPrefs by lazy {
-        Log.d("AppModules", "NamecoinSharedPreferences Init")
-        NamecoinSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "NamecoinSettingsStore Init")
+        NamecoinSettingsStore(sharedSettingsStore, applicationIOScope)
     }
 
     // OTS blockchain explorer preferences (global, like Tor settings)
+    //
+    // The blocking load is the one the store used to do inside its own
+    // constructor: `current` has to answer synchronously for the resolver
+    // builder, so somebody has to wait. It is explicit here rather than hidden
+    // in commonMain, which has no runBlocking to hide it behind.
     val otsPrefs by lazy {
-        Log.d("AppModules", "OtsSharedPreferences Init")
-        OtsSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "OtsSettingsStore Init")
+        val store = sharedSettingsStore
+        OtsSettingsStore(store, runBlocking { OtsSettingsStore.load(store) })
     }
 
     // App services that should be run as soon as there are subscribers to their
@@ -308,12 +360,13 @@ class AppModules(
     // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
-    val relayGroupDeletionPrefs = RelayGroupDeletionPreferences(appContext, applicationIOScope)
+    val relayGroupDeletionPrefs =
+        RelayGroupDeletionStore(sharedSettingsStore, applicationIOScope)
 
     // Restore + persist which drawer section headings the user has folded away, so the side menu
     // opens the way they left it (device-global: a collapsed heading is a per-device view choice,
     // not an account setting worth syncing, unlike the hidden rows beside it in the drawer).
-    val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(appContext.sharedPreferencesDataStore, applicationIOScope)
+    val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
@@ -811,8 +864,10 @@ class AppModules(
      */
     val nappletAccountScope: () -> String = { sessionManager.loggedInAccount()?.pubKey ?: "" }
 
-    // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
-    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext, nappletAccountScope) }
+    // Singleton stores for napplet permissions. The holder is what enforces
+    // DataStore's one-instance-per-file rule now; this stays a lazy val so the
+    // ledger below and the broker share one object.
+    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appStores.getDataStore("napplet_permissions"), nappletAccountScope) }
 
     /**
      * The one napplet permission ledger for the main process. Its persistent half is just the store
@@ -830,10 +885,26 @@ class AppModules(
     // carry their owning account (`nip46:<signer>:<client>`) and whose sessions run for a specific
     // account rather than the active one. The napplet path namespaces its own coordinate the same way
     // (see NappletBroker.signerCoordinateFor) instead.
-    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
+    val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appStores) }
 
     // Display + relay info for connected NIP-46 remote-signer clients.
-    val nip46ClientStore by lazy { DataStoreNip46ClientStore(appContext) }
+    val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
+
+    // The device-local favorite-apps list behind the bottom bar, the Favorite Apps grid and the
+    // browser launcher, plus the browser's visit history behind the omnibox suggestions. Both live in
+    // commons and take their store and scope from here — that is the whole of their Android binding.
+    //
+    // Main process only: the keyless `:napplet` sandbox never builds AppModules, so it never builds
+    // these either. One instance each, so DataStore only ever sees one live reader per file.
+    val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope) }
+
+    val browserHistory by lazy { BrowserHistoryRegistry(appStores.getDataStore(BrowserHistoryRegistry.FILE_NAME), applicationIOScope) }
+
+    // Favicons captured by the browser host, one PNG per host. Not a DataStore — it takes the directory
+    // to keep them in, the same way AppPreferenceStores takes rootFilesDir.
+    val browserIcons by lazy {
+        BrowserIconRegistry({ appContext.filesDir.toOkioPath() / BrowserIconRegistry.DIR }, applicationIOScope)
+    }
 
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
@@ -912,7 +983,7 @@ class AppModules(
     // and every enqueue raises the shortService shield so backgrounding
     // doesn't freeze a miner.
     val powJobStore by lazy {
-        PowJobStore(File(appContext.filesDir, PowJobStore.FILE_NAME), applicationIOScope)
+        PoWJobStore(File(appContext.filesDir, PoWJobStore.FILE_NAME), applicationIOScope)
     }
 
     val powPublishQueue by lazy {
@@ -969,11 +1040,11 @@ class AppModules(
             // start — Buzz membership is server-side) and the starred channels. Per account: the
             // joined set makes a relay first-party for NIP-42, and a star is personal.
             startBuzzPersistence = { account ->
-                BuzzWorkspacePreferences(appContext, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarPreferences(appContext, account.scope, account.pubKey, account.buzzChannelStars)
+                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
                 // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
                 // first Buzz-relay AUTH rather than after it.
-                BuzzAttestationPreferences(appContext, account.scope, account.pubKey, account.buzzAttestation)
+                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
             },
         )
 
@@ -1303,7 +1374,7 @@ class AppModules(
                     Filter(kinds = listOf(CalendarDateSlotEvent.KIND, CalendarTimeSlotEvent.KIND)),
                 ).conflate()
                 .collect {
-                    if (CalendarReminderPrefs(appContext).isEnabled() &&
+                    if (calendarReminderSettings().load().enabled &&
                         CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)

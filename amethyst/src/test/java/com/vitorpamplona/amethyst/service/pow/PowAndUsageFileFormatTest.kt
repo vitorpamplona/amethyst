@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobsFile
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -43,7 +44,7 @@ class PowAndUsageFileFormatTest {
         }
 
     private val powSample =
-        PowJobsFile(
+        PoWJobsFile(
             version = 1,
             jobs =
                 listOf(
@@ -79,7 +80,7 @@ class PowAndUsageFileFormatTest {
 
     @Test
     fun powJobsFromTheJacksonBuildStillLoad() {
-        val loaded = json.decodeFromString<PowJobsFile>(POW_JACKSON_OUTPUT)
+        val loaded = json.decodeFromString<PoWJobsFile>(POW_JACKSON_OUTPUT)
 
         assertEquals(1, loaded.jobs.size)
         val job = loaded.jobs.first()
@@ -113,7 +114,7 @@ class PowAndUsageFileFormatTest {
         assertEquals(
             "j1",
             json
-                .decodeFromString<PowJobsFile>(pow)
+                .decodeFromString<PoWJobsFile>(pow)
                 .jobs
                 .first()
                 .id,

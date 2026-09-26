@@ -119,14 +119,14 @@ class CashuWalletOps(
      * it. Used to rewind the restore window in [completeMintFromLightning]
      * recovery. Default is 0 (no persistent counter store).
      */
-    private val peekCashuCounter: (keysetId: String) -> Long = { 0L },
+    private val peekCashuCounter: suspend (keysetId: String) -> Long = { 0L },
     /**
      * Atomically reserve [count] consecutive NUT-13 counters and
      * return the first reserved index. Used by the recovery path to
      * advance past slots the mint confirmed in use. Default is a
      * no-op for tests / random-only callers.
      */
-    private val reserveCashuCounters: (keysetId: String, count: Int) -> Long = { _, _ -> 0L },
+    private val reserveCashuCounters: suspend (keysetId: String, count: Int) -> Long = { _, _ -> 0L },
 ) {
     private val opsCache = ConcurrentHashMap<String, CashuMintOperations>()
 

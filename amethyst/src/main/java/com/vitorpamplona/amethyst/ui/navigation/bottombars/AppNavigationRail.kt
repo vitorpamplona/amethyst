@@ -36,9 +36,9 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
@@ -58,7 +58,8 @@ fun AppNavigationRail(
 ) {
     val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
-    val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val favorites by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
     val reselectCoordinator = LocalTabReselectCoordinator.current

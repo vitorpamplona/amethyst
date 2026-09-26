@@ -20,16 +20,12 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import kotlinx.coroutines.flow.first
-
-private val Context.nappletStorageDataStore by preferencesDataStore(name = "napplet_storage")
 
 /**
  * DataStore-backed [NappletStorage]. Every key is prefixed with the **active account** and then the
@@ -44,9 +40,6 @@ class DataStoreNappletStorage(
     private val dataStore: DataStore<Preferences>,
     private val accountPubKey: () -> String,
 ) : NappletStorage {
-    constructor(context: Context, accountPubKey: () -> String) :
-        this(context.applicationContext.nappletStorageDataStore, accountPubKey)
-
     override suspend fun get(
         coordinate: String,
         key: String,

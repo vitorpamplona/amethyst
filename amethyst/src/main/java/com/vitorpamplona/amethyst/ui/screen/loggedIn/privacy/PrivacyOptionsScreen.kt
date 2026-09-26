@@ -89,7 +89,10 @@ import com.vitorpamplona.amethyst.commons.resources.tor_use_videos_explainer
 import com.vitorpamplona.amethyst.commons.resources.use_internal_tor
 import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.explainerId
+import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
 import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
 import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
@@ -109,9 +112,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.explainerId
-import com.vitorpamplona.amethyst.ui.tor.resourceId
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
@@ -136,7 +136,7 @@ fun PrivacyOptionsScreen(
 }
 
 // Every control writes straight to [TorSettingsFlow] via `tryEmit`; a debounced collector in
-// TorSharedPreferences persists the change automatically, so this screen has no Save/Cancel — the
+// TorSettingsStore persists the change automatically, so this screen has no Save/Cancel — the
 // back arrow is the only chrome and the state is already saved by the time the user leaves.
 @Composable
 fun PrivacyOptionsContent(
