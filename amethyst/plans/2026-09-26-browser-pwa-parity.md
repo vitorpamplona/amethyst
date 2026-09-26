@@ -1,6 +1,6 @@
 # Browser surfaces → PWA parity review
 
-Status: **review / proposal**, decisions recorded in §6. Scope: every surface that renders a
+Status: **implemented** (phases 0–5, see §7), decisions recorded in §6. Not yet verified on a device. Scope: every surface that renders a
 plain web client — the **embedded** bottom-bar tab and the **external** full-screen browser —
 plus their shared top pull-down "pill" and bottom console "pill". The nsite/napplet hosts
 reuse the same chrome and are covered where the change is shared.
@@ -287,3 +287,71 @@ nsite/napplet hosts (sandbox profile permitting).
 4. **Add to Home screen:** the shortcut opens the page full screen in **Amethyst's browser**
    (not the system browser), so the signer is present. It launches through a main-process
    trampoline.
+
+## 7. Implementation (2026-09-26)
+
+What shipped, where it lives, and what was deliberately left out.
+
+**Shared layout.** `commons/…/browser/BrowserChrome.kt` decides which actions the top pill shows, and in
+what order, for every surface (web / nsite / napplet × embedded / full screen), plus the security badge,
+the scope check, text-zoom steps, the desktop user agent and the theme-colour parser. It is covered by
+`BrowserChromeTest`. `nappletHost/…/BrowserChromeLabels.kt` maps each action to one Material Symbol and
+one label (shared strings in `commons` Android resources). Both renderers draw from these two:
+
+- `TopControlSheet` (Compose, embedded tabs).
+- `NappletControlSheet` (plain Views, full screen). It loads the same Material Symbols font from the
+  `commonsUI` assets, so the icons match. Three glyphs were added to the subset font: `FormatSize`,
+  `DesktopWindows` and `AddToHomeScreen`.
+
+**Top pill.** Header: security icon, page title, and `host · connection`. Tapping it opens page info;
+long-pressing copies the link. The full-screen header also has ✕. Below it:
+- The icon row: back · forward · reload/stop · star (filled when pinned) · share.
+- Menu rows: back to app, copy link, edit address, find in page, text size, desktop site, add to Home
+  screen, open in another browser, open full screen.
+- Privacy: Tor, what it can access, site settings.
+- Developer: console.
+
+**Bottom pill.** Console as before; find in page docks in the same slot, one panel at a time.
+
+**Web platform** (`BrowserWebTools`, `BrowserDownloads`, `BrowserPopups`, `BrowserExtrasScript`,
+`BrowserJsDialogs`; used by both `NappletBrowserActivity` and `NappletBrowserService`):
+- JS dialogs: native in full screen; relayed to Compose for the embed.
+- `_blank` / `window.open` open as a new full-screen window, with `opener` kept through a parked popup
+  WebView.
+- `intent:` URIs are parsed, hardened, and fall back to `browser_fallback_url`.
+- Downloads follow the page's route (Tor through SOCKS, remote DNS), carry the page's cookies, and land
+  in Downloads. `blob:` and `data:` downloads come through the page script.
+- HTML fullscreen: the whole window in full screen; inside the surface for the embed.
+- `navigator.share` polyfill (text/url).
+- Renderer-crash recovery in all four WebView owners.
+
+**OS integration.**
+- `theme-color` tints the full-screen window's system-bar areas.
+- `setTaskDescription` sets the title, favicon and colour in Recents.
+- Add to Home screen (`WebShortcuts` + `WebShortcutActivity`, main process, waits for Tor).
+- Dynamic launcher shortcuts for the first four web favorites.
+
+**Permissions and page info.**
+- Camera, microphone and location go through a per-origin prompt. Answers are kept in
+  `WebSitePermissionRegistry` (main process, same on Tor and open web), then Android's runtime permission
+  is requested.
+- The Connected Apps detail screen lists and resets those answers.
+- Page info shows the connection, Tor and certificate, with Clear site data (this profile only).
+
+**Left out, and why.**
+- **Pull-to-refresh:** WebView exposes no overscroll signal, so on pages that scroll an inner element
+  (most SPAs) `scrollY == 0` is always true. A pull there would reload mid-scroll.
+- **Long-press menu in the embedded tab:** the SurfaceControlViewHost surface doesn't deliver long-press
+  context menus. It is available in the full-screen browser.
+- **Theme colour in the embedded tab:** the tab owns no system bars. The script's message is ignored
+  there.
+- **Find / text size for embedded nsites and napplets:** that host has no IPC for them yet. The rows are
+  hidden via `BrowserChrome.State.hasFind` / `hasTextSize`. The full-screen nsite/napplet host has both.
+- **Notifications / Push, file sharing through Web Share:** unchanged, see §4.5.
+
+**Needs on-device verification.**
+- Popup `opener` handoff across activities.
+- Renderer-crash recovery. Trigger it with `chrome://crash` in a debug build, or by killing the renderer.
+- Downloads over Tor.
+- The pinned-shortcut cold start with Tor enabled.
+
