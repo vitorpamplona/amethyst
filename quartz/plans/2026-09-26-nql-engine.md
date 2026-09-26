@@ -111,6 +111,43 @@ vespa-eventstore's `VespaSqlBackend` compiles against it as is.
    fall back to a nested loop otherwise.
 6. Subqueries run once per distinct value of the outer columns they read.
 
+### `events.d`
+
+`events.d` is an addressable event's identifier (the first `d` value, `''`
+without one; NULL for other kinds), added to NIP-FF so a provider's addressable
+events page by `d` off the index that already replaces them:
+
+```sql
+SELECT e.d AS target, CAST(r.t1 AS INTEGER) AS rank
+FROM events AS e JOIN tags AS r ON r.event_id = e.id AND r.t0 = 'rank'
+WHERE e.kind = 30382 AND e.pubkey = ? AND e.d > ? ORDER BY target LIMIT 1000
+```
+
+- The compiler reads `d` as `event_headers.d_tag` when the source is known to be
+  addressable-only (its kind conditions all fall in 30000..39999, or a condition
+  on `d` rejects NULL) and names the kind range, so SQLite uses the partial
+  `addressable_idx (kind, pubkey, d_tag)` in `d` order. Elsewhere it guards on the
+  kind: replaceable kinds keep `d_tag = ''` for a-tag deletions.
+- `d_tag` now follows the kind, not the parsed class: unknown addressable kinds
+  get theirs and supersede. Schema v6 migrates old rows (newest version per
+  address stays).
+- `event_tag_values`' per-event index covers `(event_header_row_id, t0, t1)`, so
+  the `rank` of each card is read from the index alone.
+- The interpreter pushes `d = …` / `d IN (…)` down as `#d` (a superset, re-checked),
+  except `''`, which an event without a `d` tag has but `#d` can't find.
+
+300k cards of one provider plus 50k noise, 300 pages of 1000 through `store.nql`
+(`Nip85PagingBench`, including building the rows):
+
+| | tag values | no tag values |
+|---|---|---|
+| by `d` (`events.d`) | 1,153 ms | 2,707 ms |
+| by `d` through a `tags` self-join (before) | 1,923 ms | 501,183 ms |
+| REQ pages, whole events | 4,011 ms | 3,487 ms |
+
+Without tag values, `by d` still joins each card to its unpacked tags through
+the id index; unpacking from the same row would roughly halve it.
+
 ### The filesystem store
 
 `FsEventStore` answers through `FsSqlBackend`. Every index entry of an event is

@@ -423,6 +423,73 @@
         ]
       ],
       "content": "check this"
+    },
+    {
+      "ref": "a-card-bob",
+      "author": "alice",
+      "kind": 30382,
+      "created_at": 1700002000,
+      "tags": [
+        [
+          "d",
+          "{pubkey:bob}"
+        ],
+        [
+          "rank",
+          "87"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "a-card-carol",
+      "author": "alice",
+      "kind": 30382,
+      "created_at": 1700002001,
+      "tags": [
+        [
+          "d",
+          "{pubkey:carol}"
+        ],
+        [
+          "rank",
+          "12"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "b-no-d",
+      "author": "bob",
+      "kind": 30000,
+      "created_at": 1700002002,
+      "tags": [
+        [
+          "title",
+          "no identifier"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "c-late-d",
+      "author": "carol",
+      "kind": 30078,
+      "created_at": 1700002003,
+      "tags": [
+        [
+          "d"
+        ],
+        [
+          "d",
+          "second"
+        ],
+        [
+          "d",
+          "third"
+        ]
+      ],
+      "content": ""
     }
   ],
   "cases": [
@@ -454,8 +521,181 @@
         [
           "sig",
           "TEXT"
+        ],
+        [
+          "d",
+          "TEXT"
         ]
       ]
+    },
+    {
+      "name": "model/d-of-addressable-events",
+      "query": "SELECT kind, d FROM events WHERE d IS NOT NULL ORDER BY kind, d",
+      "ordered": true,
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-null-outside-addressable-kinds",
+      "query": "SELECT count(*) AS n FROM events WHERE d IS NULL",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          24
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-the-first-d-tag-with-a-value",
+      "query": "SELECT d FROM events WHERE kind = 30078",
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "second"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-empty-without-a-d-tag",
+      "query": "SELECT kind FROM events WHERE d = ''",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          30000
+        ]
+      ]
+    },
+    {
+      "name": "model/d-equals-a-value",
+      "query": "SELECT kind FROM events WHERE d = 'second'",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          30078
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-only-the-first-value",
+      "query": "SELECT d FROM events WHERE d IN ('post-1', 'third')",
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "post-1"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-with-its-tags",
+      "query": "SELECT e.d, t.idx, t.t1 FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'd' WHERE e.kind = 30078 ORDER BY t.idx",
+      "ordered": true,
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ],
+        [
+          "idx",
+          "INTEGER"
+        ],
+        [
+          "t1",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "second",
+          0,
+          null
+        ],
+        [
+          "second",
+          1,
+          "second"
+        ],
+        [
+          "second",
+          2,
+          "third"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-pages-a-providers-assertions",
+      "query": "SELECT e.d AS target, CAST(t.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'rank' WHERE e.kind = 30382 AND e.pubkey = ? AND e.d > ? ORDER BY target LIMIT 1",
+      "params": [
+        "{pubkey:alice}",
+        ""
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "target",
+          "TEXT"
+        ],
+        [
+          "rank",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-assertions-by-rank",
+      "query": "SELECT CAST(t.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'rank' WHERE e.kind = 30382 ORDER BY rank DESC",
+      "ordered": true,
+      "columns": [
+        [
+          "rank",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          87
+        ],
+        [
+          12
+        ]
+      ]
+    },
+    {
+      "name": "invalid/result-name-clashes-with-d",
+      "query": "SELECT kind AS d FROM events ORDER BY d",
+      "error": "invalid"
     },
     {
       "name": "model/tags-columns",
@@ -522,8 +762,8 @@
       ],
       "rows": [
         [
-          26,
-          45
+          30,
+          53
         ]
       ]
     },
@@ -1894,7 +2134,7 @@
         ],
         [
           "other",
-          14
+          18
         ],
         [
           "profile",
@@ -2793,7 +3033,19 @@
           2
         ],
         [
+          30000,
+          1
+        ],
+        [
           30023,
+          2
+        ],
+        [
+          30078,
+          1
+        ],
+        [
+          30382,
           2
         ]
       ]
@@ -2873,7 +3125,16 @@
           10002
         ],
         [
+          30000
+        ],
+        [
           30023
+        ],
+        [
+          30078
+        ],
+        [
+          30382
         ]
       ]
     },
@@ -3458,8 +3719,8 @@
       ],
       "rows": [
         [
-          1700001300,
-          30023,
+          1700002003,
+          30382,
           null
         ]
       ]
@@ -3555,7 +3816,7 @@
       ],
       "rows": [
         [
-          6
+          8
         ]
       ]
     },
@@ -3616,7 +3877,7 @@
       ],
       "rows": [
         [
-          26
+          30
         ]
       ],
       "postgres": "SELECT count(*) AS n FROM events WHERE kind = CAST(? AS INTEGER) OR CAST(? AS TEXT) IS NULL"
@@ -3635,7 +3896,7 @@
       ],
       "rows": [
         [
-          3
+          7
         ]
       ]
     },

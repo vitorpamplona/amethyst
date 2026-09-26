@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
 import com.vitorpamplona.quartz.nipXXSql.NqlType.BOOLEAN
 import com.vitorpamplona.quartz.nipXXSql.NqlType.INTEGER
@@ -97,16 +98,25 @@ class NqlSqliteCompiler(
         val sb = StringBuilder("SELECT ")
         if (q.distinct) sb.append("DISTINCT ")
         sb.append(q.outputs.withIndex().joinToString(", ") { (i, o) -> value(o.expr) + " AS c$i" })
+        val whereTerms = ArrayList<String>()
         if (q.from.isNotEmpty()) {
             val local = q.localPredicates()
             sb.append(" FROM ")
             q.from.forEachIndexed { i, src ->
                 if (i > 0) sb.append(if (src.join == NqlJoin.LEFT) " LEFT JOIN " else " JOIN ")
                 sb.append(source(q, i, local[i]))
-                if (i > 0) sb.append(" ON ").append(condition(src.on!!))
+                // An addressable-only source whose `d` is read names the kind range, for the
+                // partial `(kind, pubkey, d_tag)` index: a keyset walk in `d` order.
+                val range = if (readsD(q, i) && addressableSource(q, i)) addressableRange(alias(q, i)) else null
+                if (i > 0) {
+                    sb.append(" ON ").append(condition(src.on!!))
+                    if (range != null && src.join == NqlJoin.LEFT) sb.append(" AND ").append(range)
+                }
+                if (range != null && (i == 0 || src.join != NqlJoin.LEFT)) whereTerms.add(range)
             }
         }
-        q.where?.let { sb.append(" WHERE ").append(condition(it)) }
+        q.where?.let { whereTerms.add(0, condition(it)) }
+        if (whereTerms.isNotEmpty()) sb.append(" WHERE ").append(whereTerms.joinToString(" AND "))
         if (q.groupBy.isNotEmpty()) {
             sb.append(" GROUP BY ")
             sb.append(q.groupBy.joinToString(", ") { value(if (it is NqlColumnRef && it.output >= 0) q.outputs[it.output].expr else it) })
@@ -178,7 +188,71 @@ class NqlSqliteCompiler(
      * A WHERE / ON condition. Where it is a conjunct, FALSE and NULL filter alike,
      * which lets an `event_id` test run on the events' `row_id` (see [rowTest]).
      */
-    private fun condition(e: NqlExpr): String = conjuncts(e).joinToString(" AND ") { rowTest(it) ?: value(it) }
+    private fun condition(e: NqlExpr): String =
+        conjuncts(e).joinToString(" AND ") { c ->
+            val test = rowTest(c) ?: value(c)
+            // A test that fails on a NULL `d` holds only for addressable kinds (the others
+            // have none): saying so lets SQLite read the partial `(kind, pubkey, d_tag)` index.
+            addressableOnly(c)?.let { "$test AND ${addressableRange(it)}" } ?: test
+        }
+
+    private fun addressableRange(alias: String) = "($alias.kind >= 30000 AND $alias.kind < 40000)"
+
+    private fun readsD(
+        q: NqlQuery,
+        i: Int,
+    ): Boolean {
+        var reads = false
+        q.walkColumns { r -> if (r.owner === q && r.output < 0 && r.source == i && q.from[i].columns[r.index].first == "d") reads = true }
+        return reads
+    }
+
+    private val addressableSources = HashMap<Pair<NqlQuery, Int>, Boolean>()
+
+    /**
+     * Every row [q]'s events source [i] can keep is of an addressable kind: its own
+     * conditions pin `kind` inside 30000..39999, or reject a NULL `d`. `d` is then
+     * the store's `d_tag` as is (which also holds '' for replaceable kinds).
+     */
+    private fun addressableSource(
+        q: NqlQuery,
+        i: Int,
+    ): Boolean =
+        addressableSources.getOrPut(q to i) {
+            val src = q.from[i]
+            if (src.table != SqlProfile.EVENTS) return@getOrPut false
+            val local = q.localPredicates()[i]
+            if (local.any { addressableOnly(it) == alias(q, i) }) return@getOrPut true
+            val kinds =
+                ScanAnalyzer(
+                    { e -> if (e is NqlColumnRef && e.owner === q && e.output < 0 && e.source == i) src.columns[e.index].first else null },
+                    { e ->
+                        when (e) {
+                            is NqlLiteral -> e.value
+                            is NqlParam -> params[e.index]
+                            else -> null
+                        }
+                    },
+                ).analyze(SqlProfile.EVENTS, local).kinds
+            kinds != null && kinds.isNotEmpty() && kinds.all { it.isAddressable() }
+        }
+
+    /** The events alias whose `d` [c] compares directly (so a NULL `d` fails it), or null. */
+    private fun addressableOnly(c: NqlExpr): String? {
+        fun d(x: NqlExpr): String? {
+            if (x !is NqlColumnRef || x.output >= 0) return null
+            val src = x.owner!!.from[x.source]
+            return if (src.table == SqlProfile.EVENTS && src.columns[x.index].first == "d") alias(x.owner!!, x.source) else null
+        }
+        return when (c) {
+            is NqlBinary -> if (c.op in COMPARISONS) d(c.left) ?: d(c.right) else null
+            is NqlInList -> d(c.expr)
+            is NqlBetween -> d(c.expr)
+            is NqlLike -> d(c.expr)
+            is NqlIsNull -> if (c.not) d(c.expr) else null
+            else -> null
+        }
+    }
 
     /** `row_id` of the event a `tags.event_id` / `events.id` reference names, when the store has one; else null. */
     private fun rowOf(e: NqlExpr): String? {
@@ -361,6 +435,12 @@ class NqlSqliteCompiler(
         val owner = e.owner!!
         val src = owner.from[e.source]
         val name = if (src.subquery != null) "c${e.index}" else src.columns[e.index].first
+        // `events.d` is the store's `d_tag` for addressable kinds and NULL for the rest
+        // (where `d_tag` is NULL, or '' for replaceable kinds).
+        if (src.table == SqlProfile.EVENTS && name == "d") {
+            val a = alias(owner, e.source)
+            return if (addressableSource(owner, e.source)) "$a.d_tag" else "(CASE WHEN ${addressableRange(a)} THEN $a.d_tag END)"
+        }
         return "${alias(owner, e.source)}.$name"
     }
 
@@ -558,5 +638,7 @@ class NqlSqliteCompiler(
         const val MAX_REAL = "1.7976931348623157e308"
 
         private val INTEGER_CHAIN = setOf("+", "-", "*", "/")
+
+        private val COMPARISONS = setOf("=", "<>", "<", "<=", ">", ">=")
     }
 }

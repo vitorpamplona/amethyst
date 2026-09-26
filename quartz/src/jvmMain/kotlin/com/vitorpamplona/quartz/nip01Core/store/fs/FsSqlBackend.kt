@@ -149,7 +149,7 @@ internal class FsSqlBackend(
         drive: Drive,
         onGroup: ((Path, Entry) -> Unit)? = null,
     ): Sequence<Entry>? {
-        if (spec.table != SqlProfile.EVENTS || spec.tagName != null || spec.tagValues != null) return null
+        if (spec.table != SqlProfile.EVENTS || spec.tagName != null || spec.tagValues != null || spec.dValues != null) return null
         val kindDirs = spec.kinds?.map { layout.kindDir(it) }
         val authorDirs = spec.authors?.map { layout.authorDir(it) }
         val ids = spec.ids

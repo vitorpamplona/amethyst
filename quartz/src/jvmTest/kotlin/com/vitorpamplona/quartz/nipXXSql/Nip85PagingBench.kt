@@ -89,8 +89,37 @@ class Nip85PagingBench {
         val inBucket =
             "SELECT d.t1 AS target, CAST(r.t1 AS INTEGER) AS rank FROM tags AS r JOIN tags AS d ON d.event_id = r.event_id " +
                 "WHERE r.kind = 30382 AND r.pubkey = ? AND r.t0 = 'rank' AND r.t1 = ? AND d.t0 = 'd' AND d.t1 > ? ORDER BY target LIMIT 1000"
+        // 4. By target through `events.d`: the addressable index, one tag lookup per card.
+        val byD =
+            "SELECT e.d AS target, CAST(r.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS r ON r.event_id = e.id AND r.t0 = 'rank' " +
+                "WHERE e.kind = 30382 AND e.pubkey = ? AND e.d > ? ORDER BY target LIMIT 1000"
+        run {
+            val (checked, values) = Nql.prepare(byD, listOf(svc, ""))
+            val compiled = NqlSqliteCompiler(values, null, tagValues).compile(checked)
+            val literal = compiled.sql.replace(Regex("\\?(\\d+)")) { m -> compiled.binds[m.groupValues[1].toInt() - 1].let { if (it is String) "'$it'" else it.toString() } }
+            runBlocking {
+                store.store.pool.useReader { db ->
+                    db.prepare("EXPLAIN QUERY PLAN $literal").use { st -> while (st.step()) println("BENCH85   d plan: ${st.getText(3)}") }
+                }
+            }
+        }
         for ((name, walk) in listOf<Pair<String, () -> Pair<Int, Long>>>(
+            "nql by d" to {
+                var last = ""
+                var rows = 0
+                var bytes = 0L
+                while (true) {
+                    val r = page(byD, listOf(svc, last))
+                    if (r.rows.isEmpty()) break
+                    rows += r.rows.size
+                    bytes += r.rows.sumOf { 10L + it.joinToString(",").length }
+                    last = r.rows.last()[0] as String
+                }
+                rows to bytes
+            },
             "nql by rank buckets" to {
+                // 101 value lookups: a scan of every card's tags each without `event_tag_values`.
+                if (!tagValues) return@to 0 to 0L
                 var rows = 0
                 var bytes = 0L
                 for (rank in 100 downTo 0) {

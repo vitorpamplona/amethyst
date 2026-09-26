@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nipXXSql
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nipXXSql.NqlType.BOOLEAN
 import com.vitorpamplona.quartz.nipXXSql.NqlType.INTEGER
 import com.vitorpamplona.quartz.nipXXSql.NqlType.NULL
@@ -32,7 +35,14 @@ object SqlProfile {
     const val TAGS = "tags"
 
     val EVENTS_COLUMNS =
-        listOf("id" to TEXT, "pubkey" to TEXT, "created_at" to INTEGER, "kind" to INTEGER, "content" to TEXT, "sig" to TEXT)
+        listOf("id" to TEXT, "pubkey" to TEXT, "created_at" to INTEGER, "kind" to INTEGER, "content" to TEXT, "sig" to TEXT, "d" to TEXT)
+
+    /**
+     * `events.d`: an addressable event's identifier, the value of its first `d`
+     * tag that has one (`''` when none has, as NIP-01 addresses it); NULL for
+     * every other kind.
+     */
+    fun d(event: Event): String? = if (event.kind.isAddressable()) event.tags.dTag() else null
 
     val TAGS_COLUMNS =
         listOf(

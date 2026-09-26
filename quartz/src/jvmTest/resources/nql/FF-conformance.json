@@ -443,6 +443,77 @@
       ],
       "content": "check this",
       "sig": "223bebd14ad18dfba765523cdfab18dcfd61f2d354984c584ee13c6abc641f6a108044c99529c7862a5c4a95f9a117cd3ab61de39cf88438451f46983d51217b"
+    },
+    {
+      "id": "6aeee989c8baa081eca2971772f9f5f17ee3cfc6522d2fb6133b45ad05abd76a",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700002000,
+      "kind": 30382,
+      "tags": [
+        [
+          "d",
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
+        ],
+        [
+          "rank",
+          "87"
+        ]
+      ],
+      "content": "",
+      "sig": "4d96dd89b36d09d21e48fb6ffb9f4b0c6efe8108c2ca52a7bf9579de66f18c7e788dbfb68d58f235328305163515024366d505638f22be7fd2f6b62cb9e645d8"
+    },
+    {
+      "id": "6edc11b6252af344be0a83c865ee8b40ec9728b4a8ce1f758f838322bfed116b",
+      "pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "created_at": 1700002001,
+      "kind": 30382,
+      "tags": [
+        [
+          "d",
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+        ],
+        [
+          "rank",
+          "12"
+        ]
+      ],
+      "content": "",
+      "sig": "bedf12abd87a845842acee3f686dfa197b3d8cdae5b9300b6793a15d5873c19212ebe57554045afd4c058aef420a7c9cd042990f9689d15f56a3f1e0cabe2dfc"
+    },
+    {
+      "id": "d58dbbd321d6c66bb7fa6bd8e6fd5bdb1870008e4abc5fa373a6ae921736e17a",
+      "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+      "created_at": 1700002002,
+      "kind": 30000,
+      "tags": [
+        [
+          "title",
+          "no identifier"
+        ]
+      ],
+      "content": "",
+      "sig": "179a66ecf50e621c27b54e89a72dce6459e8195f95f63320ffa9030cfdde9f1b5128ec8a9497fa4d2964f3edf73b789ea9619926ffc496f2806b329dcab3ff3c"
+    },
+    {
+      "id": "4f1aad28731ed1722ea9bfccce0f6802b74984cf0ba61bccb797871dd470c3a5",
+      "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+      "created_at": 1700002003,
+      "kind": 30078,
+      "tags": [
+        [
+          "d"
+        ],
+        [
+          "d",
+          "second"
+        ],
+        [
+          "d",
+          "third"
+        ]
+      ],
+      "content": "",
+      "sig": "9465a46e5d64a03ad139954459034b6dd18ce56f454dc4baf4ca56b492167315f26a9d0f557268292ceb0061ed939c027e74acbb288e6f77860ac13be65e5780"
     }
   ],
   "cases": [
@@ -473,6 +544,10 @@
         [
           "sig",
           "TEXT"
+        ],
+        [
+          "d",
+          "TEXT"
         ]
       ],
       "rows": [
@@ -482,7 +557,8 @@
           1700000000,
           0,
           "{\"name\":\"alice\"}",
-          "9a531180aff3b0f936ec30a2c2e82288edca28b346dbc9cc567df12e58ccdba2dddcf841b103cb23b7fe0fa450732e5f0d79f139a6397a474f6c20f6ae91030d"
+          "9a531180aff3b0f936ec30a2c2e82288edca28b346dbc9cc567df12e58ccdba2dddcf841b103cb23b7fe0fa450732e5f0d79f139a6397a474f6c20f6ae91030d",
+          null
         ],
         [
           "0967710cdc5e5748e98ae2faa5842e2401c655343da47b3c9d832db4ff6363e6",
@@ -490,7 +566,8 @@
           1700000001,
           0,
           "{\"name\":\"Bob\"}",
-          "fe467870096711832a6707b18c358da1c80c336ea7bc34a1689631c4036734361375dfeb44d57909d7ca3f9d13db7b1f830a431bfac28c5d0af50c1485dc46a3"
+          "fe467870096711832a6707b18c358da1c80c336ea7bc34a1689631c4036734361375dfeb44d57909d7ca3f9d13db7b1f830a431bfac28c5d0af50c1485dc46a3",
+          null
         ],
         [
           "b8445199cf0c15b9ccd13dc5c2473f52ea3ead2d5baa2986ddf0fcf08af0f1c3",
@@ -498,10 +575,212 @@
           1700000002,
           0,
           "{\"name\":\"carol é\"}",
-          "1ee25e66da8ea9d78a7b60536973d09c0613217506d2ba0063f3e58023125427d3c65d00d6105f44c83416ab44e816ca820142d6713b4172f38583f5e5fffea2"
+          "1ee25e66da8ea9d78a7b60536973d09c0613217506d2ba0063f3e58023125427d3c65d00d6105f44c83416ab44e816ca820142d6713b4172f38583f5e5fffea2",
+          null
         ]
       ],
       "ordered": true
+    },
+    {
+      "name": "model/d-of-addressable-events",
+      "query": "SELECT kind, d FROM events WHERE d IS NOT NULL ORDER BY kind, d",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          30000,
+          ""
+        ],
+        [
+          30023,
+          "post-1"
+        ],
+        [
+          30023,
+          "post-2"
+        ],
+        [
+          30078,
+          "second"
+        ],
+        [
+          30382,
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
+        ],
+        [
+          30382,
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "model/d-is-null-outside-addressable-kinds",
+      "query": "SELECT count(*) AS n FROM events WHERE d IS NULL",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          24
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-the-first-d-tag-with-a-value",
+      "query": "SELECT d FROM events WHERE kind = 30078",
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "second"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-empty-without-a-d-tag",
+      "query": "SELECT kind FROM events WHERE d = ''",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          30000
+        ]
+      ]
+    },
+    {
+      "name": "model/d-equals-a-value",
+      "query": "SELECT kind FROM events WHERE d = 'second'",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          30078
+        ]
+      ]
+    },
+    {
+      "name": "model/d-is-only-the-first-value",
+      "query": "SELECT d FROM events WHERE d IN ('post-1', 'third')",
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "post-1"
+        ]
+      ]
+    },
+    {
+      "name": "model/d-with-its-tags",
+      "query": "SELECT e.d, t.idx, t.t1 FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'd' WHERE e.kind = 30078 ORDER BY t.idx",
+      "columns": [
+        [
+          "d",
+          "TEXT"
+        ],
+        [
+          "idx",
+          "INTEGER"
+        ],
+        [
+          "t1",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "second",
+          0,
+          null
+        ],
+        [
+          "second",
+          1,
+          "second"
+        ],
+        [
+          "second",
+          2,
+          "third"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "model/d-pages-a-providers-assertions",
+      "query": "SELECT e.d AS target, CAST(t.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'rank' WHERE e.kind = 30382 AND e.pubkey = ? AND e.d > ? ORDER BY target LIMIT 1",
+      "params": [
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        ""
+      ],
+      "columns": [
+        [
+          "target",
+          "TEXT"
+        ],
+        [
+          "rank",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          87
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "model/d-assertions-by-rank",
+      "query": "SELECT CAST(t.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS t ON t.event_id = e.id AND t.t0 = 'rank' WHERE e.kind = 30382 ORDER BY rank DESC",
+      "columns": [
+        [
+          "rank",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          87
+        ],
+        [
+          12
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "invalid/result-name-clashes-with-d",
+      "query": "SELECT kind AS d FROM events ORDER BY d",
+      "error": "invalid"
     },
     {
       "name": "model/tags-columns",
@@ -618,8 +897,8 @@
       ],
       "rows": [
         [
-          26,
-          45
+          30,
+          53
         ]
       ]
     },
@@ -1964,7 +2243,7 @@
         ],
         [
           "other",
-          14
+          18
         ],
         [
           "profile",
@@ -2622,9 +2901,9 @@
       ],
       "rows": [
         [
-          45,
-          44,
-          10,
+          53,
+          51,
+          11,
           5
         ]
       ]
@@ -2843,7 +3122,19 @@
           2
         ],
         [
+          30000,
+          1
+        ],
+        [
           30023,
+          2
+        ],
+        [
+          30078,
+          1
+        ],
+        [
+          30382,
           2
         ]
       ],
@@ -2865,11 +3156,15 @@
       "rows": [
         [
           "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-          8
+          10
         ],
         [
           "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
-          7
+          8
+        ],
+        [
+          "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+          5
         ]
       ],
       "ordered": true
@@ -2913,7 +3208,19 @@
           2
         ],
         [
+          30000,
+          1
+        ],
+        [
           30023,
+          2
+        ],
+        [
+          30078,
+          1
+        ],
+        [
+          30382,
           2
         ]
       ],
@@ -2940,6 +3247,10 @@
         [
           1700001,
           6
+        ],
+        [
+          1700002,
+          4
         ]
       ],
       "ordered": true
@@ -2973,7 +3284,16 @@
           10002
         ],
         [
+          30000
+        ],
+        [
           30023
+        ],
+        [
+          30078
+        ],
+        [
+          30382
         ]
       ],
       "ordered": true
@@ -3670,8 +3990,8 @@
       ],
       "rows": [
         [
-          1700001300,
-          30023,
+          1700002003,
+          30382,
           null
         ]
       ]
@@ -3732,7 +4052,7 @@
       ],
       "rows": [
         [
-          15
+          18
         ]
       ]
     },
@@ -3771,7 +4091,7 @@
       ],
       "rows": [
         [
-          6
+          8
         ]
       ]
     },
@@ -3832,7 +4152,7 @@
       ],
       "rows": [
         [
-          26
+          30
         ]
       ]
     },
@@ -3850,7 +4170,7 @@
       ],
       "rows": [
         [
-          3
+          7
         ]
       ]
     },

@@ -301,7 +301,7 @@ internal class NqlExecutor(
                     }
                 }
             } else {
-                all.add(arrayOf(e.id, e.pubKey, e.createdAt, e.kind.toLong(), e.content, e.sig))
+                all.add(arrayOf(e.id, e.pubKey, e.createdAt, e.kind.toLong(), e.content, e.sig, SqlProfile.d(e)))
             }
         }
         if (local.isEmpty()) return all

@@ -150,11 +150,13 @@ reply nostr-rs-relay gives). Net contract: exactly one version stored; newest wi
 by lowest id; older re-inserts blocked but acknowledged as already covered.
 
 **STORE-W02 — addressable supersession.** Same as W01 with unique index
-`(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. Nuance: `d_tag` is populated from the
-*parsed* event class (`AddressableEvent.dTag()`); an addressable-range kind whose class doesn't
-parse as `AddressableEvent` stores `d_tag NULL`, and SQLite treats NULLs as distinct in unique
-indexes — such events don't supersede each other. An event with no `d` tag parses as `dTag() = ""`
-(empty string), which *does* dedupe normally.
+`(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. `d_tag` follows the *kind*: every
+addressable-range event stores its first `d` value (`tags.dTag()`), whether or not Quartz has a
+class for the kind, so unknown addressable kinds supersede too (before schema v6 they stored
+`d_tag NULL` and never did; the v5 → v6 migration fills them in and keeps the newest version of
+each address). An event with no `d` tag stores `""` (empty string), which dedupes normally.
+Replaceable classes (kinds 0, 3, 10000–19999) store their fixed `""`, which a-tag deletions and
+`#d: [""]` match; NQL's `events.d` is still NULL for them (the compiler guards on the kind).
 
 **STORE-W03 — ephemeral events are never stored but are acked as accepted.**
 `insert()` returns silently and `batchInsert` reports `Accepted` for `20000 ≤ kind < 30000`

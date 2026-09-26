@@ -116,6 +116,17 @@ def build_corpus(source):
     return events, resolve
 
 
+def d_of(e):
+    """`events.d`: for an addressable kind, the value of its first `d` tag that has one ('' if none); NULL otherwise."""
+    if not 30000 <= e["kind"] < 40000:
+        return None
+    return next((t[1] for t in e["tags"] if len(t) > 1 and t[0] == "d"), "")
+
+
+def event_rows(events):
+    return [(e["id"], e["pubkey"], e["created_at"], e["kind"], e["content"], e["sig"], d_of(e)) for e in events]
+
+
 def tag_rows(events):
     for e in events:
         for idx, tag in enumerate(e["tags"]):
@@ -149,12 +160,12 @@ class Postgres:
             self.conn.execute(f.read())
         for schema, order in (("fwd", events), ("rev", list(reversed(events)))):
             self.conn.execute(f"CREATE SCHEMA {schema}")
-            self.conn.execute(f"CREATE TABLE {schema}.events (id text, pubkey text, created_at int8, kind int8, content text, sig text)")
+            self.conn.execute(f"CREATE TABLE {schema}.events (id text, pubkey text, created_at int8, kind int8, content text, sig text, d text)")
             self.conn.execute(
                 f"CREATE TABLE {schema}.tags (event_id text, idx int8, t0 text, t1 text, t2 text, t3 text, t4 text, created_at int8, kind int8, pubkey text)"
             )
             with self.conn.cursor() as cur:
-                cur.executemany(f"INSERT INTO {schema}.events VALUES (%s, %s, %s, %s, %s, %s)", [(e["id"], e["pubkey"], e["created_at"], e["kind"], e["content"], e["sig"]) for e in order])
+                cur.executemany(f"INSERT INTO {schema}.events VALUES (%s, %s, %s, %s, %s, %s, %s)", event_rows(order))
                 cur.executemany(f"INSERT INTO {schema}.tags VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", list(tag_rows(order)))
 
     @staticmethod
@@ -199,9 +210,9 @@ class SQLite:
         for schema, order in (("fwd", events), ("rev", list(reversed(events)))):
             db = sqlite3.connect(":memory:")
             db.execute("PRAGMA case_sensitive_like = ON")
-            db.execute("CREATE TABLE events (id TEXT, pubkey TEXT, created_at INTEGER, kind INTEGER, content TEXT, sig TEXT)")
+            db.execute("CREATE TABLE events (id TEXT, pubkey TEXT, created_at INTEGER, kind INTEGER, content TEXT, sig TEXT, d TEXT)")
             db.execute("CREATE TABLE tags (event_id TEXT, idx INTEGER, t0 TEXT, t1 TEXT, t2 TEXT, t3 TEXT, t4 TEXT, created_at INTEGER, kind INTEGER, pubkey TEXT)")
-            db.executemany("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?)", [(e["id"], e["pubkey"], e["created_at"], e["kind"], e["content"], e["sig"]) for e in order])
+            db.executemany("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?)", event_rows(order))
             db.executemany("INSERT INTO tags VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", list(tag_rows(order)))
             self.dbs[schema] = db
 

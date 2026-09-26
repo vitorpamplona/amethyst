@@ -25,7 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.store.owner
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 
 class EventIndexesModule(
     val hasher: (db: SQLiteConnection) -> TagNameValueHasher,
@@ -112,16 +114,7 @@ class EventIndexesModule(
         }
 
         // Prevent updates to maintain immutability
-        db.execSQL(
-            """
-            CREATE TRIGGER event_headers_prevent_update
-            BEFORE UPDATE ON event_headers
-            FOR EACH ROW
-            BEGIN
-                SELECT RAISE(ABORT, 'Error: Updates are not allowed.');
-            END;
-            """.trimIndent(),
-        )
+        db.execSQL(PREVENT_HEADER_UPDATES)
 
         db.execSQL(
             """
@@ -139,6 +132,64 @@ class EventIndexesModule(
         db.execSQL("DROP TABLE IF EXISTS $TAG_VALUES")
         db.execSQL("DROP TABLE IF EXISTS event_tags")
         db.execSQL("DROP TABLE IF EXISTS event_headers")
+    }
+
+    /**
+     * v5 → v6: `d_tag` follows the kind (NIP-01), not the parsed class. Rows of an
+     * addressable kind Quartz had no class for were stored with `d_tag` NULL, so
+     * they never replaced each other. Each gets its `d` now, and of each address
+     * only the newest version stays (ties to the lowest id), as on insert.
+     */
+    fun migrateV5AddressableByKind(db: SQLiteConnection) {
+        class Version(
+            val rowId: Long,
+            val createdAt: Long,
+            val id: String,
+            val missing: Boolean,
+        )
+        val byAddress = LinkedHashMap<Triple<Int, String, String>, MutableList<Version>>()
+        db
+            .prepare(
+                "SELECT row_id, kind, pubkey, created_at, id, coalesce((SELECT json_extract(j.value, '$[1]') FROM json_each(h.tags) AS j " +
+                    "WHERE json_extract(j.value, '$[0]') = 'd' AND json_array_length(j.value) > 1 ORDER BY j.key LIMIT 1), '') " +
+                    "FROM event_headers AS h WHERE kind >= 30000 AND kind < 40000 AND d_tag IS NULL",
+            ).use { st ->
+                while (st.step()) {
+                    val address = Triple(st.getLong(1).toInt(), st.getText(2), st.getText(5))
+                    byAddress.getOrPut(address) { ArrayList() }.add(Version(st.getLong(0), st.getLong(3), st.getText(4), missing = true))
+                }
+            }
+        if (byAddress.isEmpty()) return
+        val hasher = hasher(db)
+        // Rows are immutable but for this one correction of what they were indexed under.
+        db.execSQL("DROP TRIGGER IF EXISTS event_headers_prevent_update")
+        for ((address, versions) in byAddress) {
+            val (kind, pubkey, d) = address
+            db.prepare("SELECT row_id, created_at, id FROM event_headers WHERE kind = ? AND pubkey = ? AND d_tag = ?").use { st ->
+                st.bindLong(1, kind.toLong())
+                st.bindText(2, pubkey)
+                st.bindText(3, d)
+                while (st.step()) versions.add(Version(st.getLong(0), st.getLong(1), st.getText(2), missing = false))
+            }
+            val winner = versions.minWith(compareByDescending<Version> { it.createdAt }.thenBy { it.id })
+            versions.forEach { v ->
+                if (v !== winner) {
+                    db.prepare("DELETE FROM event_headers WHERE row_id = ?").use {
+                        it.bindLong(1, v.rowId)
+                        it.step()
+                    }
+                }
+            }
+            if (winner.missing) {
+                db.prepare("UPDATE event_headers SET d_tag = ?, atag_hash = ? WHERE row_id = ?").use {
+                    it.bindText(1, d)
+                    it.bindLong(2, hasher.hashATag(AddressSerializer.assemble(kind, pubkey, d)))
+                    it.bindLong(3, winner.rowId)
+                    it.step()
+                }
+            }
+        }
+        db.execSQL(PREVENT_HEADER_UPDATES)
     }
 
     /**
@@ -201,7 +252,10 @@ class EventIndexesModule(
             if (exists) db.execSQL("DROP TABLE $TAG_VALUES")
             return
         }
-        if (exists) return
+        if (exists) {
+            ensureTagValuesByEvent(db)
+            return
+        }
         db.execSQL(
             """
             CREATE TABLE $TAG_VALUES (
@@ -226,7 +280,19 @@ class EventIndexesModule(
         )
         // Indexes after the backfill: one sort instead of a rebalance per row.
         db.execSQL("CREATE INDEX ${TAG_VALUES}_by_name_value ON $TAG_VALUES (t0, t1, kind)")
-        db.execSQL("CREATE INDEX ${TAG_VALUES}_by_event ON $TAG_VALUES (event_header_row_id)")
+        db.execSQL("CREATE INDEX $TAG_VALUES_BY_EVENT ON $TAG_VALUES (event_header_row_id, t0, t1)")
+    }
+
+    /**
+     * The per-event index covers `t0` and `t1`, so one tag of an event (a NIP-85
+     * card's `rank`) is read from the index alone: 1.0 s to 0.57 s over 300k cards.
+     * Tables made before it carry `(event_header_row_id)` alone, replaced here.
+     */
+    private fun ensureTagValuesByEvent(db: SQLiteConnection) {
+        val has = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = '$TAG_VALUES_BY_EVENT'").use { it.step() }
+        if (has) return
+        db.execSQL("DROP INDEX IF EXISTS ${TAG_VALUES}_by_event")
+        db.execSQL("CREATE INDEX $TAG_VALUES_BY_EVENT ON $TAG_VALUES (event_header_row_id, t0, t1)")
     }
 
     val sqlInsertTagValues =
@@ -267,8 +333,15 @@ class EventIndexesModule(
             stmt.bindText(5, OptimizedJsonMapper.toJson(event.tags))
             stmt.bindText(6, event.content)
             stmt.bindText(7, event.sig)
-            if (event is AddressableEvent) {
-                val dTag = event.dTag()
+            // Addressable kinds by kind (NIP-01), whether or not Quartz has a class for
+            // them; replaceable classes keep their fixed '' (a-tag deletions match it).
+            val dTag =
+                when {
+                    event.kind.isAddressable() -> event.tags.dTag()
+                    event is AddressableEvent -> event.dTag()
+                    else -> null
+                }
+            if (dTag != null) {
                 stmt.bindText(8, dTag)
                 stmt.bindLong(9, eventOwnerHash)
                 stmt.bindLong(10, eTagHash)
@@ -332,5 +405,16 @@ class EventIndexesModule(
     companion object {
         /** The NQL tag-values table ([IndexingStrategy.indexTagValues]). */
         const val TAG_VALUES = "event_tag_values"
+
+        val PREVENT_HEADER_UPDATES =
+            """
+            CREATE TRIGGER event_headers_prevent_update
+            BEFORE UPDATE ON event_headers
+            FOR EACH ROW
+            BEGIN
+                SELECT RAISE(ABORT, 'Error: Updates are not allowed.');
+            END;
+            """.trimIndent()
+        const val TAG_VALUES_BY_EVENT = "${TAG_VALUES}_by_event_value"
     }
 }

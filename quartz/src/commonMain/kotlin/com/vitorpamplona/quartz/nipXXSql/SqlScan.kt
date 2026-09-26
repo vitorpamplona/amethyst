@@ -54,12 +54,19 @@ class ScanSpec(
     /** Newest-first cap on events, only set when the whole query is a plain newest-first listing. */
     val limit: Int? = null,
     val exact: Boolean = false,
+    /**
+     * `events` only: `d` is one of these, none of them `''`. Asked of the store
+     * as `#d`, which holds the events whose first `d` value is one of them and
+     * maybe others (any `d` tag): a superset, so the query re-checks it and the
+     * spec is never [exact] with it.
+     */
+    val dValues: Set<String>? = null,
 ) {
     /** A set emptied by contradictory conditions (e.g. `kind = 1 AND kind = 2`): nothing matches. */
     val matchesNothing: Boolean
         get() =
             ids?.isEmpty() == true || authors?.isEmpty() == true || kinds?.isEmpty() == true ||
-                tagValues?.isEmpty() == true || (since != null && until != null && since > until)
+                tagValues?.isEmpty() == true || dValues?.isEmpty() == true || (since != null && until != null && since > until)
 
     /** Narrows the store's work: a condition on id, author, kind or an indexable tag. */
     val isSelective: Boolean
@@ -77,22 +84,22 @@ class ScanSpec(
             authors = authors?.toList(),
             kinds = kinds?.toList(),
             tags =
-                if (tagName != null && tagValues != null && isIndexableTagName(tagName)) {
-                    mapOf(tagName to tagValues.toList())
-                } else {
-                    null
+                when {
+                    tagName != null && tagValues != null && isIndexableTagName(tagName) -> mapOf(tagName to tagValues.toList())
+                    dValues != null -> mapOf("d" to dValues.toList())
+                    else -> null
                 },
             since = since,
             until = until,
             limit = limit,
         )
 
-    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, exact)
+    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, exact, dValues)
 
     fun withTimeRange(
         since: Long?,
         until: Long?,
-    ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact)
+    ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact, dValues)
 
     /** Equalities tying this reference to another in the same FROM, for the executor's join-key propagation. */
     internal var links: List<ScanLink> = emptyList()
@@ -127,18 +134,18 @@ class ScanSpec(
     ): ScanSpec? =
         when {
             column == (if (table == SqlProfile.TAGS) "event_id" else "id") ->
-                ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
+                ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues)
             column == "pubkey" ->
-                ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false)
+                ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues)
             // A tag value is looked up by with its name: a single-letter one, as filters and indexes take.
             table == SqlProfile.TAGS && column == "t1" && tagName != null && isIndexableTagName(tagName) ->
-                ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues?.intersect(values) ?: values, valueNonEmpty, limit, false)
+                ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues?.intersect(values) ?: values, valueNonEmpty, limit, false, dValues)
             else -> null
         }
 
     override fun toString() =
         "ScanSpec($table ids=$ids authors=$authors kinds=$kinds since=$since until=$until " +
-            "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty limit=$limit exact=$exact)"
+            "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty d=$dValues limit=$limit exact=$exact)"
 }
 
 /**
@@ -177,6 +184,7 @@ internal class ScanAnalyzer(
         var names: Set<String>? = null
         var values: Set<String>? = null
         var valueNonEmpty = false
+        var dValues: Set<String>? = null
         var exact = true
         val captured = ArrayList<NqlExpr>()
 
@@ -231,7 +239,21 @@ internal class ScanAnalyzer(
             return true
         }
 
+        /** `d = …` / `d IN (…)` as a `#d` superset; never captured, since `#d` reads any `d` tag. */
+        fun dEquals(items: List<NqlExpr>) {
+            if (isTags) return
+            val values = items.map { text(it) ?: return }.toSet()
+            // An addressable event with no `d` tag has d = '' but no `#d` entry.
+            if ("" in values) return
+            dValues = intersect(dValues, values)
+        }
+
         for (p in preds) {
+            if (p is NqlBinary && p.op == "=") {
+                if (column(p.left) == "d" && column(p.right) == null) dEquals(listOf(p.right))
+                if (column(p.right) == "d" && column(p.left) == null) dEquals(listOf(p.left))
+            }
+            if (p is NqlInList && !p.not && column(p.expr) == "d") dEquals(p.items)
             val used =
                 when {
                     p is NqlBinary && p.op == "=" -> {
@@ -308,6 +330,7 @@ internal class ScanAnalyzer(
             tagName = name,
             tagValues = values,
             valueNonEmpty = valueNonEmpty,
+            dValues = dValues,
             // Several candidate names (`t0 IN ('a','b')`) aren't expressible.
             exact = exact && (names == null || name != null),
         ).also { it.captured = captured }
