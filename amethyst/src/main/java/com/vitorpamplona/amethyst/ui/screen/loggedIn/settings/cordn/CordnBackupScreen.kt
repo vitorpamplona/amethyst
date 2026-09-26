@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -205,6 +207,14 @@ fun CordnBackupScreen(
                         },
                         label = { Text(stringRes(R.string.cordn_backup_passphrase)) },
                         visualTransformation = PasswordVisualTransformation(),
+                        // The dots are only half of it. Without the password
+                        // keyboard type the IME treats this as ordinary prose:
+                        // it offers the passphrase in the suggestion strip, in
+                        // the clear, and learns it into the personalised
+                        // dictionary, where it outlives the app. Every other
+                        // secret field in Amethyst already sets this; this one
+                        // was the only one that did not.
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )

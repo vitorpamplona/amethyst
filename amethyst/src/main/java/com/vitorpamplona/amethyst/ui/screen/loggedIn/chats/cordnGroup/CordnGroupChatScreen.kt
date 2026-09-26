@@ -1017,13 +1017,23 @@ private suspend fun sendAttachment(
 
     try {
         // The media-quality slider.
+        //
+        // Off the main thread, like the strip and the read below it.
+        // `sendAttachment` is called from the composition's scope, so it
+        // inherits Main, and `MediaCompressor.compress` opens with
+        // `checkNotInMainThread()` — so every image attachment threw
+        // `OnMainThreadException` before it ever reached the uploader. The
+        // voice path never hit it because it posts its recording already
+        // encoded and skips compression entirely.
         val compressed =
-            item.orchestrator.compressIfNeeded(
-                uri = uri,
-                mimeType = declaredMime,
-                compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
-                context = context,
-            )
+            withContext(Dispatchers.IO) {
+                item.orchestrator.compressIfNeeded(
+                    uri = uri,
+                    mimeType = declaredMime,
+                    compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
+                    context = context,
+                )
+            }
         val mime = compressed.contentType ?: declaredMime
 
         // The strip-metadata switch. A file type the stripper does not handle comes back
@@ -1037,8 +1047,9 @@ private suspend fun sendAttachment(
 
         try {
             // Name comes from OpenableColumns: `uri.lastPathSegment` is a document id
-            // on a content:// URI, not a filename.
-            val name = resolveDisplayName(context, uri)
+            // on a content:// URI, not a filename. The query is a disk read, so it
+            // goes off the main thread with the rest — StrictMode flags it otherwise.
+            val name = withContext(Dispatchers.IO) { resolveDisplayName(context, uri) }
             val bytes =
                 withContext(Dispatchers.IO) { context.contentResolver.openInputStream(finalUri)?.use { it.readBytes() } }
                     ?: throw CordnAttachmentException(stringRes(context, R.string.cordn_media_unreadable))
