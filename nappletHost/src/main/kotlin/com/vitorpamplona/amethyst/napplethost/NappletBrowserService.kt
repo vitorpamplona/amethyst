@@ -386,6 +386,12 @@ class NappletBrowserService : Service() {
             recordIcon(host, icon)
         }
 
+        /** Relays the page's `<title>` so the tab's top sheet names the page, not just its host. */
+        override fun onReceivedTitle(
+            view: WebView,
+            title: String?,
+        ) = pushUrl(tab, view)
+
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             if (tab == null) return false
             pushConsoleLog(
@@ -477,7 +483,8 @@ class NappletBrowserService : Service() {
             tab?.loadFailed = false
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
             if (tab != null && OmniboxInput.hostOf(url) != tab.lastIconHost) tab.lastIconHost = null
-            pushUrl(tab, view)
+            // view.title still names the page being left; the new one's arrives via onReceivedTitle.
+            pushUrl(tab, view, includeTitle = false)
             pushLoadState(tab, view, isLoading = true)
         }
 
@@ -530,14 +537,18 @@ class NappletBrowserService : Service() {
     private fun pushUrl(
         tab: BrowserTab?,
         view: WebView,
+        includeTitle: Boolean = true,
     ) {
         val url = view.url ?: return
+        // WebView reports the URL itself as the title of a document that has none yet; that is no title.
+        val title = view.title?.trim()?.takeIf { includeTitle && it.isNotEmpty() && it != url }
         val message =
             Message.obtain(null, NappletBrowserContract.MSG_URL_CHANGED).apply {
                 data =
                     Bundle().apply {
                         putString(NappletBrowserContract.KEY_URL, url)
                         putBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, view.canGoBack())
+                        title?.let { putString(NappletBrowserContract.KEY_TITLE, it) }
                     }
             }
         runCatching { tab?.clientMessenger?.send(message) }

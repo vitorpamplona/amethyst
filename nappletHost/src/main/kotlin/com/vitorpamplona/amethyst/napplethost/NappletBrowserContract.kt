@@ -50,7 +50,10 @@ object NappletBrowserContract {
     /** Client → provider: route this session over Tor ([KEY_USE_TOR]) or the open web. */
     const val MSG_SET_TOR = 6
 
-    /** Provider → client: the page navigated; carries [KEY_URL] and [KEY_CAN_GO_BACK]. */
+    /**
+     * Provider → client: the page navigated or retitled; carries [KEY_URL], [KEY_CAN_GO_BACK] and, once the
+     * document has one, its `<title>` in [KEY_TITLE] (absent while a new page is still loading).
+     */
     const val MSG_URL_CHANGED = 7
 
     /**
@@ -152,6 +155,7 @@ object NappletBrowserContract {
     const val KEY_USE_TOR = "useTor"
     const val KEY_CORE_LIB_INFO = "coreLibInfo"
     const val KEY_CAN_GO_BACK = "canGoBack"
+    const val KEY_TITLE = "title"
 
     /**
      * ARGB of Amethyst's theme background, passed from the main process. The WebView (and the surface

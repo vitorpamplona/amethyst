@@ -106,8 +106,8 @@ class EmbeddedWebAppController(
     // previous view can never reap the replacement.
     private var sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
 
-    /** Invoked on the main thread when the page navigates: (url, canGoBack). */
-    var onUrlChanged: ((String, Boolean) -> Unit)? = null
+    /** Invoked on the main thread when the page navigates or retitles: (url, title or null, canGoBack). */
+    var onUrlChanged: ((String, String?, Boolean) -> Unit)? = null
 
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
@@ -235,7 +235,8 @@ class EmbeddedWebAppController(
             NappletBrowserContract.MSG_URL_CHANGED -> {
                 val url = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
-                onUrlChanged?.invoke(url, canGoBack)
+                val title = msg.data?.getString(NappletBrowserContract.KEY_TITLE)
+                onUrlChanged?.invoke(url, title, canGoBack)
             }
             NappletBrowserContract.MSG_IME_EVENT -> {
                 val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true

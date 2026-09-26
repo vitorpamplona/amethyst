@@ -37,6 +37,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -109,6 +111,13 @@ class NappletBrowserActivity : ComponentActivity() {
     private var pendingMainFrameUrl: String? = null
     private var mainFrameLoadFailed = false
     private var lastIconHost: String? = null
+
+    // The last URL whose pin state was asked of the broker, so the several page callbacks that report the
+    // same address don't each trigger a round-trip.
+    private var lastFavoriteQueryUrl: String? = null
+
+    // Page-originated alert/confirm/prompt/beforeunload, labelled with the page's origin.
+    private val jsDialogs by lazy { BrowserJsDialogs(this) }
 
     // ---- HTML file input (`<input type="file">`) ----
     // Registered as a field so it is in place before onCreate returns, which is what
@@ -306,6 +315,8 @@ class NappletBrowserActivity : ComponentActivity() {
         // A picker still up when the browser is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
         fileChooserLauncher.teardown()
+        // A dialog still up would leak its window and leave the page's JS blocked on an unanswered result.
+        jsDialogs.dismiss()
         if (this::webView.isInitialized) {
             // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
             // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER
@@ -399,6 +410,46 @@ class NappletBrowserActivity : ComponentActivity() {
             updateLoadProgress(newProgress)
         }
 
+        override fun onReceivedTitle(
+            view: WebView,
+            title: String?,
+        ) {
+            controlSheet?.updateTitle(title)
+        }
+
+        // The framework's own JS dialogs only appear when the WebView's context IS an Activity
+        // (`JsDialogHelper.canShowAlertDialog`), and this one is built from [nightThemedContext] — a
+        // configuration context, not the Activity — so without these overrides every alert() was silently
+        // dismissed, confirm() always answered false and prompt() null. [jsDialogs] shows them itself.
+        override fun onJsAlert(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = jsDialogs.alert(url, message, result)
+
+        override fun onJsConfirm(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = jsDialogs.confirm(url, message, result)
+
+        override fun onJsPrompt(
+            view: WebView,
+            url: String?,
+            message: String?,
+            defaultValue: String?,
+            result: JsPromptResult,
+        ): Boolean = jsDialogs.prompt(url, message, defaultValue, result)
+
+        override fun onJsBeforeUnload(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = jsDialogs.beforeUnload(result)
+
         override fun onReceivedIcon(
             view: WebView,
             icon: Bitmap?,
@@ -468,7 +519,9 @@ class NappletBrowserActivity : ComponentActivity() {
             mainFrameLoadFailed = false
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
             if (OmniboxInput.hostOf(url) != lastIconHost) lastIconHost = null
-            controlSheet?.updateUrl(url)
+            // Chrome scopes "block this page's dialogs" to the page: a new main-frame load lifts it.
+            jsDialogs.onMainFrameNavigation()
+            showUrl(url)
         }
 
         override fun onReceivedError(
@@ -497,7 +550,7 @@ class NappletBrowserActivity : ComponentActivity() {
             // The page has painted its first frame — drop the loading screen.
             loadingView?.let { contentFrame.removeView(it) }
             loadingView = null
-            controlSheet?.updateUrl(url)
+            showUrl(url)
         }
 
         override fun doUpdateVisitedHistory(
@@ -506,7 +559,7 @@ class NappletBrowserActivity : ComponentActivity() {
             isReload: Boolean,
         ) {
             syncBackState()
-            controlSheet?.updateUrl(url)
+            showUrl(url)
         }
 
         override fun onPageFinished(
@@ -514,13 +567,29 @@ class NappletBrowserActivity : ComponentActivity() {
             url: String,
         ) {
             syncBackState()
-            controlSheet?.updateUrl(url)
+            showUrl(url)
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
                 recordHistory(url, view.title)
                 scheduleFaviconSniff(view, url)
             }
         }
+    }
+
+    /**
+     * Pushes the displayed [url] into the chrome and, when it is a different page, asks the broker whether
+     * it is pinned — the registry lives in the main process, so the star can't know on its own.
+     */
+    private fun showUrl(url: String) {
+        controlSheet?.updateUrl(url)
+        if (url == lastFavoriteQueryUrl) return
+        lastFavoriteQueryUrl = url
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_QUERY_WEB_FAVORITE).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putString(NappletIpc.KEY_FAVORITE_URL, url) }
+            }
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
     }
 
     /**
@@ -677,6 +746,10 @@ class NappletBrowserActivity : ComponentActivity() {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
                 bridgeReplyProxy?.postMessage(payload)
             }
+            NappletIpc.MSG_WEB_FAVORITE_STATE -> {
+                val url = data.getString(NappletIpc.KEY_FAVORITE_URL) ?: return true
+                controlSheet?.setFavorite(url, data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, false))
+            }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true
                 val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
@@ -754,7 +827,7 @@ class NappletBrowserActivity : ComponentActivity() {
             onNavigate = { loadAddress(it) },
             onConsole = { show -> consolePanel?.setShowing(show) },
             isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
-            onFavoriteToggle = { url, _ -> sendFavoriteToggle(url) },
+            onFavoriteToggle = { url, isFavorite -> sendFavoriteToggle(url, isFavorite) },
         ).also { controlSheet = it }
 
     /**
@@ -775,19 +848,23 @@ class NappletBrowserActivity : ComponentActivity() {
         if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
     }
 
-    private fun sendFavoriteToggle(url: String) {
-        val host =
-            runCatching {
-                android.net.Uri
-                    .parse(url)
-                    .host
-            }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+    /**
+     * Pins or unpins [url] in the main-process registry. Sends the state the user asked for rather than a
+     * flip, and takes the broker's confirmed state back through [NappletIpc.MSG_WEB_FAVORITE_STATE].
+     */
+    private fun sendFavoriteToggle(
+        url: String,
+        isFavorite: Boolean,
+    ) {
+        val host = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
         val msg =
             Message.obtain(null, NappletIpc.MSG_TOGGLE_WEB_FAVORITE).apply {
+                replyTo = replyMessenger
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_FAVORITE_URL, url)
                         putString(NappletIpc.KEY_FAVORITE_LABEL, host)
+                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, isFavorite)
                     }
             }
         if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)

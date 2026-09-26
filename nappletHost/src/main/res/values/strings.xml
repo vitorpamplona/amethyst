@@ -36,4 +36,12 @@
     <!-- Developer console: page-load failures surfaced as console errors -->
     <string name="napplet_console_load_error">Failed to load (%1$d): %2$s</string>
     <string name="napplet_console_http_error">HTTP %1$d %2$s</string>
+
+    <!-- Page-originated JavaScript dialogs (alert / confirm / prompt / beforeunload) in the browser -->
+    <string name="napplet_js_dialog_title">%1$s says</string>
+    <string name="napplet_js_dialog_title_generic">This page says</string>
+    <string name="napplet_js_dialog_block">Block dialogs from this page</string>
+    <string name="napplet_js_leave_title">Leave site?</string>
+    <string name="napplet_js_leave_message">Changes you made may not be saved.</string>
+    <string name="napplet_js_leave">Leave</string>
 </resources>

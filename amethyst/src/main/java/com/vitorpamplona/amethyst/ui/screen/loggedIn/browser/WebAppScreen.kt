@@ -103,6 +103,8 @@ private fun EmbeddedWebAppTab(
     val id = "url:$url"
 
     var currentUrl by remember { mutableStateOf(url) }
+    // The page's own <title>; null until the current document reports one (the sheet shows the host).
+    var pageTitle by remember { mutableStateOf<String?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
@@ -124,20 +126,24 @@ private fun EmbeddedWebAppTab(
 
     // Keep the URL/back callback fresh (cheap, needs the latest closure).
     SideEffect {
-        controller.onUrlChanged = { newUrl, back ->
-            if (newUrl != "about:blank") currentUrl = newUrl
+        controller.onUrlChanged = { newUrl, title, back ->
+            if (newUrl != "about:blank") {
+                currentUrl = newUrl
+                pageTitle = title
+            }
             canGoBack = back
         }
     }
 
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, torOn, proxyAvailable, isFavorite, controller) {
+        remember(currentUrl, pageTitle, torOn, proxyAvailable, isFavorite, controller) {
             EmbeddedTabChrome(
-                title = hostLabel(currentUrl),
+                title = pageTitle ?: hostLabel(currentUrl),
                 isSandbox = false,
                 onReload = { controller.reload() },
-                onOpenFull = { FavoriteAppLauncher.launchUrl(context, url) },
+                // The page the user is looking at, not the one the tab was pinned with.
+                onOpenFull = { FavoriteAppLauncher.launchUrl(context, currentUrl) },
                 torOn = if (proxyAvailable) torOn else null,
                 onToggleTor = {
                     torOn = !torOn

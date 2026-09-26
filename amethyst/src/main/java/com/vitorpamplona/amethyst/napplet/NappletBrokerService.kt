@@ -218,18 +218,34 @@ class NappletBrokerService : Service() {
             return true
         }
 
-        // The direct-WebView browser requests a favorite toggle for the current URL (main process only).
+        // The direct-WebView browser pins/unpins the page it shows (main process only).
         if (msg.what == NappletIpc.MSG_TOGGLE_WEB_FAVORITE) {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
             val label = data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty().ifBlank { url }
             FavoriteAppsRegistry.init(applicationContext)
             val id = "url:$url"
-            if (FavoriteAppsRegistry.isFavorite(id)) {
-                FavoriteAppsRegistry.remove(id)
-            } else {
+            val target =
+                if (data.containsKey(NappletIpc.KEY_FAVORITE_IS_FAVORITE)) {
+                    data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE)
+                } else {
+                    !FavoriteAppsRegistry.isFavorite(id)
+                }
+            if (target) {
                 FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
+            } else {
+                FavoriteAppsRegistry.remove(id)
             }
+            msg.replyTo?.let { replyWebFavoriteState(it, url) }
+            return true
+        }
+
+        // The direct-WebView browser asks whether the page it now shows is pinned, so its star is right.
+        if (msg.what == NappletIpc.MSG_QUERY_WEB_FAVORITE) {
+            val replyTo = msg.replyTo ?: return true
+            val url = msg.data?.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
+            FavoriteAppsRegistry.init(applicationContext)
+            replyWebFavoriteState(replyTo, url)
             return true
         }
 
@@ -457,6 +473,26 @@ class NappletBrokerService : Service() {
             replyTo.send(response)
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before reply could be delivered", e)
+        }
+    }
+
+    /** Tells a browser surface whether [url] is currently pinned, so its star shows the registry's truth. */
+    private fun replyWebFavoriteState(
+        replyTo: Messenger,
+        url: String,
+    ) {
+        val message =
+            Message.obtain(null, NappletIpc.MSG_WEB_FAVORITE_STATE).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_FAVORITE_URL, url)
+                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, FavoriteAppsRegistry.isFavorite("url:$url"))
+                    }
+            }
+        try {
+            replyTo.send(message)
+        } catch (e: RemoteException) {
+            Log.w("NappletBrokerService", "Browser went away before the favorite state could be delivered", e)
         }
     }
 

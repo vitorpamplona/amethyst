@@ -26,6 +26,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -37,6 +38,7 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -52,7 +54,7 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
 @SuppressLint("UseSwitchCompatOrMaterialCode") // plain framework Switch: :nappletHost is Compose/Material-free
 class NappletControlSheet(
     context: Context,
-    private val title: String,
+    title: String,
     private val isSandbox: Boolean,
     private val onReload: () -> Unit,
     torInitiallyOn: Boolean?,
@@ -80,12 +82,15 @@ class NappletControlSheet(
     private val surface = resolveThemeColor(android.R.attr.colorBackground)
 
     private var expanded = false
+    private var title = title
     private var torOn = torInitiallyOn
     private var currentUrl = liveUrl
     private var isFavorite = isFavoriteInitially
     private var consoleShowing = false
 
     private val panel: LinearLayout
+    private var titleView: TextView? = null
+    private var grabber: View? = null
     private var torLabel: TextView? = null
     private var torSwitch: Switch? = null
     private var addressField: EditText? = null
@@ -99,7 +104,7 @@ class NappletControlSheet(
         gravity = Gravity.CENTER_HORIZONTAL
 
         panel = buildPanel().also { addView(it) }
-        addView(buildGrabber())
+        addView(buildGrabber().also { grabber = it })
     }
 
     private fun buildPanel(): LinearLayout =
@@ -226,13 +231,15 @@ class NappletControlSheet(
                 },
             )
             addView(
-                TextView(context).apply {
-                    text = title
-                    setTextColor(onSurface)
-                    textSize = 16f
-                    maxLines = 1
-                    setPadding(dp(10), 0, 0, 0)
-                },
+                TextView(context)
+                    .apply {
+                        text = title
+                        setTextColor(onSurface)
+                        textSize = 16f
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                        setPadding(dp(10), 0, 0, 0)
+                    }.also { titleView = it },
             )
         }
 
@@ -304,23 +311,57 @@ class NappletControlSheet(
             }
     }
 
-    /** Refreshes the address bar + security glyph as the page navigates. No-op without an address row. */
+    /**
+     * Refreshes the address bar + security glyph as the page navigates. No-op without an address row.
+     * Moving to another site also swaps the title for that site's host until its page title arrives
+     * ([updateTitle]), so the sheet never names the site the user already left.
+     */
     fun updateUrl(url: String) {
+        val previous = currentUrl
         currentUrl = url
         // Don't fight the user while they're editing the field.
         addressField?.takeIf { !it.hasFocus() }?.setText(url)
         securityGlyph?.text = securityGlyphFor(url)
-        // Reset favorite state for the new URL (we don't know if it's a favorite without a round-trip).
-        if (onFavoriteToggle != null) {
-            isFavorite = false
-            favoriteLabel?.text = context.getString(R.string.browser_favorite_add)
-        }
+        if (hostOf(url) != previous?.let(::hostOf)) setTitleText(hostOf(url) ?: url)
+        // A different page: its pin state is unknown until the host answers through [setFavorite]. Show
+        // "Add" meanwhile — the toggle sends the explicit target state, so even a tap in that window can
+        // only ever add (idempotent), never silently remove an existing pin.
+        if (url != previous && onFavoriteToggle != null) applyFavorite(false)
     }
+
+    /**
+     * Shows the page's own `<title>`, falling back to the current host when the page has none (WebView
+     * reports the URL itself as the title of an untitled document).
+     */
+    fun updateTitle(pageTitle: String?) {
+        val real = pageTitle?.trim()?.takeIf { it.isNotEmpty() && it != currentUrl }
+        setTitleText(real ?: currentUrl?.let(::hostOf) ?: return)
+    }
+
+    /** Applies the registry's answer for [url]; ignored when the user has already moved to another page. */
+    fun setFavorite(
+        url: String,
+        favorite: Boolean,
+    ) {
+        if (url == currentUrl) applyFavorite(favorite)
+    }
+
+    private fun applyFavorite(favorite: Boolean) {
+        isFavorite = favorite
+        favoriteLabel?.text = context.getString(if (favorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
+    }
+
+    private fun setTitleText(text: String) {
+        title = text
+        titleView?.text = text
+        grabber?.contentDescription = text
+    }
+
+    private fun hostOf(url: String): String? = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() }
 
     private fun toggleFavorite() {
         val url = currentUrl?.takeIf { it.isNotBlank() } ?: return
-        isFavorite = !isFavorite
-        favoriteLabel?.text = context.getString(if (isFavorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
+        applyFavorite(!isFavorite)
         collapse()
         onFavoriteToggle?.invoke(url, isFavorite)
     }
