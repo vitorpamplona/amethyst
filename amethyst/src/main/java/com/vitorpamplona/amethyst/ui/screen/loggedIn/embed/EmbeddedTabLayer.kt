@@ -83,7 +83,14 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.EmbeddedLoadOverlay
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
+import com.vitorpamplona.amethyst.napplethost.BrowserWebTools
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -126,7 +133,7 @@ private fun EmbeddedImeBridge.sendFieldOp(
  *
  * The surface is z-ordered *below* the client window (privacysandbox.ui locks it there), which still
  * forwards touch input to the provider yet lets Compose draw over it — so the active tab's
- * [TopControlSheet] is rendered on top of the surface here. Each surface is wrapped in an
+ * pill ([com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill]) is rendered on top of the surface here. Each surface is wrapped in an
  * [EmbeddedSurfaceTouchHolder] so a scroll gesture isn't stolen by a host-side ancestor (the
  * cross-process WebView can't defend its own gesture).
  *
@@ -268,107 +275,117 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             }
         }
 
-        // The active tab's top pull-down sheet, drawn AFTER the surfaces so it sits on top of the
-        // (z-below) surface, anchored to the top of the active tab's reserved bounds. Its expanded state
-        // is owned here (reset per tab) so we can draw a full-area dismiss scrim behind the open sheet —
-        // while collapsed, only the small grabber is interactive and page taps pass through.
+        // The active tab's top pull-down pill, drawn AFTER the surfaces so it sits on top of the (z-below)
+        // surface, anchored to the top of the active tab's reserved bounds. Its expanded state is owned here
+        // (reset per tab) so we can draw a full-area dismiss scrim behind the open pill — while collapsed,
+        // only the small grabber is interactive and page taps pass through.
         val chrome = EmbeddedTabHost.activeChrome
         val consoleBridge = activeController as? ConsoleBridge
-        val consoleCount = consoleBridge?.consoleLogs?.size ?: 0
         val findBridge = activeController as? FindBridge
 
         if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
-            var sheetExpanded by remember(activeId) { mutableStateOf(false) }
+            var pillExpanded by remember(activeId) { mutableStateOf(false) }
             var consoleShowing by remember(activeId) { mutableStateOf(false) }
-            var consoleExpanded by remember(activeId) { mutableStateOf(false) }
             var findShowing by remember(activeId) { mutableStateOf(false) }
+            var findQuery by remember(activeId) { mutableStateOf("") }
+            val context = LocalContext.current
 
-            if (sheetExpanded) {
+            fun closeFind() {
+                if (findShowing) findBridge?.find("")
+                findShowing = false
+                findQuery = ""
+            }
+
+            val tabModifier =
+                with(density) {
+                    Modifier
+                        .absoluteOffset(
+                            (bounds.left - layerOrigin.x).toDp(),
+                            (bounds.top - layerOrigin.y).toDp(),
+                        ).size(bounds.width.toDp(), bounds.height.toDp())
+                }
+
+            if (pillExpanded) {
+                BackHandler { pillExpanded = false }
                 Box(
                     Modifier
                         .fillMaxSize()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                        ) { sheetExpanded = false },
+                        ) { pillExpanded = false },
                 )
             }
 
-            with(density) {
-                TopControlSheet(
-                    chrome = chrome,
-                    expanded = sheetExpanded,
-                    onExpandedChange = { sheetExpanded = it },
-                    consoleCount = consoleCount,
+            val consoleLogs = consoleBridge?.consoleLogs
+            val ui =
+                chrome.ui.copy(
+                    chrome = chrome.ui.chrome.copy(hasFind = chrome.ui.chrome.hasFind && findBridge != null),
                     consoleShowing = consoleShowing,
-                    onConsole =
-                        if (consoleBridge != null) {
-                            {
-                                if (consoleShowing) {
-                                    consoleShowing = false
-                                } else {
-                                    // One bottom panel at a time: the console replaces the find bar.
-                                    if (findShowing) findBridge?.find("")
-                                    findShowing = false
-                                    consoleShowing = true
-                                    consoleExpanded = true
-                                }
-                            }
-                        } else {
-                            null
-                        },
-                    onFind =
-                        if (findBridge != null) {
-                            {
+                    consoleErrors = consoleLogs?.count { it.level == ConsoleLine.Level.ERROR } ?: 0,
+                )
+
+            Box(tabModifier) {
+                BrowserPill(
+                    ui = ui,
+                    expanded = pillExpanded,
+                    onExpandedChange = { pillExpanded = it },
+                    onEvent = { event ->
+                        val action = (event as? BrowserPillEvent.Action)?.action
+                        when {
+                            action == BrowserChrome.Action.FIND_IN_PAGE && findBridge != null -> {
+                                // One bottom panel at a time: find replaces the console.
                                 consoleShowing = false
                                 findShowing = true
                             }
+                            action == BrowserChrome.Action.CONSOLE && consoleBridge != null -> {
+                                if (!consoleShowing) closeFind()
+                                consoleShowing = !consoleShowing
+                            }
+                            else -> chrome.onEvent(event)
+                        }
+                    },
+                    showClose = false,
+                    suggestionsFor = chrome.suggestionsFor,
+                    onPasteAndGo =
+                        if (BrowserWebTools.clipboardHasText(context)) {
+                            {
+                                pillExpanded = false
+                                BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
+                            }
                         } else {
                             null
                         },
-                    modifier =
-                        Modifier
-                            .absoluteOffset(
-                                (bounds.left - layerOrigin.x).toDp(),
-                                (bounds.top - layerOrigin.y).toDp(),
-                            ).width(bounds.width.toDp()),
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
-            }
 
-            // Find in page: opened via the "Find in page" row in the top pull-down sheet.
-            if (findShowing && findBridge != null) {
-                BackHandler {
-                    findBridge.find("")
-                    findShowing = false
-                }
-                with(density) {
-                    EmbeddedFindBar(
-                        bridge = findBridge,
-                        onClose = { findShowing = false },
-                        modifier =
-                            Modifier
-                                .absoluteOffset(
-                                    (bounds.left - layerOrigin.x).toDp(),
-                                    (bounds.top - layerOrigin.y).toDp(),
-                                ).size(bounds.width.toDp(), bounds.height.toDp()),
+                // Find in page: opened from the pill's Find tile.
+                if (findShowing && findBridge != null) {
+                    BackHandler { closeFind() }
+                    val result by findBridge.findResult
+                    FindInPagePill(
+                        query = findQuery,
+                        onQueryChange = {
+                            findQuery = it
+                            findBridge.find(it)
+                        },
+                        active = result?.active ?: 0,
+                        total = result?.total,
+                        onNext = findBridge::findNext,
+                        onClose = ::closeFind,
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
-            }
 
-            // Bottom console panel: opened via the "Console" row in the top pull-down sheet.
-            if (consoleShowing && consoleBridge != null) {
-                with(density) {
-                    BottomConsoleSheet(
-                        logs = consoleBridge.consoleLogs,
-                        expanded = consoleExpanded,
-                        onExpandedChange = { consoleExpanded = it },
+                // The developer console: opened from the pill's console row.
+                if (consoleShowing && consoleLogs != null) {
+                    ConsoleSheet(
+                        lines = consoleLogs,
+                        onCopy = { lines -> BrowserWebTools.copyText(context, "console", lines.joinToString("\n", transform = ::formatConsoleLine)) },
                         onClear = { consoleBridge.clearConsoleLogs() },
-                        modifier =
-                            Modifier
-                                .absoluteOffset(
-                                    (bounds.left - layerOrigin.x).toDp(),
-                                    (bounds.top - layerOrigin.y).toDp(),
-                                ).size(bounds.width.toDp(), bounds.height.toDp()),
+                        onCopyLine = { BrowserWebTools.copyText(context, "console", formatConsoleLine(it)) },
+                        onClose = { consoleShowing = false },
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
             }
@@ -1001,3 +1018,16 @@ private fun SelectionToolbarItem(
                 }.padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
+
+/** One console line as plain text, for copying. */
+private fun formatConsoleLine(line: ConsoleLine): String =
+    buildString {
+        append(line.level.name).append(": ").append(line.message)
+        if (line.source.isNotBlank()) {
+            append(" (")
+                .append(line.source)
+                .append(':')
+                .append(line.line)
+                .append(')')
+        }
+    }

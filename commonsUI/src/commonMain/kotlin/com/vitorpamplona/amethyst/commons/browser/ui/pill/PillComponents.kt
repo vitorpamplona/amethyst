@@ -123,6 +123,7 @@ fun OriginField(
     onEdit: (() -> Unit)?,
     onLongPress: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onSecurityTap: (() -> Unit)? = null,
 ) {
     val security = ui.security
     Row(
@@ -136,11 +137,17 @@ fun OriginField(
                 role = Role.Button,
                 onClick = { onEdit?.invoke() },
                 onLongClick = onLongPress,
-            ).padding(start = 16.dp, end = 6.dp),
+            ).padding(start = if (onSecurityTap != null) 4.dp else 16.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SecurityIcon(security, size = 18.dp)
-        Spacer(Modifier.width(10.dp))
+        // Chrome's page-info entry point: the connection badge itself.
+        if (onSecurityTap != null) {
+            IconButton(onClick = onSecurityTap) { SecurityIcon(security, size = 20.dp) }
+            Spacer(Modifier.width(2.dp))
+        } else {
+            SecurityIcon(security, size = 18.dp)
+            Spacer(Modifier.width(10.dp))
+        }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(
                 if (ui.chrome.isSandbox) stringRes(securityLabel(security)) else ui.host,

@@ -20,28 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
-import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 
 /**
- * The controls a running app surface offers through its top pull-down pill — described as plain data so
- * [EmbeddedTabLayer] can draw the sheet over the (z-below) surface for the active tab. Deliberately not a
- * corner pill: that's where a site usually puts the user's own avatar/menu, so the handle lives at the
- * top-center instead.
+ * What a running app surface shows in its top pull-down pill, as plain data so [EmbeddedTabLayer] can draw
+ * the shared [com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill] over the (z-below) surface
+ * for the active tab. Deliberately not a corner pill: that's where a site usually puts the user's own
+ * avatar/menu, so the handle lives at the top-center instead.
  *
- * *Which* actions show, and in what order, comes from [BrowserChrome] with [state] — the same layout the
- * full-screen browser's native sheet uses — so the two can't drift. Everything the user picks arrives in
- * [onAction]; the console and find-in-page rows are handled by the layer itself.
+ * *Which* actions show comes from [BrowserPillUi.chrome] through
+ * [com.vitorpamplona.amethyst.commons.browser.BrowserChrome] — the same layout the full-screen windows
+ * use. Everything the user picks arrives in [onEvent]; find in page and the console are handled by the
+ * layer itself, since it draws them.
  */
 data class EmbeddedTabChrome(
-    val title: String,
-    val state: BrowserChrome.State,
-    val isFavorite: Boolean = false,
-    val desktopSite: Boolean = false,
-    val textZoom: Int = BrowserChrome.DEFAULT_TEXT_ZOOM,
-    val onAction: (BrowserChrome.Action) -> Unit,
-    /** The user typed an address into "Edit address" and pressed Go. */
-    val onNavigate: (String) -> Unit = {},
-    val onTextZoom: (Int) -> Unit = {},
-    /** The origin chip was tapped: page info (web) or the access summary (sandboxed apps). */
-    val onOriginTap: () -> Unit = {},
+    val ui: BrowserPillUi,
+    val onEvent: (BrowserPillEvent) -> Unit,
+    /** Address-editor suggestions for what the user has typed. */
+    val suggestionsFor: (String) -> List<AddressSuggestion> = { emptyList() },
 )

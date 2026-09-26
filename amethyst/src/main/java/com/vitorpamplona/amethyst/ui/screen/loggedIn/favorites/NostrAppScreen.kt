@@ -55,6 +55,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
@@ -174,21 +176,24 @@ private fun EmbeddedNostrAppTab(
     val chrome =
         remember(title, coordinate, isFavorite, controller) {
             EmbeddedTabChrome(
-                title = title.ifBlank { coordinate },
-                state =
-                    BrowserChrome.State(
-                        surface = BrowserChrome.Surface.NAPPLET,
-                        presentation = BrowserChrome.Presentation.EMBEDDED,
-                        url = "",
-                        startUrl = "",
-                        hasAccessInfo = true,
-                        // The embedded nsite/napplet host has no find or text-size plumbing (yet).
-                        hasFind = false,
-                        hasTextSize = false,
+                ui =
+                    BrowserPillUi(
+                        title = title.ifBlank { coordinate },
+                        chrome =
+                            BrowserChrome.State(
+                                surface = BrowserChrome.Surface.NAPPLET,
+                                presentation = BrowserChrome.Presentation.EMBEDDED,
+                                url = "",
+                                startUrl = "",
+                                hasAccessInfo = true,
+                                // The embedded nsite/napplet host has no find or text-size plumbing (yet).
+                                hasFind = false,
+                                hasTextSize = false,
+                            ),
+                        isFavorite = isFavorite,
                     ),
-                isFavorite = isFavorite,
-                onAction = { action ->
-                    when (action) {
+                onEvent = { event ->
+                    when ((event as? BrowserPillEvent.Action)?.action) {
                         BrowserChrome.Action.RELOAD -> controller.reload()
                         BrowserChrome.Action.OPEN_FULL_SCREEN ->
                             FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr)
@@ -205,7 +210,6 @@ private fun EmbeddedNostrAppTab(
                         else -> Unit
                     }
                 },
-                onOriginTap = { showAccess = true },
             )
         }
     // Publish the top-sheet controls to the tab layer (drawn over the z-below surface). In a SideEffect

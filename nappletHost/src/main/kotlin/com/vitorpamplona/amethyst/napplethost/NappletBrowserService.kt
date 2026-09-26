@@ -262,8 +262,13 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_PAGE_INFO_REQUEST -> {
                 val tab = tabFor(msg) ?: return true
                 val wv = tab.webView ?: return true
+                val certificate = BrowserWebTools.certificateInfo(wv)
                 sendToClient(tab, NappletBrowserContract.MSG_PAGE_INFO) {
-                    putString(NappletBrowserContract.KEY_PAGE_INFO, BrowserWebTools.pageInfo(this@NappletBrowserService, wv, if (tab.proxyPort > 0) tab.useTor else null))
+                    certificate?.let {
+                        putString(NappletBrowserContract.KEY_CERT_ISSUED_TO, it.issuedTo)
+                        putString(NappletBrowserContract.KEY_CERT_ISSUED_BY, it.issuedBy)
+                        putString(NappletBrowserContract.KEY_CERT_VALID_UNTIL, it.validUntil)
+                    }
                 }
             }
             NappletBrowserContract.MSG_JS_DIALOG_RESULT -> {

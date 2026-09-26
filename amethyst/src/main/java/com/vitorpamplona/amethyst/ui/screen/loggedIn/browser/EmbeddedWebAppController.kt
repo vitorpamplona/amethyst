@@ -42,11 +42,13 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleLogEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
@@ -102,7 +104,7 @@ class EmbeddedWebAppController(
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
     /** JavaScript console output received from the embedded WebView, capped at [MAX_CONSOLE_LOGS] entries. */
-    override val consoleLogs = mutableStateListOf<ConsoleLogEntry>()
+    override val consoleLogs = mutableStateListOf<ConsoleLine>()
 
     override fun clearConsoleLogs() = consoleLogs.clear()
 
@@ -126,8 +128,8 @@ class EmbeddedWebAppController(
     /** The camera / microphone / location request the page is waiting on, if any. */
     val pendingPermission = mutableStateOf<EmbeddedPermissionRequest?>(null)
 
-    /** Page-info text for the page on screen, once requested. */
-    val pageInfo = mutableStateOf<String?>(null)
+    /** The certificate of the page on screen, once page info asked for it (null for none, or not yet). */
+    val pageCertificate = mutableStateOf<CertificateInfo?>(null)
 
     /** A main-frame load is in flight (the pill's reload button becomes stop). */
     val isLoading = mutableStateOf(false)
@@ -284,7 +286,7 @@ class EmbeddedWebAppController(
                 val source = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_SOURCE).orEmpty()
                 val line = msg.data?.getInt(NappletBrowserContract.KEY_CONSOLE_LINE, 0) ?: 0
                 if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
-                consoleLogs.add(ConsoleLogEntry(level, message, source, line))
+                consoleLogs.add(ConsoleLine(consoleLevelOf(level), message, source, line))
             }
             NappletBrowserContract.MSG_FILE_CHOOSER_REQUEST -> {
                 val data = msg.data ?: return true
@@ -309,7 +311,17 @@ class EmbeddedWebAppController(
                 val data = msg.data ?: return true
                 _findResult.value = FindResult(data.getInt(NappletBrowserContract.KEY_FIND_ACTIVE), data.getInt(NappletBrowserContract.KEY_FIND_TOTAL))
             }
-            NappletBrowserContract.MSG_PAGE_INFO -> pageInfo.value = msg.data?.getString(NappletBrowserContract.KEY_PAGE_INFO)
+            NappletBrowserContract.MSG_PAGE_INFO -> {
+                val data = msg.data ?: return true
+                pageCertificate.value =
+                    data.getString(NappletBrowserContract.KEY_CERT_ISSUED_TO)?.let { issuedTo ->
+                        CertificateInfo(
+                            issuedTo = issuedTo,
+                            issuedBy = data.getString(NappletBrowserContract.KEY_CERT_ISSUED_BY).orEmpty(),
+                            validUntil = data.getString(NappletBrowserContract.KEY_CERT_VALID_UNTIL).orEmpty(),
+                        )
+                    }
+            }
             NappletBrowserContract.MSG_JS_DIALOG -> {
                 val data = msg.data ?: return true
                 val id = data.getLong(NappletBrowserContract.KEY_DIALOG_ID)
@@ -323,10 +335,10 @@ class EmbeddedWebAppController(
                         id = id,
                         type =
                             when (data.getString(NappletBrowserContract.KEY_DIALOG_TYPE)) {
-                                "confirm" -> EmbeddedJsDialog.Type.CONFIRM
-                                "prompt" -> EmbeddedJsDialog.Type.PROMPT
-                                "beforeunload" -> EmbeddedJsDialog.Type.BEFORE_UNLOAD
-                                else -> EmbeddedJsDialog.Type.ALERT
+                                "confirm" -> PageDialogType.CONFIRM
+                                "prompt" -> PageDialogType.PROMPT
+                                "beforeunload" -> PageDialogType.BEFORE_UNLOAD
+                                else -> PageDialogType.ALERT
                             },
                         url = data.getString(NappletBrowserContract.KEY_URL),
                         message = data.getString(NappletBrowserContract.KEY_DIALOG_MESSAGE).orEmpty(),
@@ -439,7 +451,7 @@ class EmbeddedWebAppController(
     fun clearSiteData() = send(NappletBrowserContract.MSG_CLEAR_SITE_DATA) {}
 
     fun requestPageInfo() {
-        pageInfo.value = null
+        pageCertificate.value = null
         send(NappletBrowserContract.MSG_PAGE_INFO_REQUEST) {}
     }
 
@@ -513,3 +525,13 @@ class EmbeddedWebAppController(
         private const val MAX_CONSOLE_LOGS = 200
     }
 }
+
+/** Maps the provider's console level (WebView's `ConsoleMessage.MessageLevel` name) onto the chrome's. */
+private fun consoleLevelOf(level: String): ConsoleLine.Level =
+    when (level) {
+        "ERROR" -> ConsoleLine.Level.ERROR
+        "WARNING" -> ConsoleLine.Level.WARNING
+        "DEBUG" -> ConsoleLine.Level.DEBUG
+        "TIP" -> ConsoleLine.Level.INFO
+        else -> ConsoleLine.Level.LOG
+    }

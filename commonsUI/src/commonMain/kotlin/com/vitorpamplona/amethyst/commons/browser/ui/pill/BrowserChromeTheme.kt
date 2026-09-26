@@ -18,25 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
+package com.vitorpamplona.amethyst.commons.browser.ui.pill
 
-import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
-import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
+import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
 
-/** A JS dialog an embedded page opened, waiting for the user (the page's script is paused meanwhile). */
-data class EmbeddedJsDialog(
-    val id: Long,
-    val type: PageDialogType,
-    val url: String?,
-    val message: String,
-    val defaultValue: String,
-    /** Offer "Block dialogs from this page" (from the page's second dialog on, as Chrome does). */
-    val offerBlock: Boolean,
-)
-
-/** A camera / microphone / location request from an embedded page, waiting for an answer. */
-data class EmbeddedPermissionRequest(
-    val id: Long,
-    val origin: String,
-    val permissions: Set<BrowserSitePermission>,
-)
+/**
+ * The Material theme for browser chrome drawn outside the main app's composition — the full-screen
+ * browser and nsite/napplet windows in the keyless `:napplet` process, which has no access to the user's
+ * theme preferences beyond light/dark. Uses Amethyst's default palette, typography and shapes.
+ */
+@Composable
+fun BrowserChromeTheme(
+    dark: Boolean,
+    content: @Composable () -> Unit,
+) = AmethystPreviewTheme(dark = dark, content = content)

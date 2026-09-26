@@ -76,23 +76,28 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 /**
  * The address as a first-class input, opened from the origin field. A 56dp pill field with the URL
  * pre-selected, a leading search/security icon, and trailing clear + a filled Go; below it Paste and go
- * (when the clipboard holds a URL) and the omnibox suggestions, each with a ↖ that fills its address in
- * without leaving. [onCancel] folds it back into the origin field.
+ * (when the clipboard holds a URL) and the omnibox suggestions for what's typed ([suggestionsFor]), each
+ * with a ↖ that fills its address in without leaving. [onCancel] folds it back into the origin field.
  */
 @Composable
 fun AddressEditor(
     initialUrl: String,
     security: BrowserChrome.Security,
-    suggestions: List<AddressSuggestion>,
+    suggestionsFor: (String) -> List<AddressSuggestion>,
     clipboardUrl: String?,
     onGo: (String) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
     autoFocus: Boolean = true,
+    onPasteAndGo: (() -> Unit)? = null,
 ) {
     var field by remember { mutableStateOf(TextFieldValue(initialUrl, TextRange(0, initialUrl.length))) }
     val focus = remember { FocusRequester() }
     if (autoFocus) LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+
+    // Ranked against what the user typed; the untouched page URL counts as nothing typed yet.
+    val typed = if (field.text == initialUrl) "" else field.text
+    val suggestions = remember(typed) { suggestionsFor(typed) }
 
     fun go(text: String = field.text) {
         text.trim().takeIf { it.isNotEmpty() }?.let(onGo)
@@ -153,10 +158,13 @@ fun AddressEditor(
             }
         }
 
-        if (clipboardUrl != null && clipboardUrl != field.text) {
+        // [clipboardUrl] when the host may read the clipboard up front; otherwise [onPasteAndGo] reads it only
+        // on tap (Android announces every clipboard read, so the offer can't peek at the contents).
+        if ((clipboardUrl != null && clipboardUrl != field.text) || onPasteAndGo != null) {
+            val pasteLabel = stringRes(Res.string.browser_pill_paste_go)
             AssistChip(
-                onClick = { go(clipboardUrl) },
-                label = { Text(stringRes(Res.string.browser_pill_paste_go) + "  ·  " + BrowserChrome.displayHost(clipboardUrl), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                onClick = { if (clipboardUrl != null) go(clipboardUrl) else onPasteAndGo?.invoke() },
+                label = { Text(if (clipboardUrl != null) pasteLabel + "  ·  " + BrowserChrome.displayHost(clipboardUrl) else pasteLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 leadingIcon = { Icon(MaterialSymbols.ContentPasteGo, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
                 modifier = Modifier.padding(start = 48.dp),
             )

@@ -145,10 +145,13 @@ object NappletBrowserContract {
     /** Clear the current site's cookies and storage in this account's profile, then reload. */
     const val MSG_CLEAR_SITE_DATA = 24
 
-    /** Ask for the page-info text (connection, Tor, certificate); answered with [MSG_PAGE_INFO]. */
+    /** Ask for the page's certificate for page info; answered with [MSG_PAGE_INFO]. */
     const val MSG_PAGE_INFO_REQUEST = 25
 
-    /** Provider → client: [KEY_PAGE_INFO] for the page on screen. */
+    /**
+     * Provider → client: the certificate of the page on screen — [KEY_CERT_ISSUED_TO], [KEY_CERT_ISSUED_BY]
+     * and [KEY_CERT_VALID_UNTIL], all absent for a page without one (plain HTTP).
+     */
     const val MSG_PAGE_INFO = 26
 
     /**
@@ -188,7 +191,9 @@ object NappletBrowserContract {
     const val KEY_FIND_TOTAL = "findTotal"
     const val KEY_ENABLED = "enabled"
     const val KEY_TEXT_ZOOM = "textZoom"
-    const val KEY_PAGE_INFO = "pageInfo"
+    const val KEY_CERT_ISSUED_TO = "certIssuedTo"
+    const val KEY_CERT_ISSUED_BY = "certIssuedBy"
+    const val KEY_CERT_VALID_UNTIL = "certValidUntil"
     const val KEY_DIALOG_ID = "dialogId"
     const val KEY_DIALOG_TYPE = "dialogType"
     const val KEY_DIALOG_MESSAGE = "dialogMessage"

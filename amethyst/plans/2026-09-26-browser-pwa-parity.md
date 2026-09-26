@@ -292,6 +292,10 @@ nsite/napplet hosts (sandbox profile permitting).
 
 What shipped, where it lives, and what was deliberately left out.
 
+> The two renderers described below (`TopControlSheet`, `NappletControlSheet` and their find, console and
+> dialog views) were later replaced by one set of Compose components. See
+> `2026-09-26-browser-ui-review.md` §5.
+
 **Shared layout.** `commons/…/browser/BrowserChrome.kt` decides which actions the top pill shows, and in
 what order, for every surface (web / nsite / napplet × embedded / full screen), plus the security badge,
 the scope check, text-zoom steps, the desktop user agent and the theme-colour parser. It is covered by

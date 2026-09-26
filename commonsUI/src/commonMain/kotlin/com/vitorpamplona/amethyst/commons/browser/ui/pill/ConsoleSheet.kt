@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_console
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_console_all
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_console_clear
@@ -91,6 +92,7 @@ fun ConsoleSheet(
     modifier: Modifier = Modifier,
     maxHeight: Dp = 320.dp,
     initialFilter: ConsoleFilter = ConsoleFilter.ALL,
+    onClose: (() -> Unit)? = null,
 ) {
     var filter by remember { mutableStateOf(initialFilter) }
     val errors = lines.count { it.level == ConsoleLine.Level.ERROR }
@@ -126,6 +128,11 @@ fun ConsoleSheet(
                 }
                 IconButton(onClick = onClear, enabled = lines.isNotEmpty()) {
                     Icon(MaterialSymbols.Delete, contentDescription = stringRes(Res.string.browser_pill_console_clear), modifier = Modifier.size(20.dp))
+                }
+                if (onClose != null) {
+                    IconButton(onClick = onClose) {
+                        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.browser_pill_close), modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             Row(

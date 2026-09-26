@@ -30,7 +30,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,6 +51,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +62,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogCard
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageInfoSheet
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
@@ -64,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
@@ -171,71 +184,101 @@ private fun EmbeddedWebAppTab(
         browserOrigin(currentUrl)?.let { origin -> nav.nav(Route.ConnectedAppDetail("browser:$origin")) }
     }
 
+    fun onAction(action: BrowserChrome.Action) {
+        when (action) {
+            BrowserChrome.Action.BACK -> controller.back()
+            BrowserChrome.Action.FORWARD -> controller.forward()
+            BrowserChrome.Action.RELOAD -> controller.reload()
+            BrowserChrome.Action.STOP -> controller.stop()
+            BrowserChrome.Action.FAVORITE -> toggleFavorite()
+            BrowserChrome.Action.SHARE -> BrowserWebTools.share(context, pageTitle, null, currentUrl)
+            BrowserChrome.Action.BACK_TO_APP -> controller.backToScope(url)
+            BrowserChrome.Action.COPY_LINK -> BrowserWebTools.copyToClipboard(context, currentUrl)
+            BrowserChrome.Action.DESKTOP_SITE -> {
+                desktopSite = !desktopSite
+                controller.setDesktopSite(desktopSite)
+            }
+            BrowserChrome.Action.ADD_TO_HOME_SCREEN -> WebShortcuts.requestPin(context, currentUrl, pageTitle ?: hostLabel(currentUrl))
+            BrowserChrome.Action.OPEN_IN_BROWSER_APP -> BrowserWebTools.openInOtherBrowser(context, currentUrl)
+            // The page the user is looking at, not the one the tab was pinned with.
+            BrowserChrome.Action.OPEN_FULL_SCREEN -> FavoriteAppLauncher.launchUrl(context, currentUrl)
+            BrowserChrome.Action.TOR -> {
+                torOn = !torOn
+                controller.setTor(torOn)
+                WebAppNetworkRegistry.set(currentUrl, torOn)
+            }
+            BrowserChrome.Action.SITE_SETTINGS -> openSiteSettings()
+            else -> Unit
+        }
+    }
+
+    fun onNavigate(text: String) {
+        val resolved = OmniboxInput.resolve(text) ?: return
+        // .onion only resolves over Tor.
+        if (resolved.forceTor && proxyAvailable && !torOn) {
+            torOn = true
+            controller.setTor(true)
+        }
+        controller.navigate(resolved.url)
+    }
+
+    // Favorites first, then history: what the address editor offers for what the user has typed.
+    val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
+    val candidates =
+        remember(apps, history) {
+            buildList {
+                apps.forEach { if (it is FavoriteApp.WebApp) add(OmniboxSuggestions.Candidate(it.url, it.label, isFavorite = true)) }
+                history.forEach {
+                    add(OmniboxSuggestions.Candidate(it.url, it.title.ifBlank { it.host }, isFavorite = false, visitCount = it.visitCount, lastVisitedAt = it.lastVisitedAt))
+                }
+            }
+        }
+
+    val siteDecisions by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
+    val sitePermissions = remember(siteDecisions, currentUrl) { browserOrigin(currentUrl)?.let { siteDecisions[it] }.orEmpty() }
+
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, proxyAvailable, isFavorite, desktopSite, textZoom, controller) {
+        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, proxyAvailable, isFavorite, desktopSite, textZoom, sitePermissions, candidates, controller) {
             EmbeddedTabChrome(
-                title = pageTitle ?: hostLabel(currentUrl),
-                state =
-                    BrowserChrome.State(
-                        surface = BrowserChrome.Surface.WEB,
-                        presentation = BrowserChrome.Presentation.EMBEDDED,
-                        url = currentUrl,
-                        startUrl = url,
-                        canGoBack = canGoBack,
-                        canGoForward = canGoForward,
-                        isLoading = isLoading,
-                        torOn = if (proxyAvailable) torOn else null,
-                        hasSiteSettings = browserOrigin(currentUrl) != null,
+                ui =
+                    BrowserPillUi(
+                        title = pageTitle ?: hostLabel(currentUrl),
+                        chrome =
+                            BrowserChrome.State(
+                                surface = BrowserChrome.Surface.WEB,
+                                presentation = BrowserChrome.Presentation.EMBEDDED,
+                                url = currentUrl,
+                                startUrl = url,
+                                canGoBack = canGoBack,
+                                canGoForward = canGoForward,
+                                isLoading = isLoading,
+                                torOn = if (proxyAvailable) torOn else null,
+                                hasSiteSettings = browserOrigin(currentUrl) != null,
+                            ),
+                        isFavorite = isFavorite,
+                        desktopSite = desktopSite,
+                        textZoom = textZoom,
+                        sitePermissions = sitePermissions,
                     ),
-                isFavorite = isFavorite,
-                desktopSite = desktopSite,
-                textZoom = textZoom,
-                onAction = { action ->
-                    when (action) {
-                        BrowserChrome.Action.BACK -> controller.back()
-                        BrowserChrome.Action.FORWARD -> controller.forward()
-                        BrowserChrome.Action.RELOAD -> controller.reload()
-                        BrowserChrome.Action.STOP -> controller.stop()
-                        BrowserChrome.Action.FAVORITE -> toggleFavorite()
-                        BrowserChrome.Action.SHARE -> BrowserWebTools.share(context, pageTitle, null, currentUrl)
-                        BrowserChrome.Action.BACK_TO_APP -> controller.backToScope(url)
-                        BrowserChrome.Action.COPY_LINK -> BrowserWebTools.copyToClipboard(context, currentUrl)
-                        BrowserChrome.Action.DESKTOP_SITE -> {
-                            desktopSite = !desktopSite
-                            controller.setDesktopSite(desktopSite)
+                onEvent = { event ->
+                    when (event) {
+                        is BrowserPillEvent.Action -> onAction(event.action)
+                        is BrowserPillEvent.Navigate -> onNavigate(event.input)
+                        is BrowserPillEvent.TextZoom -> {
+                            textZoom = event.percent
+                            controller.setTextZoom(event.percent)
                         }
-                        BrowserChrome.Action.ADD_TO_HOME_SCREEN -> WebShortcuts.requestPin(context, currentUrl, pageTitle ?: hostLabel(currentUrl))
-                        BrowserChrome.Action.OPEN_IN_BROWSER_APP -> BrowserWebTools.openInOtherBrowser(context, currentUrl)
-                        // The page the user is looking at, not the one the tab was pinned with.
-                        BrowserChrome.Action.OPEN_FULL_SCREEN -> FavoriteAppLauncher.launchUrl(context, currentUrl)
-                        BrowserChrome.Action.TOR -> {
-                            torOn = !torOn
-                            controller.setTor(torOn)
-                            WebAppNetworkRegistry.set(currentUrl, torOn)
+                        BrowserPillEvent.CopyOrigin -> BrowserWebTools.copyToClipboard(context, currentUrl)
+                        BrowserPillEvent.PageInfo -> {
+                            controller.requestPageInfo()
+                            showPageInfo = true
                         }
-                        BrowserChrome.Action.SITE_SETTINGS -> openSiteSettings()
-                        else -> Unit
+                        BrowserPillEvent.Close -> Unit
                     }
                 },
-                onNavigate = { text ->
-                    val resolved = OmniboxInput.resolve(text)
-                    if (resolved != null) {
-                        // .onion only resolves over Tor.
-                        if (resolved.forceTor && proxyAvailable && !torOn) {
-                            torOn = true
-                            controller.setTor(true)
-                        }
-                        controller.navigate(resolved.url)
-                    }
-                },
-                onTextZoom = { percent ->
-                    textZoom = percent
-                    controller.setTextZoom(percent)
-                },
-                onOriginTap = {
-                    controller.requestPageInfo()
-                    showPageInfo = true
+                suggestionsFor = { typed ->
+                    OmniboxSuggestions.rank(typed, candidates, limit = 5).map { AddressSuggestion(it.label, it.url, it.isFavorite) }
                 },
             )
         }
@@ -259,7 +302,7 @@ private fun EmbeddedWebAppTab(
     // A fullscreen video inside the tab: back leaves fullscreen first, as in Chrome.
     BackHandler(enabled = isFullscreen) { controller.exitFullscreen() }
 
-    EmbeddedPageUi(controller, currentUrl, showPageInfo, onPageInfoDismiss = { showPageInfo = false }, onSiteSettings = ::openSiteSettings)
+    EmbeddedPageUi(controller, chrome.ui, showPageInfo, onPageInfoDismiss = { showPageInfo = false })
 
     Scaffold(
         bottomBar = {
@@ -280,22 +323,32 @@ private fun EmbeddedWebAppTab(
 /**
  * Everything an embedded page asks the user for, drawn by the main process because the provider has no
  * window: JS dialogs, camera / microphone / location prompts (remembered per origin in
- * [WebSitePermissionRegistry], then Android's own runtime permission), and page info.
+ * [WebSitePermissionRegistry], then Android's own runtime permission), and page info — the shared
+ * [PageDialogCard], [PermissionPromptCard] and [PageInfoSheet].
  */
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 private fun EmbeddedPageUi(
     controller: EmbeddedWebAppController,
-    currentUrl: String,
+    ui: BrowserPillUi,
     showPageInfo: Boolean,
     onPageInfoDismiss: () -> Unit,
-    onSiteSettings: () -> Unit,
 ) {
     val context = LocalContext.current
 
     val dialog by controller.pendingDialog
     dialog?.let { d ->
-        EmbeddedJsDialogView(d) { confirmed, text, block -> controller.answerDialog(d.id, confirmed, text, block) }
+        Dialog(onDismissRequest = { controller.answerDialog(d.id, confirmed = false) }) {
+            PageDialogCard(
+                type = d.type,
+                host = d.url?.let(::browserOrigin)?.let(::hostLabel),
+                security = ui.security,
+                message = d.message,
+                defaultValue = d.defaultValue,
+                offerBlock = d.offerBlock,
+                onResult = { confirmed, text, block -> controller.answerDialog(d.id, confirmed, text, block) },
+            )
+        }
     }
 
     // Android's runtime permission, asked only for what the user allowed the site to use.
@@ -330,26 +383,47 @@ private fun EmbeddedPageUi(
         if (ask.isEmpty()) {
             LaunchedEffect(request.id) { grant(request.id, allowed) }
         } else {
-            EmbeddedPermissionPrompt(request.origin, ask) { allow ->
-                // null = dismissed without an answer: deny this once, remember nothing.
-                if (allow != null) {
+            // allow: grant now; remember: store the answer for the site ("Only this time" and a dismissal don't).
+            fun answer(
+                allow: Boolean,
+                remember: Boolean,
+            ) {
+                if (remember) {
                     val decision = if (allow) BrowserSitePermission.Decision.ALLOW else BrowserSitePermission.Decision.BLOCK
                     ask.forEach { WebSitePermissionRegistry.set(request.origin, it, decision) }
                 }
-                grant(request.id, if (allow == true) allowed + ask else allowed)
+                grant(request.id, if (allow) allowed + ask else allowed)
+            }
+            Dialog(onDismissRequest = { answer(allow = false, remember = false) }) {
+                PermissionPromptCard(
+                    host = hostLabel(request.origin),
+                    security = ui.security,
+                    permissions = ask,
+                    onAllow = { answer(allow = true, remember = true) },
+                    onAllowOnce = { answer(allow = true, remember = false) },
+                    onDeny = { answer(allow = false, remember = true) },
+                )
             }
         }
     }
 
     if (showPageInfo) {
-        val info by controller.pageInfo
-        EmbeddedPageInfoDialog(
-            host = hostLabel(currentUrl),
-            info = info,
-            onPermissions = if (browserOrigin(currentUrl) != null) onSiteSettings else null,
-            onClearData = { controller.clearSiteData() },
-            onDismiss = onPageInfoDismiss,
-        )
+        val certificate by controller.pageCertificate
+        val origin = browserOrigin(ui.chrome.url)
+        Dialog(onDismissRequest = onPageInfoDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                PageInfoSheet(
+                    ui = ui,
+                    certificate = certificate,
+                    onPermissionChange = { permission, decision -> origin?.let { WebSitePermissionRegistry.set(it, permission, decision) } },
+                    onClearSiteData = {
+                        onPageInfoDismiss()
+                        controller.clearSiteData()
+                    },
+                    modifier = Modifier.widthIn(max = 560.dp),
+                )
+            }
+        }
     }
 }
 

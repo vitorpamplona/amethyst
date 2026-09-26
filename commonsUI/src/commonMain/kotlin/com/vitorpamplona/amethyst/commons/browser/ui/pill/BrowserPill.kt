@@ -109,10 +109,11 @@ fun BrowserPill(
     onEvent: (BrowserPillEvent) -> Unit,
     modifier: Modifier = Modifier,
     showClose: Boolean = false,
-    suggestions: List<AddressSuggestion> = emptyList(),
+    suggestionsFor: (String) -> List<AddressSuggestion> = { emptyList() },
     clipboardUrl: String? = null,
     initiallyEditing: Boolean = false,
     initiallyTextSizeOpen: Boolean = false,
+    onPasteAndGo: (() -> Unit)? = null,
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         AnimatedVisibility(
@@ -128,10 +129,11 @@ fun BrowserPill(
                     onEvent(event)
                 },
                 showClose = showClose,
-                suggestions = suggestions,
+                suggestionsFor = suggestionsFor,
                 clipboardUrl = clipboardUrl,
                 initiallyEditing = initiallyEditing,
                 initiallyTextSizeOpen = initiallyTextSizeOpen,
+                onPasteAndGo = onPasteAndGo,
             )
         }
         PillHandle(ui, expanded, onExpandedChange)
@@ -213,10 +215,11 @@ fun BrowserPillSheet(
     onEvent: (BrowserPillEvent) -> Unit,
     modifier: Modifier = Modifier,
     showClose: Boolean = false,
-    suggestions: List<AddressSuggestion> = emptyList(),
+    suggestionsFor: (String) -> List<AddressSuggestion> = { emptyList() },
     clipboardUrl: String? = null,
     initiallyEditing: Boolean = false,
     initiallyTextSizeOpen: Boolean = false,
+    onPasteAndGo: (() -> Unit)? = null,
 ) {
     var editing by rememberSaveable { mutableStateOf(initiallyEditing) }
     var textSizeOpen by rememberSaveable { mutableStateOf(initiallyTextSizeOpen) }
@@ -244,10 +247,11 @@ fun BrowserPillSheet(
                 AddressEditor(
                     initialUrl = ui.chrome.url,
                     security = ui.security,
-                    suggestions = suggestions,
+                    suggestionsFor = suggestionsFor,
                     clipboardUrl = clipboardUrl,
                     onGo = { onEvent(BrowserPillEvent.Navigate(it)) },
                     onCancel = { editing = false },
+                    onPasteAndGo = onPasteAndGo,
                 )
             } else {
                 PillHeader(ui, showClose, onClose = { onEvent(BrowserPillEvent.Close) })
@@ -255,6 +259,7 @@ fun BrowserPillSheet(
                     ui = ui,
                     onEdit = if (Action.EDIT_ADDRESS in page) ({ editing = true }) else null,
                     onLongPress = if (!ui.chrome.isSandbox) ({ onEvent(BrowserPillEvent.CopyOrigin) }) else null,
+                    onSecurityTap = if (!ui.chrome.isSandbox) ({ onEvent(BrowserPillEvent.PageInfo) }) else null,
                 )
                 if (Action.BACK_TO_APP in page) {
                     OutOfScopeBanner(homeHost = BrowserChrome.displayHost(ui.chrome.startUrl)) {

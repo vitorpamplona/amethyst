@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.napplethost
 
 import android.Manifest
 import android.app.ActivityManager
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Icon
@@ -85,6 +85,10 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.Action
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -108,7 +112,7 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
  *
  * PWA behaviours, beyond the page itself: its own task in Recents titled, iconed and coloured after the
  * site ([updateTaskDescription]); system bars tinted with the page's `theme-color`; the top pill
- * ([NappletControlSheet], laid out by [BrowserChrome]); JS dialogs; new windows (`_blank` / `window.open`)
+ * ([BrowserChromeHost], laid out by [BrowserChrome]); JS dialogs; new windows (`_blank` / `window.open`)
  * as new browser windows with `opener` intact ([BrowserPopups]); downloads; HTML fullscreen video;
  * camera / microphone / location behind a per-site prompt; find in page; long-press link and image menus;
  * Web Share; and recovery from a renderer crash.
@@ -130,10 +134,9 @@ class NappletBrowserActivity : ComponentActivity() {
     private var loadingView: View? = null
     private var crashView: View? = null
     private var resumed = false
-    private var controlSheet: NappletControlSheet? = null
-    private var consolePanel: NappletConsolePanel? = null
-    private var findBar: BrowserFindBar? = null
-    private var consoleShowing = false
+
+    // The pill, find, console and page dialogs — the shared Compose chrome (see BrowserChromeHost).
+    private var chrome: BrowserChromeHost? = null
 
     // A thin determinate progress bar pinned to the top edge (browser-style), driven by the chrome
     // client's onProgressChanged; hidden at 100%.
@@ -161,8 +164,10 @@ class NappletBrowserActivity : ComponentActivity() {
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
 
-    // Page-originated alert/confirm/prompt/beforeunload, labelled with the page's origin.
-    private val jsDialogs by lazy { BrowserJsDialogs(this) }
+    // Page-originated alert/confirm/prompt/beforeunload: from the second dialog on a page, the user may block
+    // the rest until the next main-frame navigation (Chrome's rule), so a looping alert() can't trap them.
+    private var jsDialogsOnPage = 0
+    private var jsDialogsBlocked = false
 
     // ---- HTML file input (`<input type="file">`) ----
     // Registered as a field so it is in place before onCreate returns, which is what
@@ -175,7 +180,6 @@ class NappletBrowserActivity : ComponentActivity() {
     // ---- site permissions (camera / microphone / location) ----
     private val sitePermissionQueries = mutableMapOf<Long, (Map<BrowserSitePermission, Decision>) -> Unit>()
     private var sitePermissionSeq = 0L
-    private var permissionPrompt: AlertDialog? = null
     private var pendingRuntimeGrant: ((Map<String, Boolean>) -> Unit)? = null
     private val runtimePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -230,7 +234,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 val wv = webView
                 when {
                     customView != null -> exitFullscreen()
-                    findBar?.isShowing == true -> findBar?.hide()
+                    chrome?.handleBack() == true -> Unit
                     wv != null && wv.canGoBack() -> wv.goBack()
                     else -> {
                         isEnabled = false
@@ -242,7 +246,7 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
     private fun syncBackState() {
-        backCallback.isEnabled = customView != null || findBar?.isShowing == true || webView?.canGoBack() == true
+        backCallback.isEnabled = customView != null || chrome?.wantsBack == true || webView?.canGoBack() == true
     }
 
     private val brokerConnection =
@@ -304,18 +308,15 @@ class NappletBrowserActivity : ComponentActivity() {
         bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
         onBackPressedDispatcher.addCallback(this, backCallback)
 
-        val findBar = BrowserFindBar(this, { webView }) { syncBackState() }.also { this.findBar = it }
         val root =
             FrameLayout(this).apply {
                 setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                addView(buildControlSheet(), FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP))
-                addView(buildConsolePanel(), FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
-                addView(findBar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
-                // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
-                addView(topProgressBar)
             }
         this.root = root
+        chrome = buildChrome().also { it.attach(root) }
+        // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
+        root.addView(topProgressBar)
         setContentView(root)
         // Pad by the system bars + cutout AND the IME: on an edge-to-edge window (enforced for targetSdk
         // 35+ on Android 15+) windowSoftInputMode=adjustResize no longer shrinks the window, so without
@@ -355,6 +356,7 @@ class NappletBrowserActivity : ComponentActivity() {
         BrowserWebTools.applyBrowserSettings(wv)
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
+        wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), if (useTor) proxyPort else -1)
         }
@@ -415,8 +417,8 @@ class NappletBrowserActivity : ComponentActivity() {
         pendingFileChooser.cancel()
         fileChooserLauncher.teardown()
         // A dialog still up would leak its window and leave the page's JS blocked on an unanswered result.
-        jsDialogs.dismiss()
-        permissionPrompt?.dismiss()
+        chrome?.dialog?.answer?.invoke(false, null, false)
+        chrome?.permissionPrompt?.answer?.invoke(false, false)
         customViewCallback?.onCustomViewHidden()
         destroyWebView()
         super.onDestroy()
@@ -466,7 +468,19 @@ class NappletBrowserActivity : ComponentActivity() {
         runCatching { broker.send(msg) }
     }
 
-    private fun currentUrl(): String = webView?.url?.takeIf { it.isNotBlank() } ?: controlSheet?.state?.url?.takeIf { it.isNotBlank() } ?: startUrl
+    private fun currentUrl(): String =
+        webView?.url?.takeIf { it.isNotBlank() } ?: chrome
+            ?.ui
+            ?.chrome
+            ?.url
+            ?.takeIf { it.isNotBlank() } ?: startUrl
+
+    /** Updates what the chrome shows. */
+    private inline fun updateUi(block: BrowserPillUi.() -> BrowserPillUi) {
+        chrome?.let { it.ui = it.ui.block() }
+    }
+
+    private inline fun updateChromeState(crossinline block: BrowserChrome.State.() -> BrowserChrome.State) = updateUi { copy(chrome = chrome.block()) }
 
     /** Captures favicon, title and console output, and hosts every page-initiated UI. */
     private inner class BrowserChromeClient : WebChromeClient() {
@@ -493,7 +507,7 @@ class NappletBrowserActivity : ComponentActivity() {
             title: String?,
         ) {
             pageTitle = title?.trim()?.takeIf { it.isNotEmpty() && it != view.url }
-            controlSheet?.updateTitle(title)
+            updateUi { copy(title = pageTitle ?: BrowserChrome.displayHost(chrome.url)) }
             updateTaskDescription()
         }
 
@@ -512,34 +526,30 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-            val panel = consolePanel ?: return false
-            panel.appendLog(
-                consoleMessage.messageLevel(),
-                consoleMessage.message(),
-                consoleMessage.sourceId(),
-                consoleMessage.lineNumber(),
+            val host = chrome ?: return false
+            host.appendConsole(
+                ConsoleLine(BrowserChromeHost.levelOf(consoleMessage.messageLevel()), consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber()),
             )
-            controlSheet?.updateConsoleCount(panel.entryCount)
             return true
         }
 
         // The framework's own JS dialogs only appear when the WebView's context IS an Activity
         // (`JsDialogHelper.canShowAlertDialog`), and this one is built from [nightThemedContext] — a
         // configuration context, not the Activity — so without these overrides every alert() was silently
-        // dismissed, confirm() always answered false and prompt() null. [jsDialogs] shows them itself.
+        // dismissed, confirm() always answered false and prompt() null. The chrome shows them itself.
         override fun onJsAlert(
             view: WebView,
             url: String?,
             message: String?,
             result: JsResult,
-        ): Boolean = jsDialogs.alert(url, message, result)
+        ): Boolean = showJsDialog(PageDialogType.ALERT, url, message, null, result)
 
         override fun onJsConfirm(
             view: WebView,
             url: String?,
             message: String?,
             result: JsResult,
-        ): Boolean = jsDialogs.confirm(url, message, result)
+        ): Boolean = showJsDialog(PageDialogType.CONFIRM, url, message, null, result)
 
         override fun onJsPrompt(
             view: WebView,
@@ -547,14 +557,14 @@ class NappletBrowserActivity : ComponentActivity() {
             message: String?,
             defaultValue: String?,
             result: JsPromptResult,
-        ): Boolean = jsDialogs.prompt(url, message, defaultValue, result)
+        ): Boolean = showJsDialog(PageDialogType.PROMPT, url, message, defaultValue, result)
 
         override fun onJsBeforeUnload(
             view: WebView,
             url: String?,
             message: String?,
             result: JsResult,
-        ): Boolean = jsDialogs.beforeUnload(result)
+        ): Boolean = showJsDialog(PageDialogType.BEFORE_UNLOAD, url, message, null, result)
 
         /**
          * A `_blank` link or a user-initiated `window.open()`: open it as a new browser window, like a new
@@ -583,7 +593,7 @@ class NappletBrowserActivity : ComponentActivity() {
         override fun onPermissionRequest(request: PermissionRequest) = handlePermissionRequest(request)
 
         override fun onPermissionRequestCanceled(request: PermissionRequest) {
-            permissionPrompt?.dismiss()
+            chrome?.permissionPrompt = null
         }
 
         override fun onGeolocationPermissionsShowPrompt(
@@ -598,7 +608,7 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
         override fun onGeolocationPermissionsHidePrompt() {
-            permissionPrompt?.dismiss()
+            chrome?.permissionPrompt = null
         }
 
         override fun onShowCustomView(
@@ -659,8 +669,9 @@ class NappletBrowserActivity : ComponentActivity() {
                 applyThemeColor(null)
             }
             // Chrome scopes "block this page's dialogs" to the page: a new main-frame load lifts it.
-            jsDialogs.onMainFrameNavigation()
-            controlSheet?.setLoading(true)
+            jsDialogsOnPage = 0
+            jsDialogsBlocked = false
+            updateChromeState { copy(isLoading = true) }
             showUrl(url)
         }
 
@@ -707,7 +718,7 @@ class NappletBrowserActivity : ComponentActivity() {
             url: String,
         ) {
             syncNavigation(view)
-            controlSheet?.setLoading(false)
+            updateChromeState { copy(isLoading = false) }
             showUrl(url)
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
@@ -741,7 +752,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private fun syncNavigation(view: WebView) {
         syncBackState()
-        controlSheet?.setNavigation(view.canGoBack(), view.canGoForward())
+        updateChromeState { copy(canGoBack = view.canGoBack(), canGoForward = view.canGoForward()) }
     }
 
     /**
@@ -749,7 +760,16 @@ class NappletBrowserActivity : ComponentActivity() {
      * it is pinned — the registry lives in the main process, so the star can't know on its own.
      */
     private fun showUrl(url: String) {
-        controlSheet?.updateUrl(url)
+        updateUi {
+            if (url == chrome.url) {
+                this
+            } else {
+                // Another site: its host names it until its title arrives; its pin state is unknown until the
+                // broker answers (the star toggle sends an explicit target, so a tap meanwhile can only add).
+                val newSite = BrowserChrome.displayHost(url) != BrowserChrome.displayHost(chrome.url)
+                copy(chrome = chrome.copy(url = url), title = if (newSite) BrowserChrome.displayHost(url) else title, isFavorite = false)
+            }
+        }
         if (url == lastFavoriteQueryUrl) return
         lastFavoriteQueryUrl = url
         val msg =
@@ -835,7 +855,7 @@ class NappletBrowserActivity : ComponentActivity() {
         if (resolved.forceTor && proxyPort > 0 && !useTor) {
             useTor = true
             applyWebViewProxy(proxyPort)
-            controlSheet?.setTor(true)
+            updateChromeState { copy(torOn = true) }
         }
         webView?.loadUrl(resolved.url)
     }
@@ -944,7 +964,8 @@ class NappletBrowserActivity : ComponentActivity() {
             }
             NappletIpc.MSG_WEB_FAVORITE_STATE -> {
                 val url = data.getString(NappletIpc.KEY_FAVORITE_URL) ?: return true
-                controlSheet?.setFavorite(url, data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, false))
+                val favorite = data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, false)
+                updateUi { if (url == chrome.url) copy(isFavorite = favorite) else this }
             }
             NappletIpc.MSG_SITE_PERMISSIONS -> {
                 val callback = sitePermissionQueries.remove(data.getLong(NappletIpc.KEY_REQUEST_ID)) ?: return true
@@ -1004,10 +1025,10 @@ class NappletBrowserActivity : ComponentActivity() {
             if (ask.isEmpty()) {
                 ensureRuntimePermissions(allowed, done)
             } else {
-                showPermissionPrompt(origin, ask) { allow ->
-                    // null = dismissed without an answer: deny this once, remember nothing.
-                    if (allow != null) ask.forEach { rememberSitePermission(origin, it, if (allow) Decision.ALLOW else Decision.BLOCK) }
-                    ensureRuntimePermissions(if (allow == true) allowed + ask else allowed, done)
+                showPermissionPrompt(origin, ask) { remembered, grantNow ->
+                    // remembered: true/false = Allow while visiting / Don't allow; null = only this time or dismissed.
+                    if (remembered != null) ask.forEach { rememberSitePermission(origin, it, if (remembered) Decision.ALLOW else Decision.BLOCK) }
+                    ensureRuntimePermissions(if (grantNow) allowed + ask else allowed, done)
                 }
             }
         }
@@ -1049,49 +1070,33 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     /**
-     * Chrome's permission bubble: "<host> wants to — Use your camera — Block / Allow". [answer] gets true
-     * (allow), false (block), or null when the prompt went away unanswered.
+     * The permission prompt ([com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard]):
+     * [answer] gets true (allow, remembered), false (block, remembered), or null (allow only this time, or
+     * dismissed — nothing remembered; a dismissal also denies).
      */
     private fun showPermissionPrompt(
         origin: String,
         permissions: List<BrowserSitePermission>,
-        answer: (Boolean?) -> Unit,
+        answer: (allow: Boolean?, grantNow: Boolean) -> Unit,
     ) {
-        if (isFinishing || isDestroyed || permissionPrompt != null) {
-            answer(null)
+        val host = chrome
+        if (host == null || isFinishing || isDestroyed || host.permissionPrompt != null) {
+            answer(null, false)
             return
         }
-        var answered = false
-        val lines =
-            permissions.joinToString("\n") {
-                "• " +
-                    getString(
-                        when (it) {
-                            BrowserSitePermission.CAMERA -> CommonsR.string.browser_permission_camera
-                            BrowserSitePermission.MICROPHONE -> CommonsR.string.browser_permission_microphone
-                            BrowserSitePermission.LOCATION -> CommonsR.string.browser_permission_location
-                        },
-                    )
+        host.permissionPrompt =
+            BrowserChromeHost.PendingPermission(
+                host = BrowserChrome.displayHost(origin),
+                security = BrowserChrome.security(host.ui.chrome),
+                permissions = permissions.toSet(),
+            ) { allow, remember ->
+                when {
+                    allow && remember -> answer(true, true)
+                    allow -> answer(null, true)
+                    remember -> answer(false, false)
+                    else -> answer(null, false)
+                }
             }
-        permissionPrompt =
-            AlertDialog
-                .Builder(this)
-                .setTitle(getString(CommonsR.string.browser_permission_title, BrowserChrome.displayHost(origin)))
-                .setMessage(lines)
-                .setPositiveButton(CommonsR.string.browser_permission_allow) { _, _ ->
-                    answered = true
-                    answer(true)
-                }.setNegativeButton(CommonsR.string.browser_permission_block) { _, _ ->
-                    answered = true
-                    answer(false)
-                }.setOnDismissListener {
-                    permissionPrompt = null
-                    // Dismissed without choosing (back, the page cancelling): deny this time, remember nothing.
-                    if (!answered) {
-                        answered = true
-                        answer(null)
-                    }
-                }.show()
     }
 
     /** Requests Android's runtime permission for each allowed site permission that lacks it. */
@@ -1283,7 +1288,7 @@ class NappletBrowserActivity : ComponentActivity() {
         useTor = newUseTor
         applyWebViewProxy(if (useTor) proxyPort else -1)
         webView?.reload()
-        controlSheet?.setTor(useTor)
+        updateChromeState { copy(torOn = useTor) }
         // Key the persisted choice on the host actually displayed (which may differ from startUrl after
         // in-page navigation), so the preference sticks to the right site.
         val host = runCatching { currentUrl().toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
@@ -1305,92 +1310,162 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun barTitle(): String = title.ifBlank { runCatching { startUrl.toUri().host }.getOrNull() ?: getString(CommonsR.string.napplet_untitled) }
 
     /**
-     * The top pull-down pill: a small grabber at the top edge (out of the corner where a site shows its
-     * own avatar) that expands to the Chrome-PWA-style menu laid out by [BrowserChrome].
+     * The window's chrome: the pull-down pill at the top (out of the corner where a site shows its own avatar),
+     * find and the console at the bottom, and the page's dialogs — the shared Compose components.
      */
-    private fun buildControlSheet(): View =
-        NappletControlSheet(
-            context = this,
-            initialState =
-                BrowserChrome.State(
-                    surface = BrowserChrome.Surface.WEB,
-                    presentation = BrowserChrome.Presentation.FULL_SCREEN,
-                    url = startUrl,
-                    startUrl = startUrl,
-                    torOn = if (proxyPort > 0) useTor else null,
+    private fun buildChrome(): BrowserChromeHost =
+        BrowserChromeHost(
+            activity = this,
+            dark = isDarkTheme(),
+            initial =
+                BrowserPillUi(
+                    title = barTitle(),
+                    chrome =
+                        BrowserChrome.State(
+                            surface = BrowserChrome.Surface.WEB,
+                            presentation = BrowserChrome.Presentation.FULL_SCREEN,
+                            url = startUrl,
+                            startUrl = startUrl,
+                            torOn = if (proxyPort > 0) useTor else null,
+                        ),
+                    isFavorite = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
                 ),
-            title = barTitle(),
-            listener = sheetListener,
-            isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
-        ).also { controlSheet = it }
+            listener = chromeListener,
+        )
 
-    private val sheetListener =
-        object : NappletControlSheet.Listener {
-            override fun onAction(action: Action) {
-                val wv = webView
-                when (action) {
-                    Action.BACK -> wv?.goBack()
-                    Action.FORWARD -> wv?.goForward()
-                    Action.RELOAD -> wv?.reload()
-                    Action.STOP -> wv?.stopLoading()
-                    Action.FAVORITE -> sendFavoriteToggle(currentUrl(), controlSheet?.wantsFavorite() ?: true)
-                    Action.SHARE -> BrowserWebTools.share(this@NappletBrowserActivity, pageTitle, null, currentUrl())
-                    Action.BACK_TO_APP -> wv?.let { BrowserWebTools.backToScope(it, startUrl) }
-                    Action.COPY_LINK -> BrowserWebTools.copyToClipboard(this@NappletBrowserActivity, currentUrl())
-                    Action.EDIT_ADDRESS -> Unit
-                    Action.FIND_IN_PAGE -> {
-                        setConsoleShowing(false)
-                        findBar?.show()
-                        syncBackState()
+    private fun isDarkTheme(): Boolean =
+        when (themeType) {
+            "DARK" -> true
+            "LIGHT" -> false
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+
+    private val chromeListener =
+        object : BrowserChromeHost.Listener {
+            override fun onPillEvent(event: BrowserPillEvent) {
+                when (event) {
+                    is BrowserPillEvent.Action -> onAction(event.action)
+                    is BrowserPillEvent.Navigate -> loadAddress(event.input)
+                    is BrowserPillEvent.TextZoom -> {
+                        webView?.let { BrowserWebTools.setTextZoom(it, event.percent) }
+                        updateUi { copy(textZoom = event.percent) }
                     }
-                    Action.TEXT_SIZE -> Unit
-                    Action.DESKTOP_SITE ->
-                        wv?.let {
-                            val desktop = !BrowserWebTools.isDesktopMode(it)
-                            BrowserWebTools.setDesktopMode(it, desktop)
-                            controlSheet?.setDesktopSite(desktop)
-                        }
-                    Action.ADD_TO_HOME_SCREEN -> addToHomeScreen()
-                    Action.OPEN_IN_BROWSER_APP -> BrowserWebTools.openInOtherBrowser(this@NappletBrowserActivity, currentUrl())
-                    Action.OPEN_FULL_SCREEN -> Unit
-                    Action.TOR -> setNetworkMode(!useTor)
-                    Action.ACCESS_INFO -> Unit
-                    Action.SITE_SETTINGS -> openPermissions()
-                    Action.CONSOLE -> setConsoleShowing(!consoleShowing)
+                    BrowserPillEvent.CopyOrigin -> BrowserWebTools.copyToClipboard(this@NappletBrowserActivity, currentUrl())
+                    BrowserPillEvent.PageInfo -> showPageInfo()
+                    BrowserPillEvent.Close -> finish()
                 }
             }
 
-            override fun onNavigate(text: String) = loadAddress(text)
-
-            override fun onTextZoom(percent: Int) {
-                webView?.let { BrowserWebTools.setTextZoom(it, percent) }
+            override fun onFind(query: String) {
+                val wv = webView ?: return
+                if (query.isEmpty()) wv.clearMatches() else wv.findAllAsync(query)
             }
 
-            override fun onOriginTap() = showPageInfo()
+            override fun onFindNext(forward: Boolean) {
+                webView?.findNext(forward)
+            }
 
-            override fun onClose() = finish()
+            override fun onFindClosed() {
+                webView?.clearMatches()
+            }
+
+            override fun onPermissionChange(
+                permission: BrowserSitePermission,
+                decision: Decision,
+            ) {
+                BrowserChrome.originOf(currentUrl())?.let { rememberSitePermission(it, permission, decision) }
+            }
+
+            override fun onClearSiteData() {
+                webView?.let { BrowserWebTools.clearSiteData(this@NappletBrowserActivity, it, currentUrl()) }
+            }
+
+            override fun onPanelsChanged() = syncBackState()
         }
 
-    private fun setConsoleShowing(showing: Boolean) {
-        consoleShowing = showing
-        if (showing) findBar?.hide()
-        consolePanel?.setShowing(showing)
-        controlSheet?.setConsoleShowing(showing)
+    private fun onAction(action: Action) {
+        val wv = webView
+        when (action) {
+            Action.BACK -> wv?.goBack()
+            Action.FORWARD -> wv?.goForward()
+            Action.RELOAD -> wv?.reload()
+            Action.STOP -> wv?.stopLoading()
+            // The star flips the shown state; the toggle sends that target explicitly.
+            Action.FAVORITE -> sendFavoriteToggle(currentUrl(), chrome?.ui?.isFavorite != true)
+            Action.SHARE -> BrowserWebTools.share(this, pageTitle, null, currentUrl())
+            Action.BACK_TO_APP -> wv?.let { BrowserWebTools.backToScope(it, startUrl) }
+            Action.COPY_LINK -> BrowserWebTools.copyToClipboard(this, currentUrl())
+            Action.DESKTOP_SITE ->
+                wv?.let {
+                    val desktop = !BrowserWebTools.isDesktopMode(it)
+                    BrowserWebTools.setDesktopMode(it, desktop)
+                    updateUi { copy(desktopSite = desktop) }
+                }
+            Action.ADD_TO_HOME_SCREEN -> addToHomeScreen()
+            Action.OPEN_IN_BROWSER_APP -> BrowserWebTools.openInOtherBrowser(this, currentUrl())
+            Action.TOR -> setNetworkMode(!useTor)
+            Action.SITE_SETTINGS -> openPermissions()
+            else -> Unit
+        }
     }
 
-    /** Chrome's page-info sheet: connection, Tor, certificate, then site settings and clearing its data. */
+    /**
+     * Shows a page's JS dialog in the chrome, titled with the page's host. Answers at once when dialogs are
+     * blocked for this page, another is already up, or the window is going away.
+     */
+    private fun showJsDialog(
+        type: PageDialogType,
+        url: String?,
+        message: String?,
+        defaultValue: String?,
+        result: JsResult,
+    ): Boolean {
+        val host = chrome
+        if (jsDialogsBlocked) {
+            // A blocked page may no longer hold the user on it: leaving is allowed, everything else cancels.
+            if (type == PageDialogType.BEFORE_UNLOAD) result.confirm() else result.cancel()
+            return true
+        }
+        if (host == null || host.dialog != null || isFinishing || isDestroyed) {
+            result.cancel()
+            return true
+        }
+        jsDialogsOnPage++
+        host.dialog =
+            BrowserChromeHost.PendingDialog(
+                type = type,
+                host = url?.let(BrowserChrome::originOf)?.let(BrowserChrome::displayHost),
+                security = BrowserChrome.security(host.ui.chrome),
+                message = message.orEmpty(),
+                defaultValue = defaultValue.orEmpty(),
+                offerBlock = jsDialogsOnPage > 1,
+            ) { confirmed, text, block ->
+                if (block) jsDialogsBlocked = true
+                when {
+                    !confirmed -> result.cancel()
+                    result is JsPromptResult -> result.confirm(text.orEmpty())
+                    else -> result.confirm()
+                }
+            }
+        return true
+    }
+
+    /**
+     * Chrome's page info: connection, route and certificate, then this site's camera / microphone / location
+     * answers (asked of the broker first, so the sheet shows the truth) and its data.
+     */
     private fun showPageInfo() {
         val wv = webView ?: return
-        val url = currentUrl()
-        AlertDialog
-            .Builder(this)
-            .setTitle(BrowserChrome.displayHost(url))
-            .setMessage(BrowserWebTools.pageInfo(this, wv, if (proxyPort > 0) useTor else null))
-            .setPositiveButton(android.R.string.ok, null)
-            .setNeutralButton(CommonsR.string.browser_page_info_permissions) { _, _ -> openPermissions() }
-            .setNegativeButton(CommonsR.string.browser_page_info_clear_data) { _, _ ->
-                webView?.let { BrowserWebTools.clearSiteData(this, it, url) }
-            }.show()
+        val origin = BrowserChrome.originOf(currentUrl())
+        val certificate = BrowserWebTools.certificateInfo(wv)
+        if (origin == null) {
+            chrome?.showPageInfo(certificate)
+            return
+        }
+        querySitePermissions(origin) { decisions ->
+            updateUi { copy(sitePermissions = decisions.filterValues { it != Decision.ASK }) }
+            chrome?.showPageInfo(certificate)
+        }
     }
 
     /** Asks the main process to pin a launcher shortcut that reopens this page in Amethyst's browser. */
@@ -1445,12 +1520,6 @@ class NappletBrowserActivity : ComponentActivity() {
             }
         queueToBroker(msg)
     }
-
-    private fun buildConsolePanel(): View =
-        NappletConsolePanel(this).also {
-            it.onClearCallback = { controlSheet?.updateConsoleCount(0) }
-            consolePanel = it
-        }
 
     private fun buildLoadingView(): View =
         LinearLayout(this).apply {
@@ -1521,10 +1590,11 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun updateLoadProgress(progress: Int) {
         if (progress >= 100) {
             topProgressBar.visibility = View.GONE
-            controlSheet?.setLoading(false)
+            updateUi { copy(loadProgress = null, chrome = chrome.copy(isLoading = false)) }
         } else {
             topProgressBar.progress = progress
             topProgressBar.visibility = View.VISIBLE
+            updateUi { copy(loadProgress = progress / 100f) }
         }
     }
 
@@ -1533,9 +1603,7 @@ class NappletBrowserActivity : ComponentActivity() {
         request: WebResourceRequest,
         message: String,
     ) {
-        val panel = consolePanel ?: return
-        panel.appendLog(ConsoleMessage.MessageLevel.ERROR, message, request.url?.toString().orEmpty(), 0)
-        controlSheet?.updateConsoleCount(panel.entryCount)
+        chrome?.appendConsole(ConsoleLine(ConsoleLine.Level.ERROR, message, request.url?.toString().orEmpty(), 0))
     }
 
     private fun resolveThemeColor(attr: Int): Int {

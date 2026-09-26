@@ -1,9 +1,9 @@
 # Browser surfaces: UI review and redesign
 
-Status: **review + Compose prototypes**. The prototypes live in
+Status: **shipped** (see §5). The components live in
 `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/browser/ui/pill/`. They are rendered
 offscreen by `BrowserPillRenderTest` (commonsUI jvmTest), which writes PNGs to
-`commonsUI/build/browser-pill/`. None of it is wired into the app yet (see §5).
+`commonsUI/build/browser-pill/`.
 
 Follows `2026-09-26-browser-pwa-parity.md`. That plan settled *what* the browser does. This one is about
 how it looks and feels.
@@ -222,15 +222,35 @@ A sheet with:
 | Spacing | 4dp grid, 16dp sheet padding, 8dp between tiles |
 | Type | title `titleMedium`, origin `titleSmall`, tiles `labelMedium`, supporting `bodySmall` |
 
-## 5. Next steps
+## 5. What shipped
 
-1. Wire the prototypes in: `TopControlSheet` → `BrowserPill`, `EmbeddedFindBar` → `FindInPagePill`,
-   `BottomConsoleSheet` → `ConsoleSheet`, and the embedded dialogs → `PermissionPromptCard` /
-   `PageDialogCard` / `PageInfoSheet`.
-2. Host the same composables in the full-screen window through `ComposeView`, and delete
-   `NappletControlSheet`, `BrowserFindBar`, `NappletConsolePanel` and `BrowserJsDialogs`.
-3. Move the pill's labels from the `commons` Android resources to the Compose catalogue (the
-   prototypes already use `Res.string.browser_pill_*`).
-4. Add "Only this time" to the permission flow (the registry already treats "no answer" as
-   not-remembered).
-5. Confirm before clearing site data in both surfaces.
+Every browser surface now draws the components in `commonsUI/…/browser/ui/pill/`; the hand-built chrome
+is gone.
+
+- **Embedded tabs** (`EmbeddedTabLayer`): `EmbeddedTabChrome` now carries a `BrowserPillUi` and one
+  `onEvent(BrowserPillEvent)` callback. The layer draws `BrowserPill`, `FindInPagePill` and
+  `ConsoleSheet`, and handles find and the console itself. The address editor gets suggestions from
+  favorites and history (`OmniboxSuggestions`), and "Paste and go" checks only the clip's type.
+- **Embedded page dialogs** (`WebAppScreen`): `PageDialogCard`, `PermissionPromptCard` and
+  `PageInfoSheet` in Compose `Dialog`s. `MSG_PAGE_INFO` now sends the certificate fields
+  (`KEY_CERT_ISSUED_TO` / `_BY` / `_VALID_UNTIL`) instead of a paragraph of text. Permissions in page
+  info are edited in place, straight into `WebSitePermissionRegistry`.
+- **Full-screen windows** (`NappletBrowserActivity`, `NappletHostActivity`): `BrowserChromeHost` hosts
+  the same composables in two `ComposeView`s over the page. The top view grows to fill the window only
+  while the pill is open, so it can catch taps outside the pill; the bottom view holds find or the
+  console. Dialogs, the permission prompt and page info are Compose `Dialog`s. The browser asks the
+  broker for the site's decisions before showing page info. `:nappletHost` now applies the Compose
+  compiler and links the same JetBrains Compose libraries (Apache-2.0) the app already ships.
+- **Permissions:** Allow while visiting (remembered), Only this time (granted, not remembered), and
+  Don't allow (remembered). Dismissing the prompt denies the request once and remembers nothing.
+- **Clear site data** asks for confirmation inline, in both surfaces.
+- **Removed:** `NappletControlSheet`, `BrowserFindBar`, `NappletConsolePanel`, `BrowserJsDialogs`,
+  `BrowserChromeLabels`, `TopControlSheet`, `EmbeddedFindBar`, `BottomConsoleSheet`,
+  `EmbeddedPageDialogs`, `ConsoleLogEntry` and `BrowserWebTools.pageInfo`, plus the Android strings only
+  they used.
+
+Still open:
+- The sandboxed apps' "What it can access" is still a platform `AlertDialog`. It lists launch
+  capabilities, not browser state.
+- The embedded nsite/napplet tab has no find or text-size plumbing yet (`hasFind` / `hasTextSize` are
+  off there).

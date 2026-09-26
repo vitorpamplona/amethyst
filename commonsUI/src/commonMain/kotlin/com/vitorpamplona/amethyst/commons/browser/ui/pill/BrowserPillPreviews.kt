@@ -148,7 +148,7 @@ fun BrowserPillAddressEditorPreview() {
             expanded = true,
             onExpandedChange = {},
             onEvent = {},
-            suggestions = BrowserPillSamples.suggestions,
+            suggestionsFor = { BrowserPillSamples.suggestions },
             clipboardUrl = "https://njump.me/npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z",
             initiallyEditing = true,
         )

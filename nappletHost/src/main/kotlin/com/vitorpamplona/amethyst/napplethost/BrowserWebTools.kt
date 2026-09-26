@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.napplethost
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.net.http.SslCertificate
 import android.os.Build
 import android.os.SystemClock
 import android.webkit.CookieManager
@@ -40,6 +40,7 @@ import androidx.core.net.toUri
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
 import com.vitorpamplona.quartz.utils.Log
 import java.net.URISyntaxException
 import java.text.DateFormat
@@ -266,36 +267,47 @@ object BrowserWebTools {
 
     // ---- page info ----
 
-    /** The paragraphs of the page-info sheet for the page in [webView]. */
-    fun pageInfo(
-        context: Context,
-        webView: WebView,
-        torOn: Boolean?,
-    ): String {
-        val url = webView.url.orEmpty()
-        val lines = mutableListOf<String>()
-        lines +=
-            context.getString(
-                if (url.startsWith("https://", ignoreCase = true)) CommonsR.string.browser_page_info_https else CommonsR.string.browser_page_info_http,
+    /** The certificate of the page in [webView], for page info; null for a page without one. */
+    fun certificateInfo(webView: WebView): CertificateInfo? =
+        webView.certificate?.let { cert ->
+            CertificateInfo(
+                issuedTo = cert.issuedTo?.cName?.takeIf { it.isNotBlank() } ?: cert.issuedTo?.oName.orEmpty(),
+                issuedBy = cert.issuedBy?.oName?.takeIf { it.isNotBlank() } ?: cert.issuedBy?.cName.orEmpty(),
+                validUntil = cert.validNotAfterDate?.let { DateFormat.getDateInstance(DateFormat.MEDIUM).format(it) }.orEmpty(),
             )
-        if (torOn != null) {
-            lines += context.getString(if (torOn) CommonsR.string.browser_page_info_tor else CommonsR.string.browser_page_info_open_web)
         }
-        webView.certificate?.let { lines += certificateLine(context, it) }
-        return lines.joinToString("\n\n")
-    }
-
-    private fun certificateLine(
-        context: Context,
-        cert: SslCertificate,
-    ): String {
-        val to = cert.issuedTo?.cName?.takeIf { it.isNotBlank() } ?: cert.issuedTo?.oName.orEmpty()
-        val by = cert.issuedBy?.oName?.takeIf { it.isNotBlank() } ?: cert.issuedBy?.cName.orEmpty()
-        val until = cert.validNotAfterDate?.let { DateFormat.getDateInstance(DateFormat.MEDIUM).format(it) }.orEmpty()
-        return context.getString(CommonsR.string.browser_page_info_certificate, to, by, until)
-    }
 
     // ---- copy / share / other browser ----
+
+    /** Copies [text] with no confirmation of our own (Android 13+ shows one). */
+    fun copyText(
+        context: Context,
+        label: String,
+        text: String,
+    ) {
+        context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(label, text))
+    }
+
+    /**
+     * Whether "Paste and go" can be offered. Checks the clip's type only, never its contents, so Android
+     * doesn't toast a clipboard read every time the pill opens.
+     */
+    fun clipboardHasText(context: Context): Boolean {
+        val description = context.getSystemService(ClipboardManager::class.java)?.primaryClipDescription ?: return false
+        return description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+    }
+
+    /** The clipboard's text, trimmed; read only when the user asks to paste. */
+    fun clipboardText(context: Context): String? =
+        context
+            .getSystemService(ClipboardManager::class.java)
+            ?.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.coerceToText(context)
+            ?.toString()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
 
     fun copyToClipboard(
         context: Context,

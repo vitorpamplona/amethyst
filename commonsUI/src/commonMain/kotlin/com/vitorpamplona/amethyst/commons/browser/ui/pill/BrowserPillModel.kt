@@ -67,6 +67,9 @@ sealed interface BrowserPillEvent {
     /** The origin field was long-pressed (copy link). */
     data object CopyOrigin : BrowserPillEvent
 
+    /** The security badge at the start of the origin field was tapped: show page info. */
+    data object PageInfo : BrowserPillEvent
+
     data object Close : BrowserPillEvent
 }
 
