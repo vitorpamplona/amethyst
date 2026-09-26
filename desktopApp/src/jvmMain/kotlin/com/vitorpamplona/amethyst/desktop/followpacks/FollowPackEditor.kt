@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.followpacks
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 /**
  * Lightweight helpers for follow-pack viewing actions.
@@ -30,12 +30,12 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
  */
 object FollowPackEditor {
     /** Encodes the pack as a `nostr:naddr1…` URI for sharing via clipboard. */
-    fun toShareUri(pack: FollowListEvent): String {
+    fun toShareUri(pack: StarterPackEvent): String {
         val naddr =
             com.vitorpamplona.quartz.nip19Bech32.entities
                 .NAddress
                 .create(
-                    kind = FollowListEvent.KIND,
+                    kind = StarterPackEvent.KIND,
                     pubKeyHex = pack.pubKey,
                     dTag = pack.dTag(),
                     relays = emptyList(),
@@ -44,5 +44,5 @@ object FollowPackEditor {
     }
 
     /** Address coordinate (e.g. "39089:<pubkey>:<dTag>") — stable identity. */
-    fun aTag(pack: FollowListEvent): String = Address.assemble(FollowListEvent.KIND, pack.pubKey, pack.dTag())
+    fun aTag(pack: StarterPackEvent): String = Address.assemble(StarterPackEvent.KIND, pack.pubKey, pack.dTag())
 }

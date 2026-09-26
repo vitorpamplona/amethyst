@@ -331,16 +331,16 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -368,26 +368,26 @@ import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSet
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
@@ -395,19 +395,19 @@ import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -427,7 +427,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -437,9 +437,9 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
@@ -1145,7 +1145,7 @@ private fun RenderNoteRow(
             RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
-        is LongTextNoteEvent -> {
+        is LongFormContentEvent -> {
             RenderLongFormContent(baseNote, accountViewModel, nav)
         }
 
@@ -1171,7 +1171,7 @@ private fun RenderNoteRow(
             RenderCodeSnippetEvent(baseNote)
         }
 
-        is WikiNoteEvent -> {
+        is WikiArticleEvent -> {
             RenderWikiContent(baseNote, accountViewModel, nav)
         }
 
@@ -1191,7 +1191,7 @@ private fun RenderNoteRow(
             BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
         }
 
-        is LnZapEvent -> {
+        is ZapReceiptEvent -> {
             RenderLnZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
@@ -1215,11 +1215,11 @@ private fun RenderNoteRow(
             RenderFhirResource(baseNote, accountViewModel, nav)
         }
 
-        is PeopleListEvent -> {
+        is FollowSetEvent -> {
             DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
-        is FollowListEvent -> {
+        is StarterPackEvent -> {
             DisplayFollowList(baseNote, true, accountViewModel, nav)
         }
 
@@ -1231,7 +1231,7 @@ private fun RenderNoteRow(
             DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
         }
 
-        is ChatMessageRelayListEvent -> {
+        is DmRelayListEvent -> {
             DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
@@ -1251,7 +1251,7 @@ private fun RenderNoteRow(
             DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
-        is RelayFeedsListEvent -> {
+        is FavoriteRelayListEvent -> {
             DisplayRelayFeedsList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
@@ -1384,7 +1384,7 @@ private fun RenderNoteRow(
             )
         }
 
-        is PrivateDmEvent -> {
+        is EncryptedDmEvent -> {
             RenderPrivateMessage(
                 baseNote,
                 makeItShort,
@@ -1494,7 +1494,7 @@ private fun RenderNoteRow(
             RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
         }
 
-        is CalendarEvent -> {
+        is CalendarCollectionEvent -> {
             RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
         }
 
@@ -1502,7 +1502,7 @@ private fun RenderNoteRow(
             RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
         }
 
-        is GoalEvent -> {
+        is ZapGoalEvent -> {
             RenderGoal(baseNote, accountViewModel, nav)
         }
 
@@ -1550,7 +1550,7 @@ private fun RenderNoteRow(
             )
         }
 
-        is NIP90ContentDiscoveryResponseEvent -> {
+        is DvmContentDiscoveryResponseEvent -> {
             RenderNIP90ContentDiscoveryResponse(
                 baseNote,
                 makeItShort,
@@ -1562,7 +1562,7 @@ private fun RenderNoteRow(
             )
         }
 
-        is NIP90StatusEvent -> {
+        is DvmStatusEvent -> {
             RenderNIP90Status(
                 baseNote,
                 accountViewModel,
@@ -1640,7 +1640,7 @@ private fun RenderNoteRow(
             )
         }
 
-        is FileHeaderEvent -> {
+        is FileMetadataEvent -> {
             FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         }
 
@@ -1879,7 +1879,7 @@ private fun RenderNoteRow(
             RenderOldBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
-        is LabeledBookmarkListEvent -> {
+        is BookmarkSetEvent -> {
             RenderLabeledBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
@@ -1923,7 +1923,7 @@ private fun RenderNoteRow(
             RenderMediaStarterPack(baseNote, backgroundColor, accountViewModel, nav)
         }
 
-        is HashtagListEvent -> {
+        is InterestListEvent -> {
             RenderHashtagList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
@@ -2172,7 +2172,7 @@ fun FirstUserInfoRow(
         // Zap receipts are signed by the recipient's lightning provider; show the
         // sender from the embedded zap request instead of the service key.
         val zapSender =
-            if (baseNote.event is LnZapEvent) {
+            if (baseNote.event is ZapReceiptEvent) {
                 observeZapSender(baseNote, accountViewModel).value
             } else {
                 null
@@ -2411,7 +2411,7 @@ fun RenderAuthorImages(
         } else {
             NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
         }
-    } else if (noteEvent is LnZapEvent) {
+    } else if (noteEvent is ZapReceiptEvent) {
         // Zap receipts are signed by the recipient's lightning provider; show the
         // sender from the embedded zap request instead of the service key, matching
         // how the thread's master note resolves the author.

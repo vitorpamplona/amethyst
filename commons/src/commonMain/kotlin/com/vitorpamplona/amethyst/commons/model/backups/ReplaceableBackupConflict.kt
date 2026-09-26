@@ -32,18 +32,18 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
@@ -93,18 +93,18 @@ enum class BackupEventType {
                 ContactListEvent.KIND -> FOLLOW_LIST
                 MuteListEvent.KIND -> MUTE_LIST
                 AdvertisedRelayListEvent.KIND -> OUTBOX_INBOX_RELAYS
-                ChatMessageRelayListEvent.KIND -> DM_RELAYS
+                DmRelayListEvent.KIND -> DM_RELAYS
                 KeyPackageRelayListEvent.KIND -> KEY_PACKAGE_RELAYS
                 SearchRelayListEvent.KIND -> SEARCH_RELAYS
                 IndexerRelayListEvent.KIND -> INDEXER_RELAYS
-                RelayFeedsListEvent.KIND -> RELAY_FEEDS
+                FavoriteRelayListEvent.KIND -> RELAY_FEEDS
                 BlockedRelayListEvent.KIND -> BLOCKED_RELAYS
                 TrustedRelayListEvent.KIND -> TRUSTED_RELAYS
                 PrivateOutboxRelayListEvent.KIND -> PRIVATE_OUTBOX_RELAYS
                 AppSpecificDataEvent.KIND -> APP_SETTINGS
-                ChannelListEvent.KIND -> PUBLIC_CHATS
+                PublicChatListEvent.KIND -> PUBLIC_CHATS
                 CommunityListEvent.KIND -> COMMUNITIES
-                HashtagListEvent.KIND -> HASHTAGS
+                InterestListEvent.KIND -> HASHTAGS
                 GeohashListEvent.KIND -> GEOHASHES
                 FavoriteAlgoFeedsListEvent.KIND -> FAVORITE_ALGO_FEEDS
                 EphemeralChatListEvent.KIND -> EPHEMERAL_CHATS

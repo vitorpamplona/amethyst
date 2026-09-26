@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -56,7 +56,7 @@ fun LocalCache.cachedDvmAnnouncements(limit: Int = 100): List<AppDefinitionEvent
     addressables
         .filterIntoSet(AppDefinitionEvent.KIND) { _, note ->
             (note.event as? AppDefinitionEvent)?.let {
-                it.appMetaData()?.subscription != true && it.includeKind(NIP90ContentDiscoveryRequestEvent.KIND)
+                it.appMetaData()?.subscription != true && it.includeKind(DvmContentDiscoveryRequestEvent.KIND)
             } == true
         }.mapNotNull { it.event as? AppDefinitionEvent }
         .sortedByDescending { it.createdAt }

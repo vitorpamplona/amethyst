@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -71,7 +71,7 @@ object IcsExport {
      * haven't been fetched from relays yet.
      */
     fun calendarToIcs(
-        calendar: CalendarEvent,
+        calendar: CalendarCollectionEvent,
         memberEvents: List<Pair<Address, Any>>,
         nowSeconds: Long,
     ): String {
@@ -110,7 +110,7 @@ object IcsExport {
         return safeFilename(title ?: address.dTag) + ".ics"
     }
 
-    fun calendarFilename(calendar: CalendarEvent): String = safeFilename(calendar.title() ?: "calendar") + ".ics"
+    fun calendarFilename(calendar: CalendarCollectionEvent): String = safeFilename(calendar.title() ?: "calendar") + ".ics"
 
     private fun safeFilename(raw: String): String =
         raw

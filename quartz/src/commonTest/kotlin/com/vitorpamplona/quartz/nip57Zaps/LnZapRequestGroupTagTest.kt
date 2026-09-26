@@ -63,13 +63,13 @@ class LnZapRequestGroupTagTest {
     )
 
     private suspend fun zapRequestFor(zapped: Event) =
-        LnZapRequestEvent.create(
+        ZapRequestEvent.create(
             zappedEvent = zapped,
             relays = relays,
             signer = nostrSigner,
             pollOption = null,
             message = "",
-            zapType = LnZapEvent.ZapType.PUBLIC,
+            zapType = ZapReceiptEvent.ZapType.PUBLIC,
             toUserPubHex = null,
         )
 

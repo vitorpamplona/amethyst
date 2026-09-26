@@ -26,9 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 
-val ContactCardKindList = listOf(ContactCardEvent.KIND)
+val ContactCardKindList = listOf(UserAssertionEvent.KIND)
 
 /**
  * Kind:30382 cards *about* [targets], written by [trustedAccounts] (the account

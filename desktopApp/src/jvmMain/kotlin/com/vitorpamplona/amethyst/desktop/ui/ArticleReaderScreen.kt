@@ -91,11 +91,11 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.highlights.ArticleHighlightsPanel
 import com.vitorpamplona.amethyst.desktop.ui.highlights.HighlightAnnotationDialog
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -144,7 +144,7 @@ fun ArticleReaderScreen(
     val dTag = parsed?.third
 
     // Article state
-    var article by remember(addressTag) { mutableStateOf<LongTextNoteEvent?>(null) }
+    var article by remember(addressTag) { mutableStateOf<LongFormContentEvent?>(null) }
     var eoseReceived by remember(addressTag) { mutableStateOf(false) }
 
     // Zoom level for article text
@@ -212,7 +212,7 @@ fun ArticleReaderScreen(
             filters = listOf(FilterBuilders.longFormByAddress(pubkey, dTag)),
             relays = configuredRelays,
             onEvent = { event, _, _, _ ->
-                if (event is LongTextNoteEvent) {
+                if (event is LongFormContentEvent) {
                     // Keep the most recent version
                     val current = article
                     if (current == null || event.createdAt > current.createdAt) {
@@ -246,7 +246,7 @@ fun ArticleReaderScreen(
             relays = configuredRelays,
             eventIds = eventIds,
             onEvent = { event, _, _, _ ->
-                if (event is LnZapEvent) {
+                if (event is ZapReceiptEvent) {
                     val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
                     if (zapReceipts.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
                         zapReceipts = zapReceipts + receipt

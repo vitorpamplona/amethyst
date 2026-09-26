@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 open class DiscoverFollowSetsFeedFilter(
     val account: Account,
@@ -49,9 +49,9 @@ open class DiscoverFollowSetsFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.addressables.filterIntoSet(FollowListEvent.KIND) { _, it ->
+            LocalCache.addressables.filterIntoSet(StarterPackEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is FollowListEvent && params.match(noteEvent, it.relays)
+                noteEvent is StarterPackEvent && params.match(noteEvent, it.relays)
             }
 
         return sort(notes)
@@ -70,7 +70,7 @@ open class DiscoverFollowSetsFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is FollowListEvent && params.match(noteEvent, it.relays)
+            noteEvent is StarterPackEvent && params.match(noteEvent, it.relays)
         }
     }
 

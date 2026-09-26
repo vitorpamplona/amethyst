@@ -221,28 +221,28 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
@@ -251,19 +251,19 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -278,31 +278,31 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
@@ -310,7 +310,7 @@ import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
@@ -320,13 +320,13 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
@@ -335,7 +335,7 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -360,20 +360,20 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -381,13 +381,13 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.DvmUserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -502,7 +502,7 @@ open class EventCache :
     val bolt12ZapValidator = Bolt12ZapValidator()
 
     /**
-     * Resolver for LNURL provider metadata used by [consume]`(LnZapEvent)` to
+     * Resolver for LNURL provider metadata used by [consume]`(ZapReceiptEvent)` to
      * validate NIP-57 Appendix F. `null` skips the receipt-signer check (the
      * receipt is still accepted on signature verification alone — matches legacy
      * behavior); set this in app init so receipts can be verified against the
@@ -1210,7 +1210,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: LongTextNoteEvent,
+        event: LongFormContentEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -1298,7 +1298,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: WikiNoteEvent,
+        event: WikiArticleEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -1347,7 +1347,7 @@ open class EventCache :
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is LongTextNoteEvent -> {
+            is LongFormContentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
@@ -1405,7 +1405,7 @@ open class EventCache :
                 event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is LnZapEvent -> {
+            is ZapReceiptEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
                     (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
@@ -1438,11 +1438,11 @@ open class EventCache :
                 // The zapped event is carried in the kind:9321's `e` tags
                 // (and optionally an `a` tag for addressables). Whichever
                 // notes those resolve to receive the nutzap entry —
-                // analogous to how LnZapEvent flows into `addZap`.
+                // analogous to how ZapReceiptEvent flows into `addZap`.
                 event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is LnZapRequestEvent -> {
+            is ZapRequestEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
@@ -1456,7 +1456,7 @@ open class EventCache :
                 event.awardDefinition().map { getOrCreateAddressableNote(it) }
             }
 
-            is PrivateDmEvent -> {
+            is EncryptedDmEvent -> {
                 event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             }
 
@@ -1557,7 +1557,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: StatusEvent,
+        event: UserStatusEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -1577,7 +1577,7 @@ open class EventCache :
     fun AddressableEvent.toAddressableNote() = getOrCreateAddressableNote(address())
 
     fun consume(
-        event: ContactCardEvent,
+        event: UserAssertionEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -1667,7 +1667,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: DeletionEvent,
+        event: DeletionRequestEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -2245,13 +2245,13 @@ open class EventCache :
 
     /** NIP-29 relay-declared supported roles (kind 39003) → the group's role set. */
     fun consume(
-        event: SupportedRolesEvent,
+        event: GroupRolesEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
         if (relay != null && isRelaySignedGroupEvent(event, relay)) {
-            val latest = getOrCreateAddressableNote(event.address()).event as? SupportedRolesEvent
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupRolesEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateSupportedRoles(it) }
         }
         return new
@@ -2661,7 +2661,7 @@ open class EventCache :
     ): Boolean = false
 
     fun consume(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -2687,7 +2687,7 @@ open class EventCache :
 
         val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
-        if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
+        if (zapRequest == null || zapRequest.event !is ZapRequestEvent) {
             Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
             return false
         }
@@ -2788,7 +2788,7 @@ open class EventCache :
      * zap target). Returns null if we have no metadata, or the user has neither
      * lud16 nor lud06.
      */
-    private fun recipientLnurl(event: LnZapEvent): String? {
+    private fun recipientLnurl(event: ZapReceiptEvent): String? {
         val recipientPubkey = event.zappedAuthor().firstOrNull() ?: return null
         val user = getUserIfExists(recipientPubkey) ?: return null
         return user.lnAddress()?.takeIf { it.isNotBlank() }
@@ -2925,7 +2925,7 @@ open class EventCache :
     }
 
     private fun attachZapToLiveActivityChannel(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         note: Note,
         relay: NormalizedRelayUrl?,
     ) {
@@ -2963,7 +2963,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -3166,7 +3166,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: LnZapPaymentRequestEvent,
+        event: NwcRequestEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -3175,11 +3175,11 @@ open class EventCache :
     }
 
     fun consume(
-        event: LnZapPaymentRequestEvent,
+        event: NwcRequestEvent,
         zappedNote: Note?,
         wasVerified: Boolean,
         relay: NormalizedRelayUrl?,
-        onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        onResponse: suspend (NwcResponseEvent) -> Unit,
     ): Boolean {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -3213,7 +3213,7 @@ open class EventCache :
     }
 
     fun consume(
-        event: LnZapPaymentResponseEvent,
+        event: NwcResponseEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
@@ -3285,7 +3285,7 @@ open class EventCache :
         return false
     }
 
-    fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
+    fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(FollowSetEvent.KIND, user.pubkeyHex)
 
     override fun markAsSeen(
         eventId: String,
@@ -3584,7 +3584,7 @@ open class EventCache :
                 is ChannelMetadataEvent -> consume(event, relay, wasVerified)
                 is ChannelMuteUserEvent -> consume(event, relay, wasVerified)
                 is CommunityPostApprovalEvent -> consume(event, relay, wasVerified)
-                is DeletionEvent -> consume(event, relay, wasVerified)
+                is DeletionRequestEvent -> consume(event, relay, wasVerified)
                 is DraftWrapEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)
                 is GeohashChatEvent -> consume(event, relay, wasVerified)
@@ -3595,7 +3595,7 @@ open class EventCache :
 
                 // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
                 // route it onto the channel so a moderation UI can offer the relay's role set.
-                is SupportedRolesEvent -> consume(event, relay, wasVerified)
+                is GroupRolesEvent -> consume(event, relay, wasVerified)
 
                 is GenericRepostEvent -> consume(event, relay, wasVerified)
                 is FileStorageEvent -> consume(event, relay, wasVerified)
@@ -3627,26 +3627,26 @@ open class EventCache :
                     }
                 }
 
-                is LnZapEvent -> consume(event, relay, wasVerified)
-                is LnZapRequestEvent -> consume(event, relay, wasVerified)
+                is ZapReceiptEvent -> consume(event, relay, wasVerified)
+                is ZapRequestEvent -> consume(event, relay, wasVerified)
                 is OnchainZapEvent -> consume(event, relay, wasVerified)
                 is Bolt12ZapEvent -> consume(event, relay, wasVerified)
-                is LnZapPaymentRequestEvent -> consume(event, relay, wasVerified)
-                is LnZapPaymentResponseEvent -> consume(event, relay, wasVerified)
-                is LongTextNoteEvent -> consume(event, relay, wasVerified)
+                is NwcRequestEvent -> consume(event, relay, wasVerified)
+                is NwcResponseEvent -> consume(event, relay, wasVerified)
+                is LongFormContentEvent -> consume(event, relay, wasVerified)
                 is MetadataEvent -> consume(event, relay, wasVerified)
                 is NipTextEvent -> consume(event, relay, wasVerified)
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is LabelEvent -> consume(event, relay, wasVerified)
-                is ContactCardEvent -> consume(event, relay, wasVerified)
+                is UserAssertionEvent -> consume(event, relay, wasVerified)
                 is ReportEvent -> consume(event, relay, wasVerified)
                 is RepostEvent -> consume(event, relay, wasVerified)
-                is StatusEvent -> consume(event, relay, wasVerified)
+                is UserStatusEvent -> consume(event, relay, wasVerified)
                 is TextNoteModificationEvent -> consume(event, relay, wasVerified)
                 is ConcordChatEditEvent -> consume(event, relay, wasVerified)
-                is WikiNoteEvent -> consume(event, relay, wasVerified)
+                is WikiArticleEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
 
                 is ChatEvent -> {
@@ -3671,7 +3671,7 @@ open class EventCache :
                 // Buzz workspace kinds (block/buzz — the Buzz dialect of NIP-29).
                 // Timeline kinds attach into the group's BuzzWorkspaceChannel; the
                 // rest are stored for query/state. Kinds 9041/39005/49001 are absent
-                // on purpose: their numbers belong to GoalEvent, GroupPinnedEvent and
+                // on purpose: their numbers belong to ZapGoalEvent, GroupPinnedEvent and
                 // a non-wire audit kind. Kind 20001 is shared with GeohashPresenceEvent
                 // (BitChat); EventFactory routes it to PresenceUpdateEvent only when the
                 // BitChat `g` tag is absent, and it is handled below with the ephemerals.
@@ -3799,14 +3799,14 @@ open class EventCache :
                 is BroadcastRelayListEvent,
                 is BookmarkListEvent,
                 is OldBookmarkListEvent,
-                is CalendarEvent,
+                is CalendarCollectionEvent,
                 is CalendarDateSlotEvent,
                 is CalendarTimeSlotEvent,
                 is CalendarRSVPEvent,
                 is CashuWalletEvent,
                 is NutzapInfoEvent,
-                is ChannelListEvent,
-                is ChatMessageRelayListEvent,
+                is PublicChatListEvent,
+                is DmRelayListEvent,
                 is Bolt12OfferListEvent,
                 is ClassifiedsEvent,
                 is FundraiserEvent,
@@ -3825,7 +3825,7 @@ open class EventCache :
                         DvmHeartbeatRegistry.record(event.address(), event.createdAt)
                     }
                 is EmojiPackEvent,
-                is EmojiPackSelectionEvent,
+                is EmojiListEvent,
                 is EphemeralChatListEvent,
                 // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups +
                 // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
@@ -3840,7 +3840,7 @@ open class EventCache :
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
                 is FileServersEvent,
-                is FollowListEvent,
+                is StarterPackEvent,
                 is GeocacheListingEvent,
                 is GeocacheCurationListEvent,
                 is GeohashListEvent,
@@ -3854,7 +3854,7 @@ open class EventCache :
                 is NamedSiteEvent,
                 is RootNappletEvent,
                 is NamedNappletEvent,
-                is RelayFeedsListEvent,
+                is FavoriteRelayListEvent,
                 is KeyPackageEvent,
                 is KeyPackageRelayListEvent,
                 is LiveChessGameChallengeEvent,
@@ -3862,14 +3862,14 @@ open class EventCache :
                 is LiveChessMoveEvent,
                 is LiveChessGameEndEvent,
                 is LiveChessDrawOfferEvent,
-                is HashtagListEvent,
+                is InterestListEvent,
                 is FavoriteAlgoFeedsListEvent,
                 is IndexerRelayListEvent,
                 is InteractiveStoryPrologueEvent,
                 is InteractiveStorySceneEvent,
                 is InteractiveStoryReadingStateEvent,
                 is InterestSetEvent,
-                is LabeledBookmarkListEvent,
+                is BookmarkSetEvent,
                 is MeetingSpaceEvent,
                 is MeetingRoomEvent,
                 is MusicTrackEvent,
@@ -3884,7 +3884,7 @@ open class EventCache :
                 is ProfileBadgesEvent,
                 is ProxyRelayListEvent,
                 is PinListEvent,
-                is PeopleListEvent,
+                is FollowSetEvent,
                 // Buzz addressable/replaceable state.
                 is PersonaEvent,
                 is TeamEvent,
@@ -3904,8 +3904,8 @@ open class EventCache :
                 is SoftwareApplicationEvent,
                 is TrustedRelayListEvent,
                 is TrustProviderListEvent,
-                is VideoHorizontalEvent,
-                is VideoVerticalEvent,
+                is AddressableNormalVideoEvent,
+                is AddressableShortVideoEvent,
                 is TextTrackEvent,
                 is VideoCollaborationEvent,
                 is VideoCurationSetEvent,
@@ -3953,21 +3953,21 @@ open class EventCache :
                 // one-shot events the relay is authoritative for (it applies them and
                 // republishes the 39000/39001/39002); we store them so they're queryable,
                 // but we don't act on them client-side.
-                is PutUserEvent,
-                is RemoveUserEvent,
-                is EditMetadataEvent,
-                is DeleteEventEvent,
-                is UpdatePinListEvent,
+                is GroupPutUserEvent,
+                is GroupRemoveUserEvent,
+                is GroupEditMetadataEvent,
+                is GroupDeleteEventEvent,
+                is GroupUpdatePinListEvent,
                 is DeleteGroupEvent,
                 is CreateGroupEvent,
-                is CreateInviteEvent,
-                is JoinRequestEvent,
-                is LeaveRequestEvent,
+                is GroupCreateInviteEvent,
+                is GroupJoinRequestEvent,
+                is GroupLeaveRequestEvent,
                 is FhirResourceEvent,
-                is FileHeaderEvent,
+                is FileMetadataEvent,
                 is ProfileGalleryEntryEvent,
                 is FileStorageHeaderEvent,
-                is GoalEvent,
+                is ZapGoalEvent,
                 is GroupEvent,
                 is GitIssueEvent,
                 is GitReplyEvent,
@@ -3980,13 +3980,13 @@ open class EventCache :
                 is JesterEvent,
                 is HighlightEvent,
                 is PodcastEpisodeEvent,
-                is NIP90StatusEvent,
-                is NIP90ContentDiscoveryResponseEvent,
-                is NIP90ContentDiscoveryRequestEvent,
-                is NIP90UserDiscoveryResponseEvent,
-                is NIP90UserDiscoveryRequestEvent,
+                is DvmStatusEvent,
+                is DvmContentDiscoveryResponseEvent,
+                is DvmContentDiscoveryRequestEvent,
+                is DvmUserDiscoveryResponseEvent,
+                is DvmUserDiscoveryRequestEvent,
                 is PictureEvent,
-                is PrivateDmEvent,
+                is EncryptedDmEvent,
                 is PublicMessageEvent,
                 is RequestToVanishEvent,
                 is CodeSnippetEvent,
@@ -4000,7 +4000,7 @@ open class EventCache :
                 is GeocacheVerificationEvent,
                 is RoadEventReportEvent,
                 is RoadEventConfirmationEvent,
-                is SealedRumorEvent,
+                is SealEvent,
                 is SoftwareAssetEvent,
                 is ExternalReactionEvent,
                 is ExternalCitationEvent,

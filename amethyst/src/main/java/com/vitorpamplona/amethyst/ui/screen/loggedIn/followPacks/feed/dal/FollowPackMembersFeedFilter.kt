@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.checkGetOrCreateUser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 class FollowPackMembersFeedFilter(
     val followPackNote: AddressableNote,
@@ -33,10 +33,10 @@ class FollowPackMembersFeedFilter(
 ) : FeedFilter<User>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followPackNote.idHex
 
-    val cache: MutableMap<FollowListEvent, List<User>> = mutableMapOf()
+    val cache: MutableMap<StarterPackEvent, List<User>> = mutableMapOf()
 
     override fun feed(): List<User> {
-        val followPackEvent = followPackNote.event as? FollowListEvent ?: return emptyList()
+        val followPackEvent = followPackNote.event as? StarterPackEvent ?: return emptyList()
 
         val previousList = cache[followPackEvent]
         if (previousList != null) return previousList

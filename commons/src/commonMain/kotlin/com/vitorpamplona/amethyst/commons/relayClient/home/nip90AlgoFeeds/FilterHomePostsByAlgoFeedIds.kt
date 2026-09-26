@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 
 /**
  * Builds relay REQ filters for a favorite-DVM home feed.
@@ -112,8 +112,8 @@ private fun responseListenFilter(
             purpose = SubPurpose.HOME_FEED,
             kinds =
                 listOf(
-                    NIP90ContentDiscoveryResponseEvent.KIND,
-                    NIP90StatusEvent.KIND,
+                    DvmContentDiscoveryResponseEvent.KIND,
+                    DvmStatusEvent.KIND,
                 ),
             tags = mapOf("e" to requestIds),
             limit = 10 * requestIds.size,

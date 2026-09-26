@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -55,14 +55,14 @@ class UserProfileZapsViewModel(
 ) : ViewModel() {
     val zapsToUser =
         Filter(
-            kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
+            kinds = listOf(ZapReceiptEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
             tags = mapOf("p" to listOf(user.pubkeyHex)),
         )
 
     val sortingModel: Comparator<ZapAmount> =
         compareByDescending<ZapAmount> { it.amount }.thenBy { it.user.pubkeyHex }
 
-    suspend fun mapRequest(zapEvent: LnZapEvent): ZapAmount? {
+    suspend fun mapRequest(zapEvent: ZapReceiptEvent): ZapAmount? {
         val zapRequest =
             zapEvent.zapRequest ?: return ZapAmount(
                 LocalCache.getOrCreateUser(zapEvent.pubKey),
@@ -122,7 +122,7 @@ class UserProfileZapsViewModel(
         this.forEach { zapEvent ->
             val zapAmount =
                 when (zapEvent) {
-                    is LnZapEvent -> mapRequest(zapEvent)
+                    is ZapReceiptEvent -> mapRequest(zapEvent)
                     is OnchainZapEvent -> mapOnchainZap(zapEvent)
                     is Bolt12ZapEvent -> mapBolt12Zap(zapEvent)
                     else -> null

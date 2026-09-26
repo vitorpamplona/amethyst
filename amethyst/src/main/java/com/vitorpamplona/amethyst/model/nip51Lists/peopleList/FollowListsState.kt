@@ -35,8 +35,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.description
 import com.vitorpamplona.quartz.nip51Lists.followList.image
 import com.vitorpamplona.quartz.nip51Lists.followList.person
@@ -79,7 +79,7 @@ class FollowListsState(
     // them from relays.
     fun existingPeopleListNotes() =
         cache.addressables
-            .filter(FollowListEvent.KIND, user.pubkeyHex)
+            .filter(StarterPackEvent.KIND, user.pubkeyHex)
             .filter { it.event != null || !cache.hasBeenDeleted(it.address) }
 
     val followListVersions = MutableStateFlow(0)
@@ -99,14 +99,14 @@ class FollowListsState(
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val latestLists: StateFlow<List<FollowListEvent>> =
+    val latestLists: StateFlow<List<StarterPackEvent>> =
         followListNotes
-            .transformLatest { emitAll(it.updateFlow<FollowListEvent>()) }
+            .transformLatest { emitAll(it.updateFlow<StarterPackEvent>()) }
             .onStart { emit(followListNotes.value.events()) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    fun List<FollowListEvent>.mapToUserIdSet() = this.map { it.followIdSet() }.flattenToSet()
+    fun List<StarterPackEvent>.mapToUserIdSet() = this.map { it.followIdSet() }.flattenToSet()
 
     val allPeopleListProfiles: StateFlow<Set<HexKey>> =
         latestLists
@@ -115,7 +115,7 @@ class FollowListsState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
-    fun FollowListEvent.toUI() =
+    fun StarterPackEvent.toUI() =
         PeopleList(
             identifierTag = this.dTag(),
             title = this.title() ?: this.dTag(),
@@ -125,7 +125,7 @@ class FollowListsState(
             publicMembers = cache.load(this.followIdSet()),
         )
 
-    fun List<FollowListEvent>.toUI() = this.map { it.toUI() }
+    fun List<StarterPackEvent>.toUI() = this.map { it.toUI() }
 
     val uiListFlow =
         latestLists
@@ -148,12 +148,12 @@ class FollowListsState(
 
     fun isUserInFollowSets(user: User): Boolean = allPeopleListProfiles.value.contains(user.pubkeyHex)
 
-    fun DeletionEvent.hasDeletedAnyFollowList() = deleteAddressesWithKind(FollowListEvent.KIND) || deletesAnyEventIn(followListsEventIds.value)
+    fun DeletionRequestEvent.hasDeletedAnyFollowList() = deleteAddressesWithKind(StarterPackEvent.KIND) || deletesAnyEventIn(followListsEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->
             if (event.pubKey == signer.pubKey) {
-                event is FollowListEvent || (event is DeletionEvent && event.hasDeletedAnyFollowList())
+                event is StarterPackEvent || (event is DeletionRequestEvent && event.hasDeletedAnyFollowList())
             } else {
                 false
             }
@@ -181,7 +181,7 @@ class FollowListsState(
 
     fun getPeopleListNote(noteIdentifier: String): AddressableNote? = existingPeopleListNotes().find { it.dTag() == noteIdentifier }
 
-    fun getPeopleList(noteIdentifier: String): FollowListEvent = getPeopleListNote(noteIdentifier)?.event as FollowListEvent
+    fun getPeopleList(noteIdentifier: String): StarterPackEvent = getPeopleListNote(noteIdentifier)?.event as StarterPackEvent
 
     fun User.toUserTag() = UserTag(this.pubkeyHex, this.bestRelayHint())
 
@@ -198,7 +198,7 @@ class FollowListsState(
         val dTag = UUID.randomUUID().toString()
 
         val newListTemplate =
-            FollowListEvent.build(
+            StarterPackEvent.build(
                 name = name,
                 people = if (!isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
                 dTag = dTag,
@@ -262,7 +262,7 @@ class FollowListsState(
         account: Account,
     ) {
         val followListEvent = getPeopleList(identifierTag)
-        val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followListEvent)))
+        val deletionEvent = account.signer.sign(DeletionRequestEvent.build(listOf(followListEvent)))
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
         // Any screen whose persisted feed filter still points at this follow pack would
         // keep re-creating an empty shell for its address (and render the dTag/UUID in

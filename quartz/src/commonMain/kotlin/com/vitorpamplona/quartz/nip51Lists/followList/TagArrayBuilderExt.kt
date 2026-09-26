@@ -28,24 +28,24 @@ import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
-fun TagArrayBuilder<FollowListEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<StarterPackEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
-fun TagArrayBuilder<FollowListEvent>.description(desc: String) = addUnique(DescriptionTag.assemble(desc))
+fun TagArrayBuilder<StarterPackEvent>.description(desc: String) = addUnique(DescriptionTag.assemble(desc))
 
-fun TagArrayBuilder<FollowListEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<StarterPackEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
 
-fun TagArrayBuilder<FollowListEvent>.people(peoples: List<UserTag>) = addAll(peoples.map { it.toTagArray() })
+fun TagArrayBuilder<StarterPackEvent>.people(peoples: List<UserTag>) = addAll(peoples.map { it.toTagArray() })
 
-fun TagArrayBuilder<FollowListEvent>.person(person: UserTag) = add(person.toTagArray())
+fun TagArrayBuilder<StarterPackEvent>.person(person: UserTag) = add(person.toTagArray())
 
-fun TagArrayBuilder<FollowListEvent>.person(
+fun TagArrayBuilder<StarterPackEvent>.person(
     pubkey: HexKey,
     relayHint: NormalizedRelayUrl?,
 ) = add(UserTag.assemble(pubkey, relayHint))
 
-fun TagArrayBuilder<FollowListEvent>.personFirst(
+fun TagArrayBuilder<StarterPackEvent>.personFirst(
     pubkey: HexKey,
     relayHint: NormalizedRelayUrl?,
 ) = addFirst(UserTag.assemble(pubkey, relayHint))
 
-fun TagArrayBuilder<FollowListEvent>.removePerson(pubkey: HexKey) = remove(UserTag.TAG_NAME, pubkey)
+fun TagArrayBuilder<StarterPackEvent>.removePerson(pubkey: HexKey) = remove(UserTag.TAG_NAME, pubkey)

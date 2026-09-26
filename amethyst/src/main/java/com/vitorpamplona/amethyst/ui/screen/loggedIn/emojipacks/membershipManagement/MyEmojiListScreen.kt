@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 // Screen that lets the logged-in user inspect the contents of their kind 10030 selection
@@ -102,7 +102,7 @@ private fun MyEmojiListView(
             TopBarWithBackButton(caption = stringRes(Res.string.my_emoji_list_title), nav)
         },
     ) { contentPadding ->
-        val packAddresses by observeNoteEventAndMap<EmojiPackSelectionEvent, List<Address>>(
+        val packAddresses by observeNoteEventAndMap<EmojiListEvent, List<Address>>(
             selectionNote,
             accountViewModel,
         ) { event ->

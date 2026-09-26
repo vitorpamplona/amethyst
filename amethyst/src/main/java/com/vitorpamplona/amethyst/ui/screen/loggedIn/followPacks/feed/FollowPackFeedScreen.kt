@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.Follow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -309,7 +309,7 @@ private fun DisplayBanner(
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val noteEvent by observeNoteEvent<FollowListEvent>(baseNote, accountViewModel)
+    val noteEvent by observeNoteEvent<StarterPackEvent>(baseNote, accountViewModel)
 
     noteEvent?.image()?.let {
         AsyncImage(
@@ -327,7 +327,7 @@ fun FollowPackHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<FollowListEvent>(baseNote, accountViewModel)
+    val noteEvent by observeNoteEvent<StarterPackEvent>(baseNote, accountViewModel)
 
     Text(
         text = noteEvent?.title() ?: baseNote.dTag(),

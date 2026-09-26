@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -66,7 +66,7 @@ class CalendarHintProviderTest {
         )
 
     private fun calendar(vararg tags: Array<String>) =
-        CalendarEvent(
+        CalendarCollectionEvent(
             id = "33".repeat(32),
             pubKey = host,
             createdAt = 1700000000,

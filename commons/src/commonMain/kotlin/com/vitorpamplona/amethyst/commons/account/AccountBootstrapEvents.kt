@@ -33,11 +33,11 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -58,12 +58,12 @@ data class AccountBootstrapEvents(
     val userMetadata: MetadataEvent,
     val contactList: ContactListEvent,
     val nip65RelayList: AdvertisedRelayListEvent,
-    val dmRelayList: ChatMessageRelayListEvent,
+    val dmRelayList: DmRelayListEvent,
     val keyPackageRelayList: KeyPackageRelayListEvent,
     val searchRelayList: SearchRelayListEvent,
     val indexerRelayList: IndexerRelayListEvent,
-    val channelList: ChannelListEvent,
-    val relayFeedsList: RelayFeedsListEvent,
+    val channelList: PublicChatListEvent,
+    val relayFeedsList: FavoriteRelayListEvent,
 ) {
     /** All nine signed events in publication order. */
     fun all(): List<com.vitorpamplona.quartz.nip01Core.core.Event> =
@@ -102,13 +102,13 @@ fun bootstrapAccountEvents(
                 signer = signer,
             ),
         nip65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, signer),
-        dmRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, signer),
+        dmRelayList = DmRelayListEvent.create(DefaultDMRelayList, signer),
         // MIP-00: advertise the default outbox relays as KeyPackage hosts
         // so other users can discover and fetch this account's KeyPackage
         // events without having to guess where they were published.
         keyPackageRelayList = KeyPackageRelayListEvent.create(DefaultNIP65RelaySet.toList(), signer),
         searchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), signer),
         indexerRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), signer),
-        channelList = ChannelListEvent.create(emptyList(), DefaultChannels, signer),
-        relayFeedsList = RelayFeedsListEvent.create(DefaultGlobalRelays, signer),
+        channelList = PublicChatListEvent.create(emptyList(), DefaultChannels, signer),
+        relayFeedsList = FavoriteRelayListEvent.create(DefaultGlobalRelays, signer),
     )

@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
@@ -153,7 +153,7 @@ private fun ReactionsCollector(
  * floating zap-overlay aggregator. The same note flows two places:
  *
  *   1. [NestViewModel.onChatEvent] — `ChatroomMessageCompose` routes
- *      `LnZapEvent` notes through `RenderChatZap`, which is the same
+ *      `ZapReceiptEvent` notes through `RenderChatZap`, which is the same
  *      card live streams use. Sharing the chat ledger keeps zap
  *      cards interleaved with kind-1311 chat messages in time order.
  *
@@ -169,14 +169,14 @@ private fun ZapsCollector(
     LaunchedEffect(viewModel, roomATag) {
         val filter =
             Filter(
-                kinds = listOf(LnZapEvent.KIND, Bolt12ZapEvent.KIND),
+                kinds = listOf(ZapReceiptEvent.KIND, Bolt12ZapEvent.KIND),
                 tags = mapOf("a" to listOf(roomATag)),
             )
         LocalCache.observeNotes(filter).collect { notes ->
             val nowSec = System.currentTimeMillis() / 1000
             notes.forEach { note ->
                 viewModel.onChatEvent(note)
-                (note.event as? LnZapEvent)?.let { viewModel.onZapEvent(it, nowSec) }
+                (note.event as? ZapReceiptEvent)?.let { viewModel.onZapEvent(it, nowSec) }
                 (note.event as? Bolt12ZapEvent)?.let { viewModel.onZapEvent(it, nowSec) }
             }
         }

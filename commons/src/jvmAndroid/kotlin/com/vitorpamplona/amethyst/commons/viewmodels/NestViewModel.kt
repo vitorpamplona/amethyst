@@ -629,7 +629,7 @@ class NestViewModel(
      * same window so the visual cadence matches the React button.
      */
     fun onZapEvent(
-        event: com.vitorpamplona.quartz.nip57Zaps.LnZapEvent,
+        event: com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent,
         nowSec: Long,
         windowSec: Long = REACTION_WINDOW_SEC,
     ) {

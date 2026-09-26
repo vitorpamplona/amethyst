@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * The delivery flow:
  *   WelcomeEvent (unsigned rumor, kind:444)
- *     → SealedRumorEvent (kind:13, encrypted with sender's key)
+ *     → SealEvent (kind:13, encrypted with sender's key)
  *       → GiftWrapEvent (kind:1059, encrypted with ephemeral key to recipient)
  *
  * CRITICAL: The Commit that adds the new member MUST be confirmed by relays
@@ -64,7 +64,7 @@ object WelcomeGiftWrap {
     ): GiftWrapEvent {
         // Step 1: Build the WelcomeEvent template directly as an unsigned rumor.
         // Per NIP-59 rumors MUST have an empty sig field, so we skip the outer
-        // signature entirely and let the SealedRumorEvent carry authorship.
+        // signature entirely and let the SealEvent carry authorship.
         val welcomeTemplate =
             WelcomeEvent.build(
                 welcomeBase64 = welcomeBase64,
@@ -82,7 +82,7 @@ object WelcomeGiftWrap {
         // Step 2: Create a Rumor from the unsigned event and seal it (kind:13)
         val rumor = Rumor.create(welcomeRumor)
         val sealedRumor =
-            SealedRumorEvent.create(
+            SealEvent.create(
                 rumor = rumor,
                 encryptTo = recipientPubKey,
                 signer = signer,

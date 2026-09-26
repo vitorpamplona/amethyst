@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlin.math.abs
 
 /**
@@ -96,7 +96,7 @@ internal const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
  */
 private fun isGroupableEvent(event: Event?): Boolean =
     event != null &&
-        event !is LnZapEvent &&
+        event !is ZapReceiptEvent &&
         event !is LiveActivitiesRaidEvent &&
         event !is LiveActivitiesClipEvent &&
         event !is ChannelCreateEvent &&

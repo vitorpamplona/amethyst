@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 fun filterFollowSetsByHashtag(
     relay: NormalizedRelayUrl,
@@ -44,7 +44,7 @@ fun filterFollowSetsByHashtag(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.FOLLOW_LISTS,
-                    kinds = listOf(FollowListEvent.KIND),
+                    kinds = listOf(StarterPackEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 300,
                     since = since,

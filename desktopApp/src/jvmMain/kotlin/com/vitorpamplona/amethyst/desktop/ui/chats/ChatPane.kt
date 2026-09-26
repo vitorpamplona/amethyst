@@ -125,7 +125,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
 import com.vitorpamplona.amethyst.desktop.ui.note.DesktopRichText
 import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -714,7 +714,7 @@ private fun MessageWithReactions(
     LaunchedEffect(note.idHex, event) {
         decryptedContent =
             when (event) {
-                is PrivateDmEvent -> {
+                is EncryptedDmEvent -> {
                     try {
                         event.decryptContent(account.signer)
                     } catch (_: Exception) {
@@ -776,7 +776,7 @@ private fun MessageWithReactions(
                     ) {
                         // Encryption badge
                         when (event) {
-                            is PrivateDmEvent -> {
+                            is EncryptedDmEvent -> {
                                 Icon(
                                     MaterialSymbols.LockOpen,
                                     contentDescription = "NIP-04 (legacy)",
@@ -947,7 +947,7 @@ private fun MessageReplyContext(
         preview =
             when (val e = parent.event) {
                 is ChatMessageEncryptedFileHeaderEvent -> "📎 Attachment"
-                is PrivateDmEvent ->
+                is EncryptedDmEvent ->
                     try {
                         e.decryptContent(account.signer)
                     } catch (_: Exception) {
@@ -1076,7 +1076,7 @@ private fun ReplyPreviewBar(
         preview =
             when (event) {
                 is ChatMessageEncryptedFileHeaderEvent -> "📎 Attachment"
-                is PrivateDmEvent ->
+                is EncryptedDmEvent ->
                     try {
                         event.decryptContent(account.signer)
                     } catch (_: Exception) {

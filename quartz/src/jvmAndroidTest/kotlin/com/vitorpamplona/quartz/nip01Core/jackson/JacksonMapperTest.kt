@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.jackson
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -46,7 +46,7 @@ class JacksonMapperTest {
         )
 
     val followCard =
-        FollowListEvent(
+        StarterPackEvent(
             id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
             pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
             createdAt = 1761736286,

@@ -25,7 +25,7 @@ package com.vitorpamplona.quartz.nip57Zaps
  * Used by Note.kt for checking private zap status.
  */
 interface IPrivateZapsDecryptionCache {
-    fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
+    fun cachedPrivateZap(event: ZapRequestEvent): LnZapPrivateEvent?
 
-    suspend fun decryptPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
+    suspend fun decryptPrivateZap(event: ZapRequestEvent): LnZapPrivateEvent?
 }

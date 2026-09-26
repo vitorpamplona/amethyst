@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -62,7 +62,7 @@ class PeopleListViewModel : ViewModel() {
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun selectedAddress() = PeopleListEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
+    fun selectedAddress() = FollowSetEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
 
     fun selectedNote() = account.cache.getOrCreateAddressableNote(selectedAddress())
 

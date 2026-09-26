@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -237,7 +237,7 @@ class RelayGroupChannel(
         updateChannelInfo()
     }
 
-    fun updateSupportedRoles(event: SupportedRolesEvent) {
+    fun updateSupportedRoles(event: GroupRolesEvent) {
         // Only newer definitions supersede; equal-or-older is dropped (no redundant emit).
         if (event.createdAt <= supportedRolesUpdatedAt) return
         supportedRoles = event.roles()

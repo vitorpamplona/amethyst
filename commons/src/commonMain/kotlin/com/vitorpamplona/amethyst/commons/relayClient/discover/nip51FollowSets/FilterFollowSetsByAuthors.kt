@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 fun filterFollowSetsAuthors(
     relay: NormalizedRelayUrl,
@@ -43,7 +43,7 @@ fun filterFollowSetsAuthors(
                 ExplainedFilter(
                     purpose = SubPurpose.FOLLOW_LISTS,
                     authors = authorList,
-                    kinds = listOf(FollowListEvent.KIND),
+                    kinds = listOf(StarterPackEvent.KIND),
                     limit = 300,
                     since = since,
                 ),

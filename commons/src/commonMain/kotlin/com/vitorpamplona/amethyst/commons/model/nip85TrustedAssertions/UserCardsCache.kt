@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
 import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -104,7 +104,7 @@ class UserCardsCache : UserDependencies {
                 emit(null)
             }
         }.map {
-            (it?.note?.event as? ContactCardEvent)?.rank()
+            (it?.note?.event as? UserAssertionEvent)?.rank()
         }.flowOn(Dispatchers.IO)
 
     private val formatter = PlatformNumberFormatter()
@@ -132,7 +132,7 @@ class UserCardsCache : UserDependencies {
                 emit(null)
             }
         }.map {
-            val value = (it?.note?.event as? ContactCardEvent)?.followerCount()
+            val value = (it?.note?.event as? UserAssertionEvent)?.followerCount()
 
             if (value != null && value > 0) {
                 formatter.format(value.toLong())

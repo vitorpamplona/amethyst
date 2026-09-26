@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 
 /**
@@ -89,7 +89,7 @@ class MeteringNostrSigner(
         fromPublicKey: HexKey,
     ): String = metered(UsageKeys.DECRYPT_COUNT, UsageKeys.DECRYPT_US) { inner.nip44Decrypt(ciphertext, fromPublicKey) }
 
-    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = metered(UsageKeys.DECRYPT_COUNT, UsageKeys.DECRYPT_US) { inner.decryptZapEvent(event) }
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = metered(UsageKeys.DECRYPT_COUNT, UsageKeys.DECRYPT_US) { inner.decryptZapEvent(event) }
 
     override suspend fun deriveKey(nonce: HexKey): HexKey = inner.deriveKey(nonce)
 

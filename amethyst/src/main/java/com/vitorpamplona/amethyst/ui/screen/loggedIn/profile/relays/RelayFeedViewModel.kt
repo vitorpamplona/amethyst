@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip01Core.RelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip01Core.Wrapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -144,7 +144,7 @@ class RelayFeedViewModel :
                                     .flow()
                                     .metadata.stateFlow
                                     .map { dmNote ->
-                                        (dmNote.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
+                                        (dmNote.note.event as? DmRelayListEvent)?.relays()?.toSet() ?: emptySet()
                                     },
                             flow2 = user.relayState().flow(),
                             transform = ::convert,
@@ -154,7 +154,7 @@ class RelayFeedViewModel :
                     emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? ChatMessageRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? DmRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

@@ -27,20 +27,20 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
 val ShortsFromCommunityKinds =
     listOf(
         VideoShortEvent.KIND,
-        VideoVerticalEvent.KIND,
+        AddressableShortVideoEvent.KIND,
     )
 
 val ShortsFromCommunityKindsStr =
     listOf(
         VideoShortEvent.KIND.toString(),
-        VideoVerticalEvent.KIND.toString(),
+        AddressableShortVideoEvent.KIND.toString(),
     )
 
 fun filterShortsFromAllCommunities(

@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.note.types.toMediaContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 @Composable
 fun FileHeaderCardCompose(
@@ -60,7 +60,7 @@ fun FileHeaderCardCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = (baseNote.event as? FileHeaderEvent) ?: return
+    val event = (baseNote.event as? FileMetadataEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
 
     Column(
@@ -90,7 +90,7 @@ fun FileHeaderCardCompose(
 @Composable
 private fun FileHeaderCardImage(
     note: Note,
-    event: FileHeaderEvent,
+    event: FileMetadataEvent,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
 ) {
@@ -145,7 +145,7 @@ private fun FileHeaderCardImage(
 }
 
 @Composable
-internal fun FileHeaderCardCaption(videoEvent: FileHeaderEvent) {
+internal fun FileHeaderCardCaption(videoEvent: FileMetadataEvent) {
     val event = (videoEvent as? Event) ?: return
 
     val title = videoEvent.summary()

@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaym
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
@@ -50,7 +50,7 @@ fun NWCFinderFilterAssemblerSubscription(
     val states =
         remember(note) {
             val zapPaymentRequestNote = note
-            (zapPaymentRequestNote.event as? LnZapPaymentRequestEvent)?.let { noteEvent ->
+            (zapPaymentRequestNote.event as? NwcRequestEvent)?.let { noteEvent ->
                 noteEvent.walletServicePubKey()?.let {
                     zapPaymentRequestNote.relays.map {
                         NWCPaymentQueryState(

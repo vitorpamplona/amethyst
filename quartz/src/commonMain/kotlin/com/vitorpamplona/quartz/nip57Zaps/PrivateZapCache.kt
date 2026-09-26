@@ -28,8 +28,8 @@ class PrivateZapCache(
     signer: NostrSigner,
 ) : IPrivateZapsDecryptionCache {
     private val decryptionCache =
-        object : LruCache<LnZapRequestEvent, PrivateZapDecryptCache>(1000) {
-            override fun create(key: LnZapRequestEvent): PrivateZapDecryptCache? {
+        object : LruCache<ZapRequestEvent, PrivateZapDecryptCache>(1000) {
+            override fun create(key: ZapRequestEvent): PrivateZapDecryptCache? {
                 val zappedAuthor = key.zappedAuthor().firstOrNull()
                 return if (key.isPrivateZap() && zappedAuthor != null) {
                     PrivateZapDecryptCache(signer)
@@ -39,20 +39,20 @@ class PrivateZapCache(
             }
         }
 
-    fun delete(event: LnZapRequestEvent) {
+    fun delete(event: ZapRequestEvent) {
         decryptionCache.remove(event)
     }
 
-    override fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent? = decryptionCache[event]?.cached()
+    override fun cachedPrivateZap(event: ZapRequestEvent): LnZapPrivateEvent? = decryptionCache[event]?.cached()
 
-    override suspend fun decryptPrivateZap(event: LnZapRequestEvent) = decryptionCache[event]?.decrypt(event)
+    override suspend fun decryptPrivateZap(event: ZapRequestEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class PrivateZapDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<LnZapRequestEvent, LnZapPrivateEvent>(signer) {
+) : DecryptCache<ZapRequestEvent, LnZapPrivateEvent>(signer) {
     override suspend fun decryptAndParse(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         signer: NostrSigner,
     ): LnZapPrivateEvent = signer.decryptZapEvent(event)
 }

@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import kotlinx.coroutines.channels.BufferOverflow
@@ -151,8 +151,8 @@ class Chatroom : NotesGatherer {
             } else {
                 // Old conversation, keep the last one.
                 sorted.take(1).toSet()
-            } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent && it.event !is BaseDMGroupEvent }
-        // Both DM protocols are pruned by the recency rule above: NIP-04 (PrivateDmEvent) and NIP-17
+            } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is EncryptedDmEvent && it.event !is BaseDMGroupEvent }
+        // Both DM protocols are pruned by the recency rule above: NIP-04 (EncryptedDmEvent) and NIP-17
         // (BaseDMGroupEvent rumors — ChatMessageEvent / file headers). Anything else that ever lands in a
         // room is kept. The caller realigns the per-relay download window for the dropped messages so
         // they can be paged again later (see LocalCache.pruneOldMessages + RelayLoadingCursors.rewindTo).

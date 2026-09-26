@@ -35,11 +35,11 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.Mute
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,8 +61,8 @@ class NoteFeedFlow(
         outboxRelays: Set<NormalizedRelayUrl>,
     ): IFeedTopNavFilter =
         when (noteEvent) {
-            is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
+            is FollowSetEvent -> {
+                if (noteEvent.dTag() == FollowSetEvent.BLOCK_LIST_D_TAG) {
                     MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
                 } else {
                     AuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
@@ -73,7 +73,7 @@ class NoteFeedFlow(
                 MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), blockedRelays)
             }
 
-            is FollowListEvent -> {
+            is StarterPackEvent -> {
                 AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays)
             }
 
@@ -81,7 +81,7 @@ class NoteFeedFlow(
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
 
-            is HashtagListEvent -> {
+            is InterestListEvent -> {
                 HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), outboxRelays)
             }
 
@@ -108,8 +108,8 @@ class NoteFeedFlow(
         outboxRelays: Set<NormalizedRelayUrl>,
     ) {
         when (noteEvent) {
-            is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
+            is FollowSetEvent -> {
+                if (noteEvent.dTag() == FollowSetEvent.BLOCK_LIST_D_TAG) {
                     emit(MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
                 } else {
                     emit(AuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
@@ -120,7 +120,7 @@ class NoteFeedFlow(
                 emit(MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), blockedRelays))
             }
 
-            is FollowListEvent -> {
+            is StarterPackEvent -> {
                 emit(AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays))
             }
 
@@ -128,7 +128,7 @@ class NoteFeedFlow(
                 emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
 
-            is HashtagListEvent -> {
+            is InterestListEvent -> {
                 emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), outboxRelays))
             }
 
@@ -160,8 +160,8 @@ class NoteFeedFlow(
         proxyRelays: Set<NormalizedRelayUrl>,
     ): IFeedTopNavFilter =
         when (noteEvent) {
-            is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
+            is FollowSetEvent -> {
+                if (noteEvent.dTag() == FollowSetEvent.BLOCK_LIST_D_TAG) {
                     MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
                 } else {
                     AuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
@@ -172,7 +172,7 @@ class NoteFeedFlow(
                 MutedAuthorsByProxyTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), proxyRelays)
             }
 
-            is FollowListEvent -> {
+            is StarterPackEvent -> {
                 AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays)
             }
 
@@ -180,7 +180,7 @@ class NoteFeedFlow(
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
 
-            is HashtagListEvent -> {
+            is InterestListEvent -> {
                 HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), proxyRelays)
             }
 
@@ -207,8 +207,8 @@ class NoteFeedFlow(
         proxyRelays: Set<NormalizedRelayUrl>,
     ) {
         when (noteEvent) {
-            is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
+            is FollowSetEvent -> {
+                if (noteEvent.dTag() == FollowSetEvent.BLOCK_LIST_D_TAG) {
                     emit(MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
                 } else {
                     emit(AuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
@@ -219,7 +219,7 @@ class NoteFeedFlow(
                 emit(MutedAuthorsByProxyTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), proxyRelays))
             }
 
-            is FollowListEvent -> {
+            is StarterPackEvent -> {
                 emit(AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays))
             }
 
@@ -227,7 +227,7 @@ class NoteFeedFlow(
                 emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
 
-            is HashtagListEvent -> {
+            is InterestListEvent -> {
                 emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), proxyRelays))
             }
 

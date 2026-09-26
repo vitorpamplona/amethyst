@@ -43,9 +43,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivitie
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.RenderCommunitiesThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.RenderContentDVMThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.RenderClassifiedsThumb
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -157,8 +157,8 @@ fun InnerChannelCardWithReactions(
         is ChannelCreateEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is ClassifiedsEvent -> InnerCardBox(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> InnerCardRow(baseNote, accountViewModel, nav)
-        is FollowListEvent -> InnerCardRow(baseNote, accountViewModel, nav)
-        is LongTextNoteEvent -> InnerCardRow(baseNote, accountViewModel, nav)
+        is StarterPackEvent -> InnerCardRow(baseNote, accountViewModel, nav)
+        is LongFormContentEvent -> InnerCardRow(baseNote, accountViewModel, nav)
     }
 }
 
@@ -211,7 +211,7 @@ private fun RenderNoteRow(
         is CommunityDefinitionEvent -> RenderCommunitiesThumb(baseNote, accountViewModel, nav)
         is ChannelCreateEvent -> RenderPublicChatChannelThumb(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> RenderContentDVMThumb(baseNote, accountViewModel, nav)
-        is FollowListEvent -> RenderFollowSetThumb(baseNote, accountViewModel, nav)
-        is LongTextNoteEvent -> RenderLongFormThumb(baseNote, accountViewModel, nav)
+        is StarterPackEvent -> RenderFollowSetThumb(baseNote, accountViewModel, nav)
+        is LongFormContentEvent -> RenderLongFormThumb(baseNote, accountViewModel, nav)
     }
 }

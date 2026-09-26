@@ -67,7 +67,7 @@ import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 
 /**
  * Renders a kind-30041 NKBIP-01 publication section — a chapter, zettel or episode.
@@ -331,12 +331,12 @@ private fun wikilinkResolver(event: PublicationContentEvent): (String) -> String
             link == null -> null
 
             link.eventId != null ->
-                "nostr:" + NEvent.create(link.eventId!!, link.pubKey, WikiNoteEvent.KIND, link.relay)
+                "nostr:" + NEvent.create(link.eventId!!, link.pubKey, WikiArticleEvent.KIND, link.relay)
 
             link.pubKey != null ->
                 "nostr:" +
                     NAddress.create(
-                        WikiNoteEvent.KIND,
+                        WikiArticleEvent.KIND,
                         link.pubKey!!,
                         PublicationContentEvent.normalizeWikilink(link.target),
                         link.relay,

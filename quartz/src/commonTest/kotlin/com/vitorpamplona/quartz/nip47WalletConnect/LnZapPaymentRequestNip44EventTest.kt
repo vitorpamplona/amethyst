@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
 import kotlinx.coroutines.test.runTest
@@ -44,7 +44,7 @@ class LnZapPaymentRequestNip44EventTest {
 
             val request = GetBalanceMethod.Companion.create()
             val event =
-                LnZapPaymentRequestEvent.Companion.createRequest(
+                NwcRequestEvent.Companion.createRequest(
                     request = request,
                     walletServicePubkey = walletServicePubkey,
                     signer = clientSigner,
@@ -68,7 +68,7 @@ class LnZapPaymentRequestNip44EventTest {
 
             val request = GetInfoMethod.Companion.create()
             val event =
-                LnZapPaymentRequestEvent.Companion.createRequest(
+                NwcRequestEvent.Companion.createRequest(
                     request = request,
                     walletServicePubkey = walletServicePubkey,
                     signer = clientSigner,

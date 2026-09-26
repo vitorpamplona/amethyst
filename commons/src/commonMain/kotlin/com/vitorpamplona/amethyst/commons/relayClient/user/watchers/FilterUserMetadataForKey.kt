@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -44,9 +44,9 @@ val UserMetadataForKeyKinds =
     listOf(
         MetadataEvent.KIND,
         ExternalIdentitiesEvent.KIND,
-        StatusEvent.KIND,
+        UserStatusEvent.KIND,
         AdvertisedRelayListEvent.KIND,
-        ChatMessageRelayListEvent.KIND,
+        DmRelayListEvent.KIND,
         KeyPackageRelayListEvent.KIND,
         PaymentTargetsEvent.KIND,
         Bolt12OfferListEvent.KIND,

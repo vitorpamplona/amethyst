@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -112,7 +112,7 @@ class NostrConnectSignerServiceTest {
             fromPublicKey: HexKey,
         ) = ciphertext
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
 

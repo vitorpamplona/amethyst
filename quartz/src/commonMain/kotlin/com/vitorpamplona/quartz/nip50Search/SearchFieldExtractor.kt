@@ -56,11 +56,11 @@ import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
 import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
 import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -71,24 +71,24 @@ import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -100,13 +100,13 @@ import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
@@ -158,11 +158,11 @@ object SearchFieldExtractor {
                 }
             }
 
-            is LongTextNoteEvent -> {
+            is LongFormContentEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
-            is WikiNoteEvent -> {
+            is WikiArticleEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
@@ -263,7 +263,7 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), null, event.content)
             }
 
-            is CalendarEvent -> {
+            is CalendarCollectionEvent -> {
                 tiers(event, event.title(), null, event.content)
             }
 
@@ -352,7 +352,7 @@ object SearchFieldExtractor {
             // kind 9002 edits the very metadata kind 39000 publishes, so it
             // splits the same way -- it was the only half of the pair falling
             // through. Its hashtags() is `t`, carried once by the funnel.
-            is EditMetadataEvent -> {
+            is GroupEditMetadataEvent -> {
                 tiers(event, event.name(), event.about(), null)
             }
 
@@ -360,7 +360,7 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.description(), null)
             }
 
-            is FollowListEvent -> {
+            is StarterPackEvent -> {
                 tiers(event, event.title(), event.description(), null)
             }
 
@@ -448,7 +448,7 @@ object SearchFieldExtractor {
             // concatenates the topics INTO the body while the funnel added
             // them as hashtags. Whether that role is tokenized or kept as
             // keywords is the backend's call, per IndexableFields.
-            is ContactCardEvent -> {
+            is UserAssertionEvent -> {
                 tiers(event, event.petName(), event.summary(), null)
             }
 
@@ -456,11 +456,11 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), null, null)
             }
 
-            is LabeledBookmarkListEvent -> {
+            is BookmarkSetEvent -> {
                 tiers(event, event.titleOrName(), event.description(), null)
             }
 
-            is PeopleListEvent -> {
+            is FollowSetEvent -> {
                 tiers(event, event.titleOrName(), event.description(), null)
             }
 
@@ -472,7 +472,7 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), null, null)
             }
 
-            is GoalEvent -> {
+            is ZapGoalEvent -> {
                 tiers(event, null, event.summary(), event.content)
             }
 
@@ -480,7 +480,7 @@ object SearchFieldExtractor {
                 tiers(event, emptyList(), listOf(event.comment(), event.context()), event.content)
             }
 
-            is FileHeaderEvent -> {
+            is FileMetadataEvent -> {
                 tiers(event, null, event.summary(), event.content)
             }
 

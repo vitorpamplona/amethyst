@@ -43,9 +43,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -594,9 +594,9 @@ class PeopleListName(
     NoteBackedName {
     override fun name(): String {
         val noteEvent = note.event
-        return if (noteEvent is PeopleListEvent) {
+        return if (noteEvent is FollowSetEvent) {
             noteEvent.titleOrName() ?: note.dTag()
-        } else if (noteEvent is FollowListEvent) {
+        } else if (noteEvent is StarterPackEvent) {
             noteEvent.title() ?: note.dTag()
         } else {
             note.dTag()

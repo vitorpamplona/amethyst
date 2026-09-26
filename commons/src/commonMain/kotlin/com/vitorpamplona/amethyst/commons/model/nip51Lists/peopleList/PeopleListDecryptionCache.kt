@@ -27,34 +27,34 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsers
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedUsersAndWords
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedWordSet
 import com.vitorpamplona.quartz.nip51Lists.muteList.mutedWords
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 
 class PeopleListDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<PeopleListEvent>(signer)
+    val cachedPrivateLists = PrivateTagArrayEventCache<FollowSetEvent>(signer)
 
-    fun cachedUsersAndWords(event: PeopleListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsersAndWords()
+    fun cachedUsersAndWords(event: FollowSetEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsersAndWords()
 
-    fun cachedUsers(event: PeopleListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsers()
+    fun cachedUsers(event: FollowSetEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUsers()
 
-    fun cachedUserIdSet(event: PeopleListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUserIdSet()
+    fun cachedUserIdSet(event: FollowSetEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedUserIdSet()
 
-    fun cachedWords(event: PeopleListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWords()
+    fun cachedWords(event: FollowSetEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWords()
 
-    fun cachedWordSet(event: PeopleListEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWordSet()
+    fun cachedWordSet(event: FollowSetEvent) = cachedPrivateLists.mergeTagListPrecached(event).mutedWordSet()
 
-    suspend fun usersAndWords(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsersAndWords()
+    suspend fun usersAndWords(event: FollowSetEvent) = cachedPrivateLists.mergeTagList(event).mutedUsersAndWords()
 
-    suspend fun users(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedUsers()
+    suspend fun users(event: FollowSetEvent) = cachedPrivateLists.mergeTagList(event).mutedUsers()
 
-    suspend fun userIdSet(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedUserIdSet()
+    suspend fun userIdSet(event: FollowSetEvent) = cachedPrivateLists.mergeTagList(event).mutedUserIdSet()
 
-    suspend fun words(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedWords()
+    suspend fun words(event: FollowSetEvent) = cachedPrivateLists.mergeTagList(event).mutedWords()
 
-    suspend fun wordSet(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedWordSet()
+    suspend fun wordSet(event: FollowSetEvent) = cachedPrivateLists.mergeTagList(event).mutedWordSet()
 
-    suspend fun privateUsers(event: PeopleListEvent) = cachedPrivateLists.privateTags(event)?.mutedUsers() ?: emptyList()
+    suspend fun privateUsers(event: FollowSetEvent) = cachedPrivateLists.privateTags(event)?.mutedUsers() ?: emptyList()
 
-    suspend fun privateUserIdSet(event: PeopleListEvent) = cachedPrivateLists.privateTags(event)?.mutedUserIdSet() ?: emptySet()
+    suspend fun privateUserIdSet(event: FollowSetEvent) = cachedPrivateLists.privateTags(event)?.mutedUserIdSet() ?: emptySet()
 }

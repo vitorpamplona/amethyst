@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
@@ -195,7 +195,7 @@ class CashuWalletOps(
      *      bails when it has no shared mint or no P2PK pubkey. This is the
      *      durable signal.
      *   2. NIP-09 delete the now-empty kind:10019 by its address coordinate
-     *      (DeletionEvent.build adds the `a` tag automatically because the
+     *      (DeletionRequestEvent.build adds the `a` tag automatically because the
      *      event is replaceable) so relays that DO honor deletions drop it
      *      entirely. Deletions are optional on Nostr, which is why step 1
      *      runs first as the fallback.
@@ -209,7 +209,7 @@ class CashuWalletOps(
         val emptyEvent = signer.sign(emptyTemplate)
         publish(emptyEvent)
 
-        val delTemplate = DeletionEvent.build(listOf(emptyEvent))
+        val delTemplate = DeletionRequestEvent.build(listOf(emptyEvent))
         val delEvent = signer.sign(delTemplate)
         publish(delEvent)
     }
@@ -230,7 +230,7 @@ class CashuWalletOps(
     suspend fun deleteWallet(walletEvent: CashuWalletEvent) {
         stopNutzaps()
 
-        val delTemplate = DeletionEvent.build(listOf(walletEvent))
+        val delTemplate = DeletionRequestEvent.build(listOf(walletEvent))
         val delEvent = signer.sign(delTemplate)
         publish(delEvent)
     }
@@ -286,7 +286,7 @@ class CashuWalletOps(
      * fired anyway; running it twice on a missing event is harmless.
      */
     suspend fun cancelMintQuote(quoteEvent: CashuMintQuoteEvent) {
-        val delTemplate = DeletionEvent.build(listOf(quoteEvent))
+        val delTemplate = DeletionRequestEvent.build(listOf(quoteEvent))
         val delEvent = signer.sign(delTemplate)
         publish(delEvent)
     }
@@ -363,7 +363,7 @@ class CashuWalletOps(
         publish(historyEvent)
 
         // NIP-09 delete the now-fulfilled quote event.
-        val delTemplate = DeletionEvent.build(listOf(quoteEvent))
+        val delTemplate = DeletionRequestEvent.build(listOf(quoteEvent))
         val delEvent = signer.sign(delTemplate)
         publish(delEvent)
 
@@ -527,11 +527,11 @@ class CashuWalletOps(
             }
 
         // NIP-09 delete the source token events. Per spec, also need k=7375 tag,
-        // which DeletionEvent.build adds automatically from the source event kind.
+        // which DeletionRequestEvent.build adds automatically from the source event kind.
         val deleteEvent =
             run {
                 val toDelete = selected.map { it.event } + listOfNotNull(prePaidChangeEvent.takeIf { finalChangeEvent != null })
-                val delTemplate = DeletionEvent.build(toDelete)
+                val delTemplate = DeletionRequestEvent.build(toDelete)
                 signer.sign(delTemplate).also { publish(it) }
             }
 
@@ -598,7 +598,7 @@ class CashuWalletOps(
 
         val deleteEvent =
             run {
-                val template = DeletionEvent.build(selected.map { it.event })
+                val template = DeletionRequestEvent.build(selected.map { it.event })
                 signer.sign(template).also { publish(it) }
             }
 
@@ -769,7 +769,7 @@ class CashuWalletOps(
         // NIP-09 delete the source token events.
         val deleteEvent =
             run {
-                val template = DeletionEvent.build(selected.map { it.event })
+                val template = DeletionRequestEvent.build(selected.map { it.event })
                 signer.sign(template).also {
                     publish(it)
                 }
@@ -1001,7 +1001,7 @@ class CashuWalletOps(
                 entry.content.proofs.any { states[it.secret] == ProofState.SPENT }
             }
         if (stale.isEmpty()) return emptyList()
-        val delTemplate = DeletionEvent.build(stale.map { it.event })
+        val delTemplate = DeletionRequestEvent.build(stale.map { it.event })
         publish(signer.sign(delTemplate))
         return stale.map { it.event }
     }
@@ -1046,7 +1046,7 @@ class CashuWalletOps(
         val signed = signer.sign(template)
         publish(signed)
 
-        val delTemplate = DeletionEvent.build(entries.map { it.event })
+        val delTemplate = DeletionRequestEvent.build(entries.map { it.event })
         val delEvent = signer.sign(delTemplate)
         publish(delEvent)
 
@@ -1088,7 +1088,7 @@ class CashuWalletOps(
      * kind:38000 is parameterized-replaceable — a delete with an `a` tag
      * pointing at the address coordinate (kind:pubkey:dTag) drops all
      * versions on compliant relays. We also include the original event id
-     * via DeletionEvent.build so relays that only track by event id still
+     * via DeletionRequestEvent.build so relays that only track by event id still
      * remove it. MintRecommendationEvent doesn't extend AddressableEvent
      * today, so we compute and add the `a` tag ourselves.
      */
@@ -1099,7 +1099,7 @@ class CashuWalletOps(
         // d-tag still get a NIP-09 `e`-only delete (the default build path).
         val dTag = event.dTag()
         val template =
-            DeletionEvent.build(listOf(event)) {
+            DeletionRequestEvent.build(listOf(event)) {
                 if (dTag != null) aTag(Address(event.kind, event.pubKey, dTag))
             }
         val delEvent = signer.sign(template)
@@ -1497,14 +1497,14 @@ data class MeltCompleted(
     val paidAmount: Long,
     val fees: Long,
     val historyEvent: CashuSpendingHistoryEvent,
-    val deleteEvent: DeletionEvent,
+    val deleteEvent: DeletionRequestEvent,
     val newTokenEvent: CashuTokenEvent?,
 )
 
 data class SendTokenCompleted(
     val cashuToken: String,
     val amount: Long,
-    val deleteEvent: DeletionEvent,
+    val deleteEvent: DeletionRequestEvent,
     val keepEvent: CashuTokenEvent?,
     val historyEvent: CashuSpendingHistoryEvent,
 )
@@ -1519,7 +1519,7 @@ data class RedeemCompleted(
 data class NutzapSent(
     val nutzapEvent: NutzapEvent,
     val keepEvent: CashuTokenEvent?,
-    val deleteEvent: DeletionEvent,
+    val deleteEvent: DeletionRequestEvent,
     val historyEvent: CashuSpendingHistoryEvent,
     val amount: Long,
 )

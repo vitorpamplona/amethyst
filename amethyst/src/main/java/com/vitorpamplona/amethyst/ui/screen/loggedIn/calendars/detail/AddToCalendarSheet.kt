@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 
 /**
  * Bottom sheet that lists the current user's own kind-31924 calendars with a checkbox per
@@ -74,7 +74,7 @@ fun AddToCalendarSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
-    val ownCalendars by produceState<List<CalendarEvent>>(initialValue = ownCalendars(myPubKey), myPubKey) {
+    val ownCalendars by produceState<List<CalendarCollectionEvent>>(initialValue = ownCalendars(myPubKey), myPubKey) {
         LocalCache.live.newEventBundles.collect {
             value = ownCalendars(myPubKey)
         }
@@ -152,17 +152,17 @@ private fun CalendarPickerRow(
     }
 }
 
-private fun ownCalendars(myPubKey: String): List<CalendarEvent> =
+private fun ownCalendars(myPubKey: String): List<CalendarCollectionEvent> =
     LocalCache.addressables
         .filterIntoSet { _, note ->
             val e = note.event
-            e is CalendarEvent && e.pubKey == myPubKey
-        }.mapNotNull { it.event as? CalendarEvent }
+            e is CalendarCollectionEvent && e.pubKey == myPubKey
+        }.mapNotNull { it.event as? CalendarCollectionEvent }
         .sortedBy { it.title()?.lowercase() ?: "" }
 
 private fun toggleMembership(
     accountViewModel: AccountViewModel,
-    calendar: CalendarEvent,
+    calendar: CalendarCollectionEvent,
     targetAddress: Address,
     isCurrentlyMember: Boolean,
 ) {
@@ -177,7 +177,7 @@ private fun toggleMembership(
         }
     accountViewModel.launchSigner {
         accountViewModel.account.signAndComputeBroadcast(
-            CalendarEvent.build(
+            CalendarCollectionEvent.build(
                 title = calendar.title().orEmpty(),
                 content = calendar.content,
                 dTag = calendar.dTag(),

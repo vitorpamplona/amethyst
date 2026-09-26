@@ -54,19 +54,19 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -887,19 +887,19 @@ object LocalPreferences {
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
                     val latestUserMetadata = async { parseEventOrNull<MetadataEvent>(latestUserMetadataStr) }
                     val latestContactList = async { parseEventOrNull<ContactListEvent>(latestContactListStr) }
-                    val latestDmRelayList = async { parseEventOrNull<ChatMessageRelayListEvent>(latestDmRelayListStr) }
+                    val latestDmRelayList = async { parseEventOrNull<DmRelayListEvent>(latestDmRelayListStr) }
                     val latestNip65RelayList = async { parseEventOrNull<AdvertisedRelayListEvent>(latestNip65RelayListStr) }
                     val latestSearchRelayList = async { parseEventOrNull<SearchRelayListEvent>(latestSearchRelayListStr) }
                     val latestIndexRelayList = async { parseEventOrNull<IndexerRelayListEvent>(latestIndexRelayListStr) }
-                    val latestRelayFeedsList = async { parseEventOrNull<RelayFeedsListEvent>(latestRelayFeedsListStr) }
+                    val latestRelayFeedsList = async { parseEventOrNull<FavoriteRelayListEvent>(latestRelayFeedsListStr) }
                     val latestBlockedRelayList = async { parseEventOrNull<BlockedRelayListEvent>(latestBlockedRelayListStr) }
                     val latestTrustedRelayList = async { parseEventOrNull<TrustedRelayListEvent>(latestTrustedRelayListStr) }
                     val latestMuteList = async { parseEventOrNull<MuteListEvent>(latestMuteListStr) }
                     val latestPrivateHomeRelayList = async { parseEventOrNull<PrivateOutboxRelayListEvent>(latestPrivateHomeRelayListStr) }
                     val latestAppSpecificData = async { parseEventOrNull<AppSpecificDataEvent>(latestAppSpecificDataStr) }
-                    val latestChannelList = async { parseEventOrNull<ChannelListEvent>(latestChannelListStr) }
+                    val latestChannelList = async { parseEventOrNull<PublicChatListEvent>(latestChannelListStr) }
                     val latestCommunityList = async { parseEventOrNull<CommunityListEvent>(latestCommunityListStr) }
-                    val latestHashtagList = async { parseEventOrNull<HashtagListEvent>(latestHashtagListStr) }
+                    val latestHashtagList = async { parseEventOrNull<InterestListEvent>(latestHashtagListStr) }
                     val latestGeohashList = async { parseEventOrNull<GeohashListEvent>(latestGeohashListStr) }
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestRelayGroupList = async { parseEventOrNull<SimpleGroupListEvent>(latestRelayGroupListStr) }

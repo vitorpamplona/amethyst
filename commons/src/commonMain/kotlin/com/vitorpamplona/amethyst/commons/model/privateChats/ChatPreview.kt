@@ -22,12 +22,12 @@ package com.vitorpamplona.amethyst.commons.model.privateChats
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
@@ -44,11 +44,11 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  */
 fun Event.hasEncryptedContent(): Boolean =
     when (this) {
-        is PrivateDmEvent -> true
+        is EncryptedDmEvent -> true
         is DraftWrapEvent -> true
-        is SealedRumorEvent -> true
+        is SealEvent -> true
         is GiftWrapEvent -> true
-        is LnZapRequestEvent -> isPrivateZap()
+        is ZapRequestEvent -> isPrivateZap()
         // Every NIP-51 list keeps its private members as a NIP-44 payload in `content`. The two
         // base classes cover all ~30 list kinds, present and future, which is the point: naming
         // them one at a time is how kind 30005 came to print its own ciphertext on screen.
@@ -105,7 +105,7 @@ fun chatPreviewOf(
     if (!canDecrypt) return ChatPreview.Undecryptable
 
     // A kind:4 addressed to neither me nor from me can't be opened with my key, ever.
-    if (event is PrivateDmEvent && myPubKey != null && !event.isIncluded(myPubKey)) {
+    if (event is EncryptedDmEvent && myPubKey != null && !event.isIncluded(myPubKey)) {
         return ChatPreview.Undecryptable
     }
 

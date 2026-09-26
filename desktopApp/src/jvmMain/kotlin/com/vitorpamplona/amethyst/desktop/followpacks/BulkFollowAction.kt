@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 data class BulkFollowPreview(
     val totalMembers: Int,
@@ -52,7 +52,7 @@ object BulkFollowAction {
      * cached metadata (so the bulk-follow always carries relay hints).
      */
     fun computePreview(
-        pack: FollowListEvent,
+        pack: StarterPackEvent,
         cache: DesktopLocalCache,
         currentFollows: Set<HexKey>,
         myPubkey: HexKey,
@@ -101,7 +101,7 @@ object BulkFollowAction {
 
     /** Unfollows every pack member that the user currently follows. */
     suspend fun commitUnfollowAll(
-        pack: FollowListEvent,
+        pack: StarterPackEvent,
         iAccount: DesktopIAccount,
         relayManager: RelayConnectionManager,
         cache: DesktopLocalCache,

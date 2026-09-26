@@ -79,28 +79,28 @@ companion object {
 
 ### Zap Request/Receipt (kinds 9734, 9735)
 ```kotlin
-class LnZapRequestEvent(...) : Event(...)
+class ZapRequestEvent(...) : Event(...)
     // Created by client, sent to Lightning Address
 
-class LnZapEvent(...) : Event(...)
+class ZapReceiptEvent(...) : Event(...)
     // Receipt from LSP, contains bolt11 + embedded zap request
-    val zapRequest: LnZapRequestEvent? by lazy { containedPost() }
+    val zapRequest: ZapRequestEvent? by lazy { containedPost() }
     val amount: BigDecimal? by lazy { /* parse from bolt11 */ }
 ```
 
 ### Long-Form Content (kind 30023)
 ```kotlin
-class LongTextNoteEvent(...) : BaseAddressableEvent(...)
+class LongFormContentEvent(...) : BaseAddressableEvent(...)
     // Blog posts, articles
     // Addressable via kind:pubkey:d-tag
 ```
 
 ### Lists (kinds 10000-30004)
 ```kotlin
-sealed class PeopleListEvent : BaseAddressableEvent {
-    object MuteList : PeopleListEvent(10000)
-    object PinList : PeopleListEvent(10001)
-    object BookmarkList : PeopleListEvent(10003)
+sealed class FollowSetEvent : BaseAddressableEvent {
+    object MuteList : FollowSetEvent(10000)
+    object PinList : FollowSetEvent(10001)
+    object BookmarkList : FollowSetEvent(10003)
     // ... 18 list types total
 }
 ```
@@ -279,7 +279,7 @@ val metadata2 = MetadataEvent.createNew(name = "Alice Updated", picture = "url2"
 ### Event Deletion
 ```kotlin
 // Delete events
-val deletion = DeletionEvent.create(
+val deletion = DeletionRequestEvent.create(
     deleteEvents = listOf(eventId1, eventId2),
     reason = "Spam",
     signer = signer

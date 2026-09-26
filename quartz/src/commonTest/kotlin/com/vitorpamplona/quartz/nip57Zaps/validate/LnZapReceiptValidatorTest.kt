@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.validate
 
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -62,13 +62,13 @@ class LnZapReceiptValidatorTest {
         signerPubkey: String = providerPubkey,
         bolt11: String? = invoice100kSats,
         description: String? = zapRequestJson(),
-    ): LnZapEvent {
+    ): ZapReceiptEvent {
         val tags = mutableListOf<Array<String>>()
         tags.add(arrayOf("p", recipientPubkey))
         if (bolt11 != null) tags.add(arrayOf("bolt11", bolt11))
         if (description != null) tags.add(arrayOf("description", description))
 
-        return LnZapEvent(
+        return ZapReceiptEvent(
             id = "f".repeat(64),
             pubKey = signerPubkey,
             createdAt = 1700000001,

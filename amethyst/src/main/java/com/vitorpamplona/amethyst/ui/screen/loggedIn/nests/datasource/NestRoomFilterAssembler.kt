@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 
 /**
@@ -100,7 +100,7 @@ class NestRoomFilterSubAssembler(
                                     LiveActivitiesChatMessageEvent.KIND,
                                     MeetingRoomPresenceEvent.KIND,
                                     ReactionEvent.KIND,
-                                    LnZapEvent.KIND,
+                                    ZapReceiptEvent.KIND,
                                     Bolt12ZapEvent.KIND,
                                 ),
                             tags = mapOf("a" to listOf(key.note.idHex)),

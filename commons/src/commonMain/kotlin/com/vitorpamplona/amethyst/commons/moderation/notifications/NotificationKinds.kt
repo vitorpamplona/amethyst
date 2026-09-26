@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.moderation.notifications
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
@@ -60,7 +60,7 @@ object NotificationKinds {
     val SUBSCRIPTION_KINDS: List<Int> =
         listOf(
             TextNoteEvent.KIND, // 1  — mentions + replies
-            PrivateDmEvent.KIND, // 4  — NIP-04 legacy DM
+            EncryptedDmEvent.KIND, // 4  — NIP-04 legacy DM
             RepostEvent.KIND, // 6
             ReactionEvent.KIND, // 7
             ChatMessageEvent.KIND, // 14 — NIP-17 DM rumor (rarely arrives raw; gift-wrap is more common)
@@ -69,7 +69,7 @@ object NotificationKinds {
             CommentEvent.KIND, // 1111 — NIP-22 threaded comment
             GiftWrapEvent.KIND, // 1059 — NIP-17 gift-wrapped DM
             NutzapEvent.KIND, // 9321 — NIP-61 Cashu nutzap
-            LnZapEvent.KIND, // 9735 — NIP-57 zap receipt
+            ZapReceiptEvent.KIND, // 9735 — NIP-57 zap receipt
             OnchainZapEvent.KIND, // 8333 — onchain zap
             Bolt12ZapEvent.KIND, // 9736 — NIP-B1 BOLT12 zap
             // NIP-17 file-header messages (encrypted file DMs)
@@ -114,7 +114,7 @@ object NotificationKinds {
         // Own events never notify — except zap receipts (LnZap/Nutzap/Onchain)
         // which are signed by the LNURL provider or the payer, not by us.
         if (event.pubKey == myPubKeyHex &&
-            event !is LnZapEvent &&
+            event !is ZapReceiptEvent &&
             event !is NutzapEvent &&
             event !is OnchainZapEvent &&
             event !is Bolt12ZapEvent

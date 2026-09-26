@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -50,14 +50,14 @@ class HashtagListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val hashtagListNote = cache.getOrCreateAddressableNote(getHashtagListAddress())
 
-    fun getHashtagListAddress() = HashtagListEvent.createAddress(signer.pubKey)
+    fun getHashtagListAddress() = InterestListEvent.createAddress(signer.pubKey)
 
     fun getHashtagListFlow(): StateFlow<NoteState> = hashtagListNote.flow().metadata.stateFlow
 
-    fun getHashtagList(): HashtagListEvent? = hashtagListNote.event as? HashtagListEvent
+    fun getHashtagList(): InterestListEvent? = hashtagListNote.event as? InterestListEvent
 
     suspend fun hashtagListWithBackup(note: Note): Set<String> {
-        val event = note.event as? HashtagListEvent ?: settings.backupHashtagList
+        val event = note.event as? InterestListEvent ?: settings.backupHashtagList
         return event?.let { decryptionCache.hashtags(it).mapTo(mutableSetOf()) { it.lowercase() } } ?: emptySet()
     }
 
@@ -75,31 +75,31 @@ class HashtagListState(
                 emptySet(),
             )
 
-    suspend fun follow(hashtags: List<String>): HashtagListEvent {
+    suspend fun follow(hashtags: List<String>): InterestListEvent {
         val hashtagList = getHashtagList()
 
         return if (hashtagList == null) {
-            HashtagListEvent.create(hashtags, true, signer)
+            InterestListEvent.create(hashtags, true, signer)
         } else {
-            HashtagListEvent.add(hashtagList, hashtags, true, signer)
+            InterestListEvent.add(hashtagList, hashtags, true, signer)
         }
     }
 
-    suspend fun follow(hashtag: String): HashtagListEvent {
+    suspend fun follow(hashtag: String): InterestListEvent {
         val hashtagList = getHashtagList()
 
         return if (hashtagList == null) {
-            HashtagListEvent.create(hashtag.lowercase(), true, signer)
+            InterestListEvent.create(hashtag.lowercase(), true, signer)
         } else {
-            HashtagListEvent.add(hashtagList, hashtag.lowercase(), true, signer)
+            InterestListEvent.add(hashtagList, hashtag.lowercase(), true, signer)
         }
     }
 
-    suspend fun unfollow(hashtag: String): HashtagListEvent? {
+    suspend fun unfollow(hashtag: String): InterestListEvent? {
         val hashtagList = getHashtagList()
 
         return if (hashtagList != null) {
-            HashtagListEvent.remove(hashtagList, hashtag, signer)
+            InterestListEvent.remove(hashtagList, hashtag, signer)
         } else {
             null
         }
@@ -118,7 +118,7 @@ class HashtagListState(
             Log.d("AccountRegisterObservers", "Hashtag List Collector Start")
             getHashtagListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Hashtag List for ${signer.pubKey}" }
-                (it.note.event as? HashtagListEvent)?.let {
+                (it.note.event as? InterestListEvent)?.let {
                     settings.updateHashtagListTo(it)
                 }
             }

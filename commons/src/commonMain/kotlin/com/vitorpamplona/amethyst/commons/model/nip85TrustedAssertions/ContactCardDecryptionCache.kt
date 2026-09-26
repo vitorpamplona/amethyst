@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.petName
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.summary
 
@@ -37,24 +37,24 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.summary
 class ContactCardDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateCards = PrivateTagArrayEventCache<ContactCardEvent>(signer, cacheSize = 100)
+    val cachedPrivateCards = PrivateTagArrayEventCache<UserAssertionEvent>(signer, cacheSize = 100)
 
-    suspend fun petName(event: ContactCardEvent) = cachedPrivateCards.mergeTagList(event).petName()
+    suspend fun petName(event: UserAssertionEvent) = cachedPrivateCards.mergeTagList(event).petName()
 
-    suspend fun summary(event: ContactCardEvent) = cachedPrivateCards.mergeTagList(event).summary()
+    suspend fun summary(event: UserAssertionEvent) = cachedPrivateCards.mergeTagList(event).summary()
 
     /**
      * The decrypted petname and summary plus the card's full decrypted tag list,
      * so renderers can resolve the NIP-30 `emoji` mappings stored alongside them.
      */
-    suspend fun nickname(event: ContactCardEvent): Nickname? = cachedPrivateCards.mergeTagList(event).toNickname()
+    suspend fun nickname(event: UserAssertionEvent): Nickname? = cachedPrivateCards.mergeTagList(event).toNickname()
 
     /**
      * Synchronous variant that only reads an already-decrypted card, for use as
      * the immediate value of UI flows. Returns null until the suspend path has
      * decrypted the card once.
      */
-    fun cachedNickname(event: ContactCardEvent): Nickname? = cachedPrivateCards.mergeTagListPrecached(event).toNickname()
+    fun cachedNickname(event: UserAssertionEvent): Nickname? = cachedPrivateCards.mergeTagListPrecached(event).toNickname()
 
     private fun TagArray.toNickname(): Nickname? {
         val name = petName()

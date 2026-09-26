@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CancellationException
 
 class NostrSignerInternal(
@@ -89,7 +89,7 @@ class NostrSignerInternal(
     // always ready
     override fun hasForegroundSupport() = true
 
-    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent {
         if (!event.isPrivateZap()) throw SignerExceptions.NothingToDecrypt()
 
         return runWrapErrors {

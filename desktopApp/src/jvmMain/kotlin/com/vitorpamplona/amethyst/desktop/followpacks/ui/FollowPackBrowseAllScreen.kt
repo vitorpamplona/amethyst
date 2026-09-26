@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.desktop.followpacks.FollowPackEditor
 import com.vitorpamplona.amethyst.desktop.followpacks.FollowPacksState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 /**
  * Search-all view for follow packs.
@@ -138,10 +138,10 @@ fun FollowPackBrowseAllScreen(
 }
 
 private fun filter(
-    packs: List<FollowListEvent>,
+    packs: List<StarterPackEvent>,
     raw: String,
     cache: DesktopLocalCache,
-): List<FollowListEvent> {
+): List<StarterPackEvent> {
     val q = raw.lowercase()
     val asHex: HexKey? = decodePublicKeyAsHexOrNull(raw)
     return packs.filter { pack ->

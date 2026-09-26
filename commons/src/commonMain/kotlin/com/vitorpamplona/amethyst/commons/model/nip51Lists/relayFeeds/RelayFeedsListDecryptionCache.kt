@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.nip51Lists.relayFeeds
 
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 
 class RelayFeedsListDecryptionCache(
     signer: NostrSigner,
-) : GenericRelayListCache<RelayFeedsListEvent>(signer)
+) : GenericRelayListCache<FavoriteRelayListEvent>(signer)

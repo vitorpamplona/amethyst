@@ -238,8 +238,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
@@ -281,10 +281,10 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
@@ -320,10 +320,10 @@ import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
 import com.vitorpamplona.quartz.nip94FileMetadata.dimension
 import com.vitorpamplona.quartz.nip94FileMetadata.fileSize
@@ -1283,7 +1283,7 @@ class Account(
 
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
-        selectedZapType: LnZapEvent.ZapType,
+        selectedZapType: ZapReceiptEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
     ) {
         var changed = false
@@ -1707,7 +1707,7 @@ class Account(
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
-                val template = DeletionEvent.build(chunkedList.mapNotNull { it.event })
+                val template = DeletionRequestEvent.build(chunkedList.mapNotNull { it.event })
                 val deletionEvent = signer.sign(template)
                 val myRelayList = outboxRelays.flow.value.toMutableSet()
                 chunkedList.forEach {
@@ -1738,7 +1738,7 @@ class Account(
 
         val recipients = (targetEvent.taggedUserIds() + targetEvent.pubKey).distinct().minus(signer.pubKey)
         broadcastPrivately(
-            NIP17Factory().createDeletionNIP17(DeletionEvent.build(myRumors), recipients, signer),
+            NIP17Factory().createDeletionNIP17(DeletionRequestEvent.build(myRumors), recipients, signer),
         )
     }
 
@@ -1749,7 +1749,7 @@ class Account(
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        val deletionEvent = signer.sign(DeletionEvent.build(listOf(event)))
+        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(event)))
         client.publish(deletionEvent, outboxRelays.flow.value + additionalRelays)
         cache.justConsumeMyOwnEvent(deletionEvent)
     }
@@ -2176,7 +2176,7 @@ class Account(
     suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
         if (!isWriteable()) return
 
-        val template = DeletionEvent.build(listOf(event))
+        val template = DeletionRequestEvent.build(listOf(event))
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
@@ -2212,7 +2212,7 @@ class Account(
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        val template = DeletionEvent.build(listOf(event))
+        val template = DeletionRequestEvent.build(listOf(event))
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
@@ -2597,7 +2597,7 @@ class Account(
                     }
                 }
             } else {
-                FileHeaderEvent.build(url, alt) {
+                FileMetadataEvent.build(url, alt) {
                     hash(headerInfo.hash)
                     fileSize(headerInfo.size)
 
@@ -2711,7 +2711,7 @@ class Account(
         val extraRelays = draftNote.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
-        val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))
+        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(deletedDraft)))
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
 
@@ -2937,7 +2937,7 @@ class Account(
         broadcast.forEach { client.publish(it, relayList) }
     }
 
-    override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
+    override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<EncryptedDmEvent>) {
         if (!isWriteable()) return
 
         val newEvent = signer.sign(eventTemplate)
@@ -3481,10 +3481,10 @@ class Account(
 
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
-        onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
+        onReady: (event: DvmContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
-        val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
+        val request = signer.sign<DvmContentDiscoveryRequestEvent>(DvmContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
@@ -3503,8 +3503,8 @@ class Account(
 
         return if (isWriteable()) {
             when {
-                event is PrivateDmEvent -> privateDMDecryptionCache.cachedDM(event)
-                event is LnZapRequestEvent && event.isPrivateZap() -> privateZapsDecryptionCache.cachedPrivateZap(event)?.content
+                event is EncryptedDmEvent -> privateDMDecryptionCache.cachedDM(event)
+                event is ZapRequestEvent && event.isPrivateZap() -> privateZapsDecryptionCache.cachedPrivateZap(event)?.content
                 event is DraftWrapEvent -> draftsDecryptionCache.preCachedDraft(event)?.content
                 else -> event.content
             }
@@ -3519,11 +3519,11 @@ class Account(
     suspend fun decryptContent(note: Note): String? {
         val event = note.event
         return when {
-            event is PrivateDmEvent && isWriteable() -> {
+            event is EncryptedDmEvent && isWriteable() -> {
                 privateDMDecryptionCache.decryptDM(event)
             }
 
-            event is LnZapRequestEvent && isWriteable() -> {
+            event is ZapRequestEvent && isWriteable() -> {
                 if (event.isPrivateZap()) {
                     if (isWriteable()) {
                         privateZapsDecryptionCache.decryptPrivateZap(event)?.content
@@ -3550,7 +3550,7 @@ class Account(
         }
     }
 
-    suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
+    suspend fun decryptZapOrNull(event: ZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
@@ -3602,7 +3602,7 @@ class Account(
             note.countReportAuthorsBy(followingKeySet()) < reportWarningThreshold
     }
 
-    fun isDecryptedContentHidden(noteEvent: PrivateDmEvent): Boolean =
+    fun isDecryptedContentHidden(noteEvent: EncryptedDmEvent): Boolean =
         if (hiddenUsers.flow.value.hiddenWordsCase
                 .isNotEmpty()
         ) {

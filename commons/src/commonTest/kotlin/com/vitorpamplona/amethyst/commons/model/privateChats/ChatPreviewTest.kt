@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.privateChats
 
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
@@ -40,7 +40,7 @@ class ChatPreviewTest {
     private fun privateDm(
         author: String = other,
         recipient: String = me,
-    ) = PrivateDmEvent(
+    ) = EncryptedDmEvent(
         id = "dm".padEnd(64, '0'),
         pubKey = author,
         createdAt = 1_000,

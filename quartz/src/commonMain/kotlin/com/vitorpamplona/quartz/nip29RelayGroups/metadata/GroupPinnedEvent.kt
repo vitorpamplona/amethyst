@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * NIP-29 relay-signed list of a group's pinned messages (kind 39005). The relay
- * regenerates it from the accepted [com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent]
+ * regenerates it from the accepted [com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent]
  * (kind 9010) moderation actions, so this is the read side clients render — the
  * source of truth for which messages are pinned and in what display order.
  *

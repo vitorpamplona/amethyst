@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,7 +62,7 @@ class NewCalendarCollectionViewModel : ViewModel() {
     private var dTag: String? = null
 
     /** The full original event in edit mode; needed to publish a NIP-09 deletion. */
-    private var loadedEvent: com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent? = null
+    private var loadedEvent: com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent? = null
 
     val selectedAddresses = mutableStateListOf<Address>()
     val availableAppointments = mutableStateOf<List<OwnedAppointmentSummary>>(emptyList())
@@ -81,9 +81,9 @@ class NewCalendarCollectionViewModel : ViewModel() {
         dTag = editDTag
 
         editDTag?.let { existingDTag ->
-            val existingAddress = Address(CalendarEvent.KIND, account.userProfile().pubkeyHex, existingDTag)
+            val existingAddress = Address(CalendarCollectionEvent.KIND, account.userProfile().pubkeyHex, existingDTag)
             val existingNote = LocalCache.addressables.get(existingAddress)
-            (existingNote?.event as? CalendarEvent)?.let { existing ->
+            (existingNote?.event as? CalendarCollectionEvent)?.let { existing ->
                 loadedEvent = existing
                 title.value = existing.title().orEmpty()
                 description.value = existing.content
@@ -140,7 +140,7 @@ class NewCalendarCollectionViewModel : ViewModel() {
 
             account.signAndComputeBroadcast(
                 if (effectiveDTag != null) {
-                    CalendarEvent.build(
+                    CalendarCollectionEvent.build(
                         title = parsedTitle,
                         content = parsedDescription,
                         dTag = effectiveDTag,
@@ -148,7 +148,7 @@ class NewCalendarCollectionViewModel : ViewModel() {
                         if (selected.isNotEmpty()) aTags(selected.map { ATag(it) })
                     }
                 } else {
-                    CalendarEvent.build(
+                    CalendarCollectionEvent.build(
                         title = parsedTitle,
                         content = parsedDescription,
                     ) {

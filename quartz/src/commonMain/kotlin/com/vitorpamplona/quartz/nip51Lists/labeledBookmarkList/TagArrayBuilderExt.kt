@@ -28,12 +28,12 @@ import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
 @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
-fun TagArrayBuilder<LabeledBookmarkListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+fun TagArrayBuilder<BookmarkSetEvent>.name(name: String) = addUnique(NameTag.assemble(name))
 
-fun TagArrayBuilder<LabeledBookmarkListEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<BookmarkSetEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
-fun TagArrayBuilder<LabeledBookmarkListEvent>.bookmarks(bookmarks: List<BookmarkIdTag>) = addAll(bookmarks.map { it.toTagArray() })
+fun TagArrayBuilder<BookmarkSetEvent>.bookmarks(bookmarks: List<BookmarkIdTag>) = addAll(bookmarks.map { it.toTagArray() })
 
-fun TagArrayBuilder<LabeledBookmarkListEvent>.description(listDescription: String) = addUnique(DescriptionTag.assemble(listDescription))
+fun TagArrayBuilder<BookmarkSetEvent>.description(listDescription: String) = addUnique(DescriptionTag.assemble(listDescription))
 
-fun TagArrayBuilder<LabeledBookmarkListEvent>.image(url: String) = addUnique(ImageTag.assemble(url))
+fun TagArrayBuilder<BookmarkSetEvent>.image(url: String) = addUnique(ImageTag.assemble(url))

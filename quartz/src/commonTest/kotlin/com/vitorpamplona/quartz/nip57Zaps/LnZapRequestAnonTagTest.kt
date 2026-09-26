@@ -57,8 +57,8 @@ class LnZapRequestAnonTagTest {
             sig = "b".repeat(128),
         )
 
-    private suspend fun request(zapType: LnZapEvent.ZapType) =
-        LnZapRequestEvent.create(
+    private suspend fun request(zapType: ZapReceiptEvent.ZapType) =
+        ZapRequestEvent.create(
             zappedEvent = zappedEvent,
             relays = relays,
             signer = signer,
@@ -71,7 +71,7 @@ class LnZapRequestAnonTagTest {
     @Test
     fun `public zap request has no anon tag and is signed by the sender`() =
         runTest {
-            val zapRequest = request(LnZapEvent.ZapType.PUBLIC)
+            val zapRequest = request(ZapReceiptEvent.ZapType.PUBLIC)
 
             assertFalse(zapRequest.hasAnonTag())
             assertFalse(zapRequest.isPrivateZap())
@@ -81,7 +81,7 @@ class LnZapRequestAnonTagTest {
     @Test
     fun `anonymous zap request has anon tag but is not private`() =
         runTest {
-            val zapRequest = request(LnZapEvent.ZapType.ANONYMOUS)
+            val zapRequest = request(ZapReceiptEvent.ZapType.ANONYMOUS)
 
             assertTrue(zapRequest.hasAnonTag())
             assertFalse(zapRequest.isPrivateZap())
@@ -98,12 +98,12 @@ class LnZapRequestAnonTagTest {
     fun `anonymous profile zap request keeps the message public`() =
         runTest {
             val zapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     userHex = receiverPubKey,
                     relays = relays,
                     signer = signer,
                     message = "great work",
-                    zapType = LnZapEvent.ZapType.ANONYMOUS,
+                    zapType = ZapReceiptEvent.ZapType.ANONYMOUS,
                 )
 
             assertTrue(zapRequest.hasAnonTag())
@@ -115,7 +115,7 @@ class LnZapRequestAnonTagTest {
     @Test
     fun `private zap request has anon tag and is private and hides the sender key`() =
         runTest {
-            val zapRequest = request(LnZapEvent.ZapType.PRIVATE)
+            val zapRequest = request(ZapReceiptEvent.ZapType.PRIVATE)
 
             assertTrue(zapRequest.hasAnonTag())
             assertTrue(zapRequest.isPrivateZap())

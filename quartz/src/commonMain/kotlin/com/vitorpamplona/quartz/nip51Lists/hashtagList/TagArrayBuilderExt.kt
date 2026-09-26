@@ -23,6 +23,6 @@ package com.vitorpamplona.quartz.nip51Lists.hashtagList
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 
-fun TagArrayBuilder<HashtagListEvent>.followHashTag(hashtag: String) = add(HashtagTag.assemble(hashtag))
+fun TagArrayBuilder<InterestListEvent>.followHashTag(hashtag: String) = add(HashtagTag.assemble(hashtag))
 
-fun TagArrayBuilder<HashtagListEvent>.hashtags(hashtags: List<String>) = addAll(hashtags.map { HashtagTag.assemble(it) })
+fun TagArrayBuilder<InterestListEvent>.hashtags(hashtags: List<String>) = addAll(hashtags.map { HashtagTag.assemble(it) })

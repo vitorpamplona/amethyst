@@ -167,7 +167,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -1817,7 +1817,7 @@ fun MainContent(
                 kinds =
                     listOf(
                         AdvertisedRelayListEvent.KIND,
-                        ChatMessageRelayListEvent.KIND,
+                        DmRelayListEvent.KIND,
                         SearchRelayListEvent.KIND,
                         BlockedRelayListEvent.KIND,
                         BlossomServersEvent.KIND,
@@ -1845,7 +1845,7 @@ fun MainContent(
                         // dmInboxRelaysStrict, self-copy resolution) alongside
                         // accountRelays' persisted copy.
                         if (event is AdvertisedRelayListEvent ||
-                            event is ChatMessageRelayListEvent ||
+                            event is DmRelayListEvent ||
                             event is BlossomServersEvent ||
                             event is MuteListEvent
                         ) {
@@ -1877,7 +1877,7 @@ fun MainContent(
                             kinds =
                                 listOf(
                                     AdvertisedRelayListEvent.KIND,
-                                    ChatMessageRelayListEvent.KIND,
+                                    DmRelayListEvent.KIND,
                                     SearchRelayListEvent.KIND,
                                     BlockedRelayListEvent.KIND,
                                     BlossomServersEvent.KIND,
@@ -1926,7 +1926,7 @@ fun MainContent(
 
                 // Process into chatroomList based on event type
                 when (event) {
-                    is com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent -> {
+                    is com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent -> {
                         iAccount.chatroomList.addMessage(
                             event.chatroomKey(iAccount.pubKey),
                             note,

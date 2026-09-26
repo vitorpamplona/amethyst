@@ -36,7 +36,7 @@ class WikiCollaborationTest {
 
     private fun mergeRequest(vararg tags: Array<String>) = WikiMergeRequestEvent("id", "pk", 0L, arrayOf(*tags), "why", "sig")
 
-    private fun coordinate() = "${WikiNoteEvent.KIND}:$destination:hot-ice-creams"
+    private fun coordinate() = "${WikiArticleEvent.KIND}:$destination:hot-ice-creams"
 
     // ---- kind 818 --------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ class WikiCollaborationTest {
     fun buildsWithTheSpecMarker() {
         val template =
             WikiMergeRequestEvent.build(
-                targetArticle = Address(WikiNoteEvent.KIND, destination, "hot-ice-creams"),
+                targetArticle = Address(WikiArticleEvent.KIND, destination, "hot-ice-creams"),
                 destinationAuthor = destination,
                 mergeSourceId = fork,
                 explanation = "I added a section",
@@ -180,7 +180,7 @@ class WikiCollaborationTest {
                 0L,
                 arrayOf(
                     arrayOf("d", "shell-structure"),
-                    arrayOf("a", "${WikiNoteEvent.KIND}:$destination:thin-shell-structure"),
+                    arrayOf("a", "${WikiArticleEvent.KIND}:$destination:thin-shell-structure"),
                 ),
                 "",
                 "sig",
@@ -232,11 +232,11 @@ class WikiCollaborationTest {
     @Test
     fun buildsARedirectWithANormalizedSlug() {
         val template =
-            WikiRedirectEvent.build("Shell Structure", Address(WikiNoteEvent.KIND, destination, "thin-shell-structure"))
+            WikiRedirectEvent.build("Shell Structure", Address(WikiArticleEvent.KIND, destination, "thin-shell-structure"))
         val tags = template.tags.associate { it[0] to it[1] }
 
         assertEquals("shell-structure", tags["d"])
-        assertEquals("${WikiNoteEvent.KIND}:$destination:thin-shell-structure", tags["a"])
+        assertEquals("${WikiArticleEvent.KIND}:$destination:thin-shell-structure", tags["a"])
         assertEquals("", template.content)
     }
 }

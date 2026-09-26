@@ -42,10 +42,10 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
@@ -112,9 +112,9 @@ class EventProcessor(
 
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
 
-            is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
+            is SealEvent -> sealHandler.add(event, eventNote, publicNote)
 
-            is LnZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
+            is ZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
         }
     }
 
@@ -153,9 +153,9 @@ class EventProcessor(
             is ChatroomKeyable -> chatHandler.delete(event, note)
             is DraftWrapEvent -> draftHandler.delete(event, note)
             is GiftWrapEvent -> giftWrapHandler.delete(event, note)
-            is SealedRumorEvent -> sealHandler.delete(event, note)
-            is LnZapRequestEvent -> zapRequest.delete(event, note)
-            is LnZapEvent -> zapEvent.delete(event, note)
+            is SealEvent -> sealHandler.delete(event, note)
+            is ZapRequestEvent -> zapRequest.delete(event, note)
+            is ZapReceiptEvent -> zapEvent.delete(event, note)
         }
     }
 
@@ -457,9 +457,9 @@ class SealedRumorEventHandler(
     private val account: Account,
     private val cache: LocalCache,
     private val eventProcessor: EventProcessor,
-) : EventHandler<SealedRumorEvent> {
+) : EventHandler<SealEvent> {
     override suspend fun add(
-        event: SealedRumorEvent,
+        event: SealEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
@@ -477,7 +477,7 @@ class SealedRumorEventHandler(
     }
 
     override suspend fun delete(
-        event: SealedRumorEvent,
+        event: SealEvent,
         eventNote: Note,
     ) {
         event.innerEventId?.let { rumorId ->
@@ -489,7 +489,7 @@ class SealedRumorEventHandler(
     }
 
     private suspend fun processNewSealedRumor(
-        event: SealedRumorEvent,
+        event: SealEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
@@ -538,9 +538,9 @@ class SealedRumorEventHandler(
 
 class LnZapRequestEventHandler(
     val decryptionCache: PrivateZapCache,
-) : EventHandler<LnZapRequestEvent> {
+) : EventHandler<ZapRequestEvent> {
     override suspend fun add(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
@@ -550,7 +550,7 @@ class LnZapRequestEventHandler(
     }
 
     override suspend fun delete(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         eventNote: Note,
     ) {
         if (event.isPrivateZap()) {
@@ -561,9 +561,9 @@ class LnZapRequestEventHandler(
 
 class LnZapEventHandler(
     val decryptionCache: PrivateZapCache,
-) : EventHandler<LnZapEvent> {
+) : EventHandler<ZapReceiptEvent> {
     override suspend fun delete(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         eventNote: Note,
     ) {
         event.zapRequest?.let { req ->

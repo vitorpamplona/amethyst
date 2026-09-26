@@ -64,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -104,7 +104,7 @@ fun RenderLnZap(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val zapEvent = note.event as? LnZapEvent ?: return
+    val zapEvent = note.event as? ZapReceiptEvent ?: return
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
 

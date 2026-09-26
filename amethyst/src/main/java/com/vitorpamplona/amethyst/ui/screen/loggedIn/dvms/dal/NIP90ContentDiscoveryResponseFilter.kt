@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 
 open class NIP90ContentDiscoveryResponseFilter(
     val account: Account,
@@ -40,7 +40,7 @@ open class NIP90ContentDiscoveryResponseFilter(
 
     fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event
-        return noteEvent is NIP90ContentDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
+        return noteEvent is DvmContentDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
     }
 
     override fun feed(): List<Note> {
@@ -54,7 +54,7 @@ open class NIP90ContentDiscoveryResponseFilter(
                 comparator = CreatedAtComparator,
             )
 
-        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return listOf()
+        val noteEvent = latestNote?.event as? DvmContentDiscoveryResponseEvent ?: return listOf()
 
         return noteEvent.innerTags().mapNotNull {
             LocalCache.checkGetOrCreateNote(it)
@@ -78,7 +78,7 @@ open class NIP90ContentDiscoveryResponseFilter(
             latestNote = maxNote
         }
 
-        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return setOf()
+        val noteEvent = latestNote?.event as? DvmContentDiscoveryResponseEvent ?: return setOf()
 
         return noteEvent
             .innerTags()

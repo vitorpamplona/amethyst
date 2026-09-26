@@ -33,11 +33,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.update
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.description
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.image
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.title
@@ -62,7 +62,7 @@ class LabeledBookmarkListsState(
 ) {
     val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun existingLabeledBookmarkNotes() = cache.addressables.filter(LabeledBookmarkListEvent.KIND, user.pubkeyHex)
+    fun existingLabeledBookmarkNotes() = cache.addressables.filter(BookmarkSetEvent.KIND, user.pubkeyHex)
 
     val labeledBookmarkListVersions = MutableStateFlow(0)
 
@@ -81,14 +81,14 @@ class LabeledBookmarkListsState(
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val latestBookmarkLists: StateFlow<List<LabeledBookmarkListEvent>> =
+    val latestBookmarkLists: StateFlow<List<BookmarkSetEvent>> =
         labeledBookmarkListNotes
-            .transformLatest { emitAll(it.updateFlow<LabeledBookmarkListEvent>()) }
+            .transformLatest { emitAll(it.updateFlow<BookmarkSetEvent>()) }
             .onStart { emit(labeledBookmarkListNotes.value.events()) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    suspend fun LabeledBookmarkListEvent.toLabeledBookmarkList() =
+    suspend fun BookmarkSetEvent.toLabeledBookmarkList() =
         LabeledBookmarkList(
             identifier = dTag(),
             title = titleOrName() ?: dTag(),
@@ -98,7 +98,7 @@ class LabeledBookmarkListsState(
             publicBookmarks = publicBookmarks().toSet(),
         )
 
-    suspend fun List<LabeledBookmarkListEvent>.toLabeledBookmarkListsFeed() = map { it.toLabeledBookmarkList() }.sortedBy { it.title }
+    suspend fun List<BookmarkSetEvent>.toLabeledBookmarkListsFeed() = map { it.toLabeledBookmarkList() }.sortedBy { it.title }
 
     val listFeedFlow =
         latestBookmarkLists
@@ -114,12 +114,12 @@ class LabeledBookmarkListsState(
 
     fun getBookmarkList(dTag: String) = listFeedFlow.value.getList(bookmarkListId = dTag)
 
-    fun DeletionEvent.hasAnyDeletedBookmarkLists() = deleteAddressesWithKind(LabeledBookmarkListEvent.KIND) || deletesAnyEventIn(labeledBookmarkListEventIds.value)
+    fun DeletionRequestEvent.hasAnyDeletedBookmarkLists() = deleteAddressesWithKind(BookmarkSetEvent.KIND) || deletesAnyEventIn(labeledBookmarkListEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->
             if (event.pubKey == signer.pubKey) {
-                event is LabeledBookmarkListEvent || (event is DeletionEvent && event.hasAnyDeletedBookmarkLists())
+                event is BookmarkSetEvent || (event is DeletionRequestEvent && event.hasAnyDeletedBookmarkLists())
             } else {
                 false
             }
@@ -143,7 +143,7 @@ class LabeledBookmarkListsState(
 
     fun getLabeledBookmarkListNote(bookmarkIdentifier: String): AddressableNote? = existingLabeledBookmarkNotes().find { it.dTag() == bookmarkIdentifier }
 
-    fun getLabeledBookmarkListEvent(bookmarkIdentifier: String): LabeledBookmarkListEvent = getLabeledBookmarkListNote(bookmarkIdentifier)?.event as LabeledBookmarkListEvent
+    fun getLabeledBookmarkListEvent(bookmarkIdentifier: String): BookmarkSetEvent = getLabeledBookmarkListNote(bookmarkIdentifier)?.event as BookmarkSetEvent
 
     fun getLabeledBookmarkListFlow(bookmarkIdentifier: String) =
         listFeedFlow
@@ -163,7 +163,7 @@ class LabeledBookmarkListsState(
         account: Account,
     ) {
         val newList =
-            LabeledBookmarkListEvent.create(
+            BookmarkSetEvent.create(
                 title = listName,
                 description = listDescription,
                 image = listImage,
@@ -202,7 +202,7 @@ class LabeledBookmarkListsState(
     ) {
         val listEvent = getLabeledBookmarkListEvent(bookmarkList.identifier)
         val renamedList =
-            LabeledBookmarkListEvent.modifyName(
+            BookmarkSetEvent.modifyName(
                 earlierVersion = listEvent,
                 newTitle = newName,
                 signer = account.signer,
@@ -217,7 +217,7 @@ class LabeledBookmarkListsState(
     ) {
         val listEvent = getLabeledBookmarkListEvent(bookmarkList.identifier)
         val modifiedList =
-            LabeledBookmarkListEvent.modifyDescription(
+            BookmarkSetEvent.modifyDescription(
                 earlierVersion = listEvent,
                 newDescription = newDescription,
                 signer = account.signer,
@@ -232,7 +232,7 @@ class LabeledBookmarkListsState(
         account: Account,
     ) {
         val clonedList =
-            LabeledBookmarkListEvent.create(
+            BookmarkSetEvent.create(
                 title = customCloneName ?: currentBookmarkList.title,
                 description = customCloneDescription ?: currentBookmarkList.description,
                 publicBookmarks = currentBookmarkList.publicBookmarks.toList(),
@@ -247,7 +247,7 @@ class LabeledBookmarkListsState(
         account: Account,
     ) {
         val listEvent = getLabeledBookmarkListEvent(bookmarkListIdentifier)
-        val deletionEventTemplate = DeletionEvent.build(listOf(listEvent))
+        val deletionEventTemplate = DeletionRequestEvent.build(listOf(listEvent))
         val deletionEvent = account.signer.sign(deletionEventTemplate)
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
     }
@@ -260,7 +260,7 @@ class LabeledBookmarkListsState(
     ) {
         val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
         val updatedList =
-            LabeledBookmarkListEvent.addBookmark(
+            BookmarkSetEvent.addBookmark(
                 earlierVersion = currentBookmarkList,
                 bookmarkIdTag = bookmark,
                 isPrivate = isBookmarkPrivate,
@@ -277,7 +277,7 @@ class LabeledBookmarkListsState(
     ) {
         val bookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
         val updatedList =
-            LabeledBookmarkListEvent.moveBookmark(
+            BookmarkSetEvent.moveBookmark(
                 earlierVersion = bookmarkList,
                 bookmarkIdTag = bookmark,
                 isCurrentlyPrivate = isBookmarkCurrentlyPrivate,
@@ -294,7 +294,7 @@ class LabeledBookmarkListsState(
     ) {
         val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
         val updatedList =
-            LabeledBookmarkListEvent.removeBookmark(
+            BookmarkSetEvent.removeBookmark(
                 earlierVersion = currentBookmarkList,
                 bookmarkIdTag = bookmark,
                 isPrivate = isBookmarkPrivate,
@@ -311,7 +311,7 @@ class LabeledBookmarkListsState(
     ) {
         if (deletedEventIds.isEmpty() && deletedAddresses.isEmpty()) return
 
-        val currentList = getLabeledBookmarkListNote(bookmarkListIdentifier)?.event as? LabeledBookmarkListEvent ?: return
+        val currentList = getLabeledBookmarkListNote(bookmarkListIdentifier)?.event as? BookmarkSetEvent ?: return
 
         val newPublicTags =
             currentList.tags
@@ -328,7 +328,7 @@ class LabeledBookmarkListsState(
         val updatedList =
             if (oldPrivateTags == null) {
                 if (newPublicTags.size == currentList.tags.size) return
-                LabeledBookmarkListEvent.resign(
+                BookmarkSetEvent.resign(
                     content = currentList.content,
                     tags = newPublicTags,
                     signer = account.signer,
@@ -344,7 +344,7 @@ class LabeledBookmarkListsState(
                             }
                         }.toTypedArray()
                 if (newPublicTags.size == currentList.tags.size && newPrivateTags.size == oldPrivateTags.size) return
-                LabeledBookmarkListEvent.resign(
+                BookmarkSetEvent.resign(
                     tags = newPublicTags,
                     privateTags = newPrivateTags,
                     signer = account.signer,

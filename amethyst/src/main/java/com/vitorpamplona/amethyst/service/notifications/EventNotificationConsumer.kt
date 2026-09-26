@@ -64,7 +64,7 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -72,7 +72,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -84,17 +84,17 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
@@ -234,7 +234,7 @@ class EventNotificationConsumer(
         // public chat the user has silenced (matches the in-app feed, which mutes all four).
         // Without the second check, muting a channel still let a like on your own message
         // there notify you — the row's glyph promises silence, so it has to mean it.
-        if (event is ReactionEvent || event is LnZapEvent || event is RepostEvent || event is GenericRepostEvent) {
+        if (event is ReactionEvent || event is ZapReceiptEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
             if (target != null &&
                 (
@@ -247,7 +247,7 @@ class EventNotificationConsumer(
         }
 
         when (event) {
-            is PrivateDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
+            is EncryptedDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEncryptedFileHeaderEvent -> DirectMessageNotification.notify(applicationContext, account, event)
 
@@ -256,7 +256,7 @@ class EventNotificationConsumer(
             is StreamMessageV2Event -> BuzzDmNotification.notify(applicationContext, account, event)
             is ChatEvent -> BuzzDmNotification.notify(applicationContext, account, event)
 
-            is LnZapEvent -> ZapNotification.notify(applicationContext, account, event)
+            is ZapReceiptEvent -> ZapNotification.notify(applicationContext, account, event)
             is NutzapEvent -> ZapNotification.notify(applicationContext, account, event)
             is OnchainZapEvent -> ZapNotification.notify(applicationContext, account, event)
 
@@ -274,15 +274,15 @@ class EventNotificationConsumer(
             is PictureEvent,
             is VideoNormalEvent,
             is VideoShortEvent,
-            is VideoHorizontalEvent,
-            is VideoVerticalEvent,
+            is AddressableNormalVideoEvent,
+            is AddressableShortVideoEvent,
             -> MediaNotification.notify(applicationContext, account, event)
 
             is PollEvent -> MentionNotification.notify(applicationContext, account, event, titleRes = Res.string.app_notification_poll_channel_message)
 
             is HighlightEvent,
-            is LongTextNoteEvent,
-            is WikiNoteEvent,
+            is LongFormContentEvent,
+            is WikiArticleEvent,
             -> ArticleNotification.notify(applicationContext, account, event)
 
             is GitIssueEvent -> CodeNotification.notify(applicationContext, account, event)

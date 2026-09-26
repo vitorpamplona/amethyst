@@ -310,7 +310,7 @@ class DesktopRelaySubscriptionsCoordinator(
                 ),
                 // Zap receipts (kind 9735) targeting these notes
                 Filter(
-                    kinds = listOf(com.vitorpamplona.quartz.nip57Zaps.LnZapEvent.KIND),
+                    kinds = listOf(com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent.KIND),
                     tags = mapOf("e" to noteIds),
                 ),
                 // Reposts (kind 6) targeting these notes

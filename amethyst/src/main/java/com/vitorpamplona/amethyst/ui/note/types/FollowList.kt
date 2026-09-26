@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.FollowSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
@@ -79,7 +79,7 @@ fun DisplayFollowList(
     nav: INav,
 ) {
     val card =
-        observeNoteEventAndMap(baseNote, accountViewModel) { event: FollowListEvent? ->
+        observeNoteEventAndMap(baseNote, accountViewModel) { event: StarterPackEvent? ->
             if (event == null) {
                 FollowSetCard(
                     name = "",
@@ -190,7 +190,7 @@ fun RenderFollowSetThumbPreview() {
     val accountViewModel = mockAccountViewModel()
 
     val followCard =
-        FollowListEvent(
+        StarterPackEvent(
             id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
             pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
             createdAt = 1761736286,

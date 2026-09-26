@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 class ArticlesFeedFilter(
     val account: Account,
@@ -50,9 +50,9 @@ class ArticlesFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.addressables.filterIntoSet(LongTextNoteEvent.KIND) { _, it ->
+            LocalCache.addressables.filterIntoSet(LongFormContentEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
+                noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
             }
         return sort(notes)
     }
@@ -70,7 +70,7 @@ class ArticlesFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
+            noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
         }
     }
 

@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.experimental.nip85TrustedAssertions
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
 import kotlinx.coroutines.test.runTest
@@ -36,15 +36,15 @@ class ContactCardPetNameTest {
     val signer = NostrSignerInternal(KeyPair())
     val targetUser = "e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411"
 
-    private suspend fun ContactCardEvent.privatePetName() = privateTags(signer)?.firstNotNullOfOrNull(PetNameTag::parse)
+    private suspend fun UserAssertionEvent.privatePetName() = privateTags(signer)?.firstNotNullOfOrNull(PetNameTag::parse)
 
-    private suspend fun ContactCardEvent.privateSummary() = privateTags(signer)?.firstNotNullOfOrNull(SummaryTag::parse)
+    private suspend fun UserAssertionEvent.privateSummary() = privateTags(signer)?.firstNotNullOfOrNull(SummaryTag::parse)
 
     @Test
     fun createKeepsPetNameAndSummaryEncrypted() =
         runTest {
             val card =
-                ContactCardEvent.create(
+                UserAssertionEvent.create(
                     targetUser = targetUser,
                     petName = "Bob from work",
                     summary = "Met at the conference",
@@ -66,7 +66,7 @@ class ContactCardPetNameTest {
     fun updateReplacesPetNameAndKeepsOtherPrivateTags() =
         runTest {
             val card =
-                ContactCardEvent.create(
+                UserAssertionEvent.create(
                     targetUser = targetUser,
                     petName = "Bob",
                     summary = "old summary",
@@ -77,7 +77,7 @@ class ContactCardPetNameTest {
 
             val updated =
                 signer.sign(
-                    ContactCardEvent.updatePetNameAndSummary(
+                    UserAssertionEvent.updatePetNameAndSummary(
                         earlierVersion = card,
                         petName = "Bobby",
                         summary = "new summary",
@@ -102,7 +102,7 @@ class ContactCardPetNameTest {
     fun updateWithNullsClearsBothFields() =
         runTest {
             val card =
-                ContactCardEvent.create(
+                UserAssertionEvent.create(
                     targetUser = targetUser,
                     petName = "Bob",
                     summary = "summary",
@@ -111,7 +111,7 @@ class ContactCardPetNameTest {
 
             val cleared =
                 signer.sign(
-                    ContactCardEvent.updatePetNameAndSummary(
+                    UserAssertionEvent.updatePetNameAndSummary(
                         earlierVersion = card,
                         petName = null,
                         summary = null,
@@ -130,7 +130,7 @@ class ContactCardPetNameTest {
             val newEmoji = EmojiUrlTag("soapbox", "https://new.example/soapbox.png")
 
             val card =
-                ContactCardEvent.create(
+                UserAssertionEvent.create(
                     targetUser = targetUser,
                     petName = "Bob :wave:",
                     emojis = listOf(oldEmoji),
@@ -140,7 +140,7 @@ class ContactCardPetNameTest {
 
             val updated =
                 signer.sign(
-                    ContactCardEvent.updatePetNameAndSummary(
+                    UserAssertionEvent.updatePetNameAndSummary(
                         earlierVersion = card,
                         petName = "Bob :soapbox:",
                         emojis = listOf(newEmoji),
@@ -159,7 +159,7 @@ class ContactCardPetNameTest {
         runTest {
             // a card that (incorrectly) carries public petname/summary tags
             val card =
-                ContactCardEvent.create(
+                UserAssertionEvent.create(
                     targetUser = targetUser,
                     signer = signer,
                     publicInitializer = {
@@ -171,7 +171,7 @@ class ContactCardPetNameTest {
 
             val updated =
                 signer.sign(
-                    ContactCardEvent.updatePetNameAndSummary(
+                    UserAssertionEvent.updatePetNameAndSummary(
                         earlierVersion = card,
                         petName = "private bob",
                         signer = signer,

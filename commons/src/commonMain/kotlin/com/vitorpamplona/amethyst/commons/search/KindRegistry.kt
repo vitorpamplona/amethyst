@@ -27,29 +27,29 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -93,7 +93,7 @@ object KindRegistry {
     val aliases: Map<String, List<Int>> =
         mapOf(
             "note" to listOf(TextNoteEvent.KIND),
-            "article" to listOf(LongTextNoteEvent.KIND),
+            "article" to listOf(LongFormContentEvent.KIND),
             // No `repost` or `profile` here on purpose: both name kinds in
             // [RenderableKinds.NEVER_IN_RESULTS], so the chip drew and the list stayed empty
             // forever. `kind:profile` was the worse of the two — it pinned the scope to Notes,
@@ -101,7 +101,7 @@ object KindRegistry {
             "channel" to listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
             "live" to listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
             "community" to listOf(CommunityDefinitionEvent.KIND),
-            "wiki" to listOf(WikiNoteEvent.KIND),
+            "wiki" to listOf(WikiArticleEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),
             "geocache" to listOf(GeocacheListingEvent.KIND),
             "highlight" to listOf(HighlightEvent.KIND),
@@ -109,7 +109,7 @@ object KindRegistry {
             // The kinds the app's own feeds are windows onto, so a screen that seeds its search
             // gets a chip a reader recognises instead of a bare number.
             "picture" to listOf(PictureEvent.KIND),
-            "video" to listOf(VideoNormalEvent.KIND, VideoShortEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
+            "video" to listOf(VideoNormalEvent.KIND, VideoShortEvent.KIND, AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND),
             "nsite" to listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND),
             "napplet" to listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
             "emoji" to listOf(EmojiPackEvent.KIND),
@@ -123,15 +123,15 @@ object KindRegistry {
             "podcast" to listOf(PodcastMetadataEvent.KIND),
             "episode" to listOf(Podcasting20EpisodeEvent.KIND),
             "software" to listOf(SoftwareApplicationEvent.KIND),
-            "followpack" to listOf(FollowListEvent.KIND),
+            "followpack" to listOf(StarterPackEvent.KIND),
             "zappoll" to listOf(ZapPollEvent.KIND),
             // `video` is every video kind; these name the two the app gives their own feeds.
-            "stories" to listOf(VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
-            "short" to listOf(VideoVerticalEvent.KIND),
-            "longvideo" to listOf(VideoHorizontalEvent.KIND),
+            "stories" to listOf(AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND),
+            "short" to listOf(AddressableShortVideoEvent.KIND),
+            "longvideo" to listOf(AddressableNormalVideoEvent.KIND),
             // The slots on a calendar, and the calendars that collect them.
             "calendar" to listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND),
-            "calendarset" to listOf(CalendarEvent.KIND),
+            "calendarset" to listOf(CalendarCollectionEvent.KIND),
         )
 
     val pseudoKinds: Set<String> = setOf("reply", "media")
@@ -148,11 +148,11 @@ object KindRegistry {
     val presets: Map<String, ContentPreset> =
         mapOf(
             "Notes" to ContentPreset(kinds = listOf(TextNoteEvent.KIND)),
-            "Articles" to ContentPreset(kinds = listOf(LongTextNoteEvent.KIND)),
+            "Articles" to ContentPreset(kinds = listOf(LongFormContentEvent.KIND)),
             "Media" to ContentPreset(pseudoKind = "media"),
             "Channels" to ContentPreset(kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND)),
             "Communities" to ContentPreset(kinds = listOf(CommunityDefinitionEvent.KIND)),
-            "Wiki" to ContentPreset(kinds = listOf(WikiNoteEvent.KIND)),
+            "Wiki" to ContentPreset(kinds = listOf(WikiArticleEvent.KIND)),
             "Polls" to ContentPreset(kinds = listOf(PollEvent.KIND)),
         )
 

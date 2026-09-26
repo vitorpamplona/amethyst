@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -45,7 +45,7 @@ import java.util.prefs.Preferences
  * simpler relay management.
  *
  * On Android, Account.dmRelays aggregates:
- * - DmRelayListState (ChatMessageRelayListEvent, kind 10050)
+ * - DmRelayListState (DmRelayListEvent, kind 10050)
  * - Nip65RelayListState (NIP-65 advertised relays)
  * - PrivateStorageRelayListState
  * - LocalRelayListState
@@ -119,8 +119,8 @@ class DesktopAccountRelays(
 
     private fun loadFromPersistence() {
         // Load DM relays from event or URL cache
-        val dmEvent = loadEvent(ChatMessageRelayListEvent.KIND)
-        if (dmEvent is ChatMessageRelayListEvent) {
+        val dmEvent = loadEvent(DmRelayListEvent.KIND)
+        if (dmEvent is DmRelayListEvent) {
             _dmRelayList.value = dmEvent.relays().toSet()
             lastDmCreatedAt.set(dmEvent.createdAt)
         } else {
@@ -160,8 +160,8 @@ class DesktopAccountRelays(
                 true
             }
 
-            ChatMessageRelayListEvent.KIND -> {
-                if (event is ChatMessageRelayListEvent && event.createdAt >= lastDmCreatedAt.get()) {
+            DmRelayListEvent.KIND -> {
+                if (event is DmRelayListEvent && event.createdAt >= lastDmCreatedAt.get()) {
                     lastDmCreatedAt.set(event.createdAt)
                     val relays = event.relays().toSet()
                     _dmRelayList.value = relays

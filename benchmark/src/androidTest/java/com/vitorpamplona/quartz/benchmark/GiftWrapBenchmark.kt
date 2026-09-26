@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -78,7 +78,7 @@ class GiftWrapBenchmark {
             val event = it.unwrapThrowing(keyToUse)
             event.checkSignature()
 
-            if (event is SealedRumorEvent) {
+            if (event is SealEvent) {
                 val innerData = event.unsealThrowing(keyToUse)
                 Assert.assertEquals(message, innerData.content)
             } else {
@@ -116,7 +116,7 @@ class GiftWrapBenchmark {
                 val seal = wrap.unwrapThrowing(keyToUse)
                 seal.checkSignature()
 
-                if (seal is SealedRumorEvent) {
+                if (seal is SealEvent) {
                     val innerData = seal.unsealThrowing(keyToUse)
                     Assert.assertEquals(message, innerData.content)
                 } else {

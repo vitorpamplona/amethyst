@@ -25,8 +25,8 @@ import com.davotoula.lightcompressor.hls.HlsRenditionSummary
 import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -122,7 +122,7 @@ class HlsVideoEventBuilderTest {
 
         assertTrue("expected Horizontal template", result.template is HlsVideoEventTemplate.Horizontal)
         val template = (result.template as HlsVideoEventTemplate.Horizontal).template
-        assertEquals(VideoHorizontalEvent.KIND, template.kind)
+        assertEquals(AddressableNormalVideoEvent.KIND, template.kind)
         assertEquals("A cool video", template.content)
     }
 
@@ -132,7 +132,7 @@ class HlsVideoEventBuilderTest {
 
         assertTrue("expected Vertical template", result.template is HlsVideoEventTemplate.Vertical)
         val template = (result.template as HlsVideoEventTemplate.Vertical).template
-        assertEquals(VideoVerticalEvent.KIND, template.kind)
+        assertEquals(AddressableShortVideoEvent.KIND, template.kind)
     }
 
     @Test

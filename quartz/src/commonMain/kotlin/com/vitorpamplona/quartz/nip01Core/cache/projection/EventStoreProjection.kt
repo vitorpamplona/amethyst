@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore.StoreChange
 import com.vitorpamplona.quartz.nip01Core.store.owner
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.SortedList
@@ -156,7 +156,7 @@ class EventStoreProjection<T : Event>(
         // NIP-09 / NIP-62 side effects come first — a deletion event
         // that arrives at the same instant as a matching event still
         // removes its targets.
-        if (event is DeletionEvent) {
+        if (event is DeletionRequestEvent) {
             if (handleDeletion(event)) changed = true
         }
         if (event is RequestToVanishEvent && event.shouldVanishFrom(store.relay)) {
@@ -260,7 +260,7 @@ class EventStoreProjection<T : Event>(
         return changed
     }
 
-    private fun handleDeletion(deletion: DeletionEvent): Boolean {
+    private fun handleDeletion(deletion: DeletionRequestEvent): Boolean {
         var changed = false
 
         // NIP-09 by id, only if the deletion's author owns the target.

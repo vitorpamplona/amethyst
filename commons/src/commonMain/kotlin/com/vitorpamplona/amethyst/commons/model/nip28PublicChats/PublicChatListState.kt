@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -44,9 +44,9 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 interface PublicChatListRepository {
-    fun channelList(): ChannelListEvent?
+    fun channelList(): PublicChatListEvent?
 
-    fun updateChannelListTo(newChannelList: ChannelListEvent?)
+    fun updateChannelListTo(newChannelList: PublicChatListEvent?)
 }
 
 class PublicChatListState(
@@ -59,14 +59,14 @@ class PublicChatListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val publicChatListNote = cache.getOrCreateAddressableNote(getChannelListAddress())
 
-    fun getChannelListAddress() = ChannelListEvent.createAddress(signer.pubKey)
+    fun getChannelListAddress() = PublicChatListEvent.createAddress(signer.pubKey)
 
     fun getChannelListFlow(): StateFlow<NoteState> = publicChatListNote.flow().metadata.stateFlow
 
-    fun getChannelList(): ChannelListEvent? = publicChatListNote.event as? ChannelListEvent
+    fun getChannelList(): PublicChatListEvent? = publicChatListNote.event as? PublicChatListEvent
 
     suspend fun publicChatListWithBackup(note: Note): Set<ChannelTag> {
-        val event = note.event as? ChannelListEvent ?: settings.channelList()
+        val event = note.event as? PublicChatListEvent ?: settings.channelList()
         return event?.let { decryptionCache.channelSet(it) } ?: emptySet()
     }
 
@@ -111,32 +111,32 @@ class PublicChatListState(
                 emptyList(),
             )
 
-    suspend fun follow(channel: PublicChatChannel): ChannelListEvent {
+    suspend fun follow(channel: PublicChatChannel): PublicChatListEvent {
         val publicChatList = getChannelList()
 
         return if (publicChatList == null) {
-            ChannelListEvent.create(ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
+            PublicChatListEvent.create(ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
         } else {
-            ChannelListEvent.add(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
+            PublicChatListEvent.add(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
         }
     }
 
-    suspend fun follow(channels: List<PublicChatChannel>): ChannelListEvent {
+    suspend fun follow(channels: List<PublicChatChannel>): PublicChatListEvent {
         val publicChatList = getChannelList()
 
         val channelTags = channels.map { ChannelTag(it.idHex, it.relayHintUrl()) }
         return if (publicChatList == null) {
-            ChannelListEvent.create(channelTags, true, signer)
+            PublicChatListEvent.create(channelTags, true, signer)
         } else {
-            ChannelListEvent.add(publicChatList, channelTags, true, signer)
+            PublicChatListEvent.add(publicChatList, channelTags, true, signer)
         }
     }
 
-    suspend fun unfollow(channel: PublicChatChannel): ChannelListEvent? {
+    suspend fun unfollow(channel: PublicChatChannel): PublicChatListEvent? {
         val publicChatList = getChannelList()
 
         return if (publicChatList != null) {
-            ChannelListEvent.remove(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), signer)
+            PublicChatListEvent.remove(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), signer)
         } else {
             null
         }
@@ -155,7 +155,7 @@ class PublicChatListState(
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
             getChannelListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Channel List for ${signer.pubKey}" }
-                (it.note.event as? ChannelListEvent)?.let {
+                (it.note.event as? PublicChatListEvent)?.let {
                     settings.updateChannelListTo(it)
                 }
             }

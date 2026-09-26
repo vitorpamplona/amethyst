@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -350,8 +350,8 @@ class MarmotMipBehaviorTest {
 
             // Bob unwraps: kind:1059 → kind:13 (Seal) → kind:444 (Rumor).
             val sealed = delivery.giftWrapEvent.unwrapThrowing(bobSigner)
-            assertEquals(SealedRumorEvent.KIND, sealed.kind, "Middle layer MUST be NIP-59 Seal kind:13")
-            assertIs<SealedRumorEvent>(sealed)
+            assertEquals(SealEvent.KIND, sealed.kind, "Middle layer MUST be NIP-59 Seal kind:13")
+            assertIs<SealEvent>(sealed)
 
             val rumor = sealed.unsealThrowing(bobSigner)
             assertEquals(WelcomeEvent.KIND, rumor.kind, "Innermost rumor MUST be kind:444")

@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,7 +116,7 @@ class BunkerRequestProcessorTest {
             return "nip44dec:$ciphertext"
         }
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
 
@@ -371,7 +371,7 @@ class BunkerRequestProcessorTest {
                         fromPublicKey: HexKey,
                     ) = ""
 
-                    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+                    override suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
 
                     override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
 

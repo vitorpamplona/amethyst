@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -82,7 +82,7 @@ fun RenderFollowSetThumb(
     nav: INav,
 ) {
     val card by observeNoteAndMap(baseNote, accountViewModel) {
-        val noteEvent = it.event as? FollowListEvent
+        val noteEvent = it.event as? StarterPackEvent
 
         FollowSetCard(
             name = noteEvent?.title()?.ifBlank { null } ?: noteEvent?.dTag() ?: "",
@@ -111,7 +111,7 @@ fun RenderFollowSetThumbPreview() {
     val nav = EmptyNav()
 
     val followCard =
-        FollowListEvent(
+        StarterPackEvent(
             id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
             pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
             createdAt = 1761736286,

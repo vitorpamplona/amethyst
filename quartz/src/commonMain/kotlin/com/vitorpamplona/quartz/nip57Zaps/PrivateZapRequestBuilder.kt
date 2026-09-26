@@ -73,7 +73,7 @@ class PrivateZapRequestBuilder {
     }
 
     fun decryptZapEvent(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         signer: NostrSignerSync,
     ): LnZapPrivateEvent {
         if (signer.keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()

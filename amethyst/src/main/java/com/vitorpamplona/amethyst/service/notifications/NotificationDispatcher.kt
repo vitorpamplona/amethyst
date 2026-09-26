@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -52,17 +52,17 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
@@ -118,8 +118,8 @@ class NotificationDispatcher(
         internal val NOTIFICATION_KINDS: Set<Int> =
             setOf(
                 // Direct-arrival
-                PrivateDmEvent.KIND,
-                LnZapEvent.KIND,
+                EncryptedDmEvent.KIND,
+                ZapReceiptEvent.KIND,
                 NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 Bolt12ZapEvent.KIND,
@@ -133,8 +133,8 @@ class NotificationDispatcher(
                 PictureEvent.KIND,
                 VideoNormalEvent.KIND,
                 VideoShortEvent.KIND,
-                VideoHorizontalEvent.KIND,
-                VideoVerticalEvent.KIND,
+                AddressableNormalVideoEvent.KIND,
+                AddressableShortVideoEvent.KIND,
                 ChannelMessageEvent.KIND,
                 PollEvent.KIND,
                 GitPatchEvent.KIND,
@@ -150,8 +150,8 @@ class NotificationDispatcher(
                 GitStatusClosedEvent.KIND,
                 GitStatusDraftEvent.KIND,
                 HighlightEvent.KIND,
-                LongTextNoteEvent.KIND,
-                WikiNoteEvent.KIND,
+                LongFormContentEvent.KIND,
+                WikiArticleEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,

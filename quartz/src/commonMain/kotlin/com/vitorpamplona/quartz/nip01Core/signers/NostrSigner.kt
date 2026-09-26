@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 abstract class NostrSigner(
     pubKey: HexKey,
@@ -67,7 +67,7 @@ abstract class NostrSigner(
         fromPublicKey: HexKey,
     ): String
 
-    abstract suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent
+    abstract suspend fun decryptZapEvent(event: ZapRequestEvent): LnZapPrivateEvent
 
     abstract suspend fun deriveKey(nonce: HexKey): HexKey
 

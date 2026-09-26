@@ -376,7 +376,7 @@ private fun RenderBechSegment(
                 .NAddress
                 .parse(segment.segmentText)
         }
-    if (naddr != null && naddr.kind == com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent.KIND) {
+    if (naddr != null && naddr.kind == com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent.KIND) {
         val followPacks = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState.current
         val relayManager = com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager.current
         if (localCache != null && relayManager != null && followPacks != null) {

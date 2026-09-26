@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -64,7 +64,7 @@ fun FollowPacksFeedLoaded(
                     baseNote = item,
                     routeForLastRead = "FollowPacksFeed",
                     modifier = Modifier.fillMaxWidth(),
-                    forceEventKind = FollowListEvent.KIND,
+                    forceEventKind = StarterPackEvent.KIND,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

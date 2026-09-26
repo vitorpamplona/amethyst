@@ -59,8 +59,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -68,16 +68,16 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -203,20 +203,20 @@ class AccountSettings(
     val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
-    var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupDMRelayList: DmRelayListEvent? = null,
     var backupKeyPackageRelayList: KeyPackageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
-    var backupRelayFeedsList: RelayFeedsListEvent? = null,
+    var backupRelayFeedsList: FavoriteRelayListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
-    var backupChannelList: ChannelListEvent? = null,
+    var backupChannelList: PublicChatListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
-    var backupHashtagList: HashtagListEvent? = null,
+    var backupHashtagList: InterestListEvent? = null,
     var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
@@ -375,7 +375,7 @@ class AccountSettings(
     // Zaps and Reactions
     // ---
 
-    fun changeDefaultZapType(zapType: LnZapEvent.ZapType): Boolean {
+    fun changeDefaultZapType(zapType: ZapReceiptEvent.ZapType): Boolean {
         if (syncedSettings.zaps.defaultZapType.value != zapType) {
             syncedSettings.zaps.defaultZapType.tryEmit(zapType)
             saveAccountSettings()
@@ -1075,7 +1075,7 @@ class AccountSettings(
         when (incoming) {
             is MetadataEvent -> updateUserMetadata(incoming)
             is ContactListEvent -> updateContactListTo(incoming)
-            is ChatMessageRelayListEvent -> updateDMRelayList(incoming)
+            is DmRelayListEvent -> updateDMRelayList(incoming)
             is KeyPackageRelayListEvent -> updateKeyPackageRelayList(incoming)
             is AdvertisedRelayListEvent -> updateNIP65RelayList(incoming)
             is CashuWalletEvent -> updateCashuWallet(incoming)
@@ -1084,13 +1084,13 @@ class AccountSettings(
             is Bolt12OfferListEvent -> updateBolt12Offers(incoming)
             is SearchRelayListEvent -> updateSearchRelayList(incoming)
             is IndexerRelayListEvent -> updateIndexRelayList(incoming)
-            is RelayFeedsListEvent -> updateRelayFeedList(incoming)
+            is FavoriteRelayListEvent -> updateRelayFeedList(incoming)
             is BlockedRelayListEvent -> updateBlockedRelayList(incoming)
             is TrustedRelayListEvent -> updateTrustedRelayList(incoming)
             is PrivateOutboxRelayListEvent -> updatePrivateHomeRelayList(incoming)
-            is ChannelListEvent -> updateChannelListTo(incoming)
+            is PublicChatListEvent -> updateChannelListTo(incoming)
             is GeohashListEvent -> updateGeohashListTo(incoming)
-            is HashtagListEvent -> updateHashtagListTo(incoming)
+            is InterestListEvent -> updateHashtagListTo(incoming)
             is FavoriteAlgoFeedsListEvent -> updateFavoriteAlgoFeedsListTo(incoming)
             is CommunityListEvent -> updateCommunityListTo(incoming)
             is EphemeralChatListEvent -> updateEphemeralChatListTo(incoming)
@@ -1140,7 +1140,7 @@ class AccountSettings(
         }
     }
 
-    fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
+    fun updateDMRelayList(newDMRelayList: DmRelayListEvent?) {
         if (newDMRelayList == null) return
 
         if (backupGuard.accept(backupDMRelayList, newDMRelayList, isEmpty = newDMRelayList.tags.isEmpty()) { updateDMRelayList(newDMRelayList) }) {
@@ -1284,7 +1284,7 @@ class AccountSettings(
         }
     }
 
-    fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
+    fun updateRelayFeedList(newRelayFeedList: FavoriteRelayListEvent?) {
         if (newRelayFeedList == null) return
 
         if (backupGuard.accept(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
@@ -1322,7 +1322,7 @@ class AccountSettings(
 
     override fun channelList() = backupChannelList
 
-    override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
+    override fun updateChannelListTo(newChannelList: PublicChatListEvent?) {
         if (newChannelList == null) return
 
         if (backupGuard.accept(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
@@ -1340,7 +1340,7 @@ class AccountSettings(
         }
     }
 
-    fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
+    fun updateHashtagListTo(newHashtagList: InterestListEvent?) {
         if (newHashtagList == null) return
 
         if (backupGuard.accept(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {

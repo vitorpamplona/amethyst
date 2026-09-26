@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 
 @Composable
 fun RenderWikiContent(
@@ -58,14 +58,14 @@ fun RenderWikiContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? WikiNoteEvent ?: return
+    val noteEvent = note.event as? WikiArticleEvent ?: return
 
     WikiNoteHeader(noteEvent, note, accountViewModel, nav)
 }
 
 @Composable
 private fun WikiNoteHeader(
-    noteEvent: WikiNoteEvent,
+    noteEvent: WikiArticleEvent,
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,

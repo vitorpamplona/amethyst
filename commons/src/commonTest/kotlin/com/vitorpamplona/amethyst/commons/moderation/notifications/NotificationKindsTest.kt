@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import kotlin.test.Test
@@ -116,8 +116,8 @@ class NotificationKindsTest {
         )
     }
 
-    private fun zapReceipt(pTag: String = me): LnZapEvent =
-        LnZapEvent(
+    private fun zapReceipt(pTag: String = me): ZapReceiptEvent =
+        ZapReceiptEvent(
             id = "zap".padEnd(64, '0'),
             pubKey = "lnurl_provider".padEnd(64, '0'),
             createdAt = 1_000,
@@ -142,8 +142,8 @@ class NotificationKindsTest {
     private fun privateDm(
         author: String,
         pTag: String = me,
-    ): PrivateDmEvent =
-        PrivateDmEvent(
+    ): EncryptedDmEvent =
+        EncryptedDmEvent(
             id = "dm".padEnd(64, '0'),
             pubKey = author,
             createdAt = 1_000,
@@ -303,7 +303,7 @@ class NotificationKindsTest {
         val expected =
             setOf(
                 TextNoteEvent.KIND,
-                PrivateDmEvent.KIND,
+                EncryptedDmEvent.KIND,
                 RepostEvent.KIND,
                 ReactionEvent.KIND,
                 GenericRepostEvent.KIND,
@@ -311,7 +311,7 @@ class NotificationKindsTest {
                 CommentEvent.KIND,
                 GiftWrapEvent.KIND,
                 NutzapEvent.KIND,
-                LnZapEvent.KIND,
+                ZapReceiptEvent.KIND,
             )
         val actual = NotificationKinds.SUBSCRIPTION_KINDS.toSet()
         assertTrue(actual.containsAll(expected), "expected subset missing from SUBSCRIPTION_KINDS")

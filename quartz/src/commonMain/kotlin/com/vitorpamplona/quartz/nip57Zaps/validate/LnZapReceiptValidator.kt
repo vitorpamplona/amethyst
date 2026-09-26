@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip57Zaps.validate
 
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 
 /**
@@ -84,7 +84,7 @@ object LnZapReceiptValidator {
      *   When true, a missing `amount` tag is treated as a failure.
      */
     fun validate(
-        receipt: LnZapEvent,
+        receipt: ZapReceiptEvent,
         expectedNostrPubkey: HexKey?,
         expectedLnurl: String?,
         strictAmount: Boolean = false,
@@ -141,13 +141,13 @@ object LnZapReceiptValidator {
         return Result.Valid
     }
 
-    private fun LnZapRequestEvent.amountMillisats(): Long? =
+    private fun ZapRequestEvent.amountMillisats(): Long? =
         tags
             .firstOrNull { it.size > 1 && it[0] == "amount" }
             ?.get(1)
             ?.toLongOrNull()
 
-    private fun LnZapRequestEvent.lnurl(): String? =
+    private fun ZapRequestEvent.lnurl(): String? =
         tags
             .firstOrNull { it.size > 1 && it[0] == "lnurl" }
             ?.get(1)

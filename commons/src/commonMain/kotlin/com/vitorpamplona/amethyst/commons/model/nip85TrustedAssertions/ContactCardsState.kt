@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
@@ -59,11 +59,11 @@ class ContactCardsState(
 ) {
     private val accountUser: User? by lazy { cache.getOrCreateUser(signer.pubKey) }
 
-    fun createCardAddress(target: HexKey): Address = ContactCardEvent.createAddress(signer.pubKey, target)
+    fun createCardAddress(target: HexKey): Address = UserAssertionEvent.createAddress(signer.pubKey, target)
 
     fun getCardNote(target: HexKey): AddressableNote = cache.getOrCreateAddressableNote(createCardAddress(target))
 
-    fun getCard(target: HexKey): ContactCardEvent? = getCardNote(target).event as? ContactCardEvent
+    fun getCard(target: HexKey): UserAssertionEvent? = getCardNote(target).event as? UserAssertionEvent
 
     /**
      * The account's own card about [target], as attached to the target user's
@@ -71,7 +71,7 @@ class ContactCardsState(
      * per-user cache (like `metadata()` does) so a card arriving later is seen.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun myCardFlow(target: User): Flow<ContactCardEvent?> =
+    fun myCardFlow(target: User): Flow<UserAssertionEvent?> =
         target
             .cards()
             .receivedCards
@@ -82,7 +82,7 @@ class ContactCardsState(
                     ?.flow()
                     ?.metadata
                     ?.stateFlow
-                    ?.map { it.note.event as? ContactCardEvent }
+                    ?.map { it.note.event as? UserAssertionEvent }
                     ?: flowOf(null)
             }
 
@@ -110,7 +110,7 @@ class ContactCardsState(
                 ?.receivedCards
                 ?.value
                 ?.get(accountUser)
-                ?.event as? ContactCardEvent ?: return null
+                ?.event as? UserAssertionEvent ?: return null
         return decryptionCache.cachedNickname(card)
     }
 
@@ -145,12 +145,12 @@ class ContactCardsState(
         target: HexKey,
         petName: String?,
         summary: String?,
-    ): ContactCardEvent {
+    ): UserAssertionEvent {
         val emojis = emojiPacks.findEmojiTags(listOfNotNull(petName, summary).joinToString(" "))
         val existing = getCard(target)
         return if (existing != null) {
             signer.sign(
-                ContactCardEvent.updatePetNameAndSummary(
+                UserAssertionEvent.updatePetNameAndSummary(
                     earlierVersion = existing,
                     petName = petName,
                     summary = summary,
@@ -159,7 +159,7 @@ class ContactCardsState(
                 ),
             )
         } else {
-            ContactCardEvent.create(
+            UserAssertionEvent.create(
                 targetUser = target,
                 petName = petName,
                 summary = summary,

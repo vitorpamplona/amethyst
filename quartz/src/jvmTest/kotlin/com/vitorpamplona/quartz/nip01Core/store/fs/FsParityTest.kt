@@ -25,9 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -121,10 +121,10 @@ class FsParityTest {
         slug: String,
         body: String,
         ts: Long,
-    ): LongTextNoteEvent =
+    ): LongFormContentEvent =
         signer.sign(
             createdAt = ts,
-            kind = LongTextNoteEvent.KIND,
+            kind = LongFormContentEvent.KIND,
             tags = arrayOf(arrayOf("d", slug)),
             content = body,
         )
@@ -234,7 +234,7 @@ class FsParityTest {
             insertBoth(v2)
             insertBoth(v3)
 
-            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
         }
 
     @Test
@@ -284,7 +284,7 @@ class FsParityTest {
             assertParity(
                 Filter(
                     authors = listOf(signer.pubKey),
-                    kinds = listOf(LongTextNoteEvent.KIND),
+                    kinds = listOf(LongFormContentEvent.KIND),
                     tags = mapOf("d" to listOf("tie")),
                 ),
             )
@@ -303,12 +303,12 @@ class FsParityTest {
             insertBoth(a)
             insertBoth(b)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(a), createdAt = 30))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(a), createdAt = 30))
             insertBoth(del)
 
             assertParity(Filter(ids = listOf(a.id)))
             assertParity(Filter(ids = listOf(b.id)))
-            assertParity(Filter(kinds = listOf(DeletionEvent.KIND)))
+            assertParity(Filter(kinds = listOf(DeletionRequestEvent.KIND)))
 
             // Re-insert blocked.
             insertBoth(a)
@@ -321,16 +321,16 @@ class FsParityTest {
             val v = article("intro", "v1", 10)
             insertBoth(v)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v), createdAt = 20))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v), createdAt = 20))
             insertBoth(del)
 
-            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
 
             // Older event at this address must be blocked, newer must pass.
             insertBoth(article("intro", "older", 5))
             insertBoth(article("intro", "newer", 100))
 
-            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
         }
 
     // ------------------------------------------------------------------
@@ -429,7 +429,7 @@ class FsParityTest {
             val artB = article("b", "B v1", 30)
             val artBv2 = article("b", "B v2", 50)
             // Deletion of n1
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n1), createdAt = 40))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(n1), createdAt = 40))
 
             listOf(n1, n2, meta1, meta2, artA, artB, artBv2, del).forEach { insertBoth(it) }
 
@@ -437,8 +437,8 @@ class FsParityTest {
             assertParity(Filter(ids = listOf(n1.id)), "n1 deleted")
             assertParity(Filter(ids = listOf(n2.id)), "n2 alive")
             assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(0)), "metadata winner")
-            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)), "articles set")
-            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(DeletionEvent.KIND)), "deletion present")
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)), "articles set")
+            assertParity(Filter(authors = listOf(signer.pubKey), kinds = listOf(DeletionRequestEvent.KIND)), "deletion present")
         }
 
     // ------------------------------------------------------------------

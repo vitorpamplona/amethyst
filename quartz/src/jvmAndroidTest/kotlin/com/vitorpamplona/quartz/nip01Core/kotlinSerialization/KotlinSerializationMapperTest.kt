@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -65,7 +65,7 @@ class KotlinSerializationMapperTest {
         )
 
     val followCard =
-        FollowListEvent(
+        StarterPackEvent(
             id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
             pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
             createdAt = 1761736286,
@@ -194,7 +194,7 @@ class KotlinSerializationMapperTest {
     fun deserializeEventWithSpecialCharactersInContent() {
         val content = "Hello \"world\" \n\ttab\\backslash"
         val event =
-            FollowListEvent(
+            StarterPackEvent(
                 id = "abc",
                 pubKey = "def",
                 createdAt = 1000,
@@ -769,7 +769,7 @@ class KotlinSerializationMapperTest {
     @Test
     fun emptyContentEvent() {
         val event =
-            FollowListEvent(
+            StarterPackEvent(
                 id = "a".repeat(64),
                 pubKey = "b".repeat(64),
                 createdAt = 0,
@@ -796,7 +796,7 @@ class KotlinSerializationMapperTest {
     fun eventWithUnicodeContent() {
         val content = "Hello \uD83D\uDE00 world \u00E9\u00E8\u00EA"
         val event =
-            FollowListEvent(
+            StarterPackEvent(
                 id = "a".repeat(64),
                 pubKey = "b".repeat(64),
                 createdAt = 1000,

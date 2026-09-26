@@ -23,38 +23,38 @@ package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 
 class UserStatusAction {
     companion object {
         suspend fun create(
             newStatus: String,
             signer: NostrSigner,
-            type: String = StatusEvent.GENERAL,
-        ): StatusEvent = StatusEvent.create(newStatus, type, signer = signer)
+            type: String = UserStatusEvent.GENERAL,
+        ): UserStatusEvent = UserStatusEvent.create(newStatus, type, signer = signer)
 
         suspend fun update(
             oldStatus: AddressableNote,
             newStatus: String,
             signer: NostrSigner,
-        ): StatusEvent {
-            val oldEvent = oldStatus.event as? StatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
+        ): UserStatusEvent {
+            val oldEvent = oldStatus.event as? UserStatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
 
-            return StatusEvent.update(oldEvent, newStatus, signer)
+            return UserStatusEvent.update(oldEvent, newStatus, signer)
         }
 
         suspend fun delete(
             oldStatus: AddressableNote,
             signer: NostrSigner,
         ): List<Event> {
-            val oldEvent = oldStatus.event as? StatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
+            val oldEvent = oldStatus.event as? UserStatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
 
-            val event = StatusEvent.clear(oldEvent, signer)
+            val event = UserStatusEvent.clear(oldEvent, signer)
 
             val deletion =
                 signer.sign(
-                    DeletionEvent.buildForVersionOnly(listOf(event)),
+                    DeletionRequestEvent.buildForVersionOnly(listOf(event)),
                 )
 
             return listOf(event, deletion)

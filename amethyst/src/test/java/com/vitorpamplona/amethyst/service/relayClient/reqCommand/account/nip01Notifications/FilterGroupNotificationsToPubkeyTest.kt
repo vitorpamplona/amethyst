@@ -58,7 +58,7 @@ class FilterGroupNotificationsToPubkeyTest {
         assertTrue(GroupNotificationKinds.contains(9)) // ChatEvent
         assertTrue(GroupNotificationKinds.contains(1111)) // CommentEvent
         assertTrue(GroupNotificationKinds.contains(7)) // ReactionEvent
-        assertTrue(GroupNotificationKinds.contains(9735)) // LnZapEvent
+        assertTrue(GroupNotificationKinds.contains(9735)) // ZapReceiptEvent
     }
 
     @Test

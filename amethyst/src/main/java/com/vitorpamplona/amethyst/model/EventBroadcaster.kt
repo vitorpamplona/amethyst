@@ -40,16 +40,16 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
@@ -121,7 +121,7 @@ class EventBroadcaster(
             event is AppSpecificDataEvent ||
             event is BookmarkListEvent ||
             event is OldBookmarkListEvent ||
-            event is LabeledBookmarkListEvent
+            event is BookmarkSetEvent
         ) {
             return false
         }
@@ -166,7 +166,7 @@ class EventBroadcaster(
         }
         // Seals, inner DM messages, and unsigned rumors never get broadcast
         // relays: they only travel inside gift wraps.
-        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
+        if (event is SealEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
             return emptySet()
         }
 
@@ -322,7 +322,7 @@ class EventBroadcaster(
                             .toList()
                     }
                 val filter =
-                    if (host.kind == SealedRumorEvent.KIND) {
+                    if (host.kind == SealEvent.KIND) {
                         Filter(
                             kinds = listOf(host.kind),
                             ids = listOf(host.id),
@@ -383,7 +383,7 @@ class EventBroadcaster(
     fun sendRestoredVersion(event: Event) {
         when (event) {
             is AdvertisedRelayListEvent -> sendEverywhereAnd(event, event.relays().mapTo(mutableSetOf()) { it.relayUrl })
-            is ChatMessageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
+            is DmRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
             is KeyPackageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
             is CashuWalletEvent -> sendLiterallyEverywhere(event)
             // Profiles and nutzap info are normally saved everywhere so others can find them;

@@ -20,91 +20,15 @@
  */
 package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AssetTag
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
-import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 /**
- * NIP-82 Software Release (kind 30063).
- *
- * A parameterizable replaceable event grouping a set of [SoftwareAssetEvent]s
- * under a named release version. The `d` tag is `<app-id>@<version>` and the
- * event's `created_at` must be the release date.
- *
- * NOTE: kind 30063 was also used by NIP-51 `ReleaseArtifactSetEvent`. This
- * experimental NIP-82 event is intentionally not registered in `EventFactory`
- * to avoid colliding with the existing registration. Callers can instantiate
- * or wrap [SoftwareReleaseEvent] directly when they know the event is a NIP-82
- * release.
+ * NIP-82 software releases share kind 30063 with NIP-51 release artifact sets, and
+ * [ReleaseArtifactSetEvent] now parses both. This used to be a second class for the same
+ * kind that `EventFactory` never built.
  */
-@Immutable
-class SoftwareReleaseEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider,
-    SearchableEvent {
-    // content carries the release notes (free-text). NOTE: kind 30063 collides
-    // with NIP-51 ReleaseArtifactSetEvent, which is what EventFactory builds for
-    // stored events — so in practice this override is not exercised at runtime.
-    override fun indexableContent() = content
-
-    // The read path: the same fields indexableContent() joins, handed over without
-    // building the joined string a scan would throw away.
-    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        visitor.visit(content)
-    }
-
-    override fun eventHints() = tags.mapNotNull(AssetTag::parseAsHint)
-
-    override fun linkedEventIds() = tags.mapNotNull(AssetTag::parseId)
-
-    fun appId() = tags.appId()
-
-    fun version() = tags.version()
-
-    fun channel() = tags.channel()
-
-    fun assets() = tags.assets()
-
-    companion object {
-        const val KIND = 30063
-
-        /** NIP-82 requires `d = <app-id>@<version>`. */
-        fun buildDTag(
-            appId: String,
-            version: String,
-        ) = "$appId@$version"
-
-        fun build(
-            appId: String,
-            version: String,
-            channel: String,
-            assets: List<EventHintBundle<SoftwareAssetEvent>>,
-            releaseNotes: String = "",
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<SoftwareReleaseEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, releaseNotes, createdAt) {
-            dTag(buildDTag(appId, version))
-            appId(appId)
-            version(version)
-            channel(channel)
-            assets(assets)
-            initializer()
-        }
-    }
-}
+@Deprecated(
+    "Kind 30063 is parsed by ReleaseArtifactSetEvent, which also exposes the NIP-82 fields. Use ReleaseArtifactSetEvent.buildSoftwareRelease to build one.",
+    ReplaceWith("ReleaseArtifactSetEvent", "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent"),
+)
+typealias SoftwareReleaseEvent = ReleaseArtifactSetEvent

@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import org.jetbrains.compose.resources.PluralStringResource
@@ -199,7 +199,7 @@ class NappletConsentSummary(
                     oneRemoved = Res.string.napplet_consent_diff_unmute_one,
                 )
             // Deletions have no prior version to compare against — the tags are the whole request.
-            DeletionEvent.KIND ->
+            DeletionRequestEvent.KIND ->
                 pluralFor(Res.plurals.napplet_consent_effect_deletes, countTag(tags, "e") + countTag(tags, "a"))
                     ?.let { Consequence(it) }
             // Any other kind: at least tell the user tags exist and can be inspected, so an empty

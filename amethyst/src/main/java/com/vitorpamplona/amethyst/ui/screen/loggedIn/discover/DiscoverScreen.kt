@@ -86,9 +86,9 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -140,14 +140,14 @@ fun DiscoverScreen(
                         discoveryFollowSetsFeedContentState,
                         "DiscoverFollowSets",
                         ScrollStateKeys.DISCOVER_FOLLOWS,
-                        FollowListEvent.KIND,
+                        StarterPackEvent.KIND,
                     ),
                     TabItem(
                         Res.string.discover_reads,
                         discoveryReadsFeedContentState,
                         "DiscoverReads",
                         ScrollStateKeys.DISCOVER_READS,
-                        LongTextNoteEvent.KIND,
+                        LongFormContentEvent.KIND,
                     ),
                     TabItem(
                         Res.string.discover_content_v2,

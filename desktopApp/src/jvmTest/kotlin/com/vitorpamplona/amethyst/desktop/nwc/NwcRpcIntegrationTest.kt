@@ -25,8 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47Client
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
@@ -66,7 +66,7 @@ class NwcRpcIntegrationTest {
             val requestEvent = client.payInvoice("lnbc50n1pjtest...")
 
             // Verify request event structure
-            assertEquals(LnZapPaymentRequestEvent.KIND, requestEvent.kind)
+            assertEquals(NwcRequestEvent.KIND, requestEvent.kind)
             assertTrue(requestEvent.content.isNotBlank())
 
             // Wallet decrypts the request
@@ -82,7 +82,7 @@ class NwcRpcIntegrationTest {
             val requestEvent = client.getBalance()
 
             // Verify it's a valid NWC request
-            assertEquals(LnZapPaymentRequestEvent.KIND, requestEvent.kind)
+            assertEquals(NwcRequestEvent.KIND, requestEvent.kind)
 
             // Wallet decrypts and verifies method type
             val decrypted = requestEvent.decryptRequest(walletSigner)
@@ -90,7 +90,7 @@ class NwcRpcIntegrationTest {
 
             // Wallet builds encrypted response
             val responseEvent =
-                LnZapPaymentResponseEvent.createResponse(
+                NwcResponseEvent.createResponse(
                     response =
                         GetBalanceSuccessResponse(
                             result = GetBalanceSuccessResponse.GetBalanceResult(balance = 125_000),
@@ -100,7 +100,7 @@ class NwcRpcIntegrationTest {
                 )
 
             // Verify response event structure
-            assertEquals(LnZapPaymentResponseEvent.KIND, responseEvent.kind)
+            assertEquals(NwcResponseEvent.KIND, responseEvent.kind)
             assertEquals(requestEvent.id, responseEvent.requestId())
 
             // Client decrypts response
@@ -124,7 +124,7 @@ class NwcRpcIntegrationTest {
             // Wallet responds with invoice
             val fakeInvoice = "lnbc500n1pjgenerated..."
             val responseEvent =
-                LnZapPaymentResponseEvent.createResponse(
+                NwcResponseEvent.createResponse(
                     response =
                         MakeInvoiceSuccessResponse(
                             result =
@@ -153,7 +153,7 @@ class NwcRpcIntegrationTest {
             val requestEvent = client.payInvoice("lnbc100n1...")
 
             val responseEvent =
-                LnZapPaymentResponseEvent.createResponse(
+                NwcResponseEvent.createResponse(
                     response =
                         PayInvoiceSuccessResponse(
                             result =
@@ -183,7 +183,7 @@ class NwcRpcIntegrationTest {
 
             // Build a request and verify it works
             val requestEvent = client.getBalance()
-            assertEquals(LnZapPaymentRequestEvent.KIND, requestEvent.kind)
+            assertEquals(NwcRequestEvent.KIND, requestEvent.kind)
 
             // Wallet can decrypt it
             val decrypted = requestEvent.decryptRequest(walletSigner)

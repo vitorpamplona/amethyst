@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 
 fun filterLongsByAuthors(
@@ -44,7 +44,7 @@ fun filterLongsByAuthors(
                 ExplainedFilter(
                     purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
-                    kinds = listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND),
+                    kinds = listOf(VideoNormalEvent.KIND, AddressableNormalVideoEvent.KIND),
                     limit = 200,
                     since = since,
                 ),

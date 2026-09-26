@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -81,7 +81,7 @@ class FollowPacksState(
     }
 
     /** All 39089 events currently in the cache. Recomputes on cache change. */
-    val allPacks: StateFlow<List<FollowListEvent>> =
+    val allPacks: StateFlow<List<StarterPackEvent>> =
         cache.followPackVersion
             .map { cache.snapshotFollowPacks().sortedByDescending { it.createdAt } }
             .stateIn(
@@ -91,7 +91,7 @@ class FollowPacksState(
             )
 
     /** Packs authored by accounts the user follows. Top-3 for sidebar. */
-    val followedAuthorsPacks: StateFlow<List<FollowListEvent>> =
+    val followedAuthorsPacks: StateFlow<List<StarterPackEvent>> =
         combine(allPacks, followedAuthors) { packs, followed ->
             packs.filter { it.pubKey in followed }
         }.stateIn(
@@ -104,7 +104,7 @@ class FollowPacksState(
      * Sidebar top-3: own packs + packs by people user follows.
      * Falls back to most-recent-from-relays when user has no follow-derived packs.
      */
-    val sidebarTopPacks: StateFlow<List<FollowListEvent>> =
+    val sidebarTopPacks: StateFlow<List<StarterPackEvent>> =
         followedAuthorsPacks
             .map { followedPacks ->
                 if (followedPacks.isNotEmpty()) {
@@ -128,8 +128,8 @@ class FollowPacksState(
 
     private val recentlyShown = ArrayDeque<String>(5)
 
-    private val featuredPackInternal = MutableStateFlow<FollowListEvent?>(null)
-    val featuredPack: StateFlow<FollowListEvent?> = featuredPackInternal.asStateFlow()
+    private val featuredPackInternal = MutableStateFlow<StarterPackEvent?>(null)
+    val featuredPack: StateFlow<StarterPackEvent?> = featuredPackInternal.asStateFlow()
 
     init {
         // Recompute featured on cache or shuffle change.
@@ -147,7 +147,7 @@ class FollowPacksState(
         shuffleTickInternal.value++
     }
 
-    private fun pickRandom(packs: List<FollowListEvent>): FollowListEvent? {
+    private fun pickRandom(packs: List<StarterPackEvent>): StarterPackEvent? {
         if (packs.isEmpty()) return null
         val candidates = packs.filter { it.address().toValue() !in recentlyShown }
         val pool = if (candidates.isEmpty()) packs else candidates
@@ -182,7 +182,7 @@ class FollowPacksState(
                 relayManager.subscribeOnRelay(
                     relay = relay,
                     subId = "$SUB_ID-${relay.url.hashCode()}",
-                    filters = listOf(Filter(kinds = listOf(FollowListEvent.KIND), limit = 200)),
+                    filters = listOf(Filter(kinds = listOf(StarterPackEvent.KIND), limit = 200)),
                     onEvent = { event, r -> cache.consume(event, r) },
                 )
                 // Suppress unused variable warning
@@ -193,5 +193,5 @@ class FollowPacksState(
     }
 
     /** Returns hashtags present on this pack, lowercase + deduped. */
-    fun hashtagsFor(pack: FollowListEvent): List<String> = pack.hashtags().map { it.lowercase() }.distinct()
+    fun hashtagsFor(pack: StarterPackEvent): List<String> = pack.hashtags().map { it.lowercase() }.distinct()
 }

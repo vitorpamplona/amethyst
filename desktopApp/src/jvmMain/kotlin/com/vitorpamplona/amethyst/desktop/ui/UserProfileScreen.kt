@@ -117,7 +117,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
@@ -125,9 +125,9 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -231,7 +231,7 @@ fun UserProfileScreen(
     var showProfileReportDialog by remember(pubKeyHex) { mutableStateOf(false) }
     var showAddToListMenu by remember(pubKeyHex) { mutableStateOf(false) }
     val followPacksState = LocalFollowPacksState.current
-    val followPacks by (followPacksState?.allPacks ?: MutableStateFlow(emptyList<FollowListEvent>())).collectAsState()
+    val followPacks by (followPacksState?.allPacks ?: MutableStateFlow(emptyList<StarterPackEvent>())).collectAsState()
     val profileHidden by (iAccount?.hiddenUsers ?: kotlinx.coroutines.flow.MutableStateFlow(com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY)).collectAsState()
     val isUserMuted = profileHidden.isUserHidden(pubKeyHex)
 
@@ -351,7 +351,7 @@ fun UserProfileScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
-    val articleEvents = remember { mutableStateListOf<LongTextNoteEvent>() }
+    val articleEvents = remember { mutableStateListOf<LongFormContentEvent>() }
     val highlightEvents = remember { mutableStateListOf<HighlightEvent>() }
 
     // Followers / Following user lists (pubkeys) and the profile's relay list.
@@ -361,7 +361,7 @@ fun UserProfileScreen(
     var relayList by remember(pubKeyHex) { mutableStateOf<List<Triple<String, Boolean, Boolean>>>(emptyList()) }
 
     // Zaps received: raw zap receipts, aggregated per zapper (pubkey → total sats).
-    val zapEvents = remember(pubKeyHex) { mutableStateListOf<LnZapEvent>() }
+    val zapEvents = remember(pubKeyHex) { mutableStateListOf<ZapReceiptEvent>() }
     var zapAmounts by remember(pubKeyHex) { mutableStateOf<List<Pair<String, BigDecimal>>>(emptyList()) }
     var zapTotalSats by remember(pubKeyHex) { mutableStateOf(BigDecimal.ZERO) }
 
@@ -559,13 +559,13 @@ fun UserProfileScreen(
                     listOf(
                         FilterBuilders.byAuthors(
                             authors = listOf(pubKeyHex),
-                            kinds = listOf(LongTextNoteEvent.KIND),
+                            kinds = listOf(LongFormContentEvent.KIND),
                             limit = 50,
                         ),
                     ),
                 relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
-                    if (event is LongTextNoteEvent && articleEvents.none { it.id == event.id }) {
+                    if (event is LongFormContentEvent && articleEvents.none { it.id == event.id }) {
                         articleEvents.add(event)
                     }
                 },
@@ -710,13 +710,13 @@ fun UserProfileScreen(
                     listOf(
                         FilterBuilders.byPTags(
                             pubKeys = listOf(pubKeyHex),
-                            kinds = listOf(LnZapEvent.KIND),
+                            kinds = listOf(ZapReceiptEvent.KIND),
                             limit = 500,
                         ),
                     ),
                 relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
-                    if (event is LnZapEvent && zapEvents.none { it.id == event.id }) {
+                    if (event is ZapReceiptEvent && zapEvents.none { it.id == event.id }) {
                         zapEvents.add(event)
                     }
                 },
@@ -971,7 +971,7 @@ fun UserProfileScreen(
                                                                 scope.launch {
                                                                     try {
                                                                         val updated =
-                                                                            FollowListEvent.add(
+                                                                            StarterPackEvent.add(
                                                                                 pack,
                                                                                 UserTag(pubKeyHex, null),
                                                                                 acct.signer,
@@ -1447,7 +1447,7 @@ fun UserProfileScreen(
                                 }
                             } else {
                                 items(
-                                    articleEvents.sortedWith(compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id }),
+                                    articleEvents.sortedWith(compareByDescending<LongFormContentEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id }),
                                     key = { "art-${it.id}" },
                                 ) { article ->
                                     LongFormCard(
@@ -1455,7 +1455,7 @@ fun UserProfileScreen(
                                         localCache = localCache,
                                         onAuthorClick = { onNavigateToProfile(article.pubKey) },
                                         onClick = {
-                                            val addressTag = "${LongTextNoteEvent.KIND}:${article.pubKey}:${article.dTag()}"
+                                            val addressTag = "${LongFormContentEvent.KIND}:${article.pubKey}:${article.dTag()}"
                                             onNavigateToArticle(addressTag)
                                         },
                                     )

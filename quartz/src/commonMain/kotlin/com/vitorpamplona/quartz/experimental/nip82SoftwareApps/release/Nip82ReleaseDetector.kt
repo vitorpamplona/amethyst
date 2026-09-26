@@ -24,22 +24,24 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppI
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 /**
  * NIP-82 reuses kind 30063 which was already taken by NIP-51's
- * `ReleaseArtifactSetEvent`. Both are valid; they coexist on the wire.
+ * [ReleaseArtifactSetEvent]. Both are valid; they coexist on the wire and the
+ * same class parses both.
  *
  * We disambiguate by inspecting the tag set: a NIP-82 Software Release MUST
  * carry both `i` (app identifier) and `version` tags. NIP-51 release artifact
  * sets do not.
  */
 fun Event.isNip82SoftwareRelease() =
-    kind == SoftwareReleaseEvent.KIND &&
+    kind == ReleaseArtifactSetEvent.KIND &&
         tags.hasTagWithContent(AppIdTag.TAG_NAME) &&
         tags.hasTagWithContent(VersionTag.TAG_NAME)
 
 /**
- * Reinterprets `this` as a [SoftwareReleaseEvent]. Use [isNip82SoftwareRelease]
+ * Reinterprets `this` as a [ReleaseArtifactSetEvent]. Use [isNip82SoftwareRelease]
  * to gate the call.
  */
-fun Event.asSoftwareRelease() = SoftwareReleaseEvent(id, pubKey, createdAt, tags, content, sig)
+fun Event.asSoftwareRelease() = this as? ReleaseArtifactSetEvent ?: ReleaseArtifactSetEvent(id, pubKey, createdAt, tags, content, sig)

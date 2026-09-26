@@ -52,13 +52,13 @@ class LnZapRequestKindTagTest {
             val relays = setOf(NormalizedRelayUrl("wss://relay.example.com/"))
 
             val zapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = publicMsg,
                     relays = relays,
                     signer = nostrSigner,
                     pollOption = null,
                     message = "",
-                    zapType = LnZapEvent.ZapType.PUBLIC,
+                    zapType = ZapReceiptEvent.ZapType.PUBLIC,
                     toUserPubHex = null,
                 )
 
@@ -84,13 +84,13 @@ class LnZapRequestKindTagTest {
             val relays = setOf(NormalizedRelayUrl("wss://relay.example.com/"))
 
             val zapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = kind1Event,
                     relays = relays,
                     signer = nostrSigner,
                     pollOption = null,
                     message = "",
-                    zapType = LnZapEvent.ZapType.PUBLIC,
+                    zapType = ZapReceiptEvent.ZapType.PUBLIC,
                     toUserPubHex = null,
                 )
 
@@ -105,12 +105,12 @@ class LnZapRequestKindTagTest {
             val relays = setOf(NormalizedRelayUrl("wss://relay.example.com/"))
 
             val zapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     userHex = receiverPubKey,
                     relays = relays,
                     signer = nostrSigner,
                     message = "",
-                    zapType = LnZapEvent.ZapType.PUBLIC,
+                    zapType = ZapReceiptEvent.ZapType.PUBLIC,
                 )
 
             val kTag = zapRequest.tags.firstOrNull { it[0] == "k" }

@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 fun filterLongFormByGeohash(
     relay: NormalizedRelayUrl,
@@ -44,7 +44,7 @@ fun filterLongFormByGeohash(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.DISCOVER_FEED,
-                    kinds = listOf(LongTextNoteEvent.KIND),
+                    kinds = listOf(LongFormContentEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 100,
                     since = since,

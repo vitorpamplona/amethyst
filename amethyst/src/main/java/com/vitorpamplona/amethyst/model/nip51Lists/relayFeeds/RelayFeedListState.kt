@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayFeeds.RelayFeeds
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -50,13 +50,13 @@ class RelayFeedListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val relayFeedListNote = cache.getOrCreateAddressableNote(getRelayFeedsListAddress())
 
-    fun getRelayFeedsListAddress() = RelayFeedsListEvent.createAddress(signer.pubKey)
+    fun getRelayFeedsListAddress() = FavoriteRelayListEvent.createAddress(signer.pubKey)
 
     fun getRelayFeedsListFlow(): StateFlow<NoteState> = relayFeedListNote.flow().metadata.stateFlow
 
-    fun getRelayFeedsList(): RelayFeedsListEvent? = relayFeedListNote.event as? RelayFeedsListEvent
+    fun getRelayFeedsList(): FavoriteRelayListEvent? = relayFeedListNote.event as? FavoriteRelayListEvent
 
-    fun relayFeedsListEvent(note: Note) = note.event as? RelayFeedsListEvent ?: settings.backupRelayFeedsList
+    fun relayFeedsListEvent(note: Note) = note.event as? FavoriteRelayListEvent ?: settings.backupRelayFeedsList
 
     suspend fun normalizeRelayFeedsListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayFeedsListEvent(note)?.let { decryptionCache.relays(it) }?.ifEmpty { null } ?: emptySet()
 
@@ -84,30 +84,30 @@ class RelayFeedListState(
                 emptySet(),
             )
 
-    suspend fun addRelay(relay: NormalizedRelayUrl): RelayFeedsListEvent {
+    suspend fun addRelay(relay: NormalizedRelayUrl): FavoriteRelayListEvent {
         val current = normalizeRelayFeedsListWithBackupNoDefaults(relayFeedListNote).toMutableList()
         if (relay !in current) current.add(relay)
         return saveRelayList(current)
     }
 
-    suspend fun removeRelay(relay: NormalizedRelayUrl): RelayFeedsListEvent? {
+    suspend fun removeRelay(relay: NormalizedRelayUrl): FavoriteRelayListEvent? {
         val current = normalizeRelayFeedsListWithBackupNoDefaults(relayFeedListNote).toMutableList()
         if (relay !in current) return null
         current.remove(relay)
         return saveRelayList(current)
     }
 
-    suspend fun saveRelayList(relayFeeds: List<NormalizedRelayUrl>): RelayFeedsListEvent {
+    suspend fun saveRelayList(relayFeeds: List<NormalizedRelayUrl>): FavoriteRelayListEvent {
         val relayFeedsList = getRelayFeedsList()
 
         return if (relayFeedsList != null && relayFeedsList.tags.isNotEmpty()) {
-            RelayFeedsListEvent.updateRelayList(
+            FavoriteRelayListEvent.updateRelayList(
                 earlierVersion = relayFeedsList,
                 relays = relayFeeds,
                 signer = signer,
             )
         } else {
-            RelayFeedsListEvent.create(
+            FavoriteRelayListEvent.create(
                 relays = relayFeeds,
                 signer = signer,
             )
@@ -125,7 +125,7 @@ class RelayFeedListState(
             Log.d("AccountRegisterObservers", "Relay feeds list Collector Start")
             getRelayFeedsListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Updating Relay feeds list for ${signer.pubKey}" }
-                (it.note.event as? RelayFeedsListEvent)?.let {
+                (it.note.event as? FavoriteRelayListEvent)?.let {
                     settings.updateRelayFeedList(it)
                 }
             }

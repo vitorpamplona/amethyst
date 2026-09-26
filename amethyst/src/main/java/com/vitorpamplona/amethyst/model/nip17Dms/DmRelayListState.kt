@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -48,14 +48,14 @@ class DmRelayListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val dmListNote = cache.getOrCreateAddressableNote(getDMRelayListAddress())
 
-    fun getDMRelayListAddress() = ChatMessageRelayListEvent.createAddress(signer.pubKey)
+    fun getDMRelayListAddress() = DmRelayListEvent.createAddress(signer.pubKey)
 
     fun getDMRelayListFlow(): StateFlow<NoteState> = dmListNote.flow().metadata.stateFlow
 
-    fun getDMRelayList(): ChatMessageRelayListEvent? = dmListNote.event as? ChatMessageRelayListEvent
+    fun getDMRelayList(): DmRelayListEvent? = dmListNote.event as? DmRelayListEvent
 
     fun normalizeDMRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
-        val event = note.event as? ChatMessageRelayListEvent ?: settings.backupDMRelayList
+        val event = note.event as? DmRelayListEvent ?: settings.backupDMRelayList
         return event?.relays()?.toSet() ?: emptySet()
     }
 
@@ -70,16 +70,16 @@ class DmRelayListState(
                 emptySet(),
             )
 
-    suspend fun saveRelayList(dmRelays: List<NormalizedRelayUrl>): ChatMessageRelayListEvent {
+    suspend fun saveRelayList(dmRelays: List<NormalizedRelayUrl>): DmRelayListEvent {
         val relayListForDMs = getDMRelayList()
         return if (relayListForDMs != null && relayListForDMs.tags.isNotEmpty()) {
-            ChatMessageRelayListEvent.updateRelayList(
+            DmRelayListEvent.updateRelayList(
                 earlierVersion = relayListForDMs,
                 relays = dmRelays,
                 signer = signer,
             )
         } else {
-            ChatMessageRelayListEvent.create(
+            DmRelayListEvent.create(
                 relays = dmRelays,
                 signer = signer,
             )
@@ -99,7 +99,7 @@ class DmRelayListState(
             Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
             getDMRelayListFlow().collect {
                 Log.d("AccountRegisterObservers") { "Updating DM Relay List for ${signer.pubKey}" }
-                (it.note.event as? ChatMessageRelayListEvent)?.let {
+                (it.note.event as? DmRelayListEvent)?.let {
                     settings.updateDMRelayList(it)
                 }
             }

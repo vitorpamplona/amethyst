@@ -25,10 +25,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip61Nutzaps.redemption.redeemedNutzaps
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -43,6 +48,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * The "e" tags with "redeemed" marker SHOULD be left unencrypted in the tags array.
  * All other "e" tags should be encrypted in the content.
+ *
+ * NIP-61 nutzap redemptions are this same kind: a history entry whose public tags
+ * carry the redeemed nutzap (`["e", <nutzap-id>, <relay>, "redeemed"]`) and the
+ * sender's `p` tag. See `buildNutzapRedemption` in `nip61Nutzaps.redemption`.
  */
 @Immutable
 class CashuSpendingHistoryEvent(
@@ -52,7 +61,22 @@ class CashuSpendingHistoryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    /**
+     * NIP-61: the nutzaps this entry redeemed, from the public `e` tags marked `redeemed`.
+     */
+    fun redeemedNutzaps() = tags.redeemedNutzaps()
+
     /**
      * Decrypts the content to get the private spending history tags.
      */

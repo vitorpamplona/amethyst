@@ -35,9 +35,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.update
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.description
 import com.vitorpamplona.quartz.nip51Lists.peopleList.image
 import com.vitorpamplona.quartz.nip51Lists.peopleList.title
@@ -78,8 +78,8 @@ class PeopleListsState(
     // can subscribe and fetch them from relays.
     fun existingPeopleListNotes() =
         cache.addressables
-            .filter(PeopleListEvent.KIND, user.pubkeyHex)
-            .filter { it.dTag() != PeopleListEvent.BLOCK_LIST_D_TAG || it.event != null }
+            .filter(FollowSetEvent.KIND, user.pubkeyHex)
+            .filter { it.dTag() != FollowSetEvent.BLOCK_LIST_D_TAG || it.event != null }
             .filter { it.event != null || !cache.hasBeenDeleted(it.address) }
 
     val peopleListVersions = MutableStateFlow(0)
@@ -99,21 +99,21 @@ class PeopleListsState(
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val latestLists: StateFlow<List<PeopleListEvent>> =
+    val latestLists: StateFlow<List<FollowSetEvent>> =
         peopleListNotes
-            .transformLatest { emitAll(it.updateFlow<PeopleListEvent>()) }
+            .transformLatest { emitAll(it.updateFlow<FollowSetEvent>()) }
             .onStart { emit(peopleListNotes.value.events()) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    suspend fun PeopleListEvent.userIdSet() = decryptionCache.userIdSet(this)
+    suspend fun FollowSetEvent.userIdSet() = decryptionCache.userIdSet(this)
 
-    suspend fun List<PeopleListEvent>.mapToUserIdSet() = this.map { it.userIdSet() }.flattenToSet()
+    suspend fun List<FollowSetEvent>.mapToUserIdSet() = this.map { it.userIdSet() }.flattenToSet()
 
-    suspend fun List<PeopleListEvent>.mapGoodUsersToIdSet() =
+    suspend fun List<FollowSetEvent>.mapGoodUsersToIdSet() =
         this
             .mapNotNull {
-                if (it.dTag() != PeopleListEvent.BLOCK_LIST_D_TAG) {
+                if (it.dTag() != FollowSetEvent.BLOCK_LIST_D_TAG) {
                     it.userIdSet()
                 } else {
                     null
@@ -127,7 +127,7 @@ class PeopleListsState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
-    suspend fun PeopleListEvent.toUI() =
+    suspend fun FollowSetEvent.toUI() =
         PeopleList(
             identifierTag = this.dTag(),
             title = this.titleOrName() ?: this.dTag(),
@@ -137,7 +137,7 @@ class PeopleListsState(
             publicMembers = cache.load(this.publicUsersIdSet()),
         )
 
-    suspend fun List<PeopleListEvent>.toUI() = this.map { it.toUI() }.sortedBy { it.title }
+    suspend fun List<FollowSetEvent>.toUI() = this.map { it.toUI() }.sortedBy { it.title }
 
     val uiListFlow =
         latestLists
@@ -158,12 +158,12 @@ class PeopleListsState(
             .map { it.select(dTag) }
             .onStart { emit(selectList(dTag)) }
 
-    fun DeletionEvent.hasDeletedAnyPeopleList() = deleteAddressesWithKind(PeopleListEvent.KIND) || deletesAnyEventIn(peopleListsEventIds.value)
+    fun DeletionRequestEvent.hasDeletedAnyPeopleList() = deleteAddressesWithKind(FollowSetEvent.KIND) || deletesAnyEventIn(peopleListsEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->
             if (event.pubKey == signer.pubKey) {
-                event is PeopleListEvent || (event is DeletionEvent && event.hasDeletedAnyPeopleList())
+                event is FollowSetEvent || (event is DeletionRequestEvent && event.hasDeletedAnyPeopleList())
             } else {
                 false
             }
@@ -191,7 +191,7 @@ class PeopleListsState(
 
     fun getPeopleListNote(noteIdentifier: String): AddressableNote? = existingPeopleListNotes().find { it.dTag() == noteIdentifier }
 
-    fun getPeopleList(noteIdentifier: String): PeopleListEvent = getPeopleListNote(noteIdentifier)?.event as PeopleListEvent
+    fun getPeopleList(noteIdentifier: String): FollowSetEvent = getPeopleListNote(noteIdentifier)?.event as FollowSetEvent
 
     fun User.toUserTag() = UserTag(this.pubkeyHex, this.bestRelayHint())
 
@@ -207,7 +207,7 @@ class PeopleListsState(
     ): String {
         val dTag = UUID.randomUUID().toString()
         val newListTemplate =
-            PeopleListEvent.build(
+            FollowSetEvent.build(
                 dTag = dTag,
                 title = listName,
                 publicMembers = if (!isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
@@ -252,7 +252,7 @@ class PeopleListsState(
         account: Account,
     ) {
         val newList =
-            PeopleListEvent.createListWithDescription(
+            FollowSetEvent.createListWithDescription(
                 dTag = UUID.randomUUID().toString(),
                 title = customCloneName ?: currentPeopleList.title,
                 description = customCloneDescription ?: currentPeopleList.description,
@@ -268,7 +268,7 @@ class PeopleListsState(
         account: Account,
     ) {
         val followListEvent = getPeopleList(identifierTag)
-        val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followListEvent)))
+        val deletionEvent = account.signer.sign(DeletionRequestEvent.build(listOf(followListEvent)))
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
         // Any screen whose persisted feed filter still points at this list would keep
         // re-creating an empty shell for its address (and render the dTag/UUID in the
@@ -284,7 +284,7 @@ class PeopleListsState(
     ) {
         val followListEvent = getPeopleList(identifierTag)
         val newList =
-            PeopleListEvent.addUser(
+            FollowSetEvent.addUser(
                 earlierVersion = followListEvent,
                 pubKeyHex = user.pubkeyHex,
                 relayHint = user.bestRelayHint(),
@@ -302,7 +302,7 @@ class PeopleListsState(
     ) {
         val followListEvent = getPeopleList(identifierTag)
         val newList =
-            PeopleListEvent.addUserFirst(
+            FollowSetEvent.addUserFirst(
                 earlierVersion = followListEvent,
                 pubKeyHex = user.pubkeyHex,
                 relayHint = user.bestRelayHint(),
@@ -320,7 +320,7 @@ class PeopleListsState(
     ) {
         val followListEvent = getPeopleList(identifierTag)
         val newList =
-            PeopleListEvent.removeUser(
+            FollowSetEvent.removeUser(
                 earlierVersion = followListEvent,
                 pubKeyHex = user.pubkeyHex,
                 isUserPrivate = isPrivate,

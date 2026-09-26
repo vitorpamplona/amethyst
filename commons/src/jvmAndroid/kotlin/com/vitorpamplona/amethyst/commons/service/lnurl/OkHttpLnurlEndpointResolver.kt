@@ -32,7 +32,7 @@ import okhttp3.coroutines.executeAsync
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * OkHttp-backed [LnurlEndpointResolver]. Used by `LocalCache.consume(LnZapEvent)`
+ * OkHttp-backed [LnurlEndpointResolver]. Used by `LocalCache.consume(ZapReceiptEvent)`
  * to look up a recipient's LNURL provider's `nostrPubkey` when validating an
  * incoming zap receipt (NIP-57 Appendix F).
  *

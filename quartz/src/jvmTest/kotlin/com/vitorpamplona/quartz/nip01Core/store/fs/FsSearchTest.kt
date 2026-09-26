@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -166,7 +166,7 @@ class FsSearchTest {
             val n = note("uniqnote bitcoin", ts = 100)
             val long =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "uniqlong body",
                         title = "title",
                         dTag = "d1",

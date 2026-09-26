@@ -84,7 +84,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
@@ -740,8 +740,8 @@ class MarmotManager(
         persistOwn: Boolean = true,
     ): TextMessageBundle {
         require(targetEvents.isNotEmpty()) { "buildDeletionMessage: targetEvents must not be empty" }
-        val template = DeletionEvent.build(targetEvents)
-        val innerEvent = RumorAssembler.assembleRumor<DeletionEvent>(signer.pubKey, template)
+        val template = DeletionRequestEvent.build(targetEvents)
+        val innerEvent = RumorAssembler.assembleRumor<DeletionRequestEvent>(signer.pubKey, template)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
@@ -1502,7 +1502,7 @@ class MarmotManager(
         val authorOf = HashMap<HexKey, HexKey>(messages.size)
         val claims = ArrayList<Pair<HexKey, HexKey>>()
         for (event in messages) {
-            if (event.kind == DeletionEvent.KIND) {
+            if (event.kind == DeletionRequestEvent.KIND) {
                 for (tag in event.tags) {
                     if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
                 }

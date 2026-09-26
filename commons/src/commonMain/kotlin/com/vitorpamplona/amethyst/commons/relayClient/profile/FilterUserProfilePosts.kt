@@ -40,11 +40,11 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
@@ -60,10 +60,10 @@ val UserProfilePostKinds1 =
         TextNoteEvent.KIND,
         GenericRepostEvent.KIND,
         RepostEvent.KIND,
-        LongTextNoteEvent.KIND,
+        LongFormContentEvent.KIND,
         PollEvent.KIND,
         HighlightEvent.KIND,
-        WikiNoteEvent.KIND,
+        WikiArticleEvent.KIND,
         VoiceEvent.KIND,
         PublicMessageEvent.KIND,
     )
