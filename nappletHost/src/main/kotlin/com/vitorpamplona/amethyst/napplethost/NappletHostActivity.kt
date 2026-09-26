@@ -258,6 +258,7 @@ class NappletHostActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SandboxComposeResources.ensure(this)
 
         if (!readManifestExtras()) {
             Toast.makeText(this, getString(R.string.napplet_invalid), Toast.LENGTH_SHORT).show()

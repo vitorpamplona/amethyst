@@ -42,6 +42,7 @@ class BrowserPillRenderTest {
         name: String,
         widthDp: Int,
         heightDp: Int,
+        minColours: Int = 20,
         content: @Composable () -> Unit,
     ) {
         val density = 2f
@@ -61,7 +62,7 @@ class BrowserPillRenderTest {
             val pixels = image.peekPixels() ?: error("no pixels for $name")
             val distinct = HashSet<Int>()
             for (y in 0 until height step 7) for (x in 0 until width step 7) distinct += pixels.getColor(x, y)
-            assertTrue(distinct.size > 20, "$name rendered almost nothing (${distinct.size} colours)")
+            assertTrue(distinct.size > minColours, "$name rendered almost nothing (${distinct.size} colours)")
         } finally {
             scene.close()
         }
@@ -75,7 +76,12 @@ class BrowserPillRenderTest {
 
     @Test fun napplet() = render("04-napplet", 820, 800) { BrowserPillNappletPreview() }
 
-    @Test fun handles() = render("05-handles", 820, 160) { PillHandlesPreview() }
+    // Three small bars on a mostly empty canvas, and deliberately the quietest thing
+    // the redesign draws — so it clears the "did anything render" bar by less than the
+    // full screens do. It scored 18 when the accent came off; a blank render is 1-3, so
+    // 12 still catches the failure this guard is for without demanding a colour the
+    // component is not supposed to have.
+    @Test fun handles() = render("05-handles", 820, 160, minColours = 12) { PillHandlesPreview() }
 
     @Test fun find() = render("06-find", 820, 220) { FindInPagePreview() }
 
