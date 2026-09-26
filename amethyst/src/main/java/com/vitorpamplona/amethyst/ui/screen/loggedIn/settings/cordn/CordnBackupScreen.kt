@@ -140,8 +140,15 @@ fun CordnBackupScreen(
             }
         }
 
+    // OpenDocument, not GetContent. `GetContent("*/*")` sends ACTION_GET_CONTENT,
+    // which on this Android version is intercepted by the system photo picker's
+    // shim (`PhotopickerGetContentActivity`) before it hands off to DocumentsUI —
+    // and a file chosen through that handoff came back as a cancelled result, so
+    // Restore opened a picker, took a tap, and quietly did nothing. An archive is
+    // not media; ACTION_OPEN_DOCUMENT is the right intent for it and reaches SAF
+    // directly.
     val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             pendingRestore = uri
         }
 
@@ -255,7 +262,7 @@ fun CordnBackupScreen(
                     )
 
                     Button(
-                        onClick = { picker.launch("*/*") },
+                        onClick = { picker.launch(arrayOf("*/*")) },
                         enabled = !busy && passphrase.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
