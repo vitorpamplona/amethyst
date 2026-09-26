@@ -1,0 +1,4309 @@
+{
+  "authors": [
+    "alice",
+    "bob",
+    "carol",
+    "dave",
+    "zapper"
+  ],
+  "corpus": [
+    {
+      "ref": "a-profile",
+      "author": "alice",
+      "kind": 0,
+      "created_at": 1700000000,
+      "tags": [],
+      "content": "{\"name\":\"alice\"}"
+    },
+    {
+      "ref": "b-profile",
+      "author": "bob",
+      "kind": 0,
+      "created_at": 1700000001,
+      "tags": [],
+      "content": "{\"name\":\"Bob\"}"
+    },
+    {
+      "ref": "c-profile",
+      "author": "carol",
+      "kind": 0,
+      "created_at": 1700000002,
+      "tags": [],
+      "content": "{\"name\":\"carol é\"}"
+    },
+    {
+      "ref": "a-hello",
+      "author": "alice",
+      "kind": 1,
+      "created_at": 1700000100,
+      "tags": [
+        [
+          "t",
+          "nostr"
+        ],
+        [
+          "t",
+          "intro"
+        ]
+      ],
+      "content": "Hello Nostr"
+    },
+    {
+      "ref": "a-sale",
+      "author": "alice",
+      "kind": 1,
+      "created_at": 1700000200,
+      "tags": [
+        [
+          "t",
+          "nostr"
+        ]
+      ],
+      "content": "50% off_sale"
+    },
+    {
+      "ref": "b-cafe",
+      "author": "bob",
+      "kind": 1,
+      "created_at": 1700000300,
+      "tags": [
+        [
+          "p",
+          "{pubkey:alice}"
+        ],
+        [
+          "t",
+          "coffee"
+        ]
+      ],
+      "content": "café ☕"
+    },
+    {
+      "ref": "c-emoji",
+      "author": "carol",
+      "kind": 1,
+      "created_at": 1700000400,
+      "tags": [
+        [
+          "e",
+          "{id:a-hello}",
+          "wss://r.example",
+          "root"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": "😀 emoji"
+    },
+    {
+      "ref": "d-plain",
+      "author": "dave",
+      "kind": 1,
+      "created_at": 1700000500,
+      "tags": [],
+      "content": "no tags"
+    },
+    {
+      "ref": "b-like",
+      "author": "bob",
+      "kind": 7,
+      "created_at": 1700000600,
+      "tags": [
+        [
+          "e",
+          "{id:a-hello}"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": "+"
+    },
+    {
+      "ref": "c-like",
+      "author": "carol",
+      "kind": 7,
+      "created_at": 1700000601,
+      "tags": [
+        [
+          "e",
+          "{id:a-hello}"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": "+"
+    },
+    {
+      "ref": "d-dislike",
+      "author": "dave",
+      "kind": 7,
+      "created_at": 1700000602,
+      "tags": [
+        [
+          "e",
+          "{id:a-sale}"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": "-"
+    },
+    {
+      "ref": "a-shaka",
+      "author": "alice",
+      "kind": 7,
+      "created_at": 1700000603,
+      "tags": [
+        [
+          "e",
+          "{id:b-cafe}"
+        ],
+        [
+          "p",
+          "{pubkey:bob}"
+        ]
+      ],
+      "content": "🤙"
+    },
+    {
+      "ref": "z-1",
+      "author": "zapper",
+      "kind": 9735,
+      "created_at": 1700000700,
+      "tags": [
+        [
+          "amount",
+          "21000"
+        ],
+        [
+          "e",
+          "{id:a-hello}"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "z-2",
+      "author": "zapper",
+      "kind": 9735,
+      "created_at": 1700000701,
+      "tags": [
+        [
+          "amount",
+          "5000"
+        ],
+        [
+          "e",
+          "{id:a-hello}"
+        ],
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "z-3",
+      "author": "zapper",
+      "kind": 9735,
+      "created_at": 1700000702,
+      "tags": [
+        [
+          "amount",
+          "1000000"
+        ],
+        [
+          "e",
+          "{id:b-cafe}"
+        ],
+        [
+          "p",
+          "{pubkey:bob}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "z-4",
+      "author": "zapper",
+      "kind": 9735,
+      "created_at": 1700000703,
+      "tags": [
+        [
+          "amount",
+          "abc"
+        ],
+        [
+          "e",
+          "{id:c-emoji}"
+        ],
+        [
+          "p",
+          "{pubkey:carol}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "a-relays",
+      "author": "alice",
+      "kind": 10002,
+      "created_at": 1700000800,
+      "tags": [
+        [
+          "r",
+          "wss://a.example"
+        ],
+        [
+          "r",
+          "wss://b.example",
+          "write"
+        ],
+        [
+          "r",
+          "wss://c.example",
+          "read"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "b-relays",
+      "author": "bob",
+      "kind": 10002,
+      "created_at": 1700000801,
+      "tags": [
+        [
+          "r",
+          "wss://a.example",
+          "read"
+        ],
+        [
+          "r",
+          "wss://d.example"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "a-follows",
+      "author": "alice",
+      "kind": 3,
+      "created_at": 1700000900,
+      "tags": [
+        [
+          "p",
+          "{pubkey:bob}"
+        ],
+        [
+          "p",
+          "{pubkey:carol}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "b-follows",
+      "author": "bob",
+      "kind": 3,
+      "created_at": 1700000901,
+      "tags": [
+        [
+          "p",
+          "{pubkey:alice}"
+        ]
+      ],
+      "content": ""
+    },
+    {
+      "ref": "a-post1",
+      "author": "alice",
+      "kind": 30023,
+      "created_at": 1700001000,
+      "tags": [
+        [
+          "d",
+          "post-1"
+        ],
+        [
+          "title",
+          "First"
+        ],
+        [
+          "t",
+          "nostr"
+        ]
+      ],
+      "content": "Long form one"
+    },
+    {
+      "ref": "a-post2",
+      "author": "alice",
+      "kind": 30023,
+      "created_at": 1700001001,
+      "tags": [
+        [
+          "d",
+          "post-2"
+        ],
+        [
+          "title",
+          "Second"
+        ]
+      ],
+      "content": "Long form two"
+    },
+    {
+      "ref": "d-edge",
+      "author": "dave",
+      "kind": 1,
+      "created_at": 1700001100,
+      "tags": [
+        [
+          "x"
+        ],
+        [
+          "six",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6"
+        ],
+        [
+          "t",
+          "NOSTR"
+        ],
+        [
+          "t",
+          ""
+        ]
+      ],
+      "content": "edge"
+    },
+    {
+      "ref": "b-tie",
+      "author": "bob",
+      "kind": 1,
+      "created_at": 1700001200,
+      "tags": [],
+      "content": "tie b"
+    },
+    {
+      "ref": "c-tie",
+      "author": "carol",
+      "kind": 1,
+      "created_at": 1700001200,
+      "tags": [],
+      "content": "tie c"
+    },
+    {
+      "ref": "b-quote",
+      "author": "bob",
+      "kind": 1,
+      "created_at": 1700001300,
+      "tags": [
+        [
+          "a",
+          "30023:{pubkey:alice}:post-1"
+        ]
+      ],
+      "content": "check this"
+    }
+  ],
+  "cases": [
+    {
+      "name": "model/events-columns",
+      "query": "SELECT * FROM events WHERE kind = 0 ORDER BY created_at",
+      "ordered": true,
+      "columns": [
+        [
+          "id",
+          "TEXT"
+        ],
+        [
+          "pubkey",
+          "TEXT"
+        ],
+        [
+          "created_at",
+          "INTEGER"
+        ],
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "content",
+          "TEXT"
+        ],
+        [
+          "sig",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "model/tags-columns",
+      "query": "SELECT * FROM tags WHERE event_id = ? ORDER BY idx",
+      "params": [
+        "{id:d-edge}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "event_id",
+          "TEXT"
+        ],
+        [
+          "idx",
+          "INTEGER"
+        ],
+        [
+          "t0",
+          "TEXT"
+        ],
+        [
+          "t1",
+          "TEXT"
+        ],
+        [
+          "t2",
+          "TEXT"
+        ],
+        [
+          "t3",
+          "TEXT"
+        ],
+        [
+          "t4",
+          "TEXT"
+        ],
+        [
+          "created_at",
+          "INTEGER"
+        ],
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "pubkey",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "model/counts",
+      "query": "SELECT (SELECT count(*) FROM events) AS events, (SELECT count(*) FROM tags) AS tags",
+      "columns": [
+        [
+          "events",
+          "INTEGER"
+        ],
+        [
+          "tags",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          26,
+          45
+        ]
+      ]
+    },
+    {
+      "name": "model/untagged-event-has-no-rows",
+      "query": "SELECT count(*) AS n FROM tags WHERE event_id = ?",
+      "params": [
+        "{id:d-plain}"
+      ],
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ]
+    },
+    {
+      "name": "model/tags-repeat-event-fields",
+      "query": "SELECT count(*) AS n FROM tags JOIN events ON events.id = tags.event_id WHERE tags.kind <> events.kind OR tags.pubkey <> events.pubkey OR tags.created_at <> events.created_at",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ]
+    },
+    {
+      "name": "model/positions",
+      "query": "SELECT t0, t1, t2, t3, t4 FROM tags WHERE event_id = ? AND t0 IN ('x', 'six') ORDER BY idx",
+      "params": [
+        "{id:d-edge}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "t0",
+          "TEXT"
+        ],
+        [
+          "t1",
+          "TEXT"
+        ],
+        [
+          "t2",
+          "TEXT"
+        ],
+        [
+          "t3",
+          "TEXT"
+        ],
+        [
+          "t4",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "x",
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "six",
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      ]
+    },
+    {
+      "name": "model/empty-value-is-not-null",
+      "query": "SELECT t1, t1 IS NULL AS missing FROM tags WHERE t0 = 't' AND event_id = ? ORDER BY idx",
+      "params": [
+        "{id:d-edge}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "t1",
+          "TEXT"
+        ],
+        [
+          "missing",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          "NOSTR",
+          false
+        ],
+        [
+          "",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "model/idx-is-position",
+      "query": "SELECT idx, t0 FROM tags WHERE event_id = ? ORDER BY idx",
+      "params": [
+        "{id:a-post1}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "idx",
+          "INTEGER"
+        ],
+        [
+          "t0",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          0,
+          "d"
+        ],
+        [
+          1,
+          "title"
+        ],
+        [
+          2,
+          "t"
+        ]
+      ]
+    },
+    {
+      "name": "literal/integer",
+      "query": "SELECT 42 AS a, -9223372036854775808 AS b, 0 AS c",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          42,
+          -9223372036854775808,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "literal/real",
+      "query": "SELECT 1.5 AS a, 1e3 AS b, 2E-2 AS c, 0.25e1 AS d",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          1.5,
+          1000.0,
+          0.02,
+          2.5
+        ]
+      ]
+    },
+    {
+      "name": "literal/string-quote",
+      "query": "SELECT 'it''s' AS s, '' AS e",
+      "columns": [
+        [
+          "s",
+          "TEXT"
+        ],
+        [
+          "e",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "it's",
+          ""
+        ]
+      ]
+    },
+    {
+      "name": "literal/boolean",
+      "query": "SELECT TRUE AS t, FALSE AS f",
+      "columns": [
+        [
+          "t",
+          "BOOLEAN"
+        ],
+        [
+          "f",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "name": "literal/null-defaults-to-text",
+      "query": "SELECT NULL AS n",
+      "columns": [
+        [
+          "n",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          null
+        ]
+      ]
+    },
+    {
+      "name": "literal/keywords-any-case",
+      "query": "select Kind as K from EVENTS where KIND = 0 order BY created_at limit 1",
+      "columns": [
+        [
+          "k",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "naming/bare-column-keeps-its-name",
+      "query": "SELECT events.kind, tags.t0 FROM events JOIN tags ON tags.event_id = events.id WHERE events.kind = 30023 AND tags.idx = 0 ORDER BY events.created_at",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "t0",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          30023,
+          "d"
+        ],
+        [
+          30023,
+          "d"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "naming/aliases-are-lower-case",
+      "query": "SELECT count(*) AS Total, kind AS KIND_OF FROM events WHERE kind = 0 GROUP BY kind",
+      "columns": [
+        [
+          "total",
+          "INTEGER"
+        ],
+        [
+          "kind_of",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "arith/integer-division",
+      "query": "SELECT 7 / 2 AS a, -7 / 2 AS b, 7 / -2 AS c, 6 / 3 AS d",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3,
+          -3,
+          -3,
+          2
+        ]
+      ]
+    },
+    {
+      "name": "arith/remainder-sign",
+      "query": "SELECT 7 % 3 AS a, -7 % 3 AS b, 7 % -3 AS c",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          1,
+          -1,
+          1
+        ]
+      ]
+    },
+    {
+      "name": "arith/promotion",
+      "query": "SELECT 7 / 2.0 AS a, 1 + 0.5 AS b, 2 * 1.5 AS c",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          3.5,
+          1.5,
+          3.0
+        ]
+      ]
+    },
+    {
+      "name": "arith/integer-division-by-zero",
+      "query": "SELECT 5 / 0 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/real-division-by-zero",
+      "query": "SELECT 5.0 / 0 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/remainder-by-zero",
+      "query": "SELECT 5 % 0 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/division-by-zero-from-data",
+      "query": "SELECT kind / (kind - 7) AS x FROM events WHERE kind = 7",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/integer-overflow-add",
+      "query": "SELECT 9223372036854775807 + 1 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/integer-overflow-subtract",
+      "query": "SELECT -9223372036854775807 - 2 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/integer-overflow-multiply",
+      "query": "SELECT 4611686018427387904 * 2 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/integer-overflow-negate",
+      "query": "SELECT -(-9223372036854775807 - 1) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/integer-overflow-abs",
+      "query": "SELECT abs(-9223372036854775807 - 1) AS x",
+      "error": "error"
+    },
+    {
+      "name": "arith/integer-overflow-divide",
+      "query": "SELECT (-9223372036854775807 - 1) / -1 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/real-overflow",
+      "query": "SELECT 1e308 * 10 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/real-underflow",
+      "query": "SELECT 1e-300 * 1e-300 AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "arith/near-the-limits",
+      "query": "SELECT 9223372036854775807 - 1 AS a, -9223372036854775807 - 1 AS b, 1e-300 * 1e-10 AS c, 1e300 * 1e8 AS d",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          9223372036854775806,
+          -9223372036854775808,
+          1e-310,
+          1e+308
+        ]
+      ]
+    },
+    {
+      "name": "arith/unary",
+      "query": "SELECT -(-5) AS a, -2.5 AS b, - kind AS c FROM events WHERE kind = 3 LIMIT 1",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          5,
+          -2.5,
+          -3
+        ]
+      ]
+    },
+    {
+      "name": "arith/concat",
+      "query": "SELECT 'a' || 'b' || 'c' AS s, 'x' || NULL AS n",
+      "columns": [
+        [
+          "s",
+          "TEXT"
+        ],
+        [
+          "n",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "abc",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "arith/null-propagates",
+      "query": "SELECT 1 + NULL AS a, NULL * 2.5 AS b",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "arith/precedence",
+      "query": "SELECT 1 + 2 * 3 AS a, (1 + 2) * 3 AS b, 2 * 3 % 4 AS c, 'a' || 'b' = 'ab' AS d, - 2 * 3 AS e",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          7,
+          9,
+          2,
+          true,
+          -6
+        ]
+      ]
+    },
+    {
+      "name": "compare/text-is-code-point-order",
+      "query": "SELECT 'a' < 'B' AS a, 'ab' < 'abc' AS b, 'é' > 'z' AS c, 'Z' < 'a' AS d, '😀' > 'é' AS e, '！' < '😀' AS f",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ],
+        [
+          "f",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          false,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/numeric-promotion",
+      "query": "SELECT 1 = 1.0 AS a, 2 < 2.5 AS b, 3 >= 3.0 AS c",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          true,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/null",
+      "query": "SELECT NULL = NULL AS a, NULL IS NULL AS b, 1 IS NOT NULL AS c, NULL <> 1 AS d, t2 IS NULL AS e FROM tags WHERE t0 = 't' AND t1 = 'coffee'",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          true,
+          true,
+          null,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/three-valued-logic",
+      "query": "SELECT FALSE AND NULL AS a, TRUE OR NULL AS b, TRUE AND NULL AS c, FALSE OR NULL AS d, NOT NULL AS e, NOT FALSE AS f",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ],
+        [
+          "f",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          false,
+          true,
+          null,
+          null,
+          null,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/in-list",
+      "query": "SELECT 1 IN (1, 2) AS a, 3 IN (1, 2) AS b, 1 IN (2, NULL) AS c, NULL IN (1) AS d, 1 NOT IN (2, NULL) AS e, 3 NOT IN (1, 2) AS f, 1 IN (1, NULL) AS g",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ],
+        [
+          "f",
+          "BOOLEAN"
+        ],
+        [
+          "g",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          false,
+          null,
+          null,
+          null,
+          true,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/between",
+      "query": "SELECT 5 BETWEEN 1 AND 10 AS a, 5 NOT BETWEEN 1 AND 4 AS b, 1 BETWEEN 0 AND NULL AS c, 'b' BETWEEN 'a' AND 'c' AS d, 2.5 BETWEEN 2 AND 3 AS e",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          true,
+          null,
+          true,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "compare/between-then-and",
+      "query": "SELECT count(*) AS n FROM events WHERE created_at BETWEEN 1700000000 AND 1700000300 AND kind = 1",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "name": "compare/boolean-equality",
+      "query": "SELECT (1 = 1) = TRUE AS a, (1 = 2) <> FALSE AS b",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "name": "like/basics",
+      "query": "SELECT 'Hello' LIKE 'H%' AS a, 'Hello' LIKE 'H_llo' AS b, 'Hello' LIKE 'Hel' AS c, 'Hello' LIKE '%' AS d, '' LIKE '%' AS e, 'Hello' LIKE '%l%o' AS f",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ],
+        [
+          "e",
+          "BOOLEAN"
+        ],
+        [
+          "f",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "like/is-case-sensitive",
+      "query": "SELECT 'Hello' LIKE 'h%' AS a, 'abc' LIKE 'ABC' AS b, lower('ABC') LIKE 'abc' AS c, 'café' LIKE 'CAFÉ' AS d",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          false,
+          false,
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "name": "like/backslash-is-literal",
+      "query": "SELECT 'a\\b' LIKE 'a\\b' AS a, 'a%' LIKE 'a\\%' AS b, 'a\\x' LIKE 'a\\_' AS c",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          false,
+          true
+        ]
+      ],
+      "postgres": "SELECT 'a\\b' LIKE 'a\\b' ESCAPE '' AS a, 'a%' LIKE 'a\\%' ESCAPE '' AS b, 'a\\x' LIKE 'a\\_' ESCAPE '' AS c"
+    },
+    {
+      "name": "like/underscore-is-one-code-point",
+      "query": "SELECT '😀x' LIKE '_x' AS a, 'éx' LIKE '_x' AS b, 'x' LIKE '_x' AS c",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "c",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "name": "like/over-content",
+      "query": "SELECT content FROM events WHERE content LIKE '%off_s%' ORDER BY created_at",
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "50% off_sale"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "like/null",
+      "query": "SELECT NULL LIKE 'a' AS a, 'a' NOT LIKE 'b' AS b",
+      "columns": [
+        [
+          "a",
+          "BOOLEAN"
+        ],
+        [
+          "b",
+          "BOOLEAN"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          true
+        ]
+      ]
+    },
+    {
+      "name": "cast/text-to-integer",
+      "query": "SELECT CAST('42' AS INTEGER) AS a, CAST('-12' AS INTEGER) AS b, CAST('+7' AS INTEGER) AS c, CAST('007' AS INTEGER) AS d, CAST('-0' AS INTEGER) AS e",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          42,
+          -12,
+          7,
+          7,
+          0
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_integer('42') AS a, nql_text_to_integer('-12') AS b, nql_text_to_integer('+7') AS c, nql_text_to_integer('007') AS d, nql_text_to_integer('-0') AS e"
+    },
+    {
+      "name": "cast/text-to-integer-malformed-is-null",
+      "query": "SELECT CAST('12abc' AS INTEGER) AS a, CAST(' 42' AS INTEGER) AS b, CAST('abc' AS INTEGER) AS c, CAST('1e3' AS INTEGER) AS d, CAST('3.9' AS INTEGER) AS e, CAST('0x10' AS INTEGER) AS f, CAST('' AS INTEGER) AS g, CAST('1_000' AS INTEGER) AS h, CAST('-' AS INTEGER) AS i",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "INTEGER"
+        ],
+        [
+          "f",
+          "INTEGER"
+        ],
+        [
+          "g",
+          "INTEGER"
+        ],
+        [
+          "h",
+          "INTEGER"
+        ],
+        [
+          "i",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_integer('12abc') AS a, nql_text_to_integer(' 42') AS b, nql_text_to_integer('abc') AS c, nql_text_to_integer('1e3') AS d, nql_text_to_integer('3.9') AS e, nql_text_to_integer('0x10') AS f, nql_text_to_integer('') AS g, nql_text_to_integer('1_000') AS h, nql_text_to_integer('-') AS i",
+      "sqlite": null
+    },
+    {
+      "name": "cast/text-to-integer-range",
+      "query": "SELECT CAST('9223372036854775807' AS INTEGER) AS a, CAST('-9223372036854775808' AS INTEGER) AS b, CAST('9223372036854775808' AS INTEGER) AS c, CAST('-9999999999999999999' AS INTEGER) AS d",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          9223372036854775807,
+          -9223372036854775808,
+          null,
+          null
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_integer('9223372036854775807') AS a, nql_text_to_integer('-9223372036854775808') AS b, nql_text_to_integer('9223372036854775808') AS c, nql_text_to_integer('-9999999999999999999') AS d",
+      "sqlite": null
+    },
+    {
+      "name": "cast/text-to-real",
+      "query": "SELECT CAST('1.5e2' AS REAL) AS a, CAST('-2.5' AS REAL) AS b, CAST('7' AS REAL) AS c, CAST('0.1' AS REAL) AS d, CAST('1E-2' AS REAL) AS e, CAST('+3' AS REAL) AS f",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ],
+        [
+          "f",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          150.0,
+          -2.5,
+          7.0,
+          0.1,
+          0.01,
+          3.0
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_real('1.5e2') AS a, nql_text_to_real('-2.5') AS b, nql_text_to_real('7') AS c, nql_text_to_real('0.1') AS d, nql_text_to_real('1E-2') AS e, nql_text_to_real('+3') AS f"
+    },
+    {
+      "name": "cast/text-to-real-malformed-is-null",
+      "query": "SELECT CAST('1.5e2x' AS REAL) AS a, CAST('x' AS REAL) AS b, CAST('.5' AS REAL) AS c, CAST('5.' AS REAL) AS d, CAST(' 1' AS REAL) AS e, CAST('Infinity' AS REAL) AS f, CAST('NaN' AS REAL) AS g, CAST('1e999' AS REAL) AS h, CAST('' AS REAL) AS i",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ],
+        [
+          "f",
+          "REAL"
+        ],
+        [
+          "g",
+          "REAL"
+        ],
+        [
+          "h",
+          "REAL"
+        ],
+        [
+          "i",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_real('1.5e2x') AS a, nql_text_to_real('x') AS b, nql_text_to_real('.5') AS c, nql_text_to_real('5.') AS d, nql_text_to_real(' 1') AS e, nql_text_to_real('Infinity') AS f, nql_text_to_real('NaN') AS g, nql_text_to_real('1e999') AS h, nql_text_to_real('') AS i",
+      "sqlite": null
+    },
+    {
+      "name": "cast/real-to-integer",
+      "query": "SELECT CAST(3.9 AS INTEGER) AS a, CAST(-3.9 AS INTEGER) AS b, CAST(1e20 AS INTEGER) AS c, CAST(-1e20 AS INTEGER) AS d, CAST(9223372036854775807.0 AS INTEGER) AS e, CAST(-9223372036854775808.0 AS INTEGER) AS f, CAST(0.5 AS INTEGER) AS g",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "INTEGER"
+        ],
+        [
+          "f",
+          "INTEGER"
+        ],
+        [
+          "g",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3,
+          -3,
+          null,
+          null,
+          null,
+          -9223372036854775808,
+          0
+        ]
+      ],
+      "postgres": "SELECT nql_real_to_integer(3.9) AS a, nql_real_to_integer(-3.9) AS b, nql_real_to_integer(1e20) AS c, nql_real_to_integer(-1e20) AS d, nql_real_to_integer(9223372036854775807.0) AS e, nql_real_to_integer(-9223372036854775808.0) AS f, nql_real_to_integer(0.5) AS g",
+      "sqlite": null
+    },
+    {
+      "name": "cast/others",
+      "query": "SELECT CAST(3 AS REAL) AS a, CAST(-12 AS TEXT) AS b, CAST(TRUE AS INTEGER) AS c, CAST(1 > 2 AS INTEGER) AS d, CAST(NULL AS INTEGER) AS e, CAST('x' AS TEXT) AS f, CAST(7 AS INTEGER) AS g, CAST(2.5 AS REAL) AS h",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "INTEGER"
+        ],
+        [
+          "f",
+          "TEXT"
+        ],
+        [
+          "g",
+          "INTEGER"
+        ],
+        [
+          "h",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          3.0,
+          "-12",
+          1,
+          0,
+          null,
+          "x",
+          7,
+          2.5
+        ]
+      ],
+      "postgres": "SELECT CAST(3 AS REAL) AS a, CAST(-12 AS TEXT) AS b, CAST(CAST(TRUE AS int4) AS INTEGER) AS c, CAST(CAST(1 > 2 AS int4) AS INTEGER) AS d, CAST(NULL AS INTEGER) AS e, CAST('x' AS TEXT) AS f, CAST(7 AS INTEGER) AS g, CAST(2.5 AS REAL) AS h"
+    },
+    {
+      "name": "cast/zap-amounts",
+      "query": "SELECT sum(CAST(t1 AS INTEGER)) AS msats, count(CAST(t1 AS INTEGER)) AS parsed FROM tags WHERE kind = 9735 AND t0 = 'amount'",
+      "columns": [
+        [
+          "msats",
+          "INTEGER"
+        ],
+        [
+          "parsed",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          1026000,
+          3
+        ]
+      ],
+      "postgres": "SELECT CAST(sum(nql_text_to_integer(t1)) AS INTEGER) AS msats, count(nql_text_to_integer(t1)) AS parsed FROM tags WHERE kind = 9735 AND t0 = 'amount'",
+      "sqlite": "SELECT sum(CAST(t1 AS INTEGER)) AS msats, count(CASE WHEN t1 GLOB '[0-9]*' THEN 1 END) AS parsed FROM tags WHERE kind = 9735 AND t0 = 'amount'"
+    },
+    {
+      "name": "case/searched",
+      "query": "SELECT CASE WHEN kind = 0 THEN 'profile' WHEN kind = 1 THEN 'note' ELSE 'other' END AS k, count(*) AS n FROM events GROUP BY k ORDER BY k",
+      "ordered": true,
+      "columns": [
+        [
+          "k",
+          "TEXT"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "note",
+          9
+        ],
+        [
+          "other",
+          14
+        ],
+        [
+          "profile",
+          3
+        ]
+      ]
+    },
+    {
+      "name": "case/without-else",
+      "query": "SELECT CASE WHEN kind = 0 THEN 'p' WHEN kind = 7 THEN 'r' END AS k FROM events WHERE kind IN (0, 3) ORDER BY created_at",
+      "columns": [
+        [
+          "k",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "p"
+        ],
+        [
+          "p"
+        ],
+        [
+          "p"
+        ],
+        [
+          null
+        ],
+        [
+          null
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "case/first-true-wins",
+      "query": "SELECT CASE WHEN 1 > 0 THEN 'a' WHEN 2 > 0 THEN 'b' ELSE 'c' END AS x, CASE WHEN NULL THEN 'a' ELSE 'b' END AS y",
+      "columns": [
+        [
+          "x",
+          "TEXT"
+        ],
+        [
+          "y",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "a",
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "conditional/functions",
+      "query": "SELECT coalesce(NULL, 2, 3) AS a, coalesce(NULL, 'x') AS b, nullif(1, 1) AS c, nullif(1, 2) AS d, coalesce(NULL, NULL) AS e, nullif(NULL, 1) AS f",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "TEXT"
+        ],
+        [
+          "f",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          2,
+          "x",
+          null,
+          1,
+          null,
+          null
+        ]
+      ],
+      "postgres": "SELECT coalesce(NULL, 2, 3) AS a, coalesce(NULL, 'x') AS b, nullif(1, 1) AS c, nullif(1, 2) AS d, CAST(coalesce(NULL, NULL) AS text) AS e, nullif(CAST(NULL AS INTEGER), 1) AS f"
+    },
+    {
+      "name": "text/length",
+      "query": "SELECT length('héllo') AS a, length('😀') AS b, length('') AS c, length(content) AS d FROM events WHERE id = ?",
+      "params": [
+        "{id:b-cafe}"
+      ],
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          5,
+          1,
+          0,
+          6
+        ]
+      ]
+    },
+    {
+      "name": "text/case-mapping-is-ascii-only",
+      "query": "SELECT lower('ÄBC') AS a, upper('äbc') AS b, lower('MiXeD') AS c",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "Äbc",
+          "äBC",
+          "mixed"
+        ]
+      ]
+    },
+    {
+      "name": "text/trim",
+      "query": "SELECT trim('  x  ') AS a, ltrim('  x  ') AS b, rtrim('  x  ') AS c, trim('xxaxx', 'x') AS d, trim('abcba', 'ab') AS e, trim('') AS f",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "TEXT"
+        ],
+        [
+          "d",
+          "TEXT"
+        ],
+        [
+          "e",
+          "TEXT"
+        ],
+        [
+          "f",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "x",
+          "x  ",
+          "  x",
+          "a",
+          "c",
+          ""
+        ]
+      ]
+    },
+    {
+      "name": "text/replace",
+      "query": "SELECT replace('aaa', 'a', 'bb') AS a, replace('abc', '', 'z') AS b, replace('aaaa', 'aa', 'b') AS c, replace('héllo', 'é', 'e') AS d",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "TEXT"
+        ],
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "bbbbbb",
+          "abc",
+          "bb",
+          "hello"
+        ]
+      ]
+    },
+    {
+      "name": "text/instr",
+      "query": "SELECT instr('héllo', 'l') AS a, instr('abc', 'z') AS b, instr('abc', '') AS c, instr('😀a', 'a') AS d",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3,
+          0,
+          1,
+          2
+        ]
+      ],
+      "postgres": "SELECT strpos('héllo', 'l') AS a, strpos('abc', 'z') AS b, strpos('abc', '') AS c, strpos('😀a', 'a') AS d"
+    },
+    {
+      "name": "text/substr",
+      "query": "SELECT substr('abcdef', 2, 3) AS a, substr('abcdef', 2) AS b, substr('abcdef', 0, 2) AS c, substr('abcdef', -1, 3) AS d, substr('abcdef', -2) AS e, substr('abcdef', 5, 10) AS f, substr('abcdef', 10) AS g, substr('abcdef', 1, 0) AS h, substr('héllo', 2, 2) AS i, substr('😀ab', 2, 1) AS j",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ],
+        [
+          "c",
+          "TEXT"
+        ],
+        [
+          "d",
+          "TEXT"
+        ],
+        [
+          "e",
+          "TEXT"
+        ],
+        [
+          "f",
+          "TEXT"
+        ],
+        [
+          "g",
+          "TEXT"
+        ],
+        [
+          "h",
+          "TEXT"
+        ],
+        [
+          "i",
+          "TEXT"
+        ],
+        [
+          "j",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "bcd",
+          "bcdef",
+          "a",
+          "a",
+          "abcdef",
+          "ef",
+          "",
+          "",
+          "él",
+          "a"
+        ]
+      ],
+      "postgres": "SELECT nql_substr('abcdef', 2, 3) AS a, nql_substr('abcdef', 2) AS b, nql_substr('abcdef', 0, 2) AS c, nql_substr('abcdef', -1, 3) AS d, nql_substr('abcdef', -2) AS e, nql_substr('abcdef', 5, 10) AS f, nql_substr('abcdef', 10) AS g, nql_substr('abcdef', 1, 0) AS h, nql_substr('héllo', 2, 2) AS i, nql_substr('😀ab', 2, 1) AS j",
+      "sqlite": "SELECT substr('abcdef', 2, 3) AS a, substr('abcdef', 2) AS b, substr('abcdef', 1, 1) AS c, substr('abcdef', 1, 1) AS d, substr('abcdef', 1) AS e, substr('abcdef', 5, 10) AS f, substr('abcdef', 10) AS g, substr('abcdef', 1, 0) AS h, substr('héllo', 2, 2) AS i, substr('😀ab', 2, 1) AS j"
+    },
+    {
+      "name": "text/substr-negative-length-is-null",
+      "query": "SELECT substr('abcdef', 3, -1) AS a, substr(content, 1, instr(content, ':') - 1) AS b FROM events WHERE kind = 1 AND content = 'no tags'",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          null,
+          null
+        ]
+      ],
+      "postgres": "SELECT nql_substr('abcdef', 3, -1) AS a, nql_substr(content, 1, strpos(content, ':') - 1) AS b FROM events WHERE kind = 1 AND content = 'no tags'",
+      "sqlite": null
+    },
+    {
+      "name": "text/split-an-a-tag",
+      "query": "SELECT CAST(substr(t1, 1, instr(t1, ':') - 1) AS INTEGER) AS k, substr(t1, instr(t1, ':') + 1, 64) = ? AS by_alice, substr(t1, instr(t1, ':') + 66) AS d FROM tags WHERE t0 = 'a'",
+      "params": [
+        "{pubkey:alice}"
+      ],
+      "columns": [
+        [
+          "k",
+          "INTEGER"
+        ],
+        [
+          "by_alice",
+          "BOOLEAN"
+        ],
+        [
+          "d",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          30023,
+          true,
+          "post-1"
+        ]
+      ],
+      "postgres": "SELECT nql_text_to_integer(nql_substr(t1, 1, strpos(t1, ':') - 1)) AS k, nql_substr(t1, strpos(t1, ':') + 1, 64) = ? AS by_alice, nql_substr(t1, strpos(t1, ':') + 66) AS d FROM tags WHERE t0 = 'a'"
+    },
+    {
+      "name": "numeric/abs",
+      "query": "SELECT abs(-5) AS a, abs(-2.5) AS b, abs(0) AS c, abs(3) AS d",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          5,
+          2.5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "name": "numeric/round-ties-to-even",
+      "query": "SELECT round(2.5) AS a, round(3.5) AS b, round(-2.5) AS c, round(0.49999999999999994) AS d, round(2.675) AS e, round(5) AS f, round(1e300) AS g",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ],
+        [
+          "f",
+          "REAL"
+        ],
+        [
+          "g",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          2.0,
+          4.0,
+          -2.0,
+          0.0,
+          3.0,
+          5.0,
+          1e+300
+        ]
+      ],
+      "sqlite": null
+    },
+    {
+      "name": "numeric/ceil-floor-trunc",
+      "query": "SELECT ceil(5) AS a, ceil(5.2) AS b, floor(-5.5) AS c, trunc(-5.5) AS d, floor(7) AS e, trunc(9) AS f",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ],
+        [
+          "f",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          5.0,
+          6.0,
+          -6.0,
+          -5.0,
+          7.0,
+          9.0
+        ]
+      ],
+      "sqlite": "SELECT ceil(5.0) AS a, ceil(5.2) AS b, floor(-5.5) AS c, trunc(-5.5) AS d, floor(7.0) AS e, trunc(9.0) AS f"
+    },
+    {
+      "name": "numeric/exact-math",
+      "query": "SELECT pow(2, 10) AS a, sqrt(16) AS b, exp(0) AS c, ln(1) AS d, log10(1000) AS e, pow(2, -1) AS f, pow(-8, 1) AS g, sqrt(0) AS h",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ],
+        [
+          "f",
+          "REAL"
+        ],
+        [
+          "g",
+          "REAL"
+        ],
+        [
+          "h",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          1024.0,
+          4.0,
+          1.0,
+          0.0,
+          3.0,
+          0.5,
+          -8.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "name": "numeric/transcendental",
+      "query": "SELECT ln(exp(2)) AS a, exp(1) AS b, log10(2) AS c, pow(2, 0.5) AS d, sqrt(2) AS e",
+      "columns": [
+        [
+          "a",
+          "REAL"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "REAL"
+        ],
+        [
+          "e",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          2.0,
+          2.718281828459045,
+          0.3010299956639812,
+          1.4142135623730951,
+          1.4142135623730951
+        ]
+      ],
+      "tolerance": 1e-12
+    },
+    {
+      "name": "numeric/sqrt-of-negative",
+      "query": "SELECT sqrt(-1) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/ln-of-zero",
+      "query": "SELECT ln(0) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/ln-of-negative",
+      "query": "SELECT ln(-1) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/log10-of-zero",
+      "query": "SELECT log10(0) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/pow-complex",
+      "query": "SELECT pow(-8, 1.0 / 3) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/pow-pole",
+      "query": "SELECT pow(0, -1) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/pow-overflow",
+      "query": "SELECT pow(10, 400) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/pow-underflow",
+      "query": "SELECT pow(10, -400) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/exp-overflow",
+      "query": "SELECT exp(1000) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/exp-underflow",
+      "query": "SELECT exp(-1000) AS x",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/domain-error-from-data",
+      "query": "SELECT ln(CAST(kind - 7 AS REAL)) AS x FROM events WHERE kind = 7",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "numeric/geometric-mean-of-zaps",
+      "query": "SELECT exp(avg(ln(CAST(t1 AS REAL)))) AS g FROM tags WHERE kind = 9735 AND t0 = 'amount'",
+      "columns": [
+        [
+          "g",
+          "REAL"
+        ]
+      ],
+      "rows": [
+        [
+          47176.939803165325
+        ]
+      ],
+      "tolerance": 1e-09,
+      "postgres": "SELECT exp(avg(ln(nql_text_to_real(t1)))) AS g FROM tags WHERE kind = 9735 AND t0 = 'amount'",
+      "sqlite": "SELECT exp(avg(ln(CAST(t1 AS REAL)))) AS g FROM tags WHERE kind = 9735 AND t0 = 'amount' AND t1 GLOB '[0-9]*'"
+    },
+    {
+      "name": "aggregate/counts",
+      "query": "SELECT count(*) AS a, count(t1) AS b, count(DISTINCT t0) AS c, count(t2) AS d FROM tags",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "aggregate/empty-input",
+      "query": "SELECT count(*) AS a, sum(kind) AS b, avg(kind) AS c, min(kind) AS d, max(content) AS e, count(content) AS f FROM events WHERE kind = 99999",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ],
+        [
+          "e",
+          "TEXT"
+        ],
+        [
+          "f",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0,
+          null,
+          null,
+          null,
+          null,
+          0
+        ]
+      ],
+      "postgres": "SELECT count(*) AS a, CAST(sum(kind) AS INTEGER) AS b, CAST(avg(kind) AS REAL) AS c, min(kind) AS d, max(content) AS e, count(content) AS f FROM events WHERE kind = 99999"
+    },
+    {
+      "name": "aggregate/result-types",
+      "query": "SELECT sum(kind) AS a, sum(kind * 1.0) AS b, avg(kind) AS c, max(kind) AS d FROM events WHERE kind = 7",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "REAL"
+        ],
+        [
+          "c",
+          "REAL"
+        ],
+        [
+          "d",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          28,
+          28.0,
+          7.0,
+          7
+        ]
+      ],
+      "postgres": "SELECT CAST(sum(kind) AS INTEGER) AS a, sum(kind * 1.0) AS b, CAST(avg(kind) AS REAL) AS c, max(kind) AS d FROM events WHERE kind = 7"
+    },
+    {
+      "name": "aggregate/integer-sum-overflow",
+      "query": "SELECT sum(9223372036854775807) AS s FROM events WHERE kind = 7",
+      "error": "error",
+      "postgres": "SELECT CAST(sum(9223372036854775807) AS INTEGER) AS s FROM events WHERE kind = 7"
+    },
+    {
+      "name": "aggregate/integer-sum-past-an-overflowing-partial",
+      "query": "SELECT sum(CASE WHEN kind = 7 THEN 9223372036854775807 ELSE -9223372036854775807 END) AS s FROM events WHERE kind IN (7, 9735)",
+      "columns": [
+        [
+          "s",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ],
+      "postgres": "SELECT CAST(sum(CASE WHEN kind = 7 THEN 9223372036854775807 ELSE -9223372036854775807 END) AS INTEGER) AS s FROM events WHERE kind IN (7, 9735)",
+      "sqlite": null
+    },
+    {
+      "name": "aggregate/min-max-text",
+      "query": "SELECT min(content) AS a, max(content) AS b FROM events WHERE kind = 1",
+      "columns": [
+        [
+          "a",
+          "TEXT"
+        ],
+        [
+          "b",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "50% off_sale",
+          "😀 emoji"
+        ]
+      ]
+    },
+    {
+      "name": "aggregate/count-distinct",
+      "query": "SELECT count(DISTINCT pubkey) AS a, count(DISTINCT kind) AS b, count(DISTINCT t2) AS c FROM (SELECT events.pubkey AS pubkey, events.kind AS kind, tags.t2 AS t2 FROM events LEFT JOIN tags ON tags.event_id = events.id WHERE events.kind IN (0, 1, 7)) AS joined",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "INTEGER"
+        ],
+        [
+          "c",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          4,
+          3,
+          2
+        ]
+      ]
+    },
+    {
+      "name": "aggregate/no-groups-no-rows",
+      "query": "SELECT kind, count(*) AS n FROM events WHERE kind = 99999 GROUP BY kind",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": []
+    },
+    {
+      "name": "aggregate/null-group",
+      "query": "SELECT t1, count(*) AS n FROM tags WHERE t0 IN ('x', 'six') GROUP BY t1 ORDER BY t1",
+      "columns": [
+        [
+          "t1",
+          "TEXT"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "1",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      "ordered": true,
+      "sqlite": "SELECT t1, count(*) AS n FROM tags WHERE t0 IN ('x', 'six') GROUP BY t1 ORDER BY t1 NULLS LAST"
+    },
+    {
+      "name": "group/by-kind",
+      "query": "SELECT kind, count(*) AS n FROM events GROUP BY kind ORDER BY kind",
+      "ordered": true,
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          9735,
+          4
+        ],
+        [
+          10002,
+          2
+        ],
+        [
+          30023,
+          2
+        ]
+      ]
+    },
+    {
+      "name": "group/having",
+      "query": "SELECT pubkey, count(*) AS n FROM events GROUP BY pubkey HAVING count(*) >= 5 ORDER BY n DESC, pubkey",
+      "ordered": true,
+      "columns": [
+        [
+          "pubkey",
+          "TEXT"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "group/by-alias",
+      "query": "SELECT kind AS k, count(*) AS n FROM events GROUP BY k ORDER BY k",
+      "ordered": true,
+      "columns": [
+        [
+          "k",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "group/by-expression",
+      "query": "SELECT created_at / 1000 AS bucket, count(*) AS n FROM events GROUP BY created_at / 1000 ORDER BY bucket",
+      "ordered": true,
+      "columns": [
+        [
+          "bucket",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "group/distinct",
+      "query": "SELECT DISTINCT kind FROM events ORDER BY kind",
+      "ordered": true,
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          7
+        ],
+        [
+          9735
+        ],
+        [
+          10002
+        ],
+        [
+          30023
+        ]
+      ]
+    },
+    {
+      "name": "group/distinct-treats-nulls-as-equal",
+      "query": "SELECT DISTINCT t2 FROM tags WHERE t0 = 'r' ORDER BY t2",
+      "columns": [
+        [
+          "t2",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "read"
+        ],
+        [
+          "write"
+        ],
+        [
+          null
+        ]
+      ],
+      "ordered": true,
+      "sqlite": "SELECT DISTINCT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 NULLS LAST"
+    },
+    {
+      "name": "group/zaps-per-note",
+      "query": "SELECT target.t1 AS note, count(*) AS zaps, sum(CAST(amount.t1 AS INTEGER)) / 1000 AS sats FROM tags AS target JOIN tags AS amount ON amount.event_id = target.event_id AND amount.t0 = 'amount' WHERE target.kind = 9735 AND target.t0 = 'e' GROUP BY target.t1 ORDER BY sats DESC, note",
+      "columns": [
+        [
+          "note",
+          "TEXT"
+        ],
+        [
+          "zaps",
+          "INTEGER"
+        ],
+        [
+          "sats",
+          "INTEGER"
+        ]
+      ],
+      "ordered": true,
+      "postgres": "SELECT target.t1 AS note, count(*) AS zaps, CAST(sum(nql_text_to_integer(amount.t1)) AS INTEGER) / 1000 AS sats FROM tags AS target JOIN tags AS amount ON amount.event_id = target.event_id AND amount.t0 = 'amount' WHERE target.kind = 9735 AND target.t0 = 'e' GROUP BY target.t1 ORDER BY sats DESC, note",
+      "sqlite": "SELECT target.t1 AS note, count(*) AS zaps, sum(CASE WHEN amount.t1 GLOB '[0-9]*' THEN CAST(amount.t1 AS INTEGER) END) / 1000 AS sats FROM tags AS target JOIN tags AS amount ON amount.event_id = target.event_id AND amount.t0 = 'amount' WHERE target.kind = 9735 AND target.t0 = 'e' GROUP BY target.t1 ORDER BY sats DESC NULLS FIRST, note"
+    },
+    {
+      "name": "group/write-relays",
+      "query": "SELECT t1 AS relay, count(DISTINCT pubkey) AS authors FROM tags WHERE kind = 10002 AND t0 = 'r' AND (t2 IS NULL OR t2 = 'write') GROUP BY t1 ORDER BY authors DESC, relay",
+      "ordered": true,
+      "columns": [
+        [
+          "relay",
+          "TEXT"
+        ],
+        [
+          "authors",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "wss://a.example",
+          1
+        ],
+        [
+          "wss://b.example",
+          1
+        ],
+        [
+          "wss://d.example",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "group/by-expression-matched-structurally",
+      "query": "SELECT (created_at / 1000) * 1000 AS bucket, count(*) AS n FROM events WHERE kind = 1 GROUP BY (created_at / 1000) * 1000 ORDER BY bucket",
+      "columns": [
+        [
+          "bucket",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          1700000000,
+          5
+        ],
+        [
+          1700001000,
+          4
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "order/nulls-sort-last-ascending",
+      "query": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2, event_id, idx",
+      "columns": [
+        [
+          "t2",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "read"
+        ],
+        [
+          "read"
+        ],
+        [
+          "write"
+        ],
+        [
+          null
+        ],
+        [
+          null
+        ]
+      ],
+      "ordered": true,
+      "sqlite": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 NULLS LAST, event_id, idx"
+    },
+    {
+      "name": "order/nulls-sort-first-descending",
+      "query": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 DESC, event_id, idx",
+      "columns": [
+        [
+          "t2",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          null
+        ],
+        [
+          null
+        ],
+        [
+          "write"
+        ],
+        [
+          "read"
+        ],
+        [
+          "read"
+        ]
+      ],
+      "ordered": true,
+      "sqlite": "SELECT t2 FROM tags WHERE t0 = 'r' ORDER BY t2 DESC NULLS FIRST, event_id, idx"
+    },
+    {
+      "name": "order/newest-first-tie-break",
+      "query": "SELECT content FROM events WHERE kind = 1 ORDER BY created_at DESC, id LIMIT 3",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "order/limit-offset",
+      "query": "SELECT created_at FROM events ORDER BY created_at, id LIMIT 3 OFFSET 2",
+      "ordered": true,
+      "columns": [
+        [
+          "created_at",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          1700000002
+        ],
+        [
+          1700000100
+        ],
+        [
+          1700000200
+        ]
+      ]
+    },
+    {
+      "name": "order/limit-parameter",
+      "query": "SELECT kind FROM events ORDER BY created_at, id LIMIT ?",
+      "params": [
+        2
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ],
+        [
+          0
+        ]
+      ]
+    },
+    {
+      "name": "order/limit-zero",
+      "query": "SELECT kind FROM events LIMIT 0",
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ]
+      ],
+      "rows": []
+    },
+    {
+      "name": "order/by-expression",
+      "query": "SELECT content FROM events WHERE kind = 1 ORDER BY length(content) DESC, id",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "order/by-alias",
+      "query": "SELECT content AS c, created_at AS t FROM events WHERE kind = 30023 ORDER BY t DESC",
+      "columns": [
+        [
+          "c",
+          "TEXT"
+        ],
+        [
+          "t",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "Long form two",
+          1700001001
+        ],
+        [
+          "Long form one",
+          1700001000
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "order/by-alias-of-an-aggregate",
+      "query": "SELECT pubkey, count(*) AS n FROM events WHERE kind = 7 GROUP BY pubkey ORDER BY n DESC, pubkey LIMIT 1",
+      "columns": [
+        [
+          "pubkey",
+          "TEXT"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "order/text-by-code-point",
+      "query": "SELECT content FROM events WHERE kind = 1 ORDER BY content",
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "join/inner",
+      "query": "SELECT notes.content, count(*) AS total FROM events AS notes JOIN tags AS reactions ON reactions.t1 = notes.id AND reactions.kind = 7 AND reactions.t0 = 'e' GROUP BY notes.id, notes.content ORDER BY total DESC, notes.content",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ],
+        [
+          "total",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "Hello Nostr",
+          2
+        ],
+        [
+          "50% off_sale",
+          1
+        ],
+        [
+          "café ☕",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "join/left-keeps-unmatched",
+      "query": "SELECT notes.content, count(reactions.event_id) AS total FROM events AS notes LEFT JOIN tags AS reactions ON reactions.t1 = notes.id AND reactions.kind = 7 AND reactions.t0 = 'e' WHERE notes.kind = 1 AND notes.pubkey = ? GROUP BY notes.id, notes.content ORDER BY total DESC, notes.content",
+      "params": [
+        "{pubkey:alice}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ],
+        [
+          "total",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "Hello Nostr",
+          2
+        ],
+        [
+          "50% off_sale",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "join/left-null-extends",
+      "query": "SELECT events.content, tags.t0 FROM events LEFT JOIN tags ON tags.event_id = events.id WHERE events.kind = 1 AND events.pubkey = ? ORDER BY events.created_at, events.id, tags.idx",
+      "params": [
+        "{pubkey:dave}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ],
+        [
+          "t0",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "no tags",
+          null
+        ],
+        [
+          "edge",
+          "x"
+        ],
+        [
+          "edge",
+          "six"
+        ],
+        [
+          "edge",
+          "t"
+        ],
+        [
+          "edge",
+          "t"
+        ]
+      ]
+    },
+    {
+      "name": "join/tag-to-referenced-event",
+      "query": "SELECT reactions.pubkey = ? AS by_bob, notes.content FROM tags JOIN events AS notes ON notes.id = tags.t1 JOIN events AS reactions ON reactions.id = tags.event_id WHERE tags.kind = 7 AND tags.t0 = 'e' ORDER BY tags.created_at",
+      "params": [
+        "{pubkey:bob}"
+      ],
+      "ordered": true,
+      "columns": [
+        [
+          "by_bob",
+          "BOOLEAN"
+        ],
+        [
+          "content",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          "Hello Nostr"
+        ],
+        [
+          false,
+          "Hello Nostr"
+        ],
+        [
+          false,
+          "50% off_sale"
+        ],
+        [
+          false,
+          "café ☕"
+        ]
+      ]
+    },
+    {
+      "name": "join/subquery-source",
+      "query": "SELECT per_kind.kind, per_kind.n FROM (SELECT kind, count(*) AS n FROM events GROUP BY kind) AS per_kind WHERE per_kind.n > 2 ORDER BY per_kind.kind",
+      "ordered": true,
+      "columns": [
+        [
+          "kind",
+          "INTEGER"
+        ],
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          9735,
+          4
+        ]
+      ]
+    },
+    {
+      "name": "join/three-way",
+      "query": "SELECT notes.content AS note, count(DISTINCT zaps.id) AS zaps FROM events AS notes JOIN tags AS target ON target.t1 = notes.id AND target.kind = 9735 AND target.t0 = 'e' JOIN events AS zaps ON zaps.id = target.event_id GROUP BY notes.id, notes.content ORDER BY zaps DESC, note",
+      "columns": [
+        [
+          "note",
+          "TEXT"
+        ],
+        [
+          "zaps",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "Hello Nostr",
+          2
+        ],
+        [
+          "café ☕",
+          1
+        ],
+        [
+          "😀 emoji",
+          1
+        ]
+      ],
+      "ordered": true
+    },
+    {
+      "name": "join/left-join-condition-in-on",
+      "query": "SELECT count(*) AS n FROM events LEFT JOIN tags ON tags.event_id = events.id AND tags.t0 = 'p' WHERE events.kind = 1",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          9
+        ]
+      ]
+    },
+    {
+      "name": "subquery/exists",
+      "query": "SELECT content FROM events WHERE events.kind = 1 AND EXISTS (SELECT 1 FROM tags WHERE tags.event_id = events.id AND tags.t0 = 'p') ORDER BY events.created_at",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "café ☕"
+        ],
+        [
+          "😀 emoji"
+        ]
+      ]
+    },
+    {
+      "name": "subquery/not-exists",
+      "query": "SELECT content FROM events WHERE events.kind = 1 AND NOT EXISTS (SELECT 1 FROM tags WHERE tags.event_id = events.id) ORDER BY events.created_at, events.id",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ]
+    },
+    {
+      "name": "subquery/in",
+      "query": "SELECT content FROM events WHERE id IN (SELECT t1 FROM tags WHERE kind = 7 AND t0 = 'e') ORDER BY created_at",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          "Hello Nostr"
+        ],
+        [
+          "50% off_sale"
+        ],
+        [
+          "café ☕"
+        ]
+      ]
+    },
+    {
+      "name": "subquery/scalar",
+      "query": "SELECT (SELECT max(created_at) FROM events) AS latest, (SELECT kind FROM events ORDER BY kind DESC LIMIT 1) AS top, (SELECT kind FROM events WHERE kind = 99999) AS none",
+      "columns": [
+        [
+          "latest",
+          "INTEGER"
+        ],
+        [
+          "top",
+          "INTEGER"
+        ],
+        [
+          "none",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          1700001300,
+          30023,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "subquery/scalar-with-two-rows",
+      "query": "SELECT (SELECT kind FROM events WHERE kind = 0) AS k",
+      "error": "error",
+      "sqlite": null
+    },
+    {
+      "name": "subquery/correlated",
+      "query": "SELECT events.content, (SELECT count(*) FROM tags WHERE tags.event_id = events.id) AS ntags FROM events WHERE events.kind = 30023 ORDER BY events.created_at",
+      "ordered": true,
+      "columns": [
+        [
+          "content",
+          "TEXT"
+        ],
+        [
+          "ntags",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          "Long form one",
+          3
+        ],
+        [
+          "Long form two",
+          2
+        ]
+      ]
+    },
+    {
+      "name": "subquery/not-in-with-null",
+      "query": "SELECT count(*) AS n FROM events WHERE kind = 1 AND id NOT IN (SELECT t2 FROM tags WHERE t0 = 'r')",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          0
+        ]
+      ]
+    },
+    {
+      "name": "subquery/in-from-a-source",
+      "query": "SELECT count(*) AS n FROM events WHERE pubkey IN (SELECT pubkey FROM tags WHERE kind = 10002)",
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ]
+    },
+    {
+      "name": "select/without-from",
+      "query": "SELECT 1 AS a, 'x' AS b",
+      "columns": [
+        [
+          "a",
+          "INTEGER"
+        ],
+        [
+          "b",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          1,
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "params/positional",
+      "query": "SELECT count(*) AS n FROM events WHERE pubkey = ? AND created_at >= ?",
+      "params": [
+        "{pubkey:alice}",
+        1700000150
+      ],
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          6
+        ]
+      ]
+    },
+    {
+      "name": "params/types",
+      "query": "SELECT ? AS b, ? AS r, ? AS i, ? AS t, coalesce(?, 'x') AS n",
+      "params": [
+        true,
+        2.5,
+        7,
+        "s",
+        null
+      ],
+      "columns": [
+        [
+          "b",
+          "BOOLEAN"
+        ],
+        [
+          "r",
+          "REAL"
+        ],
+        [
+          "i",
+          "INTEGER"
+        ],
+        [
+          "t",
+          "TEXT"
+        ],
+        [
+          "n",
+          "TEXT"
+        ]
+      ],
+      "rows": [
+        [
+          true,
+          2.5,
+          7,
+          "s",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "params/null-takes-its-context",
+      "query": "SELECT count(*) AS n FROM events WHERE kind = ? OR ? IS NULL",
+      "params": [
+        null,
+        null
+      ],
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          26
+        ]
+      ],
+      "postgres": "SELECT count(*) AS n FROM events WHERE kind = CAST(? AS INTEGER) OR CAST(? AS TEXT) IS NULL"
+    },
+    {
+      "name": "params/real-parameter",
+      "query": "SELECT count(*) AS n FROM events WHERE created_at > ?",
+      "params": [
+        1700001100.5
+      ],
+      "columns": [
+        [
+          "n",
+          "INTEGER"
+        ]
+      ],
+      "rows": [
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "name": "invalid/text-plus-integer",
+      "query": "SELECT 'a' + 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/mixed-comparison",
+      "query": "SELECT 1 < 'a' AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/concat-integer",
+      "query": "SELECT 'a' || 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/where-not-boolean",
+      "query": "SELECT id FROM events WHERE kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/where-integer-literal",
+      "query": "SELECT id FROM events WHERE 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/boolean-arithmetic",
+      "query": "SELECT TRUE + 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/not-integer",
+      "query": "SELECT NOT 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/and-integers",
+      "query": "SELECT 1 AND 2 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/real-remainder",
+      "query": "SELECT 5.5 % 2 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/cast-real-to-text",
+      "query": "SELECT CAST(1.5 AS TEXT) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/cast-to-boolean",
+      "query": "SELECT CAST(1 AS BOOLEAN) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/cast-boolean-to-text",
+      "query": "SELECT CAST(TRUE AS TEXT) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/cast-to-other-type",
+      "query": "SELECT CAST(1 AS NUMERIC) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/like-integer",
+      "query": "SELECT 1 LIKE 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/in-mixed-types",
+      "query": "SELECT 1 IN ('a', 1) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/case-mixed-types",
+      "query": "SELECT CASE WHEN TRUE THEN 1 ELSE 'a' END AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/case-mixed-numeric",
+      "query": "SELECT CASE WHEN TRUE THEN 1 ELSE 2.5 END AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/case-condition-not-boolean",
+      "query": "SELECT CASE WHEN 1 THEN 'a' END AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/coalesce-mixed-types",
+      "query": "SELECT coalesce(1, 'a') AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/coalesce-mixed-numeric",
+      "query": "SELECT coalesce(1, 2.5) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/coalesce-one-argument",
+      "query": "SELECT coalesce(1) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/nullif-mixed-numeric",
+      "query": "SELECT nullif(1, 1.0) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/order-by-boolean",
+      "query": "SELECT id FROM events ORDER BY kind = 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/boolean-less-than",
+      "query": "SELECT TRUE < FALSE AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/min-boolean",
+      "query": "SELECT min(kind = 1) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/sum-text",
+      "query": "SELECT sum(content) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/avg-text",
+      "query": "SELECT avg(content) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-argument-type",
+      "query": "SELECT length(5) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/math-on-text",
+      "query": "SELECT sqrt('4') AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/substr-real-start",
+      "query": "SELECT substr('abc', 1.5) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/lower-integer",
+      "query": "SELECT lower(1) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/wrong-argument-count",
+      "query": "SELECT length('a', 'b') AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/round-with-places",
+      "query": "SELECT round(2.5, 1) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/unnamed-expression",
+      "query": "SELECT count(*) FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/unnamed-literal",
+      "query": "SELECT 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/alias-without-as",
+      "query": "SELECT kind k FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/duplicate-result-name",
+      "query": "SELECT kind, kind FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/duplicate-name-by-case",
+      "query": "SELECT kind AS a, pubkey AS A FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/star-over-a-join",
+      "query": "SELECT * FROM events JOIN tags ON tags.event_id = events.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/source-star",
+      "query": "SELECT events.* FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/non-grouped-column",
+      "query": "SELECT content, count(*) AS n FROM events GROUP BY kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/aggregate-mixed-with-column",
+      "query": "SELECT kind, count(*) AS n FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/having-without-group-by",
+      "query": "SELECT count(*) AS n FROM events HAVING count(*) > 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/aggregate-in-where",
+      "query": "SELECT kind FROM events WHERE count(*) > 1 GROUP BY kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/aggregate-in-group-by",
+      "query": "SELECT count(*) AS n FROM events GROUP BY count(*)",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/aggregate-in-on",
+      "query": "SELECT events.kind FROM events JOIN tags ON count(*) > 1 GROUP BY events.kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/nested-aggregate",
+      "query": "SELECT max(count(*)) AS x FROM events GROUP BY kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/count-distinct-star",
+      "query": "SELECT count(DISTINCT *) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/sum-distinct",
+      "query": "SELECT sum(DISTINCT kind) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/group-by-alias-shadows-column",
+      "query": "SELECT content AS kind, count(*) AS n FROM events GROUP BY kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/order-by-alias-shadows-column",
+      "query": "SELECT content AS kind FROM events ORDER BY kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/group-by-ordinal",
+      "query": "SELECT kind, count(*) AS n FROM events GROUP BY 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/order-by-ordinal",
+      "query": "SELECT kind FROM events ORDER BY 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/order-by-expression-over-alias",
+      "query": "SELECT kind AS k FROM events ORDER BY k + 1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/distinct-order-by-non-output",
+      "query": "SELECT DISTINCT kind FROM events ORDER BY created_at",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/nulls-last",
+      "query": "SELECT t2 FROM tags ORDER BY t2 NULLS LAST",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/unknown-column",
+      "query": "SELECT nope FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/rest-column-is-not-in-the-model",
+      "query": "SELECT rest FROM tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/unknown-table",
+      "query": "SELECT * FROM users",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/ambiguous-column",
+      "query": "SELECT kind FROM events JOIN tags ON tags.event_id = events.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/duplicate-source-name",
+      "query": "SELECT notes.id FROM events AS notes JOIN tags AS notes ON notes.event_id = notes.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/source-alias-without-as",
+      "query": "SELECT notes.id FROM events notes",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/subquery-source-without-alias",
+      "query": "SELECT a FROM (SELECT 1 AS a)",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/scalar-subquery-two-columns",
+      "query": "SELECT (SELECT 1 AS a, 2 AS b) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/in-subquery-two-columns",
+      "query": "SELECT 1 IN (SELECT kind, id FROM events) AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/join-without-on",
+      "query": "SELECT events.id FROM events JOIN tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/comma-join",
+      "query": "SELECT events.id FROM events, tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/cross-join",
+      "query": "SELECT events.id FROM events CROSS JOIN tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/inner-keyword",
+      "query": "SELECT events.id FROM events INNER JOIN tags ON tags.event_id = events.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/outer-keyword",
+      "query": "SELECT events.id FROM events LEFT OUTER JOIN tags ON tags.event_id = events.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/right-join",
+      "query": "SELECT events.id FROM events RIGHT JOIN tags ON tags.event_id = events.id",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/natural-join",
+      "query": "SELECT events.id FROM events NATURAL JOIN tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/union",
+      "query": "SELECT kind FROM events UNION SELECT kind FROM tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/union-all",
+      "query": "SELECT kind FROM events UNION ALL SELECT kind FROM tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/intersect",
+      "query": "SELECT kind FROM events INTERSECT SELECT kind FROM tags",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/negative-limit",
+      "query": "SELECT id FROM events LIMIT -1",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/text-limit",
+      "query": "SELECT id FROM events LIMIT 'a'",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/limit-with-column",
+      "query": "SELECT id FROM events LIMIT kind",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/real-limit",
+      "query": "SELECT id FROM events LIMIT 1.5",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/select-all",
+      "query": "SELECT ALL kind FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/is-a-value",
+      "query": "SELECT 1 IS 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/is-distinct-from",
+      "query": "SELECT 1 IS DISTINCT FROM 2 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/not-equals-bang",
+      "query": "SELECT 1 != 2 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/double-equals",
+      "query": "SELECT 1 == 1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/unary-plus",
+      "query": "SELECT +1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/chained-comparison",
+      "query": "SELECT 1 < 2 = TRUE AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/like-escape",
+      "query": "SELECT 'a' LIKE 'a' ESCAPE '!' AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/ilike",
+      "query": "SELECT 'a' ILIKE 'A' AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/glob",
+      "query": "SELECT 'a' GLOB 'a' AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/postfix-isnull",
+      "query": "SELECT content ISNULL AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/simple-case",
+      "query": "SELECT CASE kind WHEN 0 THEN 'p' END AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/integer-literal-too-big",
+      "query": "SELECT 9223372036854775808 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/real-literal-overflow",
+      "query": "SELECT 1e999 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/real-literal-leading-point",
+      "query": "SELECT .5 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/real-literal-trailing-point",
+      "query": "SELECT 5. AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/keyword-as-alias",
+      "query": "SELECT 1 AS select",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/double-quoted-identifier",
+      "query": "SELECT \"kind\" FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/semicolon",
+      "query": "SELECT 1 AS a;",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/named-parameter",
+      "query": "SELECT :a AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/numbered-parameter",
+      "query": "SELECT ?1 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/comment",
+      "query": "SELECT 1 AS a -- comment",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/block-comment",
+      "query": "SELECT /* c */ 1 AS a",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/two-statements",
+      "query": "SELECT 1 AS a; SELECT 2 AS b",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/insert",
+      "query": "INSERT INTO events (id) VALUES ('x')",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/pragma",
+      "query": "PRAGMA table_info(events)",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/values",
+      "query": "VALUES (1)",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/common-table-expression",
+      "query": "WITH x AS (SELECT 1 AS a) SELECT a FROM x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/window-function",
+      "query": "SELECT row_number() OVER (ORDER BY created_at) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/aggregate-filter-clause",
+      "query": "SELECT count(*) FILTER (WHERE kind = 1) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/collate",
+      "query": "SELECT content FROM events ORDER BY content COLLATE NOCASE",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/blob-literal",
+      "query": "SELECT X'00' AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/hex-literal",
+      "query": "SELECT 0x10 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/bitwise-operator",
+      "query": "SELECT 1 & 2 AS x",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/postgres-cast-operator",
+      "query": "SELECT kind::text AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/empty-query",
+      "query": "",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-group-concat",
+      "query": "SELECT group_concat(content) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-string-agg",
+      "query": "SELECT string_agg(content, ',') AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-total",
+      "query": "SELECT total(kind) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-json",
+      "query": "SELECT json_extract(content, '$.name') AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-date",
+      "query": "SELECT date(created_at, 'unixepoch') AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-random",
+      "query": "SELECT random() AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-iif",
+      "query": "SELECT iif(TRUE, 1, 2) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-ifnull",
+      "query": "SELECT ifnull(NULL, 1) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-sign",
+      "query": "SELECT sign(-2) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-mod",
+      "query": "SELECT mod(7, 3) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-log",
+      "query": "SELECT log(100) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-log2",
+      "query": "SELECT log2(8) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-power",
+      "query": "SELECT power(2, 3) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-ceiling",
+      "query": "SELECT ceiling(1.5) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-pi",
+      "query": "SELECT pi() AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-sin",
+      "query": "SELECT sin(0) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-atan2",
+      "query": "SELECT atan2(1, 1) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/function-degrees",
+      "query": "SELECT degrees(1) AS x FROM events",
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/missing-parameter",
+      "query": "SELECT ? + ? AS x",
+      "params": [
+        1
+      ],
+      "error": "invalid"
+    },
+    {
+      "name": "invalid/extra-parameter",
+      "query": "SELECT ? AS x",
+      "params": [
+        1,
+        2
+      ],
+      "error": "invalid"
+    }
+  ]
+}
