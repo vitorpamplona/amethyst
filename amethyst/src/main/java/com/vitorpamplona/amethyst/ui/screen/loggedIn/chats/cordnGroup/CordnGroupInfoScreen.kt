@@ -755,7 +755,7 @@ private fun TechnicalDetails(
  * and the button is there to do the actual work.
  */
 @Composable
-private fun CopyableKeyRow(
+internal fun CopyableKeyRow(
     label: String,
     shown: String,
     copied: String,
