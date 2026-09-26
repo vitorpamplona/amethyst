@@ -32,29 +32,80 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.Po
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /** What an event tagging is about: an addressable event (`a`) or a plain one (`e`). */
 @Immutable
 sealed interface TaggingTarget {
-    /** The first 8 characters used in the assertion `d`. */
+    /**
+     * What stands for this target in the assertion `d`: `<id8>` for a plain event,
+     * `<author8>-<d16>-<hash8>` for an addressable one. Kind 39999 is addressable, so two
+     * taggings that share a `d` do not sit side by side — the later one replaces the earlier.
+     *
+     * The draft fixes these widths, so the separation is 32 bits of hash rather than a guarantee:
+     * it removes the old rule's *certain* collision between any two of an author's events, and
+     * leaves a birthday-bound residue that the draft accepts. Widening it is an upstream change,
+     * not ours.
+     */
     val prefix: String
 
     @Immutable
     data class ByAddress(
         val address: Address,
     ) : TaggingTarget {
-        // the author segment of the coordinate, not its kind
-        override val prefix get() = address.pubKeyHex.take(8)
+        /**
+         * `<author8>-<d16>-<hash8>`. Only `hash8` carries uniqueness — it is taken over the WHOLE
+         * coordinate, because no single segment identifies the target: the author repeats across
+         * everything they write, and the kind across everything of a type. The other two are
+         * decoration the draft asks for so a `d` stays readable.
+         *
+         * An empty `dTag` yields an empty `d16`, i.e. `<author8>--<hash8>`, which the draft spells
+         * out. A plain event uses its own id (below): that already covers the whole event.
+         */
+        override val prefix get() = "${address.pubKeyHex.take(AUTHOR_CHARS)}-${d16()}-${hash8()}"
+
+        /**
+         * The draft counts `d16` in UTF-16 code units, which can cut an astral character in half
+         * and leave a dangling high surrogate. That is not survivable: the id is hashed from the
+         * intact char, but UTF-8 encoding the event for the wire has no encoding for half a
+         * character and substitutes `?`, so the relay re-hashes different bytes, gets a different
+         * id, and rejects the event. Verified end to end — see the test.
+         *
+         * So the half character is dropped, giving 15 units instead of 16. `d16` is decoration
+         * the draft says carries no uniqueness, and dropping it stays deterministic, so nothing
+         * that matters is lost; `hash8` still separates the targets.
+         */
+        private fun d16(): String {
+            val cut = address.dTag.take(D_TAG_CHARS)
+            return if (cut.lastOrNull()?.isHighSurrogate() == true) cut.dropLast(1) else cut
+        }
+
+        // Lowercase hex of the UTF-8 coordinate exactly as the `a` tag carries it: no trimming,
+        // no normalization, no reordering. Hex.encode already emits lower case.
+        private fun hash8() = sha256(address.toValue().encodeToByteArray()).toHexKey().take(HASH_CHARS)
     }
 
     @Immutable
     data class ByEventId(
         val eventId: HexKey,
     ) : TaggingTarget {
-        override val prefix get() = eventId.take(8)
+        override val prefix get() = eventId.take(EVENT_ID_CHARS)
+    }
+
+    companion object {
+        const val EVENT_ID_CHARS = 8
+        const val AUTHOR_CHARS = 8
+        const val HASH_CHARS = 8
+
+        /**
+         * UTF-16 code units, which is what the draft pins ("as JavaScript `String.prototype.slice`
+         * counts them") and what [String.take] counts.
+         */
+        const val D_TAG_CHARS = 16
     }
 }
 
@@ -105,7 +156,8 @@ object TaggingHeader {
  * [TaggingHeader]:
  *
  * ```
- * ["d", "event-tag-<tagSlug>-<target8>-<asserter8>"]
+ * ["d", "event-tag-<tagSlug>-<target8>-<asserter8>"]   // <target8> = <id8>, or
+ *                                                      // <author8>-<d16>-<hash8> for an `a`
  * ["a", <target coordinate>]  or  ["e", <target id>]
  * ["z", <nostr-event-tag concept>]
  * ["z", <tagging header coordinate>]
@@ -113,6 +165,10 @@ object TaggingHeader {
  * ```
  *
  * An `a`/`e` reference without such a `z` is not a tagging and must not be read as one.
+ *
+ * The `d` is a replaceability key, never a source of truth: the draft forbids parsing it back into
+ * its fields, because `d16` is user-influenced text that may itself contain hyphens. [parse] reads
+ * the target from the `a`/`e` tag, which is authoritative.
  */
 @Immutable
 data class EventTagging(
