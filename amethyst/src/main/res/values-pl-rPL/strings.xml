@@ -268,7 +268,6 @@
     <!-- Health Connect: activity label, shown by Health Connect next to the link into our
          rationale screen. Needs to be an Android resource (not a commons Compose resource)
          because android:label on the manifest entry can only reference @string/. -->
-    <string name="health_connect_rationale_activity_label">Health Connect i Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
@@ -315,6 +314,7 @@
         <item quantity="other">Dowód pracy w górnictwie… (%1$d posty w kolejce)</item>
     </plurals>
     <string name="pow_mining_title">Wydobywanie dowodu wykonania pracy</string>
+    <string name="pow_notification_sending">Wysyłanie do transmiterów…</string>
     <string name="pow_notification_cancel_all">Anuluj</string>
     <string name="pow_time_left">◆ %1$s pozostało</string>
     <string name="pow_time_left_soon">w każdej chwili</string>
@@ -349,6 +349,10 @@
     <string name="voice_post">Wiadomość głosowa</string>
     <string name="voice_reply">Odpowiedź głosowa</string>
     <string name="pow_kind_report">Zgłoś</string>
+    <!-- Emoji packs -->
+    <string name="health_connect_rationale_activity_label">Health Connect i Amethyst</string>
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Wiadomość prywatna</string>
     <string name="pow_kind_chat_message">Wiadomość Czatu</string>
     <string name="nest_notification_broadcasting">Nest — Na żywo</string>
@@ -538,12 +542,133 @@
         <item quantity="many">Usunięto %1$d transmiterów indeksujących</item>
         <item quantity="other">Usunięto %1$d transmitery indeksujące</item>
     </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">Usunięto %1$d kanał transmitera</item>
+        <item quantity="few">Usunięto %1$d kanałów transmitera</item>
+        <item quantity="many">Usunięto %1$d kanałów transmitera</item>
+        <item quantity="other">Usunięto %1$d kanały transmitera</item>
+    </plurals>
     <plurals name="backup_card_private_outbox_lost">
         <item quantity="one">Usunięto %1$d prywatny transmiter</item>
         <item quantity="few">Usunięto %1$d prywatnych transmiterów</item>
         <item quantity="many">Usunięto %1$d prywatnych transmiterów</item>
         <item quantity="other">Usunięto %1$d prywatne transmitery</item>
     </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">Przestałeś ufać %1$d transmiterowi</item>
+        <item quantity="few">Przestałeś ufać %1$d transmiterom</item>
+        <item quantity="many">Przestałeś ufać %1$d transmiterom</item>
+        <item quantity="other">Przestałeś ufać %1$d transmiterom</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">Odblokowałeś %1$d transmiter</item>
+        <item quantity="few">Odblokowałeś %1$d transmiterów</item>
+        <item quantity="many">Odblokowałeś %1$d transmiterów</item>
+        <item quantity="other">Odblokowałeś %1$d transmitery</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">Opuściłeś %1$d czat publiczny</item>
+        <item quantity="few">Opuściłeś %1$d czatów publicznych</item>
+        <item quantity="many">Opuściłeś %1$d czatów publicznych</item>
+        <item quantity="other">Opuściłeś %1$d czaty publiczne</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">Opuściłeś %1$d społeczność</item>
+        <item quantity="few">Opuściłeś %1$d społeczności</item>
+        <item quantity="many">Opuściłeś %1$d społeczności</item>
+        <item quantity="other">Opuściłeś %1$d społeczności</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">Opuściłeś %1$d pokój czatu</item>
+        <item quantity="few">Opuściłeś %1$d pokoi czatu</item>
+        <item quantity="many">Opuściłeś %1$d pokoi czatu</item>
+        <item quantity="other">Opuściłeś %1$d pokoje czatu</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">Opuściłeś %1$d grupę</item>
+        <item quantity="few">Opuściłeś %1$d grup</item>
+        <item quantity="many">Opuściłeś %1$d grup</item>
+        <item quantity="other">Opuszczono %1$d grupy</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">Usunąłeś %1$d ulubiony kanał</item>
+        <item quantity="few">Usunąłeś %1$d ulubionych kanałów</item>
+        <item quantity="many">Usunąłeś %1$d ulubionych kanałów</item>
+        <item quantity="other">Usunięto %1$d ulubione kanały</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">Przestałeś obserwować %1$d hashtag</item>
+        <item quantity="few">Przestałeś obserwować %1$d hashtagów</item>
+        <item quantity="many">Przestałeś obserwować %1$d hashtagów</item>
+        <item quantity="other">Przestałeś obserwować %1$d hashtagi</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">Przestałeś obserwować %1$d miejsce</item>
+        <item quantity="few">Przestałeś obserwować %1$d miejsc</item>
+        <item quantity="many">Przestałeś obserwować %1$d miejsc</item>
+        <item quantity="other">Przestałeś obserwować %1$d miejsca</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">Zmieniłeś dostawcę %1$d zaufanego serwisu</item>
+        <item quantity="few">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+        <item quantity="many">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+        <item quantity="other">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+    </plurals>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">Usunięto %1$d nutzap mint</item>
+        <item quantity="few">Usunięto %1$d nutzap mintów</item>
+        <item quantity="many">Usunięto %1$d nutzap mintów</item>
+        <item quantity="other">Usunięto %1$d nutzap minty</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">Usunięto %1$d sposób na otrzymanie zapłaty</item>
+        <item quantity="few">Usunięto %1$d sposobów otrzymywania zapłaty</item>
+        <item quantity="many">Usunięto %1$d sposobów otrzymywania zapłaty</item>
+        <item quantity="other">Usunięto %1$d sposoby otrzymywania zapłaty</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">Usunięto %1$d ofertę BOLT12</item>
+        <item quantity="few">Usunięto %1$d ofert BOLT12</item>
+        <item quantity="many">Usunięto %1$d ofert BOLT12</item>
+        <item quantity="other">Usunięto %1$d oferty BOLT12</item>
+    </plurals>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s i dodano %2$d</item>
+        <item quantity="few">%1$s i dodano %2$d</item>
+        <item quantity="many">%1$s i dodano %2$d</item>
+        <item quantity="other">%1$s i dodano %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s i obserwowany %2$d</item>
+        <item quantity="few">%1$s i obserwowanych %2$d</item>
+        <item quantity="many">%1$s i obserwowanych %2$d</item>
+        <item quantity="other">%1$s i obserwowane %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s i wyciszony %2$d</item>
+        <item quantity="few">%1$s i wyciszono %2$d</item>
+        <item quantity="many">%1$s i wyciszono %2$d</item>
+        <item quantity="other">%1$s i wyciszone %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s i dołączono do %2$d</item>
+        <item quantity="few">%1$s i dołączono do %2$d</item>
+        <item quantity="many">%1$s i dołączono do %2$d</item>
+        <item quantity="other">%1$s i dołączono do %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s i zablokowano %2$d</item>
+        <item quantity="few">%1$s i zablokowano %2$d</item>
+        <item quantity="many">%1$s i zablokowano %2$d</item>
+        <item quantity="other">%1$s i zablokowano %2$d</item>
+    </plurals>
+    <string name="backup_card_app_settings">Twoje zsynchronizowane ustawienia aplikacji Amethyst zostały zmienione w innej aplikacji, która nie jest Amethystem. To może powodować problemy.</string>
+    <string name="backup_card_nutzap_key_replaced">Wymieniłeś swój klucz Nutzap</string>
+    <string name="backup_card_nutzap_key_removed">Usunąłeś swój klucz nutzap</string>
+    <string name="backup_card_wallet_emptied">Opróżniłeś swój portfel Cashu</string>
+    <string name="backup_card_wallet_rewritten">Zmieniłeś swój portfel Cashu</string>
+    <string name="backup_card_concord_emptied">Opróżniłeś swoją listę Concorda</string>
+    <string name="backup_card_concord_rewritten">Zmieniłeś swoją listę Concorda</string>
     <string name="backup_conflict_keep_new">Użyj nowej wersji</string>
     <string name="backup_conflict_relay_read_only">tylko do odczytu</string>
     <string name="backup_conflict_relay_write_only">tylko do zapisu</string>
@@ -567,7 +692,28 @@
     <string name="backup_type_relay_feeds">ulubione kanały transmitera</string>
     <string name="backup_type_relay_feeds_explainer">Transmitery, które przeglądasz jako kanały informacyjne.</string>
     <string name="backup_type_blocked_relays">lista zablokowanych przekaźników</string>
+    <string name="backup_type_blocked_relays_explainer">Transmitery, z którymi ta aplikacja nigdy się nie łączy.</string>
+    <string name="backup_type_trusted_relays">lista zaufanych transmiterów</string>
+    <string name="backup_type_trusted_relays_explainer">Zaufane transmitery, z którymi bez wahania nawiązujesz połączenie.</string>
+    <string name="backup_type_private_outbox_relays">lista prywatnych transmiterów</string>
+    <string name="backup_type_private_outbox_relays_explainer">Gdzie przechowywane są Twoje projekty i prywatne dane.</string>
+    <string name="backup_type_app_settings">zsynchronizowane ustawienia aplikacji</string>
+    <string name="backup_type_app_settings_explainer">Ustawienia Amethyst są synchronizowane na wszystkich Twoich urządzeniach. Są one zaszyfrowane, więc można porównać jedynie sam fakt ich obecności.</string>
+    <string name="backup_type_public_chats">lista czatów publicznych</string>
+    <string name="backup_type_public_chats_explainer">Publiczne czaty, do których dołączyłeś.</string>
+    <string name="backup_type_communities">lista społeczności</string>
+    <string name="backup_type_communities_explainer">Społeczności, do których dołączyłeś.</string>
+    <string name="backup_type_hashtags">obserwowane hashtagi</string>
+    <string name="backup_type_hashtags_explainer">Hashtagi, z których pochodzą posty wyświetlane w Twoich kanałach.</string>
     <string name="backup_type_geohashes">obserwowane lokalizacje</string>
+    <string name="backup_type_geohashes_explainer">Miejsca, z których posty pojawiają się na Twoich kanałach.</string>
+    <string name="backup_type_favorite_algo_feeds">lista ulubionych kanałów</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">Zapisane przez Ciebie kanały algorytmiczne.</string>
+    <string name="backup_type_ephemeral_chats">lista czatów efemerycznych</string>
+    <string name="backup_type_ephemeral_chats_explainer">Tymczasowe czaty, do których dołączyłeś.</string>
+    <string name="backup_type_relay_groups">lista grup</string>
+    <string name="backup_type_relay_groups_explainer">Grupy oparte na transmiterach, do których dołączyłeś.</string>
+    <string name="backup_type_concord_communities">Lista społeczności Concord</string>
     <string name="backup_type_concord_communities_explainer">Społeczności Concord, do których dołączyłeś. Są one zaszyfrowane, więc można porównać jedynie fakt ich istnienia.</string>
     <string name="backup_type_trust_providers">lista zaufanych dostawców</string>
     <string name="backup_type_trust_providers_explainer">Serwisy, którym ufasz, a które zajmują się klasyfikowaniem i weryfikacją osób w Twoim imieniu.</string>

@@ -175,6 +175,9 @@
     <string name="post">Đăng</string>
     <string name="voice_post">Bài đăng giọng nói</string>
     <string name="voice_reply">Trả lời giọng nói</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Tin nhắn Riêng tư</string>
     <string name="nest_notification_broadcasting">Nest — Trực tiếp</string>
     <string name="nest_notification_channel_description">Giữ âm thanh phát trong khi phòng đang mở.</string>

@@ -183,6 +183,9 @@
     <string name="post">Надіслати</string>
     <string name="voice_post">Голосова публікація</string>
     <string name="voice_reply">Голосова відповідь</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Приватне повідомлення</string>
     <string name="nest_notification_channel_description">Підтримує відтворення аудіо, поки кімната відкрита.</string>
     <string name="nest_notification_listening">Nest підключено</string>

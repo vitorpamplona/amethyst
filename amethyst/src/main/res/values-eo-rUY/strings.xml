@@ -180,6 +180,9 @@
     <string name="post">Afiŝi</string>
     <string name="voice_post">Voĉa Afiŝo</string>
     <string name="voice_reply">Voĉa Respondo</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Privata Mesaĝo</string>
     <string name="nest_notification_broadcasting">Nesto — Viva</string>
     <string name="nest_notification_channel">Nestoj</string>

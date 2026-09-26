@@ -178,6 +178,9 @@
     <string name="post">Objavi</string>
     <string name="voice_post">Glasovna objava</string>
     <string name="voice_reply">Glasovni odgovor</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Privatna poruka</string>
     <string name="nest_notification_broadcasting">Nest — Uživo</string>
     <string name="nest_notification_channel_description">Održava zvuk dok je soba otvorena.</string>

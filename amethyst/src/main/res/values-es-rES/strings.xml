@@ -180,6 +180,9 @@
     <string name="post">Publicar</string>
     <string name="voice_post">Publicación de voz</string>
     <string name="voice_reply">Respuesta de voz</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Mensaje privado</string>
     <string name="nest_notification_broadcasting">Nest — En vivo</string>
     <string name="nest_notification_channel">Nests</string>

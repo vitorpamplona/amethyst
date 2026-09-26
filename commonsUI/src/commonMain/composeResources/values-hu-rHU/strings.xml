@@ -5245,6 +5245,17 @@
         <item quantity="one">%1$d új üzenet</item>
         <item quantity="other">%1$d új üzenet</item>
     </plurals>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
     <string name="sno_object_title">3D-objektum</string>
     <string name="sno_object_details">%1$d csúcs · %2$d lap</string>
     <string name="sno_object_unreadable">Ezt a 3D-objektumot nem sikerült beolvasni (%1$s szabály)</string>
