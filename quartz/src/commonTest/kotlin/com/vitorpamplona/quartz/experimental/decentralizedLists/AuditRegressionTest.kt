@@ -143,27 +143,48 @@ class AuditRegressionTest {
     }
 
     // ...while the `d` stays deterministic, which is what lets a re-tag replace its own assertion
-    // instead of piling up a second one. Pinned against SHA-256 prefixes of the coordinates
-    // computed outside this codebase, so the test cross-checks the derivation rather than
-    // restating it: a change of hash input would silently orphan every assertion already signed.
+    // instead of piling up a second one. `event-taggings.md` § "The assertion d-tag (normative)":
+    // `<author8>-<d16>-<hash8>`, only hash8 unique. The hashes are SHA-256 prefixes of the full
+    // coordinate computed outside this codebase, so the test cross-checks the derivation rather
+    // than restating it: a change of hash input would silently orphan every assertion signed.
     @Test
-    fun theAddressablePrefixIsTheHashOfTheWholeCoordinate() {
+    fun theAddressablePrefixIsAuthorThenDTagThenTheHashOfTheWholeCoordinate() {
         assertEquals(
-            "event-tag-awesome-tag-6a5e1c40-aaaaaaaa",
+            "event-tag-awesome-tag-bbbbbbbb-good-tag-6a5e1c40-aaaaaaaa",
             EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "good-tag")), alice),
         )
         assertEquals(
-            "event-tag-awesome-tag-e89b797c-aaaaaaaa",
+            "event-tag-awesome-tag-bbbbbbbb-other-tag-e89b797c-aaaaaaaa",
             EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "other-tag")), alice),
         )
+        // same author8 AND same d16 as the first; only the kind differs, so only hash8 separates them
         assertEquals(
-            "event-tag-awesome-tag-96856fd8-aaaaaaaa",
+            "event-tag-awesome-tag-bbbbbbbb-good-tag-96856fd8-aaaaaaaa",
             EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(30023, bob, "good-tag")), alice),
         )
     }
 
+    // The draft spells this case out: an empty `d` yields an empty `d16`, hence the double hyphen.
+    @Test
+    fun anEmptyDTagSegmentLeavesADoubleHyphen() {
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb--76600e1a-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "")), alice),
+        )
+    }
+
+    // d16 is the first 16 UTF-16 code units, verbatim and truncated — decoration, not identity.
+    @Test
+    fun aLongDTagIsTruncatedToSixteenCharactersInTheDecoration() {
+        val d = "a-very-long-d-tag-that-exceeds-sixteen"
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb-a-very-long-d-ta-58899d62-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, d)), alice),
+        )
+    }
+
     // A plain event is still named by its own id: it already covers the whole event, and hashing
-    // it would only cost a round of SHA-256 per assertion built.
+    // it would only cost a round of SHA-256 per assertion built. The `e` branch is unchanged.
     @Test
     fun plainEventTargetsStillUseTheirOwnId() {
         assertEquals(

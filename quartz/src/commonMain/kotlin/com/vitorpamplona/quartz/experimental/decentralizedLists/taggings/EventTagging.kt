@@ -42,9 +42,10 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 @Immutable
 sealed interface TaggingTarget {
     /**
-     * The 8 hex characters that stand for this target in the assertion `d`. Two distinct targets
-     * must not produce the same one: kind 39999 is addressable, so taggings that share a `d` do
-     * not sit side by side — the later one replaces the earlier.
+     * What stands for this target in the assertion `d`: `<id8>` for a plain event,
+     * `<author8>-<d16>-<hash8>` for an addressable one. Two distinct targets must never produce
+     * the same one — kind 39999 is addressable, so taggings sharing a `d` do not sit side by
+     * side: the later one replaces the earlier.
      */
     val prefix: String
 
@@ -52,17 +53,39 @@ sealed interface TaggingTarget {
     data class ByAddress(
         val address: Address,
     ) : TaggingTarget {
-        // Hashed over the WHOLE coordinate, because no single segment identifies the target: the
-        // author repeats across everything they write, and the kind across everything of a type.
-        // A plain event can use its own id (below) since that already covers the whole event.
-        override val prefix get() = sha256(address.toValue().encodeToByteArray()).toHexKey().take(8)
+        /**
+         * `<author8>-<d16>-<hash8>`. Only `hash8` carries uniqueness — it is taken over the WHOLE
+         * coordinate, because no single segment identifies the target: the author repeats across
+         * everything they write, and the kind across everything of a type. The other two are
+         * decoration the draft asks for so a `d` stays readable.
+         *
+         * An empty `dTag` yields an empty `d16`, i.e. `<author8>--<hash8>`, which the draft spells
+         * out. A plain event uses its own id (below): that already covers the whole event.
+         */
+        override val prefix get() = "${address.pubKeyHex.take(AUTHOR_CHARS)}-${address.dTag.take(D_TAG_CHARS)}-${hash8()}"
+
+        // Lowercase hex of the UTF-8 coordinate exactly as the `a` tag carries it: no trimming,
+        // no normalization, no reordering. Hex.encode already emits lower case.
+        private fun hash8() = sha256(address.toValue().encodeToByteArray()).toHexKey().take(HASH_CHARS)
     }
 
     @Immutable
     data class ByEventId(
         val eventId: HexKey,
     ) : TaggingTarget {
-        override val prefix get() = eventId.take(8)
+        override val prefix get() = eventId.take(EVENT_ID_CHARS)
+    }
+
+    companion object {
+        const val EVENT_ID_CHARS = 8
+        const val AUTHOR_CHARS = 8
+        const val HASH_CHARS = 8
+
+        /**
+         * UTF-16 code units, which is what the draft pins ("as JavaScript `String.prototype.slice`
+         * counts them") and what [String.take] counts.
+         */
+        const val D_TAG_CHARS = 16
     }
 }
 
@@ -113,7 +136,8 @@ object TaggingHeader {
  * [TaggingHeader]:
  *
  * ```
- * ["d", "event-tag-<tagSlug>-<target8>-<asserter8>"]
+ * ["d", "event-tag-<tagSlug>-<target8>-<asserter8>"]   // <target8> = <id8>, or
+ *                                                      // <author8>-<d16>-<hash8> for an `a`
  * ["a", <target coordinate>]  or  ["e", <target id>]
  * ["z", <nostr-event-tag concept>]
  * ["z", <tagging header coordinate>]
@@ -121,6 +145,10 @@ object TaggingHeader {
  * ```
  *
  * An `a`/`e` reference without such a `z` is not a tagging and must not be read as one.
+ *
+ * The `d` is a replaceability key, never a source of truth: the draft forbids parsing it back into
+ * its fields, because `d16` is user-influenced text that may itself contain hyphens. [parse] reads
+ * the target from the `a`/`e` tag, which is authoritative.
  */
 @Immutable
 data class EventTagging(
