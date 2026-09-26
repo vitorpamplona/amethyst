@@ -29,7 +29,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
@@ -61,25 +60,29 @@ class NappletBrowserUiAdapter(
         // WebView creation must run on the main thread; openSession is called on a binder thread.
         mainHandler.post {
             runCatching {
-                val webView = service.createBrowserWebView(context, sessionId)
+                // The session's view is a container around the WebView, so HTML fullscreen can lay the
+                // page's custom view over it and a crashed renderer's WebView can be swapped for a new one.
+                val container = FrameLayout(context)
+                val webView = service.createBrowserWebView(context, sessionId, container)
+                container.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 // FrameLayout.LayoutParams (a MarginLayoutParams) — the SurfaceControlViewHost container
                 // measures children with measureChildWithMargins, which casts to MarginLayoutParams.
-                webView.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
-                BrowserSession(sessionId, webView, service)
+                container.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
+                BrowserSession(sessionId, container, service)
             }.onSuccess { session -> clientExecutor.execute { client.onSessionOpened(session) } }
                 .onFailure { t -> clientExecutor.execute { client.onSessionError(t) } }
         }
     }
 }
 
-/** A single embedded browser session: the WebView is the rendered view; close tears it down. */
+/** A single embedded browser session: the WebView's container is the rendered view; close tears it down. */
 @RequiresApi(Build.VERSION_CODES.R)
 private class BrowserSession(
     private val sessionId: String,
-    private val webView: WebView,
+    private val container: FrameLayout,
     private val service: NappletBrowserService,
 ) : SandboxedUiAdapter.Session {
-    override val view: View get() = webView
+    override val view: View get() = container
 
     override val signalOptions: Set<String> = emptySet()
 
@@ -91,8 +94,8 @@ private class BrowserSession(
         width: Int,
         height: Int,
     ) {
-        webView.layoutParams = FrameLayout.LayoutParams(width, height)
-        webView.requestLayout()
+        container.layoutParams = FrameLayout.LayoutParams(width, height)
+        container.requestLayout()
     }
 
     override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {

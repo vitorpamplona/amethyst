@@ -116,6 +116,91 @@ object NappletBrowserContract {
      */
     const val MSG_FILE_CHOOSER_RESULT = 15
 
+    // ---- PWA-parity controls (see BrowserChrome). Client → provider unless noted. ----
+
+    /** Go forward in the page history. */
+    const val MSG_FORWARD = 16
+
+    /** Stop the current load. */
+    const val MSG_STOP = 17
+
+    /** Find [KEY_FIND_QUERY] in the page (empty clears). Provider answers with [MSG_FIND_RESULT]. */
+    const val MSG_FIND = 18
+
+    /** Move to the next ([KEY_FIND_FORWARD] = true) or previous match. */
+    const val MSG_FIND_NEXT = 19
+
+    /** Provider → client: [KEY_FIND_ACTIVE] (0-based) of [KEY_FIND_TOTAL] matches. */
+    const val MSG_FIND_RESULT = 20
+
+    /** Switch desktop-site mode ([KEY_ENABLED]); the page reloads. */
+    const val MSG_SET_DESKTOP = 21
+
+    /** Set the text size to [KEY_TEXT_ZOOM] percent. */
+    const val MSG_SET_TEXT_ZOOM = 22
+
+    /** Step back to the most recent page on [KEY_URL]'s origin (the app's home), or load it. */
+    const val MSG_BACK_TO_SCOPE = 23
+
+    /** Clear the current site's cookies and storage in this account's profile, then reload. */
+    const val MSG_CLEAR_SITE_DATA = 24
+
+    /** Ask for the page-info text (connection, Tor, certificate); answered with [MSG_PAGE_INFO]. */
+    const val MSG_PAGE_INFO_REQUEST = 25
+
+    /** Provider → client: [KEY_PAGE_INFO] for the page on screen. */
+    const val MSG_PAGE_INFO = 26
+
+    /**
+     * Provider → client: the page opened a JS dialog. [KEY_DIALOG_ID], [KEY_DIALOG_TYPE] (`alert`, `confirm`,
+     * `prompt`, `beforeunload`), [KEY_URL], [KEY_DIALOG_MESSAGE], [KEY_DIALOG_DEFAULT], and
+     * [KEY_DIALOG_OFFER_BLOCK] when "Block dialogs from this page" should be offered. The page's JS waits
+     * until [MSG_JS_DIALOG_RESULT] arrives.
+     */
+    const val MSG_JS_DIALOG = 27
+
+    /** The user's answer: [KEY_DIALOG_ID], [KEY_DIALOG_CONFIRMED], [KEY_DIALOG_TEXT], [KEY_DIALOG_BLOCK]. */
+    const val MSG_JS_DIALOG_RESULT = 28
+
+    /**
+     * Provider → client: the page asked for camera / microphone / location. [KEY_PERMISSION_ID],
+     * [KEY_BROWSER_ORIGIN], [KEY_PERMISSIONS] (`BrowserSitePermission` keys). Answered with
+     * [MSG_PERMISSION_RESULT].
+     */
+    const val MSG_PERMISSION_REQUEST = 29
+
+    /** The granted subset: [KEY_PERMISSION_ID], [KEY_PERMISSIONS]. */
+    const val MSG_PERMISSION_RESULT = 30
+
+    /** Provider → client: the page withdrew request [KEY_PERMISSION_ID]; drop its prompt. */
+    const val MSG_PERMISSION_CANCEL = 31
+
+    /** Provider → client: HTML fullscreen entered or left ([KEY_ENABLED]). */
+    const val MSG_FULLSCREEN = 32
+
+    /** Leave HTML fullscreen (the user pressed back). */
+    const val MSG_EXIT_FULLSCREEN = 33
+
+    const val KEY_CAN_GO_FORWARD = "canGoForward"
+    const val KEY_FIND_QUERY = "findQuery"
+    const val KEY_FIND_FORWARD = "findForward"
+    const val KEY_FIND_ACTIVE = "findActive"
+    const val KEY_FIND_TOTAL = "findTotal"
+    const val KEY_ENABLED = "enabled"
+    const val KEY_TEXT_ZOOM = "textZoom"
+    const val KEY_PAGE_INFO = "pageInfo"
+    const val KEY_DIALOG_ID = "dialogId"
+    const val KEY_DIALOG_TYPE = "dialogType"
+    const val KEY_DIALOG_MESSAGE = "dialogMessage"
+    const val KEY_DIALOG_DEFAULT = "dialogDefault"
+    const val KEY_DIALOG_OFFER_BLOCK = "dialogOfferBlock"
+    const val KEY_DIALOG_CONFIRMED = "dialogConfirmed"
+    const val KEY_DIALOG_TEXT = "dialogText"
+    const val KEY_DIALOG_BLOCK = "dialogBlock"
+    const val KEY_PERMISSION_ID = "permissionId"
+    const val KEY_PERMISSIONS = "permissions"
+    const val KEY_BROWSER_ORIGIN = "browserOrigin"
+
     const val KEY_FILE_CHOOSER_ID = "fileChooserId"
     const val KEY_FILE_CHOOSER_ACCEPT = "fileChooserAccept"
     const val KEY_FILE_CHOOSER_MULTIPLE = "fileChooserMultiple"

@@ -32,236 +32,275 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.Action
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.SectionKind
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
- * The full-screen sandbox surfaces' **top pull-down sheet** — the native-View twin of the embedded
- * tabs' Compose `TopControlSheet`. Collapsed it's just a small grabber centered at the very top edge,
- * out of the corner where a site puts its own avatar/menu. Pull it down (or tap) to reveal the page's
- * controls: route over Tor, reload, and "what it can access" (sandboxed apps).
+ * The full-screen surfaces' **top pull-down pill** — the plain-View twin of the embedded tabs' Compose
+ * `TopControlSheet`. Collapsed it's a small grabber centered at the top edge, out of the corner where a site
+ * puts its own avatar/menu. Pulled down (or tapped) it shows, like a Chrome PWA's app menu:
  *
- * Built in code (no XML) because `:nappletHost` hosts plain Android `View`s, not Compose, and must stay
- * dependency-light. Add it to a `FrameLayout` parent at `Gravity.TOP` filling the width; it manages its
- * own expand/collapse.
+ * - a header with the page title, its origin + connection badge (tap: page info; long-press: copy link),
+ *   and a close button;
+ * - the icon row (back · forward · reload/stop · star · share);
+ * - the menu rows, then Privacy and Developer groups.
+ *
+ * *Which* actions appear, and in what order, comes from [BrowserChrome] — the same source the Compose sheet
+ * uses — and each action's icon/label from [BrowserChromeLabels]. This class only draws them. The page
+ * can't draw over it. Built in code (no XML, no Compose/Material) because `:nappletHost` stays light.
  */
-@SuppressLint("UseSwitchCompatOrMaterialCode") // plain framework Switch: :nappletHost is Compose/Material-free
+@SuppressLint("UseSwitchCompatOrMaterialCode", "ViewConstructor")
 class NappletControlSheet(
     context: Context,
+    initialState: BrowserChrome.State,
     title: String,
-    private val isSandbox: Boolean,
-    private val onReload: () -> Unit,
-    torInitiallyOn: Boolean?,
-    private val onToggleTor: (Boolean) -> Unit = {},
-    // When non-null, the Tor row taps through to this (e.g. a confirm dialog that relaunches) instead of
-    // toggling inline — used by the nSite host, where switching routing rebuilds the whole session.
-    private val onNetworkTap: (() -> Unit)? = null,
-    private val onInfo: (() -> Unit)? = null,
-    // When non-null, a "Manage permissions" row is added that taps through to this — used to open the
-    // main process's editable Connected Apps detail screen for this surface.
-    private val onPermissions: (() -> Unit)? = null,
-    // The live URL of a plain-website browser. Non-null only for the direct-WebView browser (never an
-    // nsite/napplet), where it renders an editable address row; [onNavigate] loads what the user types.
-    liveUrl: String? = null,
-    private val onNavigate: ((String) -> Unit)? = null,
-    // When non-null, a "Console" toggle row is added to the pull-down sheet. The callback is invoked with
-    // the new visibility each time the user flips it; the count label is updated via [updateConsoleCount].
-    private val onConsole: ((Boolean) -> Unit)? = null,
-    // When non-null, a favorite toggle row is shown; called with the current URL and new isFavorite state.
+    private val listener: Listener,
     isFavoriteInitially: Boolean = false,
-    private val onFavoriteToggle: ((url: String, isFavorite: Boolean) -> Unit)? = null,
+    /** Shows the header's close button (finishing the window). */
+    private val showClose: Boolean = true,
 ) : LinearLayout(context) {
+    /** What the sheet asks its host to do. Every row and icon ends up in [onAction]. */
+    interface Listener {
+        fun onAction(action: Action)
+
+        /** The user typed an address into "Edit address" and pressed Go. */
+        fun onNavigate(text: String) {}
+
+        /** The text-size stepper moved to [percent]. */
+        fun onTextZoom(percent: Int) {}
+
+        /** The origin chip was tapped: show page info (or the access summary for sandboxed apps). */
+        fun onOriginTap() {}
+
+        fun onClose() {}
+    }
+
     private val onSurface = resolveThemeColor(android.R.attr.textColorPrimary)
     private val dimmed = resolveThemeColor(android.R.attr.textColorSecondary)
     private val surface = resolveThemeColor(android.R.attr.colorBackground)
+    private val accent = resolveThemeColor(android.R.attr.colorPrimary)
+    private val glyphs: Typeface = BrowserGlyphs.typeface(context)
+
+    var state: BrowserChrome.State = initialState
+        private set
+    private var title: String = title
+    private var isFavorite = isFavoriteInitially
+    private var desktopSite = false
+    private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
+    private var consoleShowing = false
+    private var consoleCount = 0
+    private var editingAddress = false
 
     private var expanded = false
-    private var title = title
-    private var torOn = torInitiallyOn
-    private var currentUrl = liveUrl
-    private var isFavorite = isFavoriteInitially
-    private var consoleShowing = false
-
     private val panel: LinearLayout
-    private var titleView: TextView? = null
-    private var grabber: View? = null
-    private var torLabel: TextView? = null
-    private var torSwitch: Switch? = null
-    private var addressField: EditText? = null
-    private var securityGlyph: TextView? = null
-    private var consoleLabel: TextView? = null
-    private var consoleSwitch: Switch? = null
-    private var favoriteLabel: TextView? = null
+    private val grabber: View
 
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
-
-        panel = buildPanel().also { addView(it) }
-        addView(buildGrabber().also { grabber = it })
+        panel =
+            LinearLayout(context).apply {
+                orientation = VERTICAL
+                visibility = View.GONE
+                elevation = dp(6).toFloat()
+                background =
+                    GradientDrawable().apply {
+                        cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat())
+                        setColor(surface)
+                    }
+                setPadding(dp(8), dp(6), dp(8), dp(10))
+            }
+        addView(panel)
+        grabber = buildGrabber()
+        addView(grabber)
     }
 
-    private fun buildPanel(): LinearLayout =
-        LinearLayout(context).apply {
-            orientation = VERTICAL
-            visibility = View.GONE
-            elevation = dp(6).toFloat()
-            background =
-                GradientDrawable().apply {
-                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat(), dp(16).toFloat())
-                    setColor(surface)
-                }
-            setPadding(dp(8), dp(6), dp(8), dp(10))
+    // ---- state updates from the host ----
 
-            addView(titleRow())
-            // Browser only: an editable address bar showing the live URL + a security glyph. nsite/napplet
-            // hosts pass no navigate callback, so they never get one.
-            onNavigate?.let { addView(addressRow(currentUrl.orEmpty(), it)) }
-            addView(divider())
-            if (torOn != null) addView(torRow())
-            addView(
-                actionRow("↻", context.getString(R.string.napplet_chrome_reload)) {
-                    collapse()
-                    onReload()
-                },
-            )
-            onInfo?.let { info ->
-                addView(
-                    actionRow("ⓘ", context.getString(R.string.napplet_chrome_permissions_desc)) {
-                        collapse()
-                        info()
-                    },
-                )
+    /**
+     * The page navigated. Moving to another site swaps the title for that site's host until its page title
+     * arrives ([updateTitle]), and marks the pin state unknown until the host answers ([setFavorite]).
+     */
+    fun updateUrl(url: String) {
+        val previous = state.url
+        if (url == previous) return
+        state = state.copy(url = url)
+        if (BrowserChrome.displayHost(url) != BrowserChrome.displayHost(previous)) title = BrowserChrome.displayHost(url)
+        // Unknown until the host answers; "Add" meanwhile. The toggle sends an explicit target state, so a
+        // tap in that window can only add (idempotent), never silently remove an existing pin.
+        isFavorite = false
+        refresh()
+    }
+
+    /** Shows the page's `<title>`, falling back to the host (WebView reports the URL for untitled pages). */
+    fun updateTitle(pageTitle: String?) {
+        val real = pageTitle?.trim()?.takeIf { it.isNotEmpty() && it != state.url }
+        title = real ?: BrowserChrome.displayHost(state.url)
+        refresh()
+    }
+
+    /** Applies the registry's answer for [url]; ignored once the user has moved on to another page. */
+    fun setFavorite(
+        url: String,
+        favorite: Boolean,
+    ) {
+        if (url != state.url) return
+        isFavorite = favorite
+        refresh()
+    }
+
+    fun setNavigation(
+        canGoBack: Boolean,
+        canGoForward: Boolean,
+    ) = update(state.copy(canGoBack = canGoBack, canGoForward = canGoForward))
+
+    fun setLoading(loading: Boolean) = update(state.copy(isLoading = loading))
+
+    fun setTor(on: Boolean) = update(state.copy(torOn = on))
+
+    fun setDesktopSite(on: Boolean) {
+        desktopSite = on
+        refresh()
+    }
+
+    fun setTextZoom(percent: Int) {
+        textZoom = percent
+        refresh()
+    }
+
+    fun setConsoleShowing(showing: Boolean) {
+        consoleShowing = showing
+        refresh()
+    }
+
+    fun updateConsoleCount(count: Int) {
+        consoleCount = count
+        refresh()
+    }
+
+    private fun update(next: BrowserChrome.State) {
+        if (next == state) return
+        state = next
+        refresh()
+    }
+
+    /** Rebuilds the open panel. Collapsed, nothing is drawn, so it waits for the next [expand]. */
+    private fun refresh() {
+        grabber.contentDescription = title
+        if (expanded) render()
+    }
+
+    // ---- drawing ----
+
+    private fun render() {
+        panel.removeAllViews()
+        panel.addView(header())
+        panel.addView(iconRow())
+        panel.addView(divider())
+        val sections =
+            LinearLayout(context).apply {
+                orientation = VERTICAL
+                BrowserChrome.sections(state).forEachIndexed { index, section ->
+                    if (index > 0) addView(divider())
+                    sectionTitle(section.kind)?.let { addView(sectionLabel(it)) }
+                    section.actions.forEach { addView(row(it)) }
+                }
             }
-            onPermissions?.let { manage ->
-                addView(
-                    actionRow("⚙", context.getString(R.string.napplet_chrome_manage_permissions)) {
-                        collapse()
-                        manage()
-                    },
-                )
-            }
-            onConsole?.let {
-                val label =
-                    TextView(context).apply {
-                        text = context.getString(CommonsR.string.browser_console_title_short)
-                        setTextColor(onSurface)
-                        textSize = 15f
-                        setPadding(dp(8), 0, 0, 0)
-                        // Weight 1 so the label fills and shoves the Switch to the end, like the Tor row.
-                        layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-                    }
-                consoleLabel = label
-                // Display-only switch (the whole row is the touch target), matching the Tor row + Compose twin.
-                val toggle =
-                    Switch(context).apply {
-                        isChecked = consoleShowing
-                        isClickable = false
-                        isFocusable = false
-                    }
-                consoleSwitch = toggle
-                addView(
-                    LinearLayout(context).apply {
-                        orientation = HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(8), dp(10), dp(8), dp(10))
-                        isClickable = true
-                        setOnClickListener { toggleConsole() }
-                        addView(
-                            TextView(context).apply {
-                                text = ">"
-                                setTextColor(dimmed)
-                                textSize = 18f
-                                width = dp(28)
-                                gravity = Gravity.CENTER
-                                typeface = Typeface.MONOSPACE
-                            },
-                        )
-                        addView(label)
-                        addView(toggle)
-                    },
-                )
-            }
-            onFavoriteToggle?.let {
-                val label =
-                    TextView(context).apply {
-                        text = context.getString(if (isFavorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
-                        setTextColor(onSurface)
-                        textSize = 15f
-                        setPadding(dp(8), 0, 0, 0)
-                    }
-                favoriteLabel = label
-                addView(
-                    LinearLayout(context).apply {
-                        orientation = HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(8), dp(10), dp(8), dp(10))
-                        isClickable = true
-                        setOnClickListener { toggleFavorite() }
-                        addView(
-                            TextView(context).apply {
-                                text = "★"
-                                setTextColor(dimmed)
-                                textSize = 18f
-                                width = dp(28)
-                                gravity = Gravity.CENTER
-                            },
-                        )
-                        addView(label)
-                    },
-                )
-            }
+        panel.addView(
+            MaxHeightScrollView(context, (resources.displayMetrics.heightPixels * 0.6f).toInt()).apply {
+                isVerticalScrollBarEnabled = false
+                addView(sections)
+            },
+        )
+    }
+
+    private fun sectionTitle(kind: SectionKind): String? =
+        when (kind) {
+            SectionKind.PAGE -> null
+            SectionKind.PRIVACY -> context.getString(CommonsR.string.browser_section_privacy)
+            SectionKind.DEVELOPER -> context.getString(CommonsR.string.browser_section_developer)
         }
 
-    private fun titleRow(): View =
+    private fun header(): View =
         LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            addView(
-                TextView(context).apply {
-                    text = if (isSandbox) "🛡" else "🌐"
-                    textSize = 16f
-                },
-            )
-            addView(
-                TextView(context)
-                    .apply {
-                        text = title
-                        setTextColor(onSurface)
-                        textSize = 16f
-                        maxLines = 1
-                        ellipsize = TextUtils.TruncateAt.END
-                        setPadding(dp(10), 0, 0, 0)
-                    }.also { titleView = it },
-            )
+            setPadding(dp(8), dp(6), dp(4), dp(6))
+            val security = BrowserChrome.security(state)
+            addView(iconView(BrowserChromeLabels.securitySymbol(security), BrowserChromeLabels.securityDrawable(security), dimmed, 20))
+            if (editingAddress) {
+                addView(addressField())
+            } else {
+                addView(
+                    LinearLayout(context).apply {
+                        orientation = VERTICAL
+                        setPadding(dp(12), 0, dp(8), 0)
+                        layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+                        isClickable = true
+                        setOnClickListener {
+                            collapse()
+                            listener.onOriginTap()
+                        }
+                        if (!state.isSandbox) {
+                            setOnLongClickListener {
+                                listener.onAction(Action.COPY_LINK)
+                                true
+                            }
+                        }
+                        addView(
+                            TextView(context).apply {
+                                text = title
+                                setTextColor(onSurface)
+                                textSize = 16f
+                                typeface = Typeface.DEFAULT_BOLD
+                                maxLines = 1
+                                ellipsize = TextUtils.TruncateAt.END
+                            },
+                        )
+                        addView(
+                            TextView(context).apply {
+                                text =
+                                    if (state.isSandbox) {
+                                        context.getString(BrowserChromeLabels.securityLabel(security))
+                                    } else {
+                                        BrowserChrome.displayHost(state.url) + "  ·  " + context.getString(BrowserChromeLabels.securityLabel(security))
+                                    }
+                                setTextColor(dimmed)
+                                textSize = 13f
+                                maxLines = 1
+                                ellipsize = TextUtils.TruncateAt.MIDDLE
+                            },
+                        )
+                    },
+                )
+            }
+            if (showClose) {
+                addView(
+                    glyphButton(BrowserChromeLabels.symbolFor(Action.STOP)!!, context.getString(CommonsR.string.browser_action_close), onSurface) {
+                        collapse()
+                        listener.onClose()
+                    },
+                )
+            }
         }
 
-    /**
-     * The browser address bar: a security glyph (🧅 Tor / 🔒 https / 🌐 plain) + an editable URL field.
-     * Pressing Go hands the trimmed text to [onNavigate] (normalized by the caller) and collapses the sheet.
-     */
-    private fun addressRow(
-        initial: String,
-        onNavigate: (String) -> Unit,
-    ): View {
-        val glyph =
-            TextView(context).apply {
-                text = securityGlyphFor(initial)
-                textSize = 15f
-                width = dp(28)
-                gravity = Gravity.CENTER
-            }
-        securityGlyph = glyph
+    /** The rarely used editable address, swapped in for the origin chip by the "Edit address" row. */
+    private fun addressField(): View {
         val field =
             EditText(context).apply {
-                setText(initial)
+                setText(state.url)
                 setTextColor(onSurface)
                 setHintTextColor(dimmed)
                 hint = context.getString(CommonsR.string.browser_address_hint)
@@ -272,207 +311,231 @@ class NappletControlSheet(
                 background = null
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
                 imeOptions = EditorInfo.IME_ACTION_GO
-                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8) }
                 setOnEditorActionListener { v, actionId, _ ->
-                    if (actionId == EditorInfo.IME_ACTION_GO) {
-                        val text =
-                            v.text
-                                ?.toString()
-                                ?.trim()
-                                .orEmpty()
-                        if (text.isNotEmpty()) {
-                            clearFocus()
-                            collapse()
-                            onNavigate(text)
-                        }
-                        true
-                    } else {
-                        false
+                    if (actionId != EditorInfo.IME_ACTION_GO) return@setOnEditorActionListener false
+                    val text =
+                        v.text
+                            ?.toString()
+                            ?.trim()
+                            .orEmpty()
+                    if (text.isNotEmpty()) {
+                        hideKeyboard(v)
+                        editingAddress = false
+                        collapse()
+                        listener.onNavigate(text)
                     }
+                    true
                 }
             }
-        addressField = field
-        return LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            addView(glyph)
-            addView(field)
+        field.post {
+            field.requestFocus()
+            context.getSystemService(InputMethodManager::class.java)?.showSoftInput(field, 0)
         }
+        return field
     }
 
-    /** Updates the count shown in the Console row label so the user sees how many messages are waiting. */
-    fun updateConsoleCount(count: Int) {
-        consoleLabel?.text =
-            if (count > 0) {
-                context.getString(CommonsR.string.browser_console_title, count)
-            } else {
-                context.getString(CommonsR.string.browser_console_title_short)
-            }
-    }
-
-    /**
-     * Refreshes the address bar + security glyph as the page navigates. No-op without an address row.
-     * Moving to another site also swaps the title for that site's host until its page title arrives
-     * ([updateTitle]), so the sheet never names the site the user already left.
-     */
-    fun updateUrl(url: String) {
-        val previous = currentUrl
-        currentUrl = url
-        // Don't fight the user while they're editing the field.
-        addressField?.takeIf { !it.hasFocus() }?.setText(url)
-        securityGlyph?.text = securityGlyphFor(url)
-        if (hostOf(url) != previous?.let(::hostOf)) setTitleText(hostOf(url) ?: url)
-        // A different page: its pin state is unknown until the host answers through [setFavorite]. Show
-        // "Add" meanwhile — the toggle sends the explicit target state, so even a tap in that window can
-        // only ever add (idempotent), never silently remove an existing pin.
-        if (url != previous && onFavoriteToggle != null) applyFavorite(false)
-    }
-
-    /**
-     * Shows the page's own `<title>`, falling back to the current host when the page has none (WebView
-     * reports the URL itself as the title of an untitled document).
-     */
-    fun updateTitle(pageTitle: String?) {
-        val real = pageTitle?.trim()?.takeIf { it.isNotEmpty() && it != currentUrl }
-        setTitleText(real ?: currentUrl?.let(::hostOf) ?: return)
-    }
-
-    /** Applies the registry's answer for [url]; ignored when the user has already moved to another page. */
-    fun setFavorite(
-        url: String,
-        favorite: Boolean,
-    ) {
-        if (url == currentUrl) applyFavorite(favorite)
-    }
-
-    private fun applyFavorite(favorite: Boolean) {
-        isFavorite = favorite
-        favoriteLabel?.text = context.getString(if (favorite) R.string.browser_favorite_remove else R.string.browser_favorite_add)
-    }
-
-    private fun setTitleText(text: String) {
-        title = text
-        titleView?.text = text
-        grabber?.contentDescription = text
-    }
-
-    private fun hostOf(url: String): String? = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() }
-
-    private fun toggleFavorite() {
-        val url = currentUrl?.takeIf { it.isNotBlank() } ?: return
-        applyFavorite(!isFavorite)
-        collapse()
-        onFavoriteToggle?.invoke(url, isFavorite)
-    }
-
-    private fun securityGlyphFor(url: String): String =
-        when {
-            torOn == true -> "🧅" // 🧅 routed over Tor
-            url.startsWith("https://", ignoreCase = true) -> "🔒" // 🔒 secure
-            else -> "🌐" // 🌐 plain http
-        }
-
-    private fun torRow(): View {
-        // Steady, muted icon (the Switch carries the on/off state) — matches the Compose twin, where the
-        // lock icon is a constant onSurfaceVariant tint and the Switch is the state indicator.
-        val icon =
-            ImageView(context).apply {
-                setImageResource(R.drawable.ic_tor)
-                setColorFilter(dimmed)
-                layoutParams = LayoutParams(dp(22), dp(22))
-            }
-        val label =
-            TextView(context).apply {
-                text = context.getString(if (torOn == true) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
-                setTextColor(onSurface)
-                textSize = 15f
-                setPadding(dp(14), 0, 0, 0)
-                // Weight 1 so the label fills and shoves the Switch to the end, like the Compose row.
-                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-            }
-        // Display-only: the whole row is the touch target (parity with the Compose row, whose Switch and
-        // row both route to the same onToggle), so the Switch itself doesn't take clicks.
-        val toggle =
-            Switch(context).apply {
-                isChecked = torOn == true
-                isClickable = false
-                isFocusable = false
-            }
-        torLabel = label
-        torSwitch = toggle
-        return LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(10), dp(8), dp(10))
-            isClickable = true
-            setOnClickListener {
-                if (onNetworkTap != null) {
-                    collapse()
-                    onNetworkTap.invoke()
-                } else {
-                    toggleTor()
-                }
-            }
-            addView(icon)
-            addView(label)
-            addView(toggle)
-        }
-    }
-
-    private fun toggleTor() {
-        val next = !(torOn ?: return)
-        torOn = next
-        torSwitch?.isChecked = next
-        torLabel?.text = context.getString(if (next) R.string.napplet_net_tor_label else R.string.napplet_net_open_label)
-        securityGlyph?.text = securityGlyphFor(currentUrl.orEmpty())
-        onToggleTor(next)
-    }
-
-    private fun toggleConsole() {
-        consoleShowing = !consoleShowing
-        consoleSwitch?.isChecked = consoleShowing
-        // Collapse the top sheet on toggle, like the Compose twin, so the bottom console isn't hidden behind it.
-        collapse()
-        onConsole?.invoke(consoleShowing)
-    }
-
-    private fun actionRow(
-        glyph: String,
-        label: String,
-        onClick: () -> Unit,
-    ): View =
+    private fun iconRow(): View =
         LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            // Same vertical rhythm as the Tor row and the Compose twin's rows.
+            setPadding(0, dp(2), 0, dp(4))
+            BrowserChrome.iconRow(state).forEach { action ->
+                val enabled = BrowserChrome.isEnabled(state, action)
+                val tint = if (action == Action.FAVORITE && isFavorite) accent else onSurface
+                val button =
+                    glyphButton(
+                        BrowserChromeLabels.symbolFor(action)!!,
+                        context.getString(BrowserChromeLabels.labelFor(action, isFavorite = isFavorite)),
+                        tint,
+                    ) {
+                        collapse()
+                        onRowAction(action)
+                    }
+                if (action == Action.FAVORITE && isFavorite) button.typeface = BrowserGlyphs.filledTypeface(context)
+                button.isEnabled = enabled
+                button.alpha = if (enabled) 1f else 0.35f
+                button.layoutParams = LayoutParams(0, dp(48), 1f)
+                addView(button)
+            }
+        }
+
+    private fun row(action: Action): View {
+        val label =
+            when (action) {
+                Action.BACK_TO_APP -> context.getString(CommonsR.string.browser_action_back_to_app, BrowserChrome.displayHost(state.startUrl))
+                else -> context.getString(BrowserChromeLabels.labelFor(action, isFavorite = isFavorite, torOn = state.torOn == true))
+            }
+        val consoleLabel = if (action == Action.CONSOLE && consoleCount > 0) context.getString(CommonsR.string.browser_console_title, consoleCount) else label
+        return LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(10), dp(8), dp(10))
-            isClickable = true
-            setOnClickListener { onClick() }
+            addView(iconView(BrowserChromeLabels.symbolFor(action), BrowserChromeLabels.drawableFor(action), dimmed, 22))
             addView(
                 TextView(context).apply {
-                    text = glyph
-                    setTextColor(dimmed)
-                    textSize = 18f
-                    width = dp(28)
-                    gravity = Gravity.CENTER
-                },
-            )
-            addView(
-                TextView(context).apply {
-                    text = label
+                    text = consoleLabel
                     setTextColor(onSurface)
                     textSize = 15f
-                    setPadding(dp(8), 0, 0, 0)
+                    setPadding(dp(14), 0, 0, 0)
+                    layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
                 },
             )
+            if (action == Action.TEXT_SIZE) {
+                addView(textSizeStepper())
+            } else {
+                isClickable = true
+                setOnClickListener {
+                    if (!BrowserChromeLabels.keepsSheetOpen(action)) collapse()
+                    onRowAction(action)
+                }
+                if (BrowserChromeLabels.isToggle(action)) {
+                    // Display-only: the whole row is the touch target, as in the Compose twin.
+                    addView(
+                        Switch(context).apply {
+                            isChecked =
+                                when (action) {
+                                    Action.TOR -> state.torOn == true
+                                    Action.DESKTOP_SITE -> desktopSite
+                                    else -> consoleShowing
+                                }
+                            isClickable = false
+                            isFocusable = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private fun textSizeStepper(): View =
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(
+                glyphButton(MaterialSymbols.Remove, context.getString(CommonsR.string.browser_action_text_smaller), onSurface) {
+                    textZoom = BrowserChrome.stepTextZoom(textZoom, larger = false)
+                    listener.onTextZoom(textZoom)
+                    refresh()
+                },
+            )
+            addView(
+                TextView(context).apply {
+                    text = context.getString(CommonsR.string.browser_action_text_size_value, textZoom)
+                    setTextColor(onSurface)
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    minWidth = dp(48)
+                },
+            )
+            addView(
+                glyphButton(MaterialSymbols.Add, context.getString(CommonsR.string.browser_action_text_larger), onSurface) {
+                    textZoom = BrowserChrome.stepTextZoom(textZoom, larger = true)
+                    listener.onTextZoom(textZoom)
+                    refresh()
+                },
+            )
+        }
+
+    private fun onRowAction(action: Action) {
+        when (action) {
+            Action.EDIT_ADDRESS -> {
+                editingAddress = true
+                refresh()
+            }
+            Action.FAVORITE -> {
+                isFavorite = !isFavorite
+                listener.onAction(action)
+            }
+            Action.DESKTOP_SITE -> {
+                desktopSite = !desktopSite
+                listener.onAction(action)
+            }
+            Action.CONSOLE -> {
+                consoleShowing = !consoleShowing
+                listener.onAction(action)
+            }
+            else -> listener.onAction(action)
+        }
+    }
+
+    /** The favorite state the user is asking for (read by the host right after a FAVORITE action). */
+    fun wantsFavorite(): Boolean = isFavorite
+
+    private fun sectionLabel(text: String): View =
+        TextView(context).apply {
+            this.text = text
+            setTextColor(dimmed)
+            textSize = 12f
+            isAllCaps = true
+            letterSpacing = 0.06f
+            setPadding(dp(8), dp(10), dp(8), dp(2))
+        }
+
+    private fun iconView(
+        symbol: MaterialSymbol?,
+        drawable: Int?,
+        tint: Int,
+        sizeDp: Int,
+    ): View =
+        if (drawable != null) {
+            ImageView(context).apply {
+                setImageResource(drawable)
+                setColorFilter(tint)
+                layoutParams = LayoutParams(dp(sizeDp), dp(sizeDp))
+            }
+        } else {
+            glyphText(symbol?.glyph.orEmpty(), tint, sizeDp).apply { layoutParams = LayoutParams(dp(sizeDp + 4), LayoutParams.WRAP_CONTENT) }
+        }
+
+    private fun glyphText(
+        glyph: String,
+        tint: Int,
+        sizeDp: Int,
+    ): TextView =
+        TextView(context).apply {
+            text = glyph
+            typeface = glyphs
+            setTextColor(tint)
+            setTextSize(TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat())
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }
+
+    private fun glyphButton(
+        symbol: MaterialSymbol,
+        description: String,
+        tint: Int,
+        onClick: () -> Unit,
+    ): TextView =
+        glyphText(symbol.glyph, tint, 22).apply {
+            contentDescription = description
+            tooltipText = description
+            minWidth = dp(44)
+            minHeight = dp(44)
+            isClickable = true
+            isFocusable = true
+            background = selectableBackground()
+            // Mirrored glyphs (back/forward) flip for right-to-left layouts, as Compose's autoMirror does.
+            if (symbol.autoMirror && resources.configuration.layoutDirection == LAYOUT_DIRECTION_RTL) scaleX = -1f
+            setOnClickListener { onClick() }
+        }
+
+    private fun selectableBackground() =
+        TypedValue().let { tv ->
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true)
+            ContextCompat.getDrawable(context, tv.resourceId)
         }
 
     private fun divider(): View =
         View(context).apply {
-            setBackgroundColor(dimmed and 0x33FFFFFF.toInt())
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(1))
+            setBackgroundColor(dimmed and 0x33FFFFFF)
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(0, dp(2), 0, dp(2)) }
         }
+
+    private fun hideKeyboard(view: View) {
+        context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(view.windowToken, 0)
+    }
 
     /** The grabber: a small rounded bar centered at the top edge; tap toggles, vertical drag opens/closes. */
     @SuppressLint("ClickableViewAccessibility")
@@ -489,12 +552,7 @@ class NappletControlSheet(
         return LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            // Wrap the grabber (a vertical LinearLayout defaults its children to MATCH_PARENT width, which
-            // would stretch this chip's background across the whole screen) and center it under the parent.
-            layoutParams =
-                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                    gravity = Gravity.CENTER_HORIZONTAL
-                }
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER_HORIZONTAL }
             setPadding(dp(16), dp(7), dp(16), dp(7))
             background =
                 GradientDrawable().apply {
@@ -541,16 +599,24 @@ class NappletControlSheet(
         }
     }
 
-    private fun expand() {
+    val isExpanded: Boolean get() = expanded
+
+    fun expand() {
         if (expanded) return
         expanded = true
+        render()
         panel.visibility = View.VISIBLE
     }
 
-    private fun collapse() {
+    fun collapse() {
         if (!expanded) return
         expanded = false
+        if (editingAddress) {
+            editingAddress = false
+            hideKeyboard(panel)
+        }
         panel.visibility = View.GONE
+        panel.removeAllViews()
     }
 
     private fun withAlpha(
@@ -565,4 +631,17 @@ class NappletControlSheet(
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    /** A [ScrollView] that stops growing at [maxHeightPx], so a long menu scrolls instead of covering the page. */
+    private class MaxHeightScrollView(
+        context: Context,
+        private val maxHeightPx: Int,
+    ) : ScrollView(context) {
+        override fun onMeasure(
+            widthMeasureSpec: Int,
+            heightMeasureSpec: Int,
+        ) {
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST))
+        }
+    }
 }

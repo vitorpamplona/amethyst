@@ -134,6 +134,29 @@ object NappletIpc {
      */
     const val MSG_WEB_FAVORITE_STATE = 15
 
+    /**
+     * Host → broker (browser mode): the remembered camera / microphone / location answers for
+     * [KEY_BROWSER_ORIGIN]. Carries [KEY_REQUEST_ID] (a long) for correlation; the broker answers `replyTo`
+     * with [MSG_SITE_PERMISSIONS], one `perm.<key>` string per permission holding its
+     * `BrowserSitePermission.Decision` name.
+     */
+    const val MSG_QUERY_SITE_PERMISSIONS = 16
+
+    /** Broker → host: the reply to [MSG_QUERY_SITE_PERMISSIONS]. */
+    const val MSG_SITE_PERMISSIONS = 17
+
+    /**
+     * Host → broker (browser mode): remember the user's answer ([KEY_SITE_DECISION]) for one permission
+     * ([KEY_SITE_PERMISSION], a `BrowserSitePermission.key`) on [KEY_BROWSER_ORIGIN]. Fire-and-forget.
+     */
+    const val MSG_SET_SITE_PERMISSION = 18
+
+    /**
+     * Host → broker (browser mode): pin a launcher shortcut to [KEY_FAVORITE_URL] labelled
+     * [KEY_FAVORITE_LABEL]. The shortcut opens the page full screen in Amethyst's browser. Fire-and-forget.
+     */
+    const val MSG_ADD_TO_HOME_SCREEN = 19
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
@@ -160,6 +183,15 @@ object NappletIpc {
 
     /** Boolean: whether [KEY_FAVORITE_URL] is (or should become) a favorite. */
     const val KEY_FAVORITE_IS_FAVORITE = "favoriteIsFavorite"
+
+    /** A `BrowserSitePermission.key` (`camera`, `microphone`, `location`). */
+    const val KEY_SITE_PERMISSION = "sitePermission"
+
+    /** A `BrowserSitePermission.Decision` name (`ASK`, `ALLOW`, `BLOCK`). */
+    const val KEY_SITE_DECISION = "siteDecision"
+
+    /** Prefix of the per-permission decision entries in a [MSG_SITE_PERMISSIONS] reply. */
+    const val KEY_SITE_PERMISSION_PREFIX = "perm."
 
     /** Boolean: this sandbox surface is now foreground (true) or backgrounded (false). */
     const val KEY_FOREGROUND = "foreground"

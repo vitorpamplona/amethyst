@@ -37,8 +37,10 @@ import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -47,6 +49,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
@@ -113,6 +116,9 @@ class NappletHostService : Service() {
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
         @Volatile var contentServer: NappletContentServer? = null
         var webView: WebView? = null
+
+        // The session's root view; a WebView lost to a renderer crash is rebuilt inside it on retry.
+        var container: FrameLayout? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -185,7 +191,17 @@ class NappletHostService : Service() {
                 replyWithAdapter(tab)
             }
             NappletEmbedContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
-            NappletEmbedContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
+            NappletEmbedContract.MSG_RELOAD -> {
+                val tab = tabFor(msg) ?: return true
+                val container = tab.container
+                // After a renderer crash the tab has no WebView: the retry builds a fresh one.
+                if (tab.webView == null && container != null) {
+                    val wv = createHostWebView(container.context, tab.sessionId, container)
+                    container.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                } else {
+                    tab.webView?.reload()
+                }
+            }
             // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
             // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
             // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
@@ -311,10 +327,14 @@ class NappletHostService : Service() {
     fun createHostWebView(
         context: Context,
         sessionId: String,
+        container: FrameLayout,
     ): WebView {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
+        tab.container = container
+        // A rebuild after a renderer crash: release the previous content server first.
+        tab.contentServer?.close()
         val wv = WebView(nightThemedContext(context, tab.themeType))
         // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
         // profile has otherwise been used), so the storage partition must be chosen before the
@@ -357,6 +377,7 @@ class NappletHostService : Service() {
         tab.contentServer = null
         tab.webView?.destroy()
         tab.webView = null
+        tab.container = null
     }
 
     @Suppress("SetJavaScriptEnabled")
@@ -531,6 +552,27 @@ class NappletHostService : Service() {
             if (!request.isForMainFrame) return
             tab.loadFailed = true
             pushLoadState(tab, isLoading = false)
+        }
+
+        /**
+         * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
+         * whole process — every other tab included. Drop just this tab's WebView and report the load as
+         * failed; the tab's retry (MSG_RELOAD) rebuilds it in the same surface.
+         */
+        override fun onRenderProcessGone(
+            view: WebView,
+            detail: RenderProcessGoneDetail,
+        ): Boolean {
+            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}) for an embedded napplet/nsite" }
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.destroy()
+            if (tab.webView === view) {
+                tab.webView = null
+                tab.bridgeReplyProxy = null
+                tab.loadFailed = true
+                pushLoadState(tab, isLoading = false)
+            }
+            return true
         }
 
         override fun shouldOverrideUrlLoading(

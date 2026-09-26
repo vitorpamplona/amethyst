@@ -28,6 +28,7 @@ import android.webkit.JsResult
 import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * Shows a web page's `alert()` / `confirm()` / `prompt()` / `beforeunload` dialogs for the full-screen
@@ -116,9 +117,9 @@ internal class BrowserJsDialogs(
      */
     fun beforeUnload(result: JsResult): Boolean =
         show(result, onBlocked = { result.confirm() }) { answer ->
-            setTitle(R.string.napplet_js_leave_title)
-            setMessage(R.string.napplet_js_leave_message)
-            setPositiveButton(R.string.napplet_js_leave) { _, _ -> answer { result.confirm() } }
+            setTitle(CommonsR.string.browser_js_leave_title)
+            setMessage(CommonsR.string.browser_js_leave_message)
+            setPositiveButton(CommonsR.string.browser_js_leave) { _, _ -> answer { result.confirm() } }
             setNegativeButton(android.R.string.cancel) { _, _ -> answer { result.cancel() } }
         }
 
@@ -151,7 +152,7 @@ internal class BrowserJsDialogs(
         shownOnThisPage++
         val builder = AlertDialog.Builder(activity).apply { build(answer) }
         if (shownOnThisPage > 1) {
-            builder.setNeutralButton(R.string.napplet_js_dialog_block) { _, _ ->
+            builder.setNeutralButton(CommonsR.string.browser_js_dialog_block) { _, _ ->
                 blocked = true
                 answer { onBlocked() }
             }
@@ -173,9 +174,9 @@ internal class BrowserJsDialogs(
         val scheme = uri?.scheme?.lowercase()
         val host = uri?.host?.takeIf { it.isNotBlank() }
         return if (host != null && (scheme == "http" || scheme == "https")) {
-            activity.getString(R.string.napplet_js_dialog_title, host)
+            activity.getString(CommonsR.string.browser_js_dialog_title, host)
         } else {
-            activity.getString(R.string.napplet_js_dialog_title_generic)
+            activity.getString(CommonsR.string.browser_js_dialog_title_generic)
         }
     }
 }

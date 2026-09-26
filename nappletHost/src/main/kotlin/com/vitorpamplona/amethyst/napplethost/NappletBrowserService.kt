@@ -27,6 +27,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -36,23 +37,34 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.GeolocationPermissions
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.ProxyConfig
+import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -61,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.Executor
 
 /**
  * Provider for the **embedded** in-app browser. Runs in the keyless `:napplet` process: it hosts the
@@ -97,6 +110,20 @@ class NappletBrowserService : Service() {
         val webViewProfile: String?,
     ) {
         var webView: WebView? = null
+
+        // The session's root view (holds the WebView, and the page's fullscreen view when it has one).
+        var container: FrameLayout? = null
+        var customView: View? = null
+        var customViewCallback: WebChromeClient.CustomViewCallback? = null
+
+        // Page-originated JS dialogs and permission requests waiting on the main process's answer.
+        val jsDialogs = mutableMapOf<Long, JsResult>()
+        var jsDialogsOnPage = 0
+        var jsDialogsBlocked = false
+        val permissionRequests = mutableMapOf<Long, (Set<BrowserSitePermission>) -> Unit>()
+        var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
+        var desktopSite = false
+
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -123,6 +150,9 @@ class NappletBrowserService : Service() {
     }
 
     private val tabs = mutableMapOf<String, BrowserTab>()
+
+    // WebView's PermissionRequest → our relay id, so a page's cancellation can withdraw the prompt.
+    private val pendingWebPermissions = mutableMapOf<PermissionRequest, Long>()
 
     // The shim never changes; read+decode it once instead of per tab on the main thread.
     private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
@@ -157,6 +187,7 @@ class NappletBrowserService : Service() {
         }
         tabs.values.forEach {
             it.fileChooser.cancel()
+            cancelPending(it)
             it.webView?.destroy()
         }
         tabs.clear()
@@ -177,7 +208,7 @@ class NappletBrowserService : Service() {
                         url = data.getString(NappletBrowserContract.KEY_URL)?.ifBlank { ABOUT_BLANK } ?: ABOUT_BLANK,
                         proxyPort = data.getInt(NappletBrowserContract.KEY_PROXY_PORT, -1),
                         useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false),
-                        bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
+                        bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, Color.WHITE),
                         themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
                         webViewProfile = data.getString(NappletBrowserContract.KEY_WEBVIEW_PROFILE),
                     )
@@ -189,7 +220,77 @@ class NappletBrowserService : Service() {
                 }
                 replyWithAdapter(tab)
             }
-            NappletBrowserContract.MSG_NAVIGATE -> tabFor(msg)?.webView?.loadUrl(normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()))
+            NappletBrowserContract.MSG_NAVIGATE -> {
+                val tab = tabFor(msg) ?: return true
+                val url = normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty())
+                // A renderer crash destroyed this tab's WebView; the user's retry builds a fresh one.
+                if (tab.webView == null) rebuildWebView(tab, url) else tab.webView?.loadUrl(url)
+            }
+            NappletBrowserContract.MSG_FORWARD -> tabFor(msg)?.webView?.let { if (it.canGoForward()) it.goForward() }
+            NappletBrowserContract.MSG_STOP -> tabFor(msg)?.webView?.stopLoading()
+            NappletBrowserContract.MSG_FIND -> {
+                val tab = tabFor(msg) ?: return true
+                val wv = tab.webView ?: return true
+                val query = msg.data?.getString(NappletBrowserContract.KEY_FIND_QUERY).orEmpty()
+                if (query.isEmpty()) {
+                    wv.clearMatches()
+                    wv.setFindListener(null)
+                } else {
+                    wv.setFindListener { active, total, _ -> pushFindResult(tab, active, total) }
+                    wv.findAllAsync(query)
+                }
+            }
+            NappletBrowserContract.MSG_FIND_NEXT -> tabFor(msg)?.webView?.findNext(msg.data?.getBoolean(NappletBrowserContract.KEY_FIND_FORWARD, true) ?: true)
+            NappletBrowserContract.MSG_SET_DESKTOP -> {
+                val tab = tabFor(msg) ?: return true
+                tab.desktopSite = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
+                tab.webView?.let { BrowserWebTools.setDesktopMode(it, tab.desktopSite) }
+            }
+            NappletBrowserContract.MSG_SET_TEXT_ZOOM -> {
+                val tab = tabFor(msg) ?: return true
+                tab.textZoom = msg.data?.getInt(NappletBrowserContract.KEY_TEXT_ZOOM, BrowserChrome.DEFAULT_TEXT_ZOOM) ?: BrowserChrome.DEFAULT_TEXT_ZOOM
+                tab.webView?.let { BrowserWebTools.setTextZoom(it, tab.textZoom) }
+            }
+            NappletBrowserContract.MSG_BACK_TO_SCOPE -> {
+                val tab = tabFor(msg) ?: return true
+                tab.webView?.let { BrowserWebTools.backToScope(it, msg.data?.getString(NappletBrowserContract.KEY_URL) ?: tab.url) }
+            }
+            NappletBrowserContract.MSG_CLEAR_SITE_DATA -> {
+                val tab = tabFor(msg) ?: return true
+                tab.webView?.let { wv -> wv.url?.let { BrowserWebTools.clearSiteData(this, wv, it) } }
+            }
+            NappletBrowserContract.MSG_PAGE_INFO_REQUEST -> {
+                val tab = tabFor(msg) ?: return true
+                val wv = tab.webView ?: return true
+                sendToClient(tab, NappletBrowserContract.MSG_PAGE_INFO) {
+                    putString(NappletBrowserContract.KEY_PAGE_INFO, BrowserWebTools.pageInfo(this@NappletBrowserService, wv, if (tab.proxyPort > 0) tab.useTor else null))
+                }
+            }
+            NappletBrowserContract.MSG_JS_DIALOG_RESULT -> {
+                val tab = tabFor(msg) ?: return true
+                val data = msg.data ?: return true
+                val result = tab.jsDialogs.remove(data.getLong(NappletBrowserContract.KEY_DIALOG_ID)) ?: return true
+                if (data.getBoolean(NappletBrowserContract.KEY_DIALOG_BLOCK, false)) tab.jsDialogsBlocked = true
+                val confirmed = data.getBoolean(NappletBrowserContract.KEY_DIALOG_CONFIRMED, false)
+                when {
+                    !confirmed -> result.cancel()
+                    result is JsPromptResult -> result.confirm(data.getString(NappletBrowserContract.KEY_DIALOG_TEXT).orEmpty())
+                    else -> result.confirm()
+                }
+            }
+            NappletBrowserContract.MSG_PERMISSION_RESULT -> {
+                val tab = tabFor(msg) ?: return true
+                val data = msg.data ?: return true
+                val answer = tab.permissionRequests.remove(data.getLong(NappletBrowserContract.KEY_PERMISSION_ID)) ?: return true
+                answer(
+                    data
+                        .getStringArray(NappletBrowserContract.KEY_PERMISSIONS)
+                        .orEmpty()
+                        .mapNotNull(BrowserSitePermission::fromKey)
+                        .toSet(),
+                )
+            }
+            NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
             NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
             NappletBrowserContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
             NappletBrowserContract.MSG_IME_OP -> {
@@ -285,10 +386,20 @@ class NappletBrowserService : Service() {
     fun createBrowserWebView(
         context: Context,
         sessionId: String,
+        container: FrameLayout,
     ): WebView {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
+        tab.container = container
+        return buildTabWebView(context, tab).also { it.loadUrl(tab.url) }
+    }
+
+    /** Builds [tab]'s WebView with every client, bridge and script wired, without loading anything. */
+    private fun buildTabWebView(
+        context: Context,
+        tab: BrowserTab,
+    ): WebView {
         val wv = WebView(nightThemedContext(context, tab.themeType))
         // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
         // profile has otherwise been used), so the storage partition must be chosen before the
@@ -302,14 +413,25 @@ class NappletBrowserService : Service() {
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, sourceOrigin, isMainFrame, replyProxy ->
             onBridgeMessage(tab, view, message, sourceOrigin, isMainFrame, replyProxy)
         }
-        // __nappletImeProxy: this is the EMBEDDED surface (no native keyboard), so install the IME agent
-        // that relays the focused field to the host's keyboard. The full-screen browser activity sets the
-        // direct bridge but NOT this flag (it has a real WebView window with a native keyboard).
-        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; window.__nappletImeProxy = true; }\n$shimJs"
-        WebViewCompat.addDocumentStartJavaScript(wv, startScript, setOf("*"))
+        // imeProxy: this is the EMBEDDED surface (no native keyboard), so install the IME agent that relays
+        // the focused field to the host's keyboard. The full-screen browser activity sets the direct bridge
+        // but NOT this flag (it has a real WebView window with a native keyboard).
+        WebViewCompat.addDocumentStartJavaScript(wv, BrowserWebTools.browserStartScript(shimJs, imeProxy = true), setOf("*"))
+        BrowserWebTools.setTextZoom(wv, tab.textZoom)
+        if (tab.desktopSite) BrowserWebTools.setDesktopMode(wv, true)
         tab.webView = wv
-        wv.loadUrl(tab.url)
         return wv
+    }
+
+    /** After a renderer crash: a fresh WebView in the same surface, loading [url]. */
+    private fun rebuildWebView(
+        tab: BrowserTab,
+        url: String,
+    ) {
+        val container = tab.container ?: return
+        val wv = buildTabWebView(container.context, tab)
+        container.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        wv.loadUrl(url)
     }
 
     /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
@@ -318,42 +440,155 @@ class NappletBrowserService : Service() {
         tab.bridgeReplyProxy = null
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
+        cancelPending(tab)
+        tab.customViewCallback?.onCustomViewHidden()
+        tab.customViewCallback = null
+        tab.customView = null
+        tab.container = null
         tab.webView?.destroy()
         tab.webView = null
     }
 
-    @Suppress("SetJavaScriptEnabled")
     private fun configureWebView(
         wv: WebView,
         tab: BrowserTab?,
     ) {
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            @Suppress("DEPRECATION")
-            databaseEnabled = false
-            allowFileAccess = false
-            allowContentAccess = false
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = false
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
-            setGeolocationEnabled(false)
-            mediaPlaybackRequiresUserGesture = true
-            builtInZoomControls = true
-            displayZoomControls = false
-            loadWithOverviewMode = true
-            useWideViewPort = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
-                safeBrowsingEnabled = true
-            }
-        }
-        WebView.setWebContentsDebuggingEnabled(false)
+        BrowserWebTools.applyBrowserSettings(wv)
         wv.webViewClient = BrowserClient(tab)
         wv.webChromeClient = BrowserChromeClient(tab)
+        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            val route = if (tab != null && tab.useTor) tab.proxyPort else -1
+            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), route)
+        }
+    }
+
+    /** Answers everything [tab] still has outstanding, so no page stays blocked on a torn-down surface. */
+    private fun cancelPending(tab: BrowserTab) {
+        tab.jsDialogs.values.forEach { it.cancel() }
+        tab.jsDialogs.clear()
+        pendingWebPermissions.values.removeAll(tab.permissionRequests.keys)
+        tab.permissionRequests.values.forEach { it(emptySet()) }
+        tab.permissionRequests.clear()
+    }
+
+    private inline fun sendToClient(
+        tab: BrowserTab,
+        what: Int,
+        crossinline block: Bundle.() -> Unit,
+    ): Boolean {
+        val client = tab.clientMessenger ?: return false
+        val message = Message.obtain(null, what).apply { data = Bundle().apply(block) }
+        return runCatching { client.send(message) }.isSuccess
+    }
+
+    private fun pushFindResult(
+        tab: BrowserTab,
+        active: Int,
+        total: Int,
+    ) {
+        sendToClient(tab, NappletBrowserContract.MSG_FIND_RESULT) {
+            putInt(NappletBrowserContract.KEY_FIND_ACTIVE, active)
+            putInt(NappletBrowserContract.KEY_FIND_TOTAL, total)
+        }
+    }
+
+    private var dialogSeq = 0L
+
+    /**
+     * Relays a page's JS dialog to the main process, which draws it over the tab (this provider has no
+     * window). Answers at once when dialogs are blocked for this page or no client can show one.
+     */
+    private fun relayJsDialog(
+        tab: BrowserTab?,
+        type: String,
+        url: String?,
+        message: String?,
+        defaultValue: String?,
+        result: JsResult,
+    ): Boolean {
+        if (tab == null) {
+            result.cancel()
+            return true
+        }
+        if (tab.jsDialogsBlocked) {
+            // A blocked page may no longer hold the user on it: leaving is allowed, everything else cancels.
+            if (type == "beforeunload") result.confirm() else result.cancel()
+            return true
+        }
+        val id = ++dialogSeq
+        tab.jsDialogs[id] = result
+        tab.jsDialogsOnPage++
+        val sent =
+            sendToClient(tab, NappletBrowserContract.MSG_JS_DIALOG) {
+                putLong(NappletBrowserContract.KEY_DIALOG_ID, id)
+                putString(NappletBrowserContract.KEY_DIALOG_TYPE, type)
+                putString(NappletBrowserContract.KEY_URL, url)
+                putString(NappletBrowserContract.KEY_DIALOG_MESSAGE, message)
+                putString(NappletBrowserContract.KEY_DIALOG_DEFAULT, defaultValue)
+                putBoolean(NappletBrowserContract.KEY_DIALOG_OFFER_BLOCK, tab.jsDialogsOnPage > 1)
+            }
+        if (!sent) tab.jsDialogs.remove(id)?.cancel()
+        return true
+    }
+
+    private var permissionSeq = 0L
+
+    /** Relays a camera / microphone / location request to the main process, which owns the prompt. */
+    private fun relayPermissionRequest(
+        tab: BrowserTab?,
+        origin: String?,
+        wanted: Set<BrowserSitePermission>,
+        answer: (Set<BrowserSitePermission>) -> Unit,
+    ): Long? {
+        if (tab == null || origin == null || wanted.isEmpty()) {
+            answer(emptySet())
+            return null
+        }
+        val id = ++permissionSeq
+        tab.permissionRequests[id] = answer
+        val sent =
+            sendToClient(tab, NappletBrowserContract.MSG_PERMISSION_REQUEST) {
+                putLong(NappletBrowserContract.KEY_PERMISSION_ID, id)
+                putString(NappletBrowserContract.KEY_BROWSER_ORIGIN, origin)
+                putStringArray(NappletBrowserContract.KEY_PERMISSIONS, wanted.map { it.key }.toTypedArray())
+            }
+        if (!sent) tab.permissionRequests.remove(id)?.invoke(emptySet())
+        return id
+    }
+
+    private fun sitePermissionFor(resource: String): BrowserSitePermission? =
+        when (resource) {
+            PermissionRequest.RESOURCE_VIDEO_CAPTURE -> BrowserSitePermission.CAMERA
+            PermissionRequest.RESOURCE_AUDIO_CAPTURE -> BrowserSitePermission.MICROPHONE
+            else -> null
+        }
+
+    /** HTML fullscreen inside the surface: the page's view covers the tab; back (from the client) leaves it. */
+    private fun enterFullscreen(
+        tab: BrowserTab?,
+        view: View,
+        callback: WebChromeClient.CustomViewCallback,
+    ) {
+        val container = tab?.container
+        if (tab == null || container == null || tab.customView != null) {
+            callback.onCustomViewHidden()
+            return
+        }
+        tab.customView = view
+        tab.customViewCallback = callback
+        view.setBackgroundColor(Color.BLACK)
+        container.addView(view, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        sendToClient(tab, NappletBrowserContract.MSG_FULLSCREEN) { putBoolean(NappletBrowserContract.KEY_ENABLED, true) }
+    }
+
+    private fun exitFullscreen(tab: BrowserTab) {
+        val view = tab.customView ?: return
+        tab.customView = null
+        tab.container?.removeView(view)
+        val callback = tab.customViewCallback
+        tab.customViewCallback = null
+        callback?.onCustomViewHidden()
+        sendToClient(tab, NappletBrowserContract.MSG_FULLSCREEN) { putBoolean(NappletBrowserContract.KEY_ENABLED, false) }
     }
 
     private inner class BrowserChromeClient(
@@ -391,6 +626,91 @@ class NappletBrowserService : Service() {
             view: WebView,
             title: String?,
         ) = pushUrl(tab, view)
+
+        // This WebView is built from a Service context, so the framework can't show JS dialogs itself
+        // (it needs an Activity); the main process draws them over the tab instead.
+        override fun onJsAlert(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = relayJsDialog(tab, "alert", url, message, null, result)
+
+        override fun onJsConfirm(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = relayJsDialog(tab, "confirm", url, message, null, result)
+
+        override fun onJsPrompt(
+            view: WebView,
+            url: String?,
+            message: String?,
+            defaultValue: String?,
+            result: JsPromptResult,
+        ): Boolean = relayJsDialog(tab, "prompt", url, message, defaultValue, result)
+
+        override fun onJsBeforeUnload(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = relayJsDialog(tab, "beforeunload", url, message, null, result)
+
+        /** `_blank` / user-initiated `window.open()`: a new full-screen browser window, `opener` intact. */
+        override fun onCreateWindow(
+            view: WebView,
+            isDialog: Boolean,
+            isUserGesture: Boolean,
+            resultMsg: Message,
+        ): Boolean {
+            val tab = tab ?: return false
+            if (!isUserGesture) return false
+            val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+            val (token, child) = BrowserPopups.create(this@NappletBrowserService, shimJs, tab.proxyPort, tab.useTor, tab.themeType, tab.webViewProfile)
+            transport.webView = child
+            resultMsg.sendToTarget()
+            runCatching { startActivity(NappletBrowserActivity.popupIntent(this@NappletBrowserService, token)) }
+                .onFailure { Log.w(TAG, "Could not open the new window", it) }
+            return true
+        }
+
+        override fun onPermissionRequest(request: PermissionRequest) {
+            val wanted = request.resources.mapNotNull(::sitePermissionFor).toSet()
+            val id =
+                relayPermissionRequest(tab, BrowserChrome.originOf(request.origin.toString()), wanted) { granted ->
+                    val resources = request.resources.filter { sitePermissionFor(it) in granted }.toTypedArray()
+                    if (resources.isEmpty()) request.deny() else request.grant(resources)
+                }
+            if (id != null) pendingWebPermissions[request] = id
+        }
+
+        override fun onPermissionRequestCanceled(request: PermissionRequest) {
+            val id = pendingWebPermissions.remove(request) ?: return
+            val tab = tab ?: return
+            tab.permissionRequests.remove(id)
+            sendToClient(tab, NappletBrowserContract.MSG_PERMISSION_CANCEL) { putLong(NappletBrowserContract.KEY_PERMISSION_ID, id) }
+        }
+
+        override fun onGeolocationPermissionsShowPrompt(
+            origin: String,
+            callback: GeolocationPermissions.Callback,
+        ) {
+            relayPermissionRequest(tab, BrowserChrome.originOf(origin), setOf(BrowserSitePermission.LOCATION)) { granted ->
+                // Never let WebView remember it: the answer lives in the main-process registry.
+                callback.invoke(origin, BrowserSitePermission.LOCATION in granted, false)
+            }
+        }
+
+        override fun onShowCustomView(
+            view: View,
+            callback: CustomViewCallback,
+        ) = enterFullscreen(tab, view, callback)
+
+        override fun onHideCustomView() {
+            tab?.let { exitFullscreen(it) }
+        }
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             if (tab == null) return false
@@ -468,19 +788,18 @@ class NappletBrowserService : Service() {
             val uri = request.url
             val scheme = uri.scheme?.lowercase()
             if (scheme == "http" || scheme == "https") return false
-            if (request.hasGesture()) {
-                runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
-            return true
+            return BrowserWebTools.openExternal(this@NappletBrowserService, uri, request.hasGesture()) { view.loadUrl(it) }
         }
 
         override fun onPageStarted(
             view: WebView,
             url: String,
-            favicon: android.graphics.Bitmap?,
+            favicon: Bitmap?,
         ) {
-            // A new main-frame navigation cleared any prior error.
+            // A new main-frame navigation cleared any prior error, and lifts "block this page's dialogs".
             tab?.loadFailed = false
+            tab?.jsDialogsOnPage = 0
+            tab?.jsDialogsBlocked = false
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
             if (tab != null && OmniboxInput.hostOf(url) != tab.lastIconHost) tab.lastIconHost = null
             // view.title still names the page being left; the new one's arrives via onReceivedTitle.
@@ -513,6 +832,35 @@ class NappletBrowserService : Service() {
             if (!request.isForMainFrame) return
             tab?.loadFailed = true
             pushLoadState(tab, view, isLoading = false)
+        }
+
+        /**
+         * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
+         * whole process — every other tab included. Drop just this tab's WebView and report the load as
+         * failed; the tab's retry (MSG_NAVIGATE) builds a fresh WebView in the same surface.
+         */
+        override fun onRenderProcessGone(
+            view: WebView,
+            detail: RenderProcessGoneDetail,
+        ): Boolean {
+            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}) for an embedded tab" }
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.destroy()
+            val tab = tab ?: return true
+            if (tab.webView === view) {
+                tab.webView = null
+                tab.customView?.let { tab.container?.removeView(it) }
+                tab.customView = null
+                tab.customViewCallback = null
+                cancelPending(tab)
+                tab.loadFailed = true
+                sendToClient(tab, NappletBrowserContract.MSG_LOAD_STATE) {
+                    putBoolean(NappletBrowserContract.KEY_IS_LOADING, false)
+                    putBoolean(NappletBrowserContract.KEY_LOAD_FAILED, true)
+                    putString(NappletBrowserContract.KEY_URL, tab.url)
+                }
+            }
+            return true
         }
     }
 
@@ -548,6 +896,7 @@ class NappletBrowserService : Service() {
                     Bundle().apply {
                         putString(NappletBrowserContract.KEY_URL, url)
                         putBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, view.canGoBack())
+                        putBoolean(NappletBrowserContract.KEY_CAN_GO_FORWARD, view.canGoForward())
                         title?.let { putString(NappletBrowserContract.KEY_TITLE, it) }
                     }
             }
@@ -568,21 +917,13 @@ class NappletBrowserService : Service() {
             onApplied()
             return
         }
-        val executor = java.util.concurrent.Executor { it.run() }
+        val executor = Executor { it.run() }
         runCatching {
             if (port > 0) {
-                val config =
-                    androidx.webkit.ProxyConfig
-                        .Builder()
-                        .addProxyRule("socks5://127.0.0.1:$port")
-                        .build()
-                androidx.webkit.ProxyController
-                    .getInstance()
-                    .setProxyOverride(config, executor) { onApplied() }
+                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
+                ProxyController.getInstance().setProxyOverride(config, executor) { onApplied() }
             } else {
-                androidx.webkit.ProxyController
-                    .getInstance()
-                    .clearProxyOverride(executor) { onApplied() }
+                ProxyController.getInstance().clearProxyOverride(executor) { onApplied() }
             }
         }.onFailure {
             Log.w(TAG, "Failed to apply WebView proxy override", it)
@@ -606,6 +947,23 @@ class NappletBrowserService : Service() {
         tab.bridgeReplyProxy = replyProxy
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
+
+        // Browser conveniences (share, blob downloads) are handled here, never brokered. The theme colour
+        // only matters to a window with system bars, which an embedded tab doesn't own.
+        when (envelope.stringOrNull("type")) {
+            "browser.share" -> {
+                BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
+                return
+            }
+            "browser.download" -> {
+                val data = envelope.stringOrNull("data") ?: return
+                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
+                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
+                }
+                return
+            }
+            "browser.themeColor" -> return
+        }
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
         if (envelope.stringOrNull("type").orEmpty().startsWith("ime.")) {
