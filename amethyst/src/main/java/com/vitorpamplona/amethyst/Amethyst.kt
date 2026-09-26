@@ -23,12 +23,15 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.amethyst.service.okhttp.isEmulator
@@ -38,6 +41,8 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -144,6 +149,17 @@ class Amethyst : Application() {
 
         // Hydrate the device-local favorite-apps list (main process only; the sandbox never reads it).
         FavoriteAppsRegistry.init(this)
+
+        // Mirror web-app favorites into the launcher's long-press shortcuts (open in Amethyst's browser).
+        CoroutineScope(Dispatchers.Default).launch {
+            FavoriteAppsRegistry.favorites
+                .map { apps -> apps.filterIsInstance<FavoriteApp.WebApp>().map { it.url to it.label } }
+                .distinctUntilChanged()
+                .collect { WebShortcuts.publishFavorites(this@Amethyst, FavoriteAppsRegistry.favorites.value) }
+        }
+
+        // Hydrate the per-site camera/microphone/location answers the browser asks about.
+        WebSitePermissionRegistry.init(this)
 
         // Hydrate the device-local browser visit history (main process only; feeds the omnibox suggestions).
         BrowserHistoryRegistry.init(this)

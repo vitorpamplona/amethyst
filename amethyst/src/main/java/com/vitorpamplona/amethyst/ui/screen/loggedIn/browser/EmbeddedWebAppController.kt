@@ -35,10 +35,13 @@ import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
@@ -48,6 +51,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
@@ -69,7 +74,8 @@ class EmbeddedWebAppController(
 ) : EmbeddedSurfaceController,
     EmbeddedImeBridge,
     EmbeddedMagnifierProbe,
-    ConsoleBridge {
+    ConsoleBridge,
+    FindBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -106,8 +112,28 @@ class EmbeddedWebAppController(
     // previous view can never reap the replacement.
     private var sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
 
-    /** Invoked on the main thread when the page navigates or retitles: (url, title or null, canGoBack). */
-    var onUrlChanged: ((String, String?, Boolean) -> Unit)? = null
+    /** Invoked on the main thread when the page navigates or retitles: (url, title or null, canGoBack, canGoForward). */
+    var onUrlChanged: ((String, String?, Boolean, Boolean) -> Unit)? = null
+
+    // ---- page-initiated UI, drawn by the main process (the provider has no window) ----
+
+    private val _findResult = mutableStateOf<FindResult?>(null)
+    override val findResult: State<FindResult?> = _findResult
+
+    /** The JS dialog the page is waiting on, if any. */
+    val pendingDialog = mutableStateOf<EmbeddedJsDialog?>(null)
+
+    /** The camera / microphone / location request the page is waiting on, if any. */
+    val pendingPermission = mutableStateOf<EmbeddedPermissionRequest?>(null)
+
+    /** Page-info text for the page on screen, once requested. */
+    val pageInfo = mutableStateOf<String?>(null)
+
+    /** A main-frame load is in flight (the pill's reload button becomes stop). */
+    val isLoading = mutableStateOf(false)
+
+    /** The page is showing HTML fullscreen (a video) inside the surface. */
+    val isFullscreen = mutableStateOf(false)
 
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
@@ -150,6 +176,9 @@ class EmbeddedWebAppController(
         onMagnifierFrame = null
         onLoadStatusChanged = null
         consoleLogs.clear()
+        pendingDialog.value = null
+        pendingPermission.value = null
+        isFullscreen.value = false
     }
 
     override fun teardown() = unbind()
@@ -235,8 +264,9 @@ class EmbeddedWebAppController(
             NappletBrowserContract.MSG_URL_CHANGED -> {
                 val url = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
+                val canGoForward = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_FORWARD, false) ?: false
                 val title = msg.data?.getString(NappletBrowserContract.KEY_TITLE)
-                onUrlChanged?.invoke(url, title, canGoBack)
+                onUrlChanged?.invoke(url, title, canGoBack, canGoForward)
             }
             NappletBrowserContract.MSG_IME_EVENT -> {
                 val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true
@@ -275,6 +305,56 @@ class EmbeddedWebAppController(
                     }
                 }
             }
+            NappletBrowserContract.MSG_FIND_RESULT -> {
+                val data = msg.data ?: return true
+                _findResult.value = FindResult(data.getInt(NappletBrowserContract.KEY_FIND_ACTIVE), data.getInt(NappletBrowserContract.KEY_FIND_TOTAL))
+            }
+            NappletBrowserContract.MSG_PAGE_INFO -> pageInfo.value = msg.data?.getString(NappletBrowserContract.KEY_PAGE_INFO)
+            NappletBrowserContract.MSG_JS_DIALOG -> {
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_DIALOG_ID)
+                // One page, one dialog at a time; if another is somehow still up, the newcomer is refused.
+                if (pendingDialog.value != null) {
+                    answerDialog(id, confirmed = false)
+                    return true
+                }
+                pendingDialog.value =
+                    EmbeddedJsDialog(
+                        id = id,
+                        type =
+                            when (data.getString(NappletBrowserContract.KEY_DIALOG_TYPE)) {
+                                "confirm" -> EmbeddedJsDialog.Type.CONFIRM
+                                "prompt" -> EmbeddedJsDialog.Type.PROMPT
+                                "beforeunload" -> EmbeddedJsDialog.Type.BEFORE_UNLOAD
+                                else -> EmbeddedJsDialog.Type.ALERT
+                            },
+                        url = data.getString(NappletBrowserContract.KEY_URL),
+                        message = data.getString(NappletBrowserContract.KEY_DIALOG_MESSAGE).orEmpty(),
+                        defaultValue = data.getString(NappletBrowserContract.KEY_DIALOG_DEFAULT).orEmpty(),
+                        offerBlock = data.getBoolean(NappletBrowserContract.KEY_DIALOG_OFFER_BLOCK, false),
+                    )
+            }
+            NappletBrowserContract.MSG_PERMISSION_REQUEST -> {
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_PERMISSION_ID)
+                val origin = data.getString(NappletBrowserContract.KEY_BROWSER_ORIGIN)
+                val wanted =
+                    data
+                        .getStringArray(NappletBrowserContract.KEY_PERMISSIONS)
+                        .orEmpty()
+                        .mapNotNull(BrowserSitePermission::fromKey)
+                        .toSet()
+                if (origin == null || wanted.isEmpty() || pendingPermission.value != null) {
+                    answerPermission(id, emptySet())
+                } else {
+                    pendingPermission.value = EmbeddedPermissionRequest(id, origin, wanted)
+                }
+            }
+            NappletBrowserContract.MSG_PERMISSION_CANCEL -> {
+                val id = msg.data?.getLong(NappletBrowserContract.KEY_PERMISSION_ID)
+                if (pendingPermission.value?.id == id) pendingPermission.value = null
+            }
+            NappletBrowserContract.MSG_FULLSCREEN -> isFullscreen.value = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
                 val bytes = data.getByteArray(NappletBrowserContract.KEY_MAG_BYTES) ?: return true
@@ -330,12 +410,68 @@ class EmbeddedWebAppController(
 
     private fun publishLoadStatus(status: EmbeddedLoadStatus) {
         loadStatus = status
+        isLoading.value = status.isLoading
         onLoadStatusChanged?.invoke(status)
     }
 
     private fun String.isBlankPage() = isEmpty() || this == "about:blank"
 
     fun back() = send(NappletBrowserContract.MSG_BACK) {}
+
+    fun forward() = send(NappletBrowserContract.MSG_FORWARD) {}
+
+    fun stop() = send(NappletBrowserContract.MSG_STOP) {}
+
+    override fun find(query: String) {
+        if (query.isEmpty()) _findResult.value = null
+        send(NappletBrowserContract.MSG_FIND) { putString(NappletBrowserContract.KEY_FIND_QUERY, query) }
+    }
+
+    override fun findNext(forward: Boolean) = send(NappletBrowserContract.MSG_FIND_NEXT) { putBoolean(NappletBrowserContract.KEY_FIND_FORWARD, forward) }
+
+    fun setDesktopSite(enabled: Boolean) = send(NappletBrowserContract.MSG_SET_DESKTOP) { putBoolean(NappletBrowserContract.KEY_ENABLED, enabled) }
+
+    fun setTextZoom(percent: Int) = send(NappletBrowserContract.MSG_SET_TEXT_ZOOM) { putInt(NappletBrowserContract.KEY_TEXT_ZOOM, percent) }
+
+    /** Back to the app's home origin ([homeUrl]), Chrome's out-of-scope ✕. */
+    fun backToScope(homeUrl: String) = send(NappletBrowserContract.MSG_BACK_TO_SCOPE) { putString(NappletBrowserContract.KEY_URL, homeUrl) }
+
+    fun clearSiteData() = send(NappletBrowserContract.MSG_CLEAR_SITE_DATA) {}
+
+    fun requestPageInfo() {
+        pageInfo.value = null
+        send(NappletBrowserContract.MSG_PAGE_INFO_REQUEST) {}
+    }
+
+    fun exitFullscreen() = send(NappletBrowserContract.MSG_EXIT_FULLSCREEN) {}
+
+    /** Answers the page's JS dialog [id]; [block] suppresses its further dialogs until it navigates. */
+    fun answerDialog(
+        id: Long,
+        confirmed: Boolean,
+        text: String? = null,
+        block: Boolean = false,
+    ) {
+        if (pendingDialog.value?.id == id) pendingDialog.value = null
+        send(NappletBrowserContract.MSG_JS_DIALOG_RESULT) {
+            putLong(NappletBrowserContract.KEY_DIALOG_ID, id)
+            putBoolean(NappletBrowserContract.KEY_DIALOG_CONFIRMED, confirmed)
+            text?.let { putString(NappletBrowserContract.KEY_DIALOG_TEXT, it) }
+            putBoolean(NappletBrowserContract.KEY_DIALOG_BLOCK, block)
+        }
+    }
+
+    /** Grants [granted] (possibly nothing) for the page's permission request [id]. */
+    fun answerPermission(
+        id: Long,
+        granted: Set<BrowserSitePermission>,
+    ) {
+        if (pendingPermission.value?.id == id) pendingPermission.value = null
+        send(NappletBrowserContract.MSG_PERMISSION_RESULT) {
+            putLong(NappletBrowserContract.KEY_PERMISSION_ID, id)
+            putStringArray(NappletBrowserContract.KEY_PERMISSIONS, granted.map { it.key }.toTypedArray())
+        }
+    }
 
     fun setTor(useTor: Boolean) = send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
 

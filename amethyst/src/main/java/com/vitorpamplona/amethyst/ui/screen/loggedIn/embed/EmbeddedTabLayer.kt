@@ -29,6 +29,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.SystemClock
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -274,11 +275,13 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         val chrome = EmbeddedTabHost.activeChrome
         val consoleBridge = activeController as? ConsoleBridge
         val consoleCount = consoleBridge?.consoleLogs?.size ?: 0
+        val findBridge = activeController as? FindBridge
 
         if (chrome != null && bounds.width > 0f && bounds.height > 0f) {
             var sheetExpanded by remember(activeId) { mutableStateOf(false) }
             var consoleShowing by remember(activeId) { mutableStateOf(false) }
             var consoleExpanded by remember(activeId) { mutableStateOf(false) }
+            var findShowing by remember(activeId) { mutableStateOf(false) }
 
             if (sheetExpanded) {
                 Box(
@@ -304,9 +307,21 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                                 if (consoleShowing) {
                                     consoleShowing = false
                                 } else {
+                                    // One bottom panel at a time: the console replaces the find bar.
+                                    if (findShowing) findBridge?.find("")
+                                    findShowing = false
                                     consoleShowing = true
                                     consoleExpanded = true
                                 }
+                            }
+                        } else {
+                            null
+                        },
+                    onFind =
+                        if (findBridge != null) {
+                            {
+                                consoleShowing = false
+                                findShowing = true
                             }
                         } else {
                             null
@@ -318,6 +333,26 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                                 (bounds.top - layerOrigin.y).toDp(),
                             ).width(bounds.width.toDp()),
                 )
+            }
+
+            // Find in page: opened via the "Find in page" row in the top pull-down sheet.
+            if (findShowing && findBridge != null) {
+                BackHandler {
+                    findBridge.find("")
+                    findShowing = false
+                }
+                with(density) {
+                    EmbeddedFindBar(
+                        bridge = findBridge,
+                        onClose = { findShowing = false },
+                        modifier =
+                            Modifier
+                                .absoluteOffset(
+                                    (bounds.left - layerOrigin.x).toDp(),
+                                    (bounds.top - layerOrigin.y).toDp(),
+                                ).size(bounds.width.toDp(), bounds.height.toDp()),
+                    )
+                }
             }
 
             // Bottom console panel: opened via the "Console" row in the top pull-down sheet.

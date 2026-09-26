@@ -37,6 +37,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
@@ -114,6 +117,7 @@ import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.napplet.NappletBrokerService
+import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
@@ -321,6 +325,11 @@ fun ConnectedAppDetailScreen(
                 }
             }
 
+            // Camera / microphone / location answers for a website (`browser:<origin>`), editable here.
+            if (coordinate.startsWith(BROWSER_PREFIX)) {
+                SitePermissionsSection(coordinate.removePrefix(BROWSER_PREFIX))
+            }
+
             // Recent activity (NIP-46 clients only)
             if (nip46Client != null && nip46Activity.isNotEmpty()) {
                 SectionHeader(stringRes(Res.string.nip46_signer_activity_title))
@@ -341,6 +350,11 @@ fun ConnectedAppDetailScreen(
                             signerLedger.revokeAll(coordinate)
                         }
                         capabilityLedger.revokeAll(identity)
+                        // A forgotten website also loses its camera / microphone / location answers.
+                        if (coordinate.startsWith(BROWSER_PREFIX)) {
+                            val origin = coordinate.removePrefix(BROWSER_PREFIX)
+                            BrowserSitePermission.entries.forEach { WebSitePermissionRegistry.set(origin, it, BrowserSitePermission.Decision.ASK) }
+                        }
                         // Forgetting an app has to stop it signing *now*. The two ledgers above only
                         // drop persisted + capability grants; the broker separately holds the signer's
                         // in-memory "allow for this session" grants, which would otherwise keep the
@@ -533,6 +547,69 @@ private fun AppIdentityHeader(state: ConnectedAppDetailState) {
         }
     }
 }
+
+private const val BROWSER_PREFIX = "browser:"
+
+/**
+ * The site's camera / microphone / location answers ([WebSitePermissionRegistry]), each switchable between
+ * Ask, Allow and Block — Chrome's per-site permission list.
+ */
+@Composable
+private fun SitePermissionsSection(origin: String) {
+    val all by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
+    val decisions = all[origin].orEmpty()
+    SectionHeader(stringRes(CommonsR.string.browser_permission_section))
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(4.dp)) {
+            BrowserSitePermission.entries.forEachIndexed { index, permission ->
+                if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+                val decision = decisions[permission] ?: BrowserSitePermission.Decision.ASK
+                var menuOpen by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringRes(
+                            when (permission) {
+                                BrowserSitePermission.CAMERA -> CommonsR.string.browser_permission_camera
+                                BrowserSitePermission.MICROPHONE -> CommonsR.string.browser_permission_microphone
+                                BrowserSitePermission.LOCATION -> CommonsR.string.browser_permission_location
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box {
+                        TextButton(onClick = { menuOpen = true }) { Text(stringRes(decision.labelRes())) }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            BrowserSitePermission.Decision.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(stringRes(option.labelRes())) },
+                                    onClick = {
+                                        menuOpen = false
+                                        WebSitePermissionRegistry.set(origin, permission, option)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun BrowserSitePermission.Decision.labelRes(): Int =
+    when (this) {
+        BrowserSitePermission.Decision.ASK -> CommonsR.string.browser_permission_ask
+        BrowserSitePermission.Decision.ALLOW -> CommonsR.string.browser_permission_allowed
+        BrowserSitePermission.Decision.BLOCK -> CommonsR.string.browser_permission_blocked
+    }
 
 @Composable
 private fun SectionHeader(text: String) {

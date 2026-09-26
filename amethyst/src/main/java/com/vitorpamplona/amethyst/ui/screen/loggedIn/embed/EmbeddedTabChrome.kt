@@ -20,30 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+
 /**
- * The controls a running app surface offers through its top pull-down sheet — described as plain data so
+ * The controls a running app surface offers through its top pull-down pill — described as plain data so
  * [EmbeddedTabLayer] can draw the sheet over the (z-below) surface for the active tab. Deliberately not a
  * corner pill: that's where a site usually puts the user's own avatar/menu, so the handle lives at the
- * top-center instead and only the actions the surface actually supports are shown.
+ * top-center instead.
+ *
+ * *Which* actions show, and in what order, comes from [BrowserChrome] with [state] — the same layout the
+ * full-screen browser's native sheet uses — so the two can't drift. Everything the user picks arrives in
+ * [onAction]; the console and find-in-page rows are handled by the layer itself.
  */
 data class EmbeddedTabChrome(
     val title: String,
-    /** A sandboxed napplet/nsite (shows the shield + "what it can access"), vs a plain web client. */
-    val isSandbox: Boolean,
-    val onReload: () -> Unit,
-    val onOpenFull: () -> Unit,
-    /** Current Tor state, or null when this surface has no Tor toggle (Tor off / locked napplet). */
-    val torOn: Boolean? = null,
-    val onToggleTor: () -> Unit = {},
-    /** The "what it can access" sheet, for sandboxed napplets/nsites; null for a plain web client. */
-    val onInfo: (() -> Unit)? = null,
-    /**
-     * Opens this app's editable permission screen (the "Connected Apps" detail) so the user can change
-     * trust level and per-capability grants as they browse; null when the surface has no managed identity.
-     */
-    val onPermissions: (() -> Unit)? = null,
-    /** Whether the current URL/app is already saved as a favorite. */
+    val state: BrowserChrome.State,
     val isFavorite: Boolean = false,
-    /** Toggles the current site/app in the favorites registry; null when not applicable. */
-    val onFavorite: (() -> Unit)? = null,
+    val desktopSite: Boolean = false,
+    val textZoom: Int = BrowserChrome.DEFAULT_TEXT_ZOOM,
+    val onAction: (BrowserChrome.Action) -> Unit,
+    /** The user typed an address into "Edit address" and pressed Go. */
+    val onNavigate: (String) -> Unit = {},
+    val onTextZoom: (Int) -> Unit = {},
+    /** The origin chip was tapped: page info (web) or the access summary (sandboxed apps). */
+    val onOriginTap: () -> Unit = {},
 )

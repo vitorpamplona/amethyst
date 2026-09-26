@@ -665,6 +665,16 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Amethyst" />
 
+        <!-- Target of web-app launcher shortcuts (Add to Home screen + favorites). Main process, so the
+             app and Tor are up before it hands the URL to the full-screen browser; draws nothing. -->
+        <activity
+            android:name=".favorites.WebShortcutActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Capability-consent dialog. Runs in the main process (the only side trusted to grant). -->
         <activity
             android:name=".napplet.NappletConsentActivity"

@@ -33,6 +33,7 @@ import android.os.RemoteException
 import android.os.SystemClock
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
@@ -246,6 +248,47 @@ class NappletBrokerService : Service() {
             val url = msg.data?.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
             FavoriteAppsRegistry.init(applicationContext)
             replyWebFavoriteState(replyTo, url)
+            return true
+        }
+
+        // The browser asks what the user already answered for a site's camera/microphone/location.
+        if (msg.what == NappletIpc.MSG_QUERY_SITE_PERMISSIONS) {
+            val replyTo = msg.replyTo ?: return true
+            val data = msg.data ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            WebSitePermissionRegistry.init(applicationContext)
+            val reply =
+                Message.obtain(null, NappletIpc.MSG_SITE_PERMISSIONS).apply {
+                    this.data =
+                        Bundle().apply {
+                            putLong(NappletIpc.KEY_REQUEST_ID, data.getLong(NappletIpc.KEY_REQUEST_ID))
+                            putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                            BrowserSitePermission.entries.forEach { permission ->
+                                putString(NappletIpc.KEY_SITE_PERMISSION_PREFIX + permission.key, WebSitePermissionRegistry.decision(origin, permission).name)
+                            }
+                        }
+                }
+            runCatching { replyTo.send(reply) }
+            return true
+        }
+
+        // The browser relays the user's answer to a site's permission prompt; remember it per origin.
+        if (msg.what == NappletIpc.MSG_SET_SITE_PERMISSION) {
+            val data = msg.data ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            val permission = BrowserSitePermission.fromKey(data.getString(NappletIpc.KEY_SITE_PERMISSION)) ?: return true
+            val decision = runCatching { BrowserSitePermission.Decision.valueOf(data.getString(NappletIpc.KEY_SITE_DECISION).orEmpty()) }.getOrNull() ?: return true
+            WebSitePermissionRegistry.init(applicationContext)
+            WebSitePermissionRegistry.set(origin, permission, decision)
+            return true
+        }
+
+        // The full-screen browser's "Add to Home screen": pin a shortcut that reopens it in Amethyst.
+        if (msg.what == NappletIpc.MSG_ADD_TO_HOME_SCREEN) {
+            val data = msg.data ?: return true
+            val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return true
+            BrowserIconRegistry.init(applicationContext)
+            WebShortcuts.requestPin(applicationContext, url, data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty())
             return true
         }
 

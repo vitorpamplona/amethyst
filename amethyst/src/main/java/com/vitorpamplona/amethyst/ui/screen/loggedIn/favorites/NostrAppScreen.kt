@@ -54,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
@@ -174,20 +175,37 @@ private fun EmbeddedNostrAppTab(
         remember(title, coordinate, isFavorite, controller) {
             EmbeddedTabChrome(
                 title = title.ifBlank { coordinate },
-                isSandbox = true,
-                onReload = { controller.reload() },
-                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr) },
-                onInfo = { showAccess = true },
-                onPermissions = { nav.nav(Route.ConnectedAppDetail(permissionCoordinate)) },
+                state =
+                    BrowserChrome.State(
+                        surface = BrowserChrome.Surface.NAPPLET,
+                        presentation = BrowserChrome.Presentation.EMBEDDED,
+                        url = "",
+                        startUrl = "",
+                        hasAccessInfo = true,
+                        // The embedded nsite/napplet host has no find or text-size plumbing (yet).
+                        hasFind = false,
+                        hasTextSize = false,
+                    ),
                 isFavorite = isFavorite,
-                onFavorite = {
-                    val favId = "nostr:$coordinate"
-                    if (FavoriteAppsRegistry.isFavorite(favId)) {
-                        FavoriteAppsRegistry.remove(favId)
-                    } else {
-                        FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                onAction = { action ->
+                    when (action) {
+                        BrowserChrome.Action.RELOAD -> controller.reload()
+                        BrowserChrome.Action.OPEN_FULL_SCREEN ->
+                            FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr)
+                        BrowserChrome.Action.ACCESS_INFO -> showAccess = true
+                        BrowserChrome.Action.SITE_SETTINGS -> nav.nav(Route.ConnectedAppDetail(permissionCoordinate))
+                        BrowserChrome.Action.FAVORITE -> {
+                            val favId = "nostr:$coordinate"
+                            if (FavoriteAppsRegistry.isFavorite(favId)) {
+                                FavoriteAppsRegistry.remove(favId)
+                            } else {
+                                FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                            }
+                        }
+                        else -> Unit
                     }
                 },
+                onOriginTap = { showAccess = true },
             )
         }
     // Publish the top-sheet controls to the tab layer (drawn over the z-below surface). In a SideEffect
