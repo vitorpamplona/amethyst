@@ -155,6 +155,9 @@ class NappletBrowserActivity : ComponentActivity() {
     // same address don't each trigger a round-trip.
     private var lastFavoriteQueryUrl: String? = null
 
+    /** The origin whose site permissions the pill is already showing. */
+    private var lastSitePermissionOrigin: String? = null
+
     // What Recents shows for this task: the page's title, favicon and theme colour.
     private var pageTitle: String? = null
     private var pageIcon: Bitmap? = null
@@ -771,6 +774,20 @@ class NappletBrowserActivity : ComponentActivity() {
                 copy(chrome = chrome.copy(url = url), title = if (newSite) BrowserChrome.displayHost(url) else title, isFavorite = false)
             }
         }
+        // The pill's "Site settings" line summarises this origin's camera/mic/location answers, and the
+        // registry that holds them lives in the main process. Until this was asked for on navigation, the
+        // only thing that ever filled it was opening page info — so a window said "Nothing allowed yet"
+        // about a site it had already been granted the camera on, and only stopped lying once you opened
+        // the sheet that made it ask.
+        BrowserChrome.originOf(url)?.let { origin ->
+            if (origin != lastSitePermissionOrigin) {
+                lastSitePermissionOrigin = origin
+                querySitePermissions(origin) { decisions ->
+                    updateUi { copy(sitePermissions = decisions.filterValues { it != Decision.ASK }) }
+                }
+            }
+        }
+
         if (url == lastFavoriteQueryUrl) return
         lastFavoriteQueryUrl = url
         val msg =
@@ -1383,6 +1400,14 @@ class NappletBrowserActivity : ComponentActivity() {
                 decision: Decision,
             ) {
                 BrowserChrome.originOf(currentUrl())?.let { rememberSitePermission(it, permission, decision) }
+                // Keep the pill's summary in step with the sheet the change was made in. The registry
+                // is authoritative and lives in the other process, but it does not call back, so an
+                // edit made here would otherwise not show up until the next navigation.
+                updateUi {
+                    val next = sitePermissions.toMutableMap()
+                    if (decision == Decision.ASK) next.remove(permission) else next[permission] = decision
+                    copy(sitePermissions = next)
+                }
             }
 
             override fun onClearSiteData() {
