@@ -581,9 +581,9 @@ class SQLiteEventStore(
         }
         // The replaceable / addressable unique indexes fire only when the supersession
         // trigger found nothing older to delete, i.e. the stored version already wins
-        // (STORE-W01/W02). Same shape as a duplicate: nothing to write, `OK true`.
+        // (STORE-W01/W02). Nothing was written, so REPLACED: `OK false`, not a duplicate.
         if (message.contains(SUPERSEDED_CONSTRAINT) || isSupersededByStored(event, db)) {
-            return IEventStore.InsertOutcome.Rejected(RejectionReason.SUPERSEDED)
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.REPLACED)
         }
 
         return if (message.contains("constraint", ignoreCase = true)) {
@@ -618,7 +618,7 @@ class SQLiteEventStore(
      * trigger *would* have deleted doesn't count. That precision matters
      * here: this is the fallback for unrecognized failures, and a disk
      * error while inserting a winning replaceable event must stay `Failed`
-     * rather than turn into a silent `OK true`. An equal id is the
+     * rather than be reported as having lost to a stored version. An equal id is the
      * duplicate case and is answered before this one.
      */
     private fun isSupersededByStored(

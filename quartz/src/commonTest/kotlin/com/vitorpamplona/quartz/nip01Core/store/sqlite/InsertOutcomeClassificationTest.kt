@@ -34,9 +34,9 @@ import kotlin.test.assertTrue
 
 /**
  * `batchInsert` must name *why* a row didn't land, because the relay turns
- * that reason into the NIP-01 answer: [RejectionReason.DUPLICATE] and
- * [RejectionReason.SUPERSEDED] are `OK true` ("already covered"), everything
- * else is `OK false`, which clients retry.
+ * that reason into the NIP-01 answer: [RejectionReason.DUPLICATE] is `OK true`
+ * (the event is already here), everything else is `OK false` — including
+ * [RejectionReason.REPLACED], a stale version that was not written.
  *
  * This suite pins the classification **independently of the SQLite driver's
  * exception text**. The bundled JVM driver raises
@@ -81,18 +81,18 @@ class InsertOutcomeClassificationTest : BaseDBTest() {
         }
 
     @Test
-    fun olderReplaceableIsRejectedAsSuperseded() =
+    fun olderReplaceableIsRejectedAsReplaced() =
         forEachDB { db ->
             val time = TimeUtils.now()
             val older = signer.sign(MetadataEvent.createNew("Vitor 1", createdAt = time))
             val newer = signer.sign(MetadataEvent.createNew("Vitor 2", createdAt = time + 1))
 
             assertEquals(IEventStore.InsertOutcome.Accepted, db.batchInsert(listOf<Event>(newer))[0])
-            assertRejected(RejectionReason.SUPERSEDED, db.batchInsert(listOf<Event>(older))[0])
+            assertRejected(RejectionReason.REPLACED, db.batchInsert(listOf<Event>(older))[0])
         }
 
     @Test
-    fun sameSecondReplaceableTieLoserIsRejectedAsSuperseded() =
+    fun sameSecondReplaceableTieLoserIsRejectedAsReplaced() =
         forEachDB { db ->
             val time = TimeUtils.now()
             // NIP-01 breaks a created_at tie by lowest id, so the winner is
@@ -104,18 +104,18 @@ class InsertOutcomeClassificationTest : BaseDBTest() {
                 ).sortedBy { it.id }
 
             assertEquals(IEventStore.InsertOutcome.Accepted, db.batchInsert(listOf<Event>(winner))[0])
-            assertRejected(RejectionReason.SUPERSEDED, db.batchInsert(listOf<Event>(loser))[0])
+            assertRejected(RejectionReason.REPLACED, db.batchInsert(listOf<Event>(loser))[0])
         }
 
     @Test
-    fun olderAddressableIsRejectedAsSuperseded() =
+    fun olderAddressableIsRejectedAsReplaced() =
         forEachDB { db ->
             val time = TimeUtils.now()
             val older = signer.sign(LongFormContentEvent.build("v1", "title", dTag = "blog", createdAt = time))
             val newer = signer.sign(LongFormContentEvent.build("v2", "title", dTag = "blog", createdAt = time + 1))
 
             assertEquals(IEventStore.InsertOutcome.Accepted, db.batchInsert(listOf<Event>(newer))[0])
-            assertRejected(RejectionReason.SUPERSEDED, db.batchInsert(listOf<Event>(older))[0])
+            assertRejected(RejectionReason.REPLACED, db.batchInsert(listOf<Event>(older))[0])
         }
 
     @Test
