@@ -24,7 +24,11 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,6 +37,7 @@ import java.nio.ByteOrder
 import kotlin.math.PI
 import kotlin.math.sin
 
+@kotlin.OptIn(ExperimentalCoroutinesApi::class)
 @OptIn(UnstableApi::class)
 class SpectrumAudioBufferSinkTest {
     private val fftSize = 64
@@ -160,5 +165,38 @@ class SpectrumAudioBufferSinkTest {
         sink.handleBuffer(interleavedStereoPcm(tone, tone))
 
         assertEquals(fftSize * 1_000_000_000L / 44100, out.replayCache.last().durationNanos)
+    }
+
+    /**
+     * The audio thread emits a cluster of fft frames within a few ms, with no suspension point in
+     * between, while the UI collector sits on the main dispatcher and cannot interleave. Anything the
+     * registry's flow cannot hold at that instant is dropped; a 2-slot buffer kept 2 of every cluster.
+     */
+    private fun deliveredFromOneCluster(framesInCluster: Int): Int {
+        var count = -1
+        runTest {
+            val mediaId = "test://cluster-$framesInCluster"
+            val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+            PcmTapRegistry.bind(mediaId, sink)
+            sink.flush(48000, 1, C.ENCODING_PCM_16BIT)
+
+            val received = mutableListOf<Spectrum>()
+            val collector = launch { PcmTapRegistry.spectrumFor(mediaId).collect { received.add(it) } }
+            advanceUntilIdle() // let the collector subscribe
+
+            sink.handleBuffer(monoPcm(sineShorts(k = 2, n = fftSize * framesInCluster)))
+
+            advanceUntilIdle() // only now does the UI collector get to run
+            collector.cancel()
+            PcmTapRegistry.bind(null, sink)
+            count = received.size
+        }
+        return count
+    }
+
+    @Test
+    fun everyFrameOfAClusterReachesTheVisualizer() {
+        assertEquals("cluster of 8", 8, deliveredFromOneCluster(8))
+        assertEquals("cluster of 20", 20, deliveredFromOneCluster(20))
     }
 }

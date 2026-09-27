@@ -27,6 +27,7 @@ import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.vitorpamplona.amethyst.commons.audio.AudioWindow
 import com.vitorpamplona.amethyst.commons.audio.Fft
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
+import com.vitorpamplona.amethyst.commons.audio.SpectrumTrail
 import com.vitorpamplona.amethyst.commons.audio.normalizeToPeakInPlace
 import com.vitorpamplona.amethyst.commons.audio.toLogBins
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -118,11 +119,6 @@ class SpectrumAudioBufferSink(
 object PcmTapRegistry {
     private const val MAX_TRACKED_FLOWS = 64
 
-    // Frames buffered per media flow beyond the 1-frame replay. A cluster is ~15 fft frames (~0.33 s
-    // of audio, measured on a Pixel 9a); 63 leaves room for an unusually large one without letting a
-    // stalled UI bank more than ~1.5 s of stale spectrum.
-    private const val SPECTRUM_BUFFER_FRAMES = 63
-
     private val lock = Any()
 
     // access-order LinkedHashMap → eldest (least-recently-used) entries iterate first for eviction.
@@ -178,16 +174,13 @@ object PcmTapRegistry {
                         if (!fedByLiveSink && !stillCollected) iter.remove()
                     }
                 }
-                // The audio thread emits in clusters — the pipeline fills its output buffer ~3 times a
-                // second, so ~15 fft frames land within a few ms of each other (one per decoder call,
-                // or several from one large call) — while the UI collector sits on the main dispatcher
-                // and cannot run in between. A 2-slot buffer therefore kept only ~2 frames of each
-                // cluster and dropped the rest. Hold a whole cluster instead, and drop the STALEST
-                // frame rather than the newest if the UI does fall behind. (Spreading the cluster
-                // back over time is SpectrumTrail's job, not this flow's.)
+                // Frames arrive in clusters (see SpectrumTrail) emitted within a few ms on the audio
+                // thread, while the collector sits on the main dispatcher and cannot run in between;
+                // a 2-slot buffer kept ~2 frames of each cluster and dropped the rest. Hold as much as
+                // the visualizer's own backlog, which is the real lag bound, dropping the stalest.
                 MutableSharedFlow(
                     replay = 1,
-                    extraBufferCapacity = SPECTRUM_BUFFER_FRAMES,
+                    extraBufferCapacity = SpectrumTrail.MAX_BACKLOG_FRAMES,
                     onBufferOverflow = BufferOverflow.DROP_OLDEST,
                 )
             }

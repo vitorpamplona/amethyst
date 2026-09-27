@@ -21,16 +21,20 @@
 package com.vitorpamplona.amethyst.commons.audio
 
 /**
- * The whole per-displayed-frame step of the spectrum visualizer: release queued frames as their
- * audio time comes due, apply the decay trail against what is already on screen, and return a
+ * The per-displayed-frame step of the spectrum visualizer: queue incoming frames, release each as
+ * its audio time comes due, apply the decay trail against what is already on screen, and return a
  * fresh array to draw.
  *
- * Frames arrive in clusters (see [SpectrumPacer]). Releasing one per display refresh drained a
- * ~15-frame cluster in ~110 ms at 120 Hz and then froze until the next one — measured as ~3 stalls
- * of ~210 ms every second. Each frame instead stays up for the [Spectrum.durationNanos] of audio it
- * describes, so a cluster spreads across the gap to the next. Time lost while starved is not owed
- * back: when frames return after a gap they resume from the current frame time rather than being
- * dumped at once to catch up.
+ * Why pacing is needed at all: the audio pipeline fills its output buffer in chunks, so frames reach
+ * the UI in clusters — ~15 frames roughly every 330 ms, measured on a Pixel 9a. Drawn on arrival a
+ * cluster collapses into one frame; released one per display refresh it plays out in ~110 ms at
+ * 120 Hz and then freezes (161 stalls averaging 211 ms over 52.8 s). Each frame instead stays up for
+ * the [Spectrum.durationNanos] of audio it describes, so a cluster spreads across the gap to the
+ * next. Time lost while starved is not owed back: after a gap, frames resume from the current frame
+ * time rather than being dumped at once to catch up.
+ *
+ * The backlog is capped at [capacity], evicting the stalest frame, so faster-than-real-time playback
+ * or a stalled UI cannot leave the picture drifting ever further behind the sound.
  *
  * The decay gives each bin an instant attack and a gradual release, so bars snap up to a transient
  * and fall back smoothly instead of flickering.
@@ -42,17 +46,23 @@ package com.vitorpamplona.amethyst.commons.audio
  */
 class SpectrumTrail(
     private val decay: Float,
-    capacity: Int = MAX_BACKLOG_FRAMES,
+    private val capacity: Int = MAX_BACKLOG_FRAMES,
 ) {
-    private val pacer = SpectrumPacer(capacity)
+    private val queue = ArrayDeque<Spectrum>(capacity)
     private var drawn = FloatArray(0)
 
     // When the frame at the head of the queue may be drawn, in the caller's frame-clock nanos.
     private var dueNanos = Long.MIN_VALUE
     private var starved = true
 
-    /** Queues a freshly decoded frame, evicting the stalest if the backlog is at capacity. */
-    fun offer(frame: Spectrum) = pacer.offer(frame)
+    /** Queues a freshly decoded frame, evicting the stalest if the backlog is at [capacity]. */
+    fun offer(frame: Spectrum) {
+        while (queue.size >= capacity) queue.removeFirst()
+        queue.addLast(frame)
+    }
+
+    /** True when nothing is queued, so the caller can stop polling until the next [offer]. */
+    fun isEmpty(): Boolean = queue.isEmpty()
 
     /**
      * The array to draw at [frameTimeNanos], or null when nothing new is due and the current one
@@ -62,7 +72,7 @@ class SpectrumTrail(
      * instance is what signals Compose to redraw. Do NOT switch to in-place mutation.
      */
     fun nextOrNull(frameTimeNanos: Long): FloatArray? {
-        if (pacer.isEmpty()) {
+        if (queue.isEmpty()) {
             starved = true
             return null
         }
@@ -74,11 +84,10 @@ class SpectrumTrail(
 
         var result: FloatArray? = null
         while (dueNanos <= frameTimeNanos) {
-            val frame = pacer.next() ?: break
+            val frame = queue.removeFirstOrNull() ?: break
             result = decayedFrom(frame)
             dueNanos += frame.durationNanos
         }
-
         return result
     }
 
@@ -95,8 +104,7 @@ class SpectrumTrail(
 
     companion object {
         // A cluster is ~15 frames, so 24 (~0.5 s of audio) never trims ordinary playback, while
-        // capping how far the picture can lag the sound when frames come faster than real time
-        // (2x playback speed).
+        // bounding how far the picture can lag the sound (e.g. at 2x playback speed).
         const val MAX_BACKLOG_FRAMES = 24
     }
 }

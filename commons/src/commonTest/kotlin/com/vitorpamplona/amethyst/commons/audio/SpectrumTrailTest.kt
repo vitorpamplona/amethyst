@@ -22,18 +22,12 @@ package com.vitorpamplona.amethyst.commons.audio
 
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
-/**
- * The per-displayed-frame step of the visualizer: release queued frames as their audio time comes
- * due, apply the decay trail against what is drawn, and hand back a fresh array.
- *
- * Frames reach the UI in clusters (~15 at a time, ~3 times a second, measured on a Pixel 9a) because
- * the audio pipeline fills its output buffer in chunks. Releasing one per display refresh drained a
- * cluster in ~110 ms at 120 Hz and then froze for ~220 ms. Frames must instead be released at the
- * rate of the audio they describe, so a cluster spreads across the gap to the next one.
- */
+/** Pacing, starvation, backlog and decay rules of [SpectrumTrail]; see its KDoc for why each exists. */
 class SpectrumTrailTest {
     private val ms = 1_000_000L
 
@@ -170,5 +164,20 @@ class SpectrumTrailTest {
 
         // mutableStateOf compares by reference; reusing one array would never trigger a redraw.
         assertNotSame(first, second)
+    }
+
+    @Test
+    fun reportsEmptyOnlyOnceEveryQueuedFrameIsReleasedSoTheCallerKnowsWhenToPark() {
+        val trail = SpectrumTrail(decay = 0f)
+        assertTrue(trail.isEmpty())
+
+        trail.offer(frame(1f))
+        trail.offer(frame(2f))
+        assertFalse(trail.isEmpty())
+
+        trail.nextOrNull(0)
+        assertFalse(trail.isEmpty()) // frame 2 is queued but not yet due
+        trail.nextOrNull(20 * ms)
+        assertTrue(trail.isEmpty())
     }
 }
