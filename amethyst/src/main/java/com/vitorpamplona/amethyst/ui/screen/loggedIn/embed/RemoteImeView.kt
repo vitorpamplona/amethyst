@@ -90,9 +90,10 @@ class RemoteImeView(
     private val flush = Runnable { flushState() }
 
     init {
-        // Invisible but focusable: the IME needs a laid-out, visible target, but the user must never see
-        // this field or its cursor/selection handles — only the embedded page.
-        isFocusableInTouchMode = true
+        // Invisible: the IME needs a laid-out, visible target, but the user must never see this field or its
+        // cursor/selection handles — only the embedded page. Focusable only while it mirrors a page field
+        // (see [setFocusTarget]).
+        setFocusTarget(false)
         alpha = 0f
         background = null
         setTextColor(0x00000000)
@@ -186,6 +187,7 @@ class RemoteImeView(
     ) {
         configureFor(focus)
         mirroring = true
+        setFocusTarget(true)
         fieldReadOnly = focus.readOnly
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
         // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
@@ -313,10 +315,26 @@ class RemoteImeView(
         // whatever arrives to the field focused THEN, not the one it was computed from. Nothing this mirror
         // holds belongs to the page once the field has blurred, so suppress the echo and drop the queue.
         applyingRemote = true
-        clearFocus()
+        // Not focusable again until the next page focus. Dropping the flag clears our focus as well, so no
+        // separate clearFocus() is needed (and one alone could hand focus straight back to us).
+        setFocusTarget(false)
         applyingRemote = false
         removeCallbacks(flush)
         imm.hideSoftInputFromWindow(windowToken, 0)
+    }
+
+    /**
+     * Whether this view can take focus. It lives in the main window whether or not a browser tab is open, so
+     * while it is focusable it is the fallback focus target for the whole window: when a Compose text field
+     * elsewhere loses focus (clearFocus(), or its screen being popped), Android hands focus to this EditText.
+     * It then becomes the IME's target, so the keyboard stays up over a screen with no field, and it comes
+     * back every time the app resumes. So it is focusable only while it actually mirrors a page field.
+     * Both flags are set: `isFocusable` alone would still let it take focus outside touch mode (a hardware
+     * keyboard or D-pad).
+     */
+    private fun setFocusTarget(enabled: Boolean) {
+        isFocusable = enabled
+        isFocusableInTouchMode = enabled
     }
 
     private fun applyRemote(
