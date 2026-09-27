@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -67,7 +68,8 @@ class RelaySession(
     private val store: SessionBackend,
     val policy: IRelayPolicy,
     private val scope: CoroutineScope,
-    private val onSend: (String) -> Unit,
+    /** Where every frame for this client goes; see [SessionSink] for the typed/raw split. */
+    private val sink: SessionSink,
     private val onClose: (RelaySession) -> Unit,
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     /**
@@ -77,7 +79,26 @@ class RelaySession(
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
+    /**
+     * Identities the transport proved before the session existed — a
+     * NIP-98 header on an HTTP command (NIP-FE), say — recorded exactly as
+     * a NIP-42 AUTH would record them. The policy's `accept(AuthCmd)` and
+     * `onAuthenticated` are not consulted: there is no AUTH event, and the
+     * transport, not the engine, did the verifying.
+     */
+    initialAuthenticatedUsers: Set<HexKey> = emptySet(),
 ) : AutoCloseable {
+    /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
+    constructor(
+        store: SessionBackend,
+        policy: IRelayPolicy,
+        scope: CoroutineScope,
+        onSend: (String) -> Unit,
+        onClose: (RelaySession) -> Unit,
+        negentropySettings: NegentropySettings = NegentropySettings.Default,
+        id: Long = nextConnectionId(),
+    ) : this(store, policy, scope, SessionSink.of(onSend), onClose, negentropySettings, id)
+
     private val subscriptions = LargeCache<String, Job>()
 
     /**
@@ -95,7 +116,7 @@ class RelaySession(
      * the copy costs nothing on the hot path.
      */
     @Volatile
-    private var authenticatedUsers = setOf<HexKey>()
+    private var authenticatedUsers: Set<HexKey> = initialAuthenticatedUsers.toSet()
 
     /**
      * The per-connection scope. Handed to the [policy] at connect (so gating
@@ -133,10 +154,7 @@ class RelaySession(
 
     fun send(message: Message) {
         try {
-            // message.toJson() defaults to OptimizedJsonMapper.toJson(this) for
-            // every type; NegMsgMessage overrides it with a direct-build wire
-            // path (identical output, ~2× faster on big reconcile frames).
-            onSend(message.toJson())
+            sink.message(message)
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
@@ -145,7 +163,7 @@ class RelaySession(
     /** [send] for frames that are already wire-format JSON (the raw REQ path). */
     private fun sendRaw(json: String) {
         try {
-            onSend(json)
+            sink.raw(json)
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
@@ -175,6 +193,16 @@ class RelaySession(
                 return
             }
 
+        receive(cmd)
+    }
+
+    /**
+     * Dispatches an already-parsed command, for a transport that parsed and
+     * sized it itself (NIP-FE's HTTP bodies). [IRelayPolicy.acceptMessage]
+     * is not run here — it judges wire text — so such a caller applies the
+     * message-length limit before calling.
+     */
+    suspend fun receive(cmd: Command) {
         if (!cmd.isValid()) {
             send(NoticeMessage("error: invalid command"))
             return
