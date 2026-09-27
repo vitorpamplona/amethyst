@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -190,6 +191,23 @@ data class PagedFetchResult(
  * it a `limit` to bound that single page; without one you get the relay's default page
  * of top hits.
  *
+ * **NIP-67 completeness hints.** A relay may append hints to a page's `EOSE`:
+ *
+ *  - `"finish"` — every stored match was sent, so the walk stops right there instead of
+ *    spending one more REQ just to observe an empty page. It ends
+ *    [PagedFetchResult.End.DRAINED] (or LIMIT_REACHED / UNPAGEABLE when a filter had
+ *    already dropped out of the page, since `finish` can only speak for what was asked).
+ *  - `"more"` — the relay holds more; paging continues, which is what the walk does
+ *    anyway until it sees an empty page, so this needs no special handling.
+ *  - `"auth"` — more may be available after NIP-42. Handled like an `auth-required:`
+ *    CLOSED: when a responder is attached the walk waits (once) for the AUTH verdict and,
+ *    on success, reads the page the relay re-serves after the AUTH's re-REQ, dropping the
+ *    events it already delivered. If the AUTH does not happen, the page's events still
+ *    count but the walk can no longer claim DRAINED: it ends
+ *    [PagedFetchResult.End.AUTH_REQUIRED] wherever it would have ended DRAINED.
+ *
+ * Hints are only ever a shortcut; their absence changes nothing (the heuristic above).
+ *
  * @param relay       The relay to query.
  * @param filters Filters to apply on every page (the `until` field is overwritten per page).
  * @param idleTimeoutMs   Idle window per page — like every accessory timeout, it is measured
@@ -336,6 +354,16 @@ suspend fun INostrClient.fetchAllPages(
         // declining to give one.
         var pageEnd: PageSignal? = null
 
+        // NIP-67 hints of the EOSE that ended this page (null: none sent). Written on the
+        // relay's reader thread before the EOSE signal is sent; the channel orders it.
+        var eoseHints: List<String>? = null
+
+        // Ids delivered on this page, kept only while an EOSE `"auth"` hint could still make
+        // the relay re-serve the page after AUTH (at most once per walk), so the re-served
+        // copies of events already handed to [onEvent] are dropped. Reader-thread only.
+        val pageIds: HashSet<HexKey>? = if (pendingOnAuthRequired && !authRetried) HashSet() else null
+        var reServing = false
+
         try {
             val listener =
                 object : SubscriptionListener {
@@ -363,6 +391,9 @@ suspend fun INostrClient.fetchAllPages(
                             // Drop a boundary-second event we already delivered on an
                             // earlier page (the inclusive re-fetch returns it again).
                             if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
+                            // The relay re-serving this page after an EOSE "auth" hint: skip what
+                            // this page already delivered.
+                            if (reServing && pageIds != null && event.id in pageIds) return
 
                             // Count this event against every active filter it satisfies
                             // (one event can match more than one). Only a non-search filter
@@ -390,6 +421,7 @@ suspend fun INostrClient.fetchAllPages(
                             if (atLeastOne) {
                                 onEvent(event)
                                 delivered++
+                                pageIds?.add(event.id)
                                 // Track the oldest advancing second and the ids delivered
                                 // in it — that becomes the next boundary and its dedup set.
                                 if (advancesCursor) {
@@ -411,6 +443,15 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
+                        doneChannel.trySend(PageSignal.EOSE)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                        hints: List<String>?,
+                    ) {
+                        eoseHints = hints
                         doneChannel.trySend(PageSignal.EOSE)
                     }
 
@@ -454,6 +495,18 @@ suspend fun INostrClient.fetchAllPages(
                     clock.bump()
                     pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
                 }
+            } else if (pageEnd == PageSignal.EOSE && eoseHints.hasHint(EoseMessage.HINT_AUTH) && pendingOnAuthRequired && !authRetried) {
+                // NIP-67 "auth": the page was answered, but the relay says it held some back.
+                // Same wait as the CLOSED case — the relay sent its challenge before this EOSE,
+                // and the AUTH's OK re-sends this very REQ — except the page already delivered
+                // events, so the re-served copies are dropped via [pageIds].
+                authRetried = true
+                reServing = true
+                if (awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) == AuthOutcome.AUTHENTICATED) {
+                    eoseHints = null
+                    clock.bump()
+                    pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+                }
             }
 
             unsubscribe(subId)
@@ -464,6 +517,10 @@ suspend fun INostrClient.fetchAllPages(
         }
 
         totalEvents += delivered
+
+        // The page ended on an EOSE saying more is visible only after AUTH, and no AUTH
+        // took the wall down: whatever it did deliver stands, but it cannot prove absence.
+        val authBlocked = pageEnd == PageSignal.EOSE && eoseHints.hasHint(EoseMessage.HINT_AUTH)
 
         // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
         // depends on why the page ended and on what was asked:
@@ -489,6 +546,23 @@ suspend fun INostrClient.fetchAllPages(
                     pageEnd == PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
                     pageEnd == null -> PagedFetchResult.End.IDLE
                     cappedByLimit -> PagedFetchResult.End.LIMIT_REACHED
+                    filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
+                    authBlocked -> PagedFetchResult.End.AUTH_REQUIRED
+                    else -> PagedFetchResult.End.DRAINED
+                }
+            break
+        }
+
+        // NIP-67 "finish": the relay says it sent every stored match for this page's
+        // filters, so there is nothing below the cursor to ask for — stop now rather than
+        // spend a REQ to watch an empty page come back. It only speaks for the filters this
+        // page actually carried; one that already dropped out (limit met, or a search after
+        // its single page) keeps the reading it would have had.
+        if (pageEnd == PageSignal.EOSE && eoseHints.hasHint(EoseMessage.HINT_FINISH)) {
+            end =
+                when {
+                    authBlocked -> PagedFetchResult.End.AUTH_REQUIRED
+                    filters.indices.any { i -> filters[i].limit.let { it != null && matchCountPerFilter[i] >= it } } -> PagedFetchResult.End.LIMIT_REACHED
                     filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
                     else -> PagedFetchResult.End.DRAINED
                 }
@@ -587,3 +661,5 @@ suspend fun INostrClient.fetchAllPages(
         onNewPage = onNewPage,
         onEvent = onEvent,
     )
+
+private fun List<String>?.hasHint(hint: String) = this != null && contains(hint)

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -113,6 +114,9 @@ class RelayAuthenticator(
     // from RelayAuthStatus.snapshot().
     private val authStatus = LargeCache<NormalizedRelayUrl, RelayAuthStatus>()
 
+    /** The challenge each relay was last re-authenticated on because of an EOSE `"auth"` hint. */
+    private val authHintRetried = LargeCache<NormalizedRelayUrl, String>()
+
     private val _authStateFlow = MutableStateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>(persistentMapOf())
 
     /**
@@ -143,6 +147,7 @@ class RelayAuthenticator(
                     is AuthMessage -> authenticate(relay, msg.challenge, interactive = true)
                     is OkMessage -> checkAuthResults(relay, msg)
                     is ClosedMessage -> reauthenticateIfAuthRequired(relay, msg)
+                    is EoseMessage -> reauthenticateIfAuthHinted(relay, msg)
                 }
             }
 
@@ -153,6 +158,7 @@ class RelayAuthenticator(
 
             override fun onDisconnected(relay: IRelayClient) {
                 authStatus.remove(relay.url)
+                authHintRetried.remove(relay.url)
                 publishSnapshot(relay.url)
             }
         }
@@ -222,6 +228,34 @@ class RelayAuthenticator(
         msg: ClosedMessage,
     ) {
         if (MachineReadablePrefix.parse(msg.message) != MachineReadablePrefix.AUTH_REQUIRED) return
+        reauthenticateWithStoredChallenge(relay)
+    }
+
+    /**
+     * NIP-67 / NIP-42: an `EOSE` carrying the `"auth"` hint says the relay may hold more
+     * matches for this subscription if we authenticate. The relay MUST have sent its
+     * `AUTH` challenge before that EOSE, so the challenge is already stored and the normal
+     * [authenticate] pass has usually run on it. This takes the same path as an
+     * `auth-required:` CLOSED: re-attach any approved identity not yet sent on that
+     * challenge (never prompting), and let the AUTH's `OK` → [INostrClient.syncFilters]
+     * re-send the REQ so the relay can serve what it held back. Deduped per
+     * (pubkey, challenge) and skipped while an AUTH is in flight, so it cannot loop.
+     */
+    private fun reauthenticateIfAuthHinted(
+        relay: IRelayClient,
+        msg: EoseMessage,
+    ) {
+        if (!msg.needsAuth()) return
+        // A relay that keeps refusing us may tag EVERY EOSE with "auth". Unlike a CLOSED, the
+        // subscription is still answered, so there is no refusal to recover from — one retry
+        // per challenge is enough, and it spares an external signer a pass per subscription.
+        val challenge = authStatus.get(relay.url)?.lastChallenge() ?: return
+        if (authHintRetried.get(relay.url) == challenge) return
+        authHintRetried.put(relay.url, challenge)
+        reauthenticateWithStoredChallenge(relay)
+    }
+
+    private fun reauthenticateWithStoredChallenge(relay: IRelayClient) {
         val status = authStatus.get(relay.url) ?: return
         // Coalesce the burst: a relay refuses EVERY currently-open sub with its own `auth-required`
         // CLOSED, so a single missing identity yields many CLOSEDs at once. Re-signing on each would

@@ -79,6 +79,13 @@ class RelaySession(
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
+    /**
+     * NIP-67: append a completeness hint (`"finish"` / `"more"`) to each REQ's `EOSE`
+     * when the stored replay proves one — see [EoseCompletenessProbe]. Off by default:
+     * the proof assumes the [store] honours `limit` exactly and returns every match
+     * for an unbounded filter, which an arbitrary backend need not do.
+     */
+    val completenessHints: Boolean = false,
 ) : AutoCloseable {
     /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
     constructor(
@@ -353,7 +360,15 @@ class RelaySession(
         }
 
         // Policy may rewrite filters to match the user's access level.
-        val filters = (result as PolicyResult.Accepted).cmd.filters
+        val acceptedFilters = (result as PolicyResult.Accepted).cmd.filters
+
+        // NIP-67: may raise a single filter's limit by one to detect "more"; the extra
+        // stored row is counted but never sent. Zero-decode path only: the screened path's
+        // single `onEach` also carries live events accepted mid-replay, so stored rows can't
+        // be told apart there, and a policy that vetoes rows could not honestly say "finish".
+        val probe = if (completenessHints && !policy.filtersOutgoingEvents) EoseCompletenessProbe.of(acceptedFilters) else null
+        val filters = probe?.queryFilters ?: acceptedFilters
+        val eose = { send(EoseMessage(cmd.subId, probe?.hints())) }
 
         // UNDISPATCHED: the stored replay runs inline on this coroutine —
         // the reader-pool acquire doesn't suspend when a connection is
@@ -377,7 +392,7 @@ class RelaySession(
                                     send(EventMessage(cmd.subId, event))
                                 }
                             },
-                            onEose = { send(EoseMessage(cmd.subId)) },
+                            onEose = { eose() },
                         )
                     } else {
                         // Zero-decode path: the stored replay splices raw
@@ -395,13 +410,16 @@ class RelaySession(
                             ctx = requestContext,
                             filters = filters,
                             onEachStored = { raw ->
-                                sendRaw(
-                                    buildString(framePrefix.length + raw.jsonTags.length + raw.content.length + 256) {
-                                        append(framePrefix)
-                                        raw.appendJsonObjectTo(this)
-                                        append(']')
-                                    },
-                                )
+                                // NIP-67 probe: the one extra row it asked for is counted, not sent.
+                                if (probe == null || probe.onStored()) {
+                                    sendRaw(
+                                        buildString(framePrefix.length + raw.jsonTags.length + raw.content.length + 256) {
+                                            append(framePrefix)
+                                            raw.appendJsonObjectTo(this)
+                                            append(']')
+                                        },
+                                    )
+                                }
                             },
                             // Live events arrive with their wire body already
                             // serialized (once per event, shared across every
@@ -417,7 +435,7 @@ class RelaySession(
                                     },
                                 )
                             },
-                            onEose = { send(EoseMessage(cmd.subId)) },
+                            onEose = { eose() },
                         )
                     }
                 } catch (e: CancellationException) {

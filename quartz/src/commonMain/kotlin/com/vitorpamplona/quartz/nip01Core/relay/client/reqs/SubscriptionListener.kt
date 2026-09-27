@@ -30,6 +30,18 @@ interface SubscriptionListener {
         forFilters: List<Filter>?,
     ) {}
 
+    /**
+     * EOSE together with its NIP-67 completeness [hints] (`finish`, `more`, `auth`, …;
+     * null when the relay sent the plain two-element EOSE). The pool calls this one;
+     * the default forwards to the two-argument [onEose], so listeners that don't care
+     * about hints keep overriding that.
+     */
+    fun onEose(
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+        hints: List<String>?,
+    ) = onEose(relay, forFilters)
+
     suspend fun onEvent(
         event: Event,
         isLive: Boolean,
