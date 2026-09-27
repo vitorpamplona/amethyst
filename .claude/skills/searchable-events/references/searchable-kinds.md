@@ -140,7 +140,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 39000 | GroupMetadataEvent | nip29RelayGroups/metadata | `listOfNotNull(name(), about())` NL |
 | 39089 | StarterPackEvent | nip51Lists/starterPack | `listOfNotNull(title(), description())` NL |
 | 39092 | MediaStarterPackEvent | nip51Lists/mediaStarterPack | `listOfNotNull(title(), description())` NL |
-| 39307 | TextTrackEvent | nip71Video/textTrack | `content` (the WebVTT cue text) |
+| 39307 | TextTrackEvent | nip71Video/textTrack | `WebVttText.cueText(content)` NL — each cue's payload lines with tags removed and character references decoded; no header, timings, cue settings, ids, `NOTE`/`STYLE`/`REGION` blocks. Content with no `-->` timing line is not a caption file and is indexed as written |
 | 39701 | WebBookmarkEvent | nipB0WebBookmarks | `listOfNotNull(title(), description())` NL |
 | 39998 | AddressableListHeaderEvent | experimental/decentralizedLists/header | same as 9998 |
 | 39999 | AddressableListItemEvent | experimental/decentralizedLists/item | same as 9998 |
