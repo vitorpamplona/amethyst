@@ -99,6 +99,7 @@ class RelayReqRefusals(
         relay: NormalizedRelayUrl,
         reason: String,
     ): Boolean {
+        learnDisallowedKinds(relay, reason)
         val candidate = classify(reason) ?: return false
         // NO_READS is the strictest verdict; once reached, nothing softens it.
         if (blocked[relay] == Policy.NO_READS) return false
@@ -126,13 +127,59 @@ class RelayReqRefusals(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
     ): Boolean =
-        when (blocked[relay]) {
-            Policy.NO_READS -> true
-            Policy.SEARCH_ONLY -> filters.isNotEmpty() && filters.all { it.search.isNullOrEmpty() }
-            null -> false
-        }
+        // Everything this REQ asks for is a kind the relay refused.
+        (filters.isNotEmpty() && narrow(relay, filters).isEmpty()) ||
+            when (blocked[relay]) {
+                Policy.NO_READS -> true
+                Policy.SEARCH_ONLY -> filters.isNotEmpty() && filters.all { it.search.isNullOrEmpty() }
+                null -> false
+            }
 
     fun blockedRelays(): Map<NormalizedRelayUrl, Policy> = blocked.snapshot()
+
+    // Kinds a relay has said it will not serve at all ("kind not allowed: 21059").
+    private val disallowedKinds = ConcurrentMap<NormalizedRelayUrl, Set<Int>>()
+
+    /**
+     * Learn the kinds a relay named as not allowed in a CLOSED reason.
+     *
+     * A relay with a kind allowlist refuses the WHOLE REQ over one kind it doesn't
+     * serve, so the kinds it does serve in that filter are lost with it. The message
+     * names the kind, so one refusal is enough to learn it: nothing is guessed, and
+     * [narrow] strips exactly that kind for exactly this relay.
+     */
+    private fun learnDisallowedKinds(
+        relay: NormalizedRelayUrl,
+        reason: String,
+    ) {
+        val kinds = parseDisallowedKinds(reason)
+        if (kinds.isEmpty()) return
+        disallowedKinds.merge(relay, kinds) { old, new -> old + new }
+    }
+
+    /**
+     * [filters] as [relay] will actually serve them: kinds the relay refused are
+     * removed. A filter whose kinds all got removed is dropped, never sent with an
+     * empty kind list, which would ask for EVERY kind. A filter with no kind list
+     * is left alone.
+     */
+    fun narrow(
+        relay: NormalizedRelayUrl,
+        filters: List<Filter>,
+    ): List<Filter> {
+        val refused = disallowedKinds[relay] ?: return filters
+        return filters.mapNotNull { filter ->
+            val kinds = filter.kinds ?: return@mapNotNull filter
+            val kept = kinds.filterNot { it in refused }
+            when {
+                kept.size == kinds.size -> filter
+                kept.isEmpty() -> null
+                else -> filter.copy(kinds = kept)
+            }
+        }
+    }
+
+    fun disallowedKinds(relay: NormalizedRelayUrl): Set<Int> = disallowedKinds[relay] ?: emptySet()
 
     private fun classify(reason: String): Policy? {
         val t = reason.lowercase()
@@ -142,6 +189,20 @@ class RelayReqRefusals(
     }
 
     companion object {
+        // "kind not allowed: 21059", "kinds not allowed: 7374, 30382", "kind 21059 is not allowed"
+        private val KINDS_AFTER_MARKER = Regex("""kinds? (?:is |are )?not allowed:?\s*([0-9][0-9,\s]*)""")
+        private val KIND_BEFORE_MARKER = Regex("""kind ([0-9]+) (?:is )?not allowed""")
+
+        fun parseDisallowedKinds(reason: String): Set<Int> {
+            val t = reason.lowercase()
+            val kinds = mutableSetOf<Int>()
+            KINDS_AFTER_MARKER.findAll(t).forEach { m ->
+                m.groupValues[1].split(',', ' ').mapNotNullTo(kinds) { it.trim().toIntOrNull() }
+            }
+            KIND_BEFORE_MARKER.findAll(t).forEach { m -> m.groupValues[1].toIntOrNull()?.let { kinds.add(it) } }
+            return kinds
+        }
+
         // The relay only serves NIP-50 search REQs (a plain feed REQ is refused).
         private val SEARCH_REQUIRED_MARKERS =
             listOf(
