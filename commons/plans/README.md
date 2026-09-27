@@ -1,13 +1,14 @@
 # commons plans
 
-_Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration entries)._
+_Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI entries)._
 
 ## In progress
 | Plan | Summary |
 | ---- | ------- |
 | [2026-05-04-custom-feeds-plan.md](2026-05-04-custom-feeds-plan.md) | Custom feed creation/discovery/management for Desktop; core model + builder + kind 31890 + desktop UI shipped, but relay-filter layer, DVM marketplace, kind 10090 sync, and list resolution still pending. |
 | [2026-05-06-nest-subscription-manager-extraction.md](2026-05-06-nest-subscription-manager-extraction.md) | Split the per-speaker subscription state machine out of `NestViewModel`; only the `ActiveSubscription` stepping-stone is extracted so far. |
-| [2026-08-30-commons-migration-sweep.md](2026-08-30-commons-migration-sweep.md) | The running tracker for moving `amethyst/` code into `commons`/`commonsUI`: waves, what moved each round, what stays and why. `LocalCache` has moved; retiring `DesktopLocalCache` (Wave 2 part B) and the `AccountViewModel` hub composables are next. |
+| [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md) | **The target.** Android ships on laptops, so the whole UI (screens + navigation shell) moves to `commonsUI`, `amethyst` becomes an Android shim, and a new JVM `desktopApp` renders the same UI. Measures Wave 4: `Account`'s 77-file move-group, its 5 blocked files and 14 seams, and `AccountViewModel`'s dependencies; sequences the rest. |
+| [2026-08-30-commons-migration-sweep.md](2026-08-30-commons-migration-sweep.md) | The running log of moving `amethyst/` code into `commons`/`commonsUI`: waves, what moved each round. `LocalCache` has moved. Its STAY list and Wave 2 part B are superseded by the one-UI plan above. |
 | [2026-05-30-amethyst-to-commons-migration.md](2026-05-30-amethyst-to-commons-migration.md) | The original roadmap for the same move; superseded in practice by the sweep tracker above. |
 
 ## Queued

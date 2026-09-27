@@ -17,6 +17,12 @@ therefore useless to the headless `cli`:
   its `LazyListState`, `ChatNewMessageState` with `TextFieldValue`,
   `EmojiSuggestionState` with `TextFieldState`).
 
+Its end state is **the whole app UI**: every screen, the navigation host and the
+navigation chrome for every window size (bottom bar, rail, permanent drawer), with
+`amethyst` and a new JVM `desktopApp` as thin shims around it. Screens still in
+`amethyst/` are waiting on `AccountViewModel` and the app root, not staying there
+by design. See `commons/plans/2026-09-27-one-ui-android-desktop.md`.
+
 It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,
 `nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`

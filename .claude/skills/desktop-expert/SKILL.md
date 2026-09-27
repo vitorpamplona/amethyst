@@ -248,9 +248,16 @@ application {
 
 ## 5. Desktop Navigation Patterns
 
-### NavigationRail (Current Pattern)
+### NavigationRail (Current Pattern — legacy)
 
-Desktop uses **NavigationRail** (vertical sidebar) instead of Android's bottom navigation.
+> **Being replaced.** Android now also ships on laptops, and the plan is one UI: the
+> shared navigation shell (bottom bar / rail / permanent drawer picked by window size
+> via `ScreenLayoutSpec`) moves to `commonsUI`, and a new `desktopApp` becomes a JVM
+> shim that renders it. Don't grow this sidebar shell or add Desktop-only screens; see
+> `commons/plans/2026-09-27-one-ui-android-desktop.md`. What stays Desktop-specific is
+> the window, tray, menu bar, keyboard shortcuts and file system integration.
+
+Today's desktop app uses **NavigationRail** (vertical sidebar) instead of Android's bottom navigation.
 
 ```kotlin
 Row(Modifier.fillMaxSize()) {

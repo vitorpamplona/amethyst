@@ -11,9 +11,11 @@ contain implementations of Nostr specifications and utilities to help implement 
 `concord/` (`cordXX`), `buzz/`, plus the binding-agnostic RFC 9420 engine in `mls/`. A new protocol
 over Nostr belongs here as a package, not as a Gradle module; `quic`/`nestsClient`/`marmotQuic` are
 modules because they are transports with no Nostr in them. Commons stores
-shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
-App is designed to be mouse first and so uses a completely different screen and navigation
-architecture while sharing the back end components with the android counterpart. `cli` ships `amy`,
+shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
+also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
+window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and a new `desktopApp`
+becomes a JVM shim that renders the same UI (see `commons/plans/2026-09-27-one-ui-android-desktop.md`).
+Until it lands, today's `desktopApp` still has its own mouse-first screens and navigation. `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
@@ -105,7 +107,9 @@ amethyst/
   codecs. Not WebTransport — the binding has its own ALPNs and writes frames
   straight onto QUIC streams, so it deliberately does not reuse
   `nestsClient`'s `WebTransportSession`.
-- `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
+- `amethyst/` & `desktopApp/` = Platform shims: process/window entry points, services, system
+  integrations and the actuals of shared ports. Screens and navigation are shared UI and are
+  moving to `commonsUI` (today's `desktopApp` screens are legacy, to be replaced).
 - `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic
   allowed). May also depend on `:geode` (for `amy serve`, which embeds the
   standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
@@ -207,10 +211,20 @@ etc. instead of re-implementing them.
   (StateFlow/SharedFlow), so they belong in `commons`; anything that imports
   `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res` belongs in
   `commonsUI`.
-- **Keep native** → screen composables/scaffolding (Desktop `Window` vs Android
-  `Activity`), navigation (sidebar vs bottom nav), platform interactions
-  (gestures, keyboard shortcuts), system integrations (notifications, file
-  pickers).
+  **Screens and navigation are shared too**: screen composables, the nav host,
+  and the navigation chrome for every window size (bottom bar, rail, permanent
+  drawer) belong in `commonsUI`, because Android runs on laptops and the new
+  Desktop app renders the same UI. Adapt to the window with `ScreenLayoutSpec`
+  / `LocalScreenLayout`, not with a per-platform screen.
+- **Keep native** → only what is the platform itself: the process/window entry
+  point (Android `Activity`/`Service`, Desktop `Window`/tray/menu bar),
+  system integrations (notifications, file pickers, share sheets, camera,
+  media3, WebView, keyring/Keystore), and the platform `actual`s or port
+  implementations the shared UI calls. A new screen goes in `commonsUI` when
+  its dependencies allow. While `AccountViewModel` is still app-side, one that
+  needs it may live in `amethyst/`, but keep Android APIs out of it (behind a
+  port or slot) so it can move later. Don't add screens to today's `desktopApp`
+  that the shared UI will have to re-create.
 
 When extracting a composable: move it to `commonsUI/commonMain/` (see
 `/compose-expert`), add expect/actual for any platform behavior (see
@@ -429,8 +443,11 @@ Do this before considering the task complete.
   at byte level (`perl -CSD -pe 's/\x{202E}/\\u202E/g'`).
 
 ### Navigation Shell
-- **Desktop**: Sidebar + main content area
-- **Android**: Bottom navigation
+One shell, picked by window size rather than by platform: `ScreenLayoutSpec`
+chooses the bottom bar (compact), the rail, or the permanent drawer (wide,
+landscape, tall enough), and docks the notification panel on very wide windows.
+It is moving to `commonsUI` with `AppNavigation`. Today's `desktopApp` still has
+its own sidebar shell, which will be replaced.
 
 ## Git Workflow
 

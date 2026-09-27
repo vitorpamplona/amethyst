@@ -1,0 +1,216 @@
+---
+title: "One UI: the whole app moves to commonsUI, Android and Desktop become shims"
+type: refactor
+status: in-progress
+date: 2026-09-27
+owner: commons
+consumers: amethyst, desktopApp, commonsUI
+---
+
+# One UI for Android and Desktop
+
+## The decision (maintainer, 2026-09-27)
+
+Android now ships on laptops, so Amethyst Android needs a desktop-class UI. Rather than
+maintain two desktop UIs, there will be one:
+
+- **`commonsUI` holds the whole app UI.** Every screen, the navigation host, and the
+  navigation chrome at every size (bottom bar, rail, permanent drawer, docked panels).
+- **`amethyst/` becomes an Android shim**: Activities, services, notifications, media3,
+  camera, WebView, Health Connect, Keystore/DataStore actuals, flavours. Nothing that is not
+  Android itself.
+- **A new `desktopApp` becomes a JVM shim** that runs the same `commonsUI` app, so Desktop
+  looks exactly like Android on a laptop: Window, tray, menu bar, keyring, file pickers.
+  It **replaces** the current `desktopApp`, which keeps shipping until the new one reaches
+  parity, then goes.
+
+This supersedes the "screens and navigation stay platform-native" rule that
+`.claude/CLAUDE.md`, `commons/ARCHITECTURE.md`, the `kotlin-multiplatform` /
+`compose-expert` / `desktop-expert` skills and the sweep tracker's STAY list used to state.
+Those were updated alongside this plan.
+
+## What this changes in the running migration
+
+The tracker ([2026-08-30-commons-migration-sweep.md](2026-08-30-commons-migration-sweep.md))
+stays the log of what moved. These of its conclusions no longer hold:
+
+| Old conclusion | Now |
+|---|---|
+| `Account` is a god object: "decompose, don't move". `AccountViewModel`: "shrink, don't move". | **Move both** to `commons`. They were only to be decomposed because Desktop was going to keep its own; the shared screens now need the same `Account` on both platforms. Narrow interfaces can still be carved out later, for tests and the CLI, but they are not a prerequisite. |
+| STAY: `*Screen.kt`, `*TopBar.kt`, `AppNavigation`, `INav`/`Route`/`RouteMaker`, drawer/bottom bar, `LoggedInPage`, `loggedOff/`, `settings/` screens | **All move** to `commonsUI` (`RouteMaker` to `commons`, it has no Compose). |
+| Wave 2 part B: turn `DesktopLocalCache` into a facade over `EventCache` | **Dropped.** The new desktop app uses `LocalCache` and `Account` directly. The old `desktopApp` keeps its fork until it is retired. |
+| "Desktop phase": merge Desktop's `ToggleableTimeAgoText`, `TimeAgoFormatter`, `ChatBubbleLayout` forks onto the shared ones | **Dropped** for the same reason. |
+| `jdk.localedata` in Desktop's packaged runtime (+~28 MB) is "a packaging call" | **Required** by the new desktop app: the shared date formatters need the CLDR data. |
+
+## Where we start from
+
+The Android app already contains the laptop UI. `ScreenLayoutSpec` (now in
+`commonsUI/…/ui/layouts/ScreenLayout.kt`) picks one of three navigation tiers from the window
+size alone (bottom bar below 600dp, rail, permanent drawer when wide, landscape and at least
+600dp tall), docks the notification panel from 1200dp, and caps every destination to a 600dp
+reading column (`CappedScreenContent`). A JVM window can feed it `widthDp`/`heightDp` and
+get the same answer. Still app-side and part of the move: `AppNavigation.kt` (1,370 lines),
+`AppNavigationRail.kt`, the permanent drawer in `AccountSwitcherAndLeftDrawerLayout.kt`,
+`MessagesTwoPane.kt`, and `MainActivity.kt` (493 lines, the part that is not Activity
+plumbing).
+
+## Prerequisites the move surfaced
+
+- **Navigation library.** The app uses `androidx.navigation:navigation-compose` 2.10.1. Its
+  Gradle module metadata publishes an `androidJvm` variant and only **`jvmStubs`** for `jvm`
+  (checked 2026-09-27), so it cannot run the nav host on Desktop. The multiplatform path is
+  JetBrains' `org.jetbrains.androidx.navigation:navigation-compose`, which resolves to the
+  androidx artifact on Android. That swap (and its licence check, per CLAUDE.md) comes before
+  `AppNavigation` can move.
+- **The app root.** `Amethyst.instance` (the `AppModules` graph) is read by 178 files, 115 of
+  them under `ui/`. Shared screens cannot reach an Android `Application`. The root needs a
+  commons-side interface for what screens read from it, provided once at the composition root
+  (as `LocalUserFinderAccount` / `LocalEventFinder` already are), with an Android and a JVM
+  implementation.
+- **Android-only libraries rendered inside screens.** Each needs an expect/actual or a slot the
+  shim fills: media3 (46 files), Vico charts (8), WebView (5), CameraX (4), Health Connect (4),
+  ML Kit (3, `play` flavour only).
+- **Current-Desktop-only features.** The current `desktopApp` (260 files, ~70k lines) has
+  features Android lacks: deck columns, the article editor, highlights, scheduled-post
+  screens, keyboard shortcuts, menu bar, tray. Each needs a call before the old app is
+  retired: bring it into `commonsUI` for both platforms, or keep it in the new JVM shim. That
+  inventory is not done yet.
+
+## Wave 4, measured: what moves with `Account`
+
+Measured 2026-09-27 on `main` @ `c13e496c` with a closure script (not committed; the method
+is below) over `amethyst/src/{main,play,fdroid}`.
+
+**An unconstrained closure is useless.** Following every edge from `Account.kt` reaches
+1,724 of the app's 1,762 files, because a few edges leave `model/` for the app root
+(`Amethyst.kt`), `ui/navigation` and `ui/screen`, and those reach everything. The useful
+measure is the group reachable **inside `model/`**, plus the list of edges that leave it.
+Each leaving edge is a seam to cut before the group can move.
+
+### The group
+
+- **75 files, 22,753 lines**: `Account.kt`, `AccountSettings.kt`, the `Account*Actions` files,
+  `EventBroadcaster`, and 60-odd per-feature state holders (`nip51Lists/*`, `nip65RelayList`,
+  `serverList/*`, `topNavFeeds/*`, `nip46Signer/*`, `cordn/*`, …). That is 75 of the 89 files
+  in `model/`.
+- **Adding `EventProcessor`** (`ui/screen/loggedIn/DecryptAndIndexProcessor.kt`, which
+  `Account` constructs) brings it to 77 files, 23,850 lines, and adds no new exit edge except
+  two `Amethyst.instance.notificationDispatcher` calls.
+- **11 files use `java.*`** (`BigDecimal`, `ConcurrentHashMap`, `UUID`, `Base64`, `File`,
+  `Locale`, and `OkHttpClient` in `CashuWalletState`). So the group lands in
+  **`commons/jvmAndroid`** first and promotes to `commonMain` later, the same route
+  `LocalCache` took.
+- **No Compose UI** in any of them.
+
+### Hard blockers inside the group (5 files)
+
+| File | Blocker | Proposed cut |
+|---|---|---|
+| `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String` |
+| `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry` |
+| `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app |
+| `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string |
+| `nip46Signer/Nip46ConsentBridge.kt` | `Res` + `loadStringRes`; `Amethyst.instance.appContext`; the app's `SignerConnectCoordinator` / `SignerConsentCoordinator` / napplet op labels | it is the Android consent-dialog bridge: leave it in the app and inject it into `Account` through an interface |
+
+### Edges that leave the group (14 targets)
+
+| Target | Used for | Proposed cut |
+|---|---|---|
+| `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface |
+| `LocalPreferences.kt` | `saveToEncryptedStorage(accountSettings)` on settings change | a `AccountSettingsPersister` port, implemented in the app |
+| `DebugUtils.kt` | `logTime` (2 sites) | move `logTime` to `commons/util` (it is timing + `Log`) |
+| `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | the same settable hook `LocalCache` already needed |
+| `service/location/LocationState.kt` | the `LocationResult` type in `geolocationFlow` and the around-me feed | move the result type to `commons`; the `LocationManager` half stays |
+| `service/uploads/FileHeader.kt` | the `FileHeader` data type in three send methods | split: the data class to `commons`, the `MediaMetadataRetriever` reader stays |
+| `service/relayClient/…/BuzzMembershipEoseManager.kt` | the `MembershipNotificationKinds` constant | move the constant to `commons/model/buzz` |
+| `ui/navigation/bottombars/NavBarItem.kt` | `DefaultBottomBarEntries` | see the table above |
+| `ui/screen/loggedIn/DecryptAndIndexProcessor.kt` | `EventProcessor`, built by `Account` | moves with the group (see above) |
+| `AccountSecretsStore.kt`, `LegacySharedPreferences.kt` | Geohash identity storage | behind the Geohash port above |
+| `connectedApps/consent/*Coordinator.kt`, `napplet/NostrSignerOpLabels.kt` | Nip46 consent bridge | stay in the app with the bridge |
+
+About twenty small cuts, most of them "pass it in" or "move one declaration". None is a
+redesign.
+
+## Wave 4, measured: `AccountViewModel`
+
+`AccountViewModel.kt` is 3,303 lines.
+
+- **Android imports.** Its Android imports are `Context` (3 methods take one), `Toast`,
+  `Uri`, `Handler`/`Looper`, `android.util.LruCache` (5 sites), `NotificationManager` and
+  `ContextCompat`. It has no `R` references left.
+- **`Amethyst.instance`.** It reads the app root in six places: `websocketBuilder`,
+  `relayStats`, `powPublishQueue`, `localBlossomCacheProbe`, `blossomResolver` and
+  `appContext`.
+- **Other app files.** Outside the `Account` group it depends on 29 app files. They fall into
+  three kinds:
+  - **Headless, should move with it:** `RelaySubscriptionsCoordinator`, `ClinkDebitPayer`,
+    `CallSessionBridge`, `NestBridge`, `MarkChatRoomsAsRead`, `RowUnread`,
+    `ReloadMintViewModel`, `EventSync`, `CardFeedContentState`, `RoleBasedHttpClientBuilder`.
+  - **Payment and intent handlers:** `ZapPaymentHandler`, `V4VPaymentHandler`,
+    `LightningAddressResolver`, `MeltProcessor`, `ZapCustomDialog.payViaIntent`. They take an
+    Android `Context` to fire payment intents; that needs a `PaymentLauncher` port.
+  - **Composable files it borrows a type or constant from:** `ZapAmountCommentNotification`
+    (`MultiSetCompose`), `ZapraiserStatus` (`ReactionsRow`), `NOTIFICATION_LAST_READ_KEY`
+    (`NotificationScreen`). The declarations move to `commons`; the composables don't have to.
+  - **Genuinely Android:** `MediaSaverToDisk`, `MarmotGroupIconUploader`,
+    `dismissNotificationForEvent` (`NotificationUtils`). These go behind ports.
+
+`AccountViewModel` moves after the `Account` group, into `commons/viewmodels` (jvmAndroid
+first).
+
+## Sequence
+
+1. **Docs** (this plan, and the rule changes in CLAUDE.md, both ARCHITECTURE files, three
+   skills and the tracker). Done 2026-09-27.
+2. **Cut the `Account` group's seams**, one small PR each, in the app, with no move yet. Every
+   cut is a behaviour-preserving refactor that compiles and tests on its own:
+   - the `BuildConfig` parameter;
+   - `DefaultBottomBarEntries`;
+   - `MembershipNotificationKinds`;
+   - `logTime`;
+   - `checkNotInMainThread`;
+   - the `LocationResult` and `FileHeader` types;
+   - the settings-persister, Geohash legacy-store, Nip46-bridge and notification-dispatcher
+     ports;
+   - the typed zap error.
+3. **Move the group** (77 files) to `commons/jvmAndroid` in one PR. Desktop keeps its
+   `DesktopIAccount` until the old app is retired; `IAccount` stays as the port it already is.
+4. **`AccountViewModel`**: the same recipe, using the dependency list above.
+5. **The shared composables and their helpers** (sized in the tracker's 2026-09-27 section):
+   - `RouteMaker`;
+   - drop the `accountViewModel` overloads of the `observe*` helpers;
+   - `DisappearingScaffold`'s immersive-scrolling read goes onto `DisplaySettings`;
+   - then `UserProfilePicture`, `UsernameDisplay`, `Loaders`, `RichTextViewer`,
+     `NoteCompose`.
+
+   Once `AccountViewModel` is in `commons`, these move without retyping.
+6. **Screens**, feature by feature, into `commonsUI`.
+7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
+8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
+   retiring the old `desktopApp`.
+
+Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
+`AccountViewModel` unchanged and only move later.
+
+## Method (so the numbers can be re-run)
+
+The closure script indexes every public top-level declaration in
+`amethyst/src/{main,play,fdroid}`. For each file it follows edges of four kinds:
+
+- explicit imports;
+- wildcard imports;
+- inline fully-qualified names;
+- **same-package references**, which need no import. This is the undercount the tracker's
+  header warns about.
+
+A same-package lowercase name reached through a `.` counts only when it is an extension. The
+lexer blanks strings but keeps `${…}` templates. A file is marked blocked by any of:
+
+- `android.*`, `com.google.*`, or a non-KMP `androidx.*`;
+- `R`/`BuildConfig`;
+- a library `commons` lacks.
+
+Symbols from `commons.*` that actually live in `commonsUI` (`Res`, `loadStringRes`) are
+checked separately. The first pass missed them. Known over-count: same-package token matching
+can link a file to a same-named declaration it does not use; the edges above were checked by
+hand.
