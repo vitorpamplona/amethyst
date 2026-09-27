@@ -73,6 +73,15 @@ abstract class RelayServerBase(
     var completenessHints: Boolean = false
 
     /**
+     * Consumes EVENTs addressed to the relay itself (e.g. NIP-43 join/leave
+     * requests) before the policy chain runs — see [EventCommandHandler].
+     * Applies to connections opened after it is set, so install it before
+     * the server starts accepting traffic. Null (the default) leaves every
+     * EVENT on the normal policy + store path.
+     */
+    var eventCommandHandler: EventCommandHandler? = null
+
+    /**
      * Builds the per-connection policy, prepending a [LimitsPolicy] when
      * [limits] is set so requests are clamped/rejected before the application
      * policy runs.
@@ -101,6 +110,7 @@ abstract class RelayServerBase(
                 onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
                 completenessHints = completenessHints,
+                commandHandler = eventCommandHandler,
             ),
         )
 

@@ -68,10 +68,13 @@ import kotlinx.serialization.json.int
  *
  * The NIP-43 role (`createrole`, `editrole`, `deleterole`, `assignrole`,
  * `unassignrole`) and invite-code (`listclaims`, `createclaim`,
- * `deleteclaim`) methods only maintain the [BanStore]'s records. A relay
- * that publishes kind 13534 / 33534 events or admits kind 28934 join
- * requests reads them from there ([BanStore.listRoles],
- * [BanStore.rolesOf], [BanStore.isValidClaim]).
+ * `deleteclaim`) methods only maintain the [BanStore]'s records; they mean
+ * something only when a NIP-43 engine consumes them (e.g.
+ * [com.vitorpamplona.quartz.nip43RelayMembers.server.RelayMembershipServer],
+ * which publishes kinds 13534 / 33534 and admits kind 28934 joins). A relay
+ * without one passes `nip43Methods = false` so it neither advertises nor
+ * accepts them, and a relay with one wires [afterMutation] so the engine
+ * republishes before the RPC answers.
  */
 class Nip86Server(
     val banStore: BanStore,
@@ -107,6 +110,21 @@ class Nip86Server(
      * case-insensitively (lowercased on entry).
      */
     allowList: Set<HexKey> = emptySet(),
+    /**
+     * Whether the NIP-43 role and invite-code methods are offered. `false`
+     * drops them from [supportedMethods] and answers them as unsupported —
+     * for relays that don't run a NIP-43 engine, where they'd be silent
+     * no-ops.
+     */
+    val nip43Methods: Boolean = true,
+    /**
+     * Runs after every state-changing method has been applied, before the
+     * response is returned — e.g. to republish the relay-signed NIP-43
+     * events so a client reading the relay right after the RPC sees the
+     * change. A throw turns the response into an `internal:` error, although
+     * the [BanStore] mutation itself stays applied.
+     */
+    private val afterMutation: suspend () -> Unit = {},
 ) {
     private val allowList: Set<HexKey> = allowList.mapTo(HashSet()) { it.lowercase() }
 
@@ -121,7 +139,7 @@ class Nip86Server(
     }
 
     val supportedMethods: List<String> =
-        listOf(
+        listOfNotNull(
             Nip86Method.SUPPORTED_METHODS,
             Nip86Method.BAN_PUBKEY,
             Nip86Method.UNBAN_PUBKEY,
@@ -129,14 +147,14 @@ class Nip86Server(
             Nip86Method.ALLOW_PUBKEY,
             Nip86Method.UNALLOW_PUBKEY,
             Nip86Method.LIST_ALLOWED_PUBKEYS,
-            Nip86Method.CREATE_ROLE,
-            Nip86Method.EDIT_ROLE,
-            Nip86Method.DELETE_ROLE,
-            Nip86Method.ASSIGN_ROLE,
-            Nip86Method.UNASSIGN_ROLE,
-            Nip86Method.LIST_CLAIMS,
-            Nip86Method.CREATE_CLAIM,
-            Nip86Method.DELETE_CLAIM,
+            Nip86Method.CREATE_ROLE.takeIf { nip43Methods },
+            Nip86Method.EDIT_ROLE.takeIf { nip43Methods },
+            Nip86Method.DELETE_ROLE.takeIf { nip43Methods },
+            Nip86Method.ASSIGN_ROLE.takeIf { nip43Methods },
+            Nip86Method.UNASSIGN_ROLE.takeIf { nip43Methods },
+            Nip86Method.LIST_CLAIMS.takeIf { nip43Methods },
+            Nip86Method.CREATE_CLAIM.takeIf { nip43Methods },
+            Nip86Method.DELETE_CLAIM.takeIf { nip43Methods },
             Nip86Method.BAN_EVENT,
             Nip86Method.UNBAN_EVENT,
             Nip86Method.ALLOW_EVENT,
@@ -151,6 +169,10 @@ class Nip86Server(
             Nip86Method.CHANGE_RELAY_DESCRIPTION,
             Nip86Method.CHANGE_RELAY_ICON,
         )
+
+    /** The [supportedMethods] that change state (everything but the queries). */
+    private val mutatingMethods: Set<String> =
+        supportedMethods.filterTo(HashSet()) { it != Nip86Method.SUPPORTED_METHODS && !it.startsWith("list") }
 
     /**
      * Dispatches a single RPC request from [pubkey] (the caller, as
@@ -168,6 +190,9 @@ class Nip86Server(
     ): Nip86Response {
         if (!isAuthorized(pubkey)) {
             return Nip86Response(error = "pubkey is not on the admin list")
+        }
+        if (req.method !in supportedMethods) {
+            return Nip86Response(error = "method not supported: ${req.method}")
         }
         return runCatching {
             when (req.method) {
@@ -309,6 +334,8 @@ class Nip86Server(
                 else -> {
                     Nip86Response(error = "method not supported: ${req.method}")
                 }
+            }.also { response ->
+                if (response.error == null && req.method in mutatingMethods) afterMutation()
             }
         }.getOrElse { e ->
             // CancellationException must propagate so structured

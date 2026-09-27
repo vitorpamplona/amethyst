@@ -86,6 +86,12 @@ class RelaySession(
      * for an unbounded filter, which an arbitrary backend need not do.
      */
     val completenessHints: Boolean = false,
+    /**
+     * Consumes EVENTs addressed to the relay itself (e.g. NIP-43 join/leave
+     * requests) ahead of the [policy] chain; see [EventCommandHandler].
+     * Null (the default) sends every EVENT down the normal path.
+     */
+    private val commandHandler: EventCommandHandler? = null,
 ) : AutoCloseable {
     /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
     constructor(
@@ -221,6 +227,21 @@ class RelaySession(
     }
 
     private suspend fun handleEvent(cmd: EventCmd) {
+        if (commandHandler != null) {
+            val handled =
+                try {
+                    commandHandler.handle(cmd.event, requestContext)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    OkMessage.rejected(cmd.event.id, MachineReadablePrefix.ERROR, e.message ?: "request failed")
+                }
+            if (handled != null) {
+                send(handled)
+                return
+            }
+        }
+
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
             send(OkMessage(cmd.event.id, false, result.reason))

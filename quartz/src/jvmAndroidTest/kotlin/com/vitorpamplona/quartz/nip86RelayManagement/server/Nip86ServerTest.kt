@@ -397,4 +397,54 @@ class Nip86ServerTest {
         assertTrue(server.isAuthorized(admin))
         assertTrue(server.isAuthorized(admin.uppercase()))
     }
+
+    @Test
+    fun nip43MethodsOffAreNeitherAdvertisedNorDispatched() {
+        runBlocking {
+            val store = BanStore()
+            val holder = Holder(Nip11RelayInformation(name = "n"))
+            val server = Nip86Server(banStore = store, infoHolder = holder, allowList = setOf(admin), nip43Methods = false)
+
+            val names = (server.dispatch(admin, Nip86Request.supportedMethods()).result as JsonArray).map { it.jsonPrimitive.content }
+            listOf(
+                Nip86Method.CREATE_ROLE,
+                Nip86Method.EDIT_ROLE,
+                Nip86Method.DELETE_ROLE,
+                Nip86Method.ASSIGN_ROLE,
+                Nip86Method.UNASSIGN_ROLE,
+                Nip86Method.LIST_CLAIMS,
+                Nip86Method.CREATE_CLAIM,
+                Nip86Method.DELETE_CLAIM,
+            ).forEach { assertFalse(it in names, it) }
+            assertTrue(Nip86Method.BAN_PUBKEY in names)
+
+            assertNotNull(server.dispatch(admin, Nip86Request.createClaim("code")).error)
+            assertNotNull(server.dispatch(admin, Nip86Request.createRole("mod")).error)
+            assertTrue(store.listClaims().isEmpty())
+            assertTrue(store.listRoles().isEmpty())
+        }
+    }
+
+    @Test
+    fun afterMutationRunsOnlyAfterSuccessfulStateChanges() {
+        runBlocking {
+            var calls = 0
+            val store = BanStore()
+            val holder = Holder(Nip11RelayInformation(name = "n"))
+            val server = Nip86Server(banStore = store, infoHolder = holder, allowList = setOf(admin), afterMutation = { calls++ })
+
+            server.dispatch(admin, Nip86Request.supportedMethods())
+            server.dispatch(admin, Nip86Request.listAllowedPubkeys())
+            server.dispatch(admin, Nip86Request.listClaims())
+            assertEquals(0, calls, "queries don't change state")
+
+            server.dispatch(admin, Nip86Request.allowPubkey(pk))
+            server.dispatch(admin, Nip86Request.createRole("mod"))
+            assertEquals(2, calls)
+
+            // A failed mutation (unknown role) changes nothing and doesn't fire.
+            assertNotNull(server.dispatch(admin, Nip86Request.assignRole(pk, "ghost")).error)
+            assertEquals(2, calls)
+        }
+    }
 }

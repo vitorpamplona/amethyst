@@ -47,9 +47,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
  * static policies would silently diverge after the first admin call.
  * Geode seeds the [BanStore] from `[authorization]` at first boot
  * instead — see `com.vitorpamplona.geode.config.RuntimeConfig`.
+ *
+ * [membersOnly] is the NIP-43 members-only mode: the pubkey allow list
+ * *is* the relay's member list, so it gates writes even while it is
+ * empty (a fresh members-only relay is closed, not open, until someone
+ * joins). Off by default, which keeps the NIP-86 reading: an empty allow
+ * list restricts nothing.
  */
 class BanListPolicy(
     val banStore: BanStore,
+    val membersOnly: Boolean = false,
 ) : PassThroughPolicy() {
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
         val ev = cmd.event
@@ -62,7 +69,11 @@ class BanListPolicy(
         if (banStore.isBanned(ev.pubKey)) {
             return PolicyResult.Rejected("blocked: pubkey is banned")
         }
-        if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
+        if (membersOnly) {
+            if (!banStore.isAllowedPubkey(ev.pubKey)) {
+                return PolicyResult.Rejected("restricted: only members can write to this relay; request access with a NIP-43 join request")
+            }
+        } else if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
             return PolicyResult.Rejected("blocked: pubkey is not on the allow list")
         }
         if (!banStore.isKindAllowed(ev.kind)) {
