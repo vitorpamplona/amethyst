@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 /**
  * Reserves the visual space the `AppBottomBar` occupies on root tab entries so a
  * FloatingActionButton stays at the same vertical position whether or not the bar is
- * rendered. `AppBottomBar` hides itself on canPop entries (drawer pushes, in-app
+ * rendered. `AppBottomBar` hides itself off [INav.showsBottomBar] entries (in-app
  * navigations) — without this padding the FAB drops by `AppBottomBarHeight` there.
  *
  * The system-navigation-bar inset is already handled by the surrounding Scaffold, so
@@ -41,8 +41,8 @@ val FABPaddingFromBottom = 30.dp
 
 @Composable
 fun Modifier.fabBottomBarPadding(nav: INav): Modifier =
-    if (nav.canPop() || LocalScreenLayout.current.isLargeScreen) {
-        // canPop entries hide the bar on phones; large screens never render it at all.
+    if (!nav.showsBottomBar() || LocalScreenLayout.current.isLargeScreen) {
+        // In-app pushes hide the bar on phones; large screens never render it at all.
         padding(bottom = FABPaddingFromBottom)
     } else {
         this

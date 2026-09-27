@@ -54,6 +54,14 @@ const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
 
 fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
 
+// Per-entry hint stamped by Nav.navDrawer marking that the entry was opened
+// from the navigation drawer. It sits on top of the stack like any push (back
+// arrow, slide animation), but Nav.showsBottomBar keeps the bottom bar on it:
+// a drawer destination is a top-level section, not a detail screen.
+const val DRAWER_ROOT_KEY = "drawerRoot"
+
+fun NavBackStackEntry.isDrawerRoot(): Boolean = savedStateHandle.get<Boolean>(DRAWER_ROOT_KEY) == true
+
 /**
  * The shell's current layout tier, mirrored for the transition specs below. Transition
  * lambdas run when a navigation starts — outside composition — so they can't read

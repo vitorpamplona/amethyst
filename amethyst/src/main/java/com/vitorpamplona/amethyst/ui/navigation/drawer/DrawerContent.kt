@@ -210,7 +210,7 @@ private fun DrawerContentBody(
     accountViewModel: AccountViewModel,
 ) {
     val onClickUser = {
-        nav.nav(routeFor(accountViewModel.userProfile()))
+        nav.navDrawer(routeFor(accountViewModel.userProfile()))
         nav.closeDrawer()
     }
 
@@ -742,7 +742,7 @@ private fun ScheduledPostsNavigationRow(
         badgeCount = pendingCount,
         onClick = {
             nav.closeDrawer()
-            nav.nav { def.resolveRoute(accountViewModel) }
+            nav.navDrawer { def.resolveRoute(accountViewModel) }
         },
     )
 }
@@ -850,7 +850,7 @@ fun NavigationRow(
         tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(route)
+            nav.navDrawer(route)
         },
     )
 }
@@ -871,7 +871,7 @@ fun NavigationRow(
         tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(computeRoute)
+            nav.navDrawer(computeRoute)
         },
     )
 }
@@ -890,7 +890,7 @@ fun NavigationRow(
         tint = tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(route)
+            nav.navDrawer(route)
         },
     )
 }
@@ -909,7 +909,7 @@ fun NavigationRow(
         tint = tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(computeRoute)
+            nav.navDrawer(computeRoute)
         },
     )
 }
