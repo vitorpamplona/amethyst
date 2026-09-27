@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedNote
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
@@ -168,7 +169,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.ui.note.observeEdits
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
+import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsFromMe
+import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsToMe
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
+import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterFollowingPublicChatsCreationEvent
+import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterLastMessageFollowingPublicChats
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.ui.platform.UriHandler
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 
 // F-Droid distributes Amethyst as MIT-licensed free software; the build must
 // not surface links to external (e.g. GitHub-hosted) policy documents.

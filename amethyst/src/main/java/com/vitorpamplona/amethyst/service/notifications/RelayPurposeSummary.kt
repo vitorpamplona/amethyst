@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.service.notifications
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
+import com.vitorpamplona.amethyst.commons.relays.ui.SubPurposeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_browsing
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**

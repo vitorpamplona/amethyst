@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.payment_targets_section_expl
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText

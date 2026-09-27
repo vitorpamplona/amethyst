@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
+import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_clear
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_coordinator

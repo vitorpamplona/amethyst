@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
 import com.vitorpamplona.amethyst.commons.model.navigation.toNames
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList

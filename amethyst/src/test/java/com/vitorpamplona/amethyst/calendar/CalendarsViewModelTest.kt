@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.calendar
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
 import kotlinx.coroutines.Dispatchers

@@ -387,7 +387,7 @@ fun CordnCreateGroupScreen(
                             if (draft.showStale) {
                                 stringRes(Res.string.cordn_coordinators_hide_older)
                             } else {
-                                stringRes(Res.string.cordn_coordinators_show_older, stale.size)
+                                pluralStringRes(Res.plurals.cordn_coordinators_show_older, stale.size, stale.size)
                             },
                         )
                     }
@@ -462,7 +462,7 @@ fun CordnCreateGroupScreen(
                                 // different answers and only one of them is final.
                                 // Reporting the first for the second sends someone
                                 // off to paste a pubkey by hand over a timeout.
-                                stringRes(Res.string.cordn_coordinators_discover_unheard, result.unreachable.size)
+                                pluralStringRes(Res.plurals.cordn_coordinators_discover_unheard, result.unreachable.size, result.unreachable.size)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -927,7 +927,7 @@ private fun CoordinatorSummary(
                             text =
                                 when {
                                     coverage == null || !coverage.answered -> stringRes(Res.string.cordn_create_coverage_unknown)
-                                    reached == rosterSize -> stringRes(Res.string.cordn_create_coverage_all, rosterSize)
+                                    reached == rosterSize -> pluralStringRes(Res.plurals.cordn_create_coverage_all, rosterSize, rosterSize)
                                     else -> stringRes(Res.string.cordn_create_coverage_partial, reached ?: 0, rosterSize)
                                 },
                             style = MaterialTheme.typography.labelSmall,

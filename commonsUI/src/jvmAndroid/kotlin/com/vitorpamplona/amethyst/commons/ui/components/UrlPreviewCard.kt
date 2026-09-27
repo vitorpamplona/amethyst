@@ -1,0 +1,179 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.components
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.copy_url_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.kind_comments
+import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UrlPreviewCard(
+    url: String,
+    previewInfo: UrlInfoItem,
+    onUrlComments: (() -> Unit)? = null,
+    onCardClick: (() -> Unit)? = null,
+) {
+    val uri = LocalUriHandler.current
+    val popupExpanded =
+        remember {
+            mutableStateOf(false)
+        }
+
+    if (popupExpanded.value) {
+        val clipboardManager = LocalClipboard.current
+        val scope = rememberCoroutineScope()
+        M3ActionDialog(
+            title = stringRes(Res.string.link_actions_dialog_title),
+            onDismiss = { popupExpanded.value = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = MaterialSymbols.ContentCopy,
+                    text = stringRes(Res.string.copy_url_to_clipboard),
+                ) {
+                    scope.launch {
+                        clipboardManager.setText(url)
+                        popupExpanded.value = false
+                    }
+                }
+                onUrlComments?.let {
+                    M3ActionRow(
+                        icon = MaterialSymbols.Link,
+                        text = stringRes(Res.string.kind_comments),
+                    ) {
+                        popupExpanded.value = false
+                        it()
+                    }
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier =
+            MaterialTheme.colorScheme.innerPostModifier
+                .combinedClickable(
+                    onClick = {
+                        if (onCardClick != null) {
+                            onCardClick()
+                        } else {
+                            runCatching { uri.openUri(url) }
+                        }
+                    },
+                    onLongClick = {
+                        popupExpanded.value = true
+                    },
+                ),
+    ) {
+        // A Loaded preview no longer implies an image: a player page that ships no cover art is
+        // kept (it has media to play), and painting its empty string left a blank 180dp box.
+        if (previewInfo.imageUrlFullPath.isNotBlank()) {
+            AsyncImage(
+                model = previewInfo.imageUrlFullPath,
+                contentDescription = previewInfo.title,
+                contentScale = ContentScale.FillWidth,
+                modifier = previewCardImageModifier,
+            )
+        }
+
+        Row(
+            modifier = MaxWidthWithHorzPadding,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f, fill = false),
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            // Only meaningful when the card's own tap does something else (e.g. opening the
+            // comment thread); otherwise it would duplicate the card's open-in-browser tap.
+            if (onCardClick != null) {
+                IconButton(
+                    onClick = { runCatching { uri.openUri(url) } },
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                        contentDescription = stringRes(Res.string.url_preview_open_in_browser),
+                        modifier = Size14Modifier,
+                        tint = Color.Gray,
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = previewInfo.title,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = MaxWidthWithHorzPadding,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Text(
+            text = previewInfo.description,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = MaxWidthWithHorzPadding,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Spacer(modifier = DoubleVertSpacer)
+    }
+}

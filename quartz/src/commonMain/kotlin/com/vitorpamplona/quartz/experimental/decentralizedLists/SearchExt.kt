@@ -20,12 +20,17 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists
 
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.names
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.NamesTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.SingularPlural
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TitlesTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.titles
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.comments
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.name
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.CommentsTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.NameTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.TitleTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.title
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
@@ -83,6 +88,20 @@ fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean
     }
     return true
 }
+
+/**
+ * The TITLE role of [forEachSearchableListField], for search engines that weight fields: what the
+ * list or item is called — the header's `names` and `titles` (singular, then plural) and the
+ * item's `name` and `title`. Same first-well-formed-tag rule as the walk.
+ */
+fun TagArray.searchableListTitles(): List<String?> {
+    val names = names()
+    val titles = titles()
+    return listOf(names?.singular, names?.plural, titles?.singular, titles?.plural, name(), title())
+}
+
+/** The DESCRIPTION role of [forEachSearchableListField]: `description`, then `comments`. */
+fun TagArray.searchableListDescriptions(): List<String?> = listOf(description(), comments())
 
 /** The write-path join of [forEachSearchableListField]: one field per line. */
 fun TagArray.searchableListContent() =
