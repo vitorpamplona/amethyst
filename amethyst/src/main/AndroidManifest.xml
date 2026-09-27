@@ -17,6 +17,17 @@
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
 
+        <!-- So the browser's hand-off tile can name the browser it would open.
+             Android 11+ package visibility answers resolveActivity with nothing
+             for a scheme that is not declared here, so without this the tile can
+             only ever say "Open in browser". Read-only: it names the target, the
+             hand-off itself still goes through a chooser. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+
         <!-- NIP-A3 payment targets. Android 11+ package visibility means
              queryIntentActivities returns NOTHING for a scheme not declared here,
              so without these the zap picker's pay-to chip is invisible on every

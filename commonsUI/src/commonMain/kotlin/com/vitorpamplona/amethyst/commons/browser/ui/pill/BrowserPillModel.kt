@@ -44,6 +44,13 @@ data class BrowserPillUi(
     val consoleErrors: Int = 0,
     /** Answers this site already has (camera / mic / location), for the site-settings summary. */
     val sitePermissions: Map<BrowserSitePermission, BrowserSitePermission.Decision> = emptyMap(),
+    /**
+     * The default browser's name, when the system will name one and it is not us.
+     *
+     * Null means the hand-off shows a chooser, and the tile has to stay "Open in browser":
+     * no default is set, the device hides it, or the only handler is Amethyst itself.
+     */
+    val defaultBrowserName: String? = null,
 ) {
     val security: BrowserChrome.Security get() = BrowserChrome.security(chrome)
     val host: String get() = BrowserChrome.displayHost(chrome.url)
