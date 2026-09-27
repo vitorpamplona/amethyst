@@ -89,6 +89,21 @@ fun observeUserNickname(
     return flow.collectAsStateWithLifecycle(remember(user) { userAssertions.cachedNickname(user) })
 }
 
+/**
+ * The name the account knows [user] by, for display: the NIP-85 nickname, else the NIP-02 petname
+ * from the account's own follow list. Editing UIs should keep using [observeUserNickname].
+ */
+@Composable
+fun observeUserDisplayNickname(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Nickname?> {
+    val userAssertions = accountViewModel.account.userAssertions
+    val flow = remember(user) { userAssertions.displayNicknameFlow(user) }
+
+    return flow.collectAsStateWithLifecycle(remember(user) { userAssertions.cachedDisplayNickname(user) })
+}
+
 @Composable
 fun observeUserAboutMe(
     user: User,

@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnameResolver
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,6 +61,28 @@ class UserAssertionsState(
     val emojiPacks: EmojiPackState,
 ) {
     private val accountUser: User? by lazy { cache.getOrCreateUser(signer.pubKey) }
+
+    // The account's own kind-3 follow list, whose `p` tags may carry NIP-02 petnames.
+    private val followListNote: AddressableNote by lazy { cache.getOrCreateAddressableNote(ContactListEvent.createAddress(signer.pubKey)) }
+
+    // pubkey -> petname for the latest follow list, rebuilt only when that list changes.
+    private class PetnameIndex(
+        val event: ContactListEvent,
+        val petnames: Map<HexKey, String>,
+    )
+
+    private var petnameIndex: PetnameIndex? = null
+
+    private fun followListPetname(
+        followList: ContactListEvent?,
+        target: HexKey,
+    ): String? {
+        if (followList == null) return null
+        val index =
+            petnameIndex?.takeIf { it.event === followList }
+                ?: PetnameIndex(followList, PetnameResolver.petnames(followList.tags)).also { petnameIndex = it }
+        return index.petnames[target]
+    }
 
     fun createCardAddress(target: HexKey): Address = UserAssertionEvent.createAddress(signer.pubKey, target)
 
@@ -115,20 +140,58 @@ class UserAssertionsState(
     }
 
     /**
+     * The NIP-02 petname the account's own follow list (kind 3) gives [target], if any. It is the
+     * fallback for display when the account has no NIP-85 nickname for them.
+     */
+    fun followListPetnameFlow(target: User): Flow<String?> =
+        followListNote
+            .flow()
+            .metadata
+            .stateFlow
+            .map { followListPetname(it.note.event as? ContactListEvent, target.pubkeyHex) }
+            .distinctUntilChanged()
+
+    /** Synchronous counterpart of [followListPetnameFlow]. */
+    fun cachedFollowListPetname(target: User): String? = followListPetname(followListNote.event as? ContactListEvent, target.pubkeyHex)
+
+    /**
+     * The name the account knows [target] by, for rendering: the NIP-85 nickname when it has a
+     * petname, otherwise the kind-3 (NIP-02) petname. Use [nicknameFlow] instead when editing
+     * the nickname, which must not pick up the follow-list fallback.
+     */
+    fun displayNicknameFlow(target: User): Flow<Nickname?> =
+        combine(nicknameFlow(target), followListPetnameFlow(target), ::withFollowListFallback)
+            .distinctUntilChanged()
+
+    /** Synchronous counterpart of [displayNicknameFlow], from already-decrypted data. */
+    fun cachedDisplayNickname(target: User): Nickname? = withFollowListFallback(cachedNickname(target), cachedFollowListPetname(target))
+
+    private fun withFollowListFallback(
+        nickname: Nickname?,
+        followListPetname: String?,
+    ): Nickname? =
+        if (nickname?.petName != null || followListPetname == null) {
+            nickname
+        } else {
+            // The card's tags can't describe a name that didn't come from the card.
+            Nickname(followListPetname, nickname?.summary, EmptyTagList)
+        }
+
+    /**
      * The name to render for [target], per the NIP-81 policy: the nickname the
-     * account gave them wins over the profile's own display name, falling back
-     * to the short npub when neither exists.
+     * account gave them wins over the profile's own display name, then the
+     * account's NIP-02 follow-list petname, falling back to the short npub.
      */
     fun displayNameFlow(target: User): Flow<String> =
         combine(
             target.metadata().flow,
-            nicknameFlow(target),
+            displayNicknameFlow(target),
         ) { info, nickname ->
             nickname?.petName ?: info?.info?.bestName() ?: target.pubkeyDisplayHex()
         }.distinctUntilChanged()
 
     /** Synchronous first value for [displayNameFlow], from already-decrypted data. */
-    fun cachedDisplayName(target: User): String = cachedNickname(target)?.petName ?: target.toBestDisplayName()
+    fun cachedDisplayName(target: User): String = cachedDisplayNickname(target)?.petName ?: target.toBestDisplayName()
 
     suspend fun petName(target: HexKey): String? = getCard(target)?.let { decryptionCache.petName(it) }
 

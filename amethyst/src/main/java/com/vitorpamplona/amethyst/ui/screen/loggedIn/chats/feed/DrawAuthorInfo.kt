@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.note.InnerUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderUserCards
 import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
@@ -84,7 +84,7 @@ private fun WatchAndDisplayUser(
     nav: INav,
 ) {
     val userState by observeUserInfo(author, accountViewModel)
-    val nickname by observeUserNickname(author, accountViewModel)
+    val nickname by observeUserDisplayNickname(author, accountViewModel)
     val petName = nickname?.petName
     // A geohash message's `n` nickname wins over the (usually empty) profile of a throwaway key.
     val displayName = nameOverride ?: petName ?: userState?.info?.bestName()

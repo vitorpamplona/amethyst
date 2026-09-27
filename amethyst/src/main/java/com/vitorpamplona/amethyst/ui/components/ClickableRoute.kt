@@ -55,8 +55,8 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.CustomEmojiChecker
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -306,7 +306,7 @@ fun RenderUserAsClickableText(
     nav: INav,
 ) {
     val userState by observeUserInfo(baseUser, accountViewModel)
-    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val nickname by observeUserDisplayNickname(baseUser, accountViewModel)
     val petName = nickname?.petName
 
     CreateClickableTextWithEmoji(
