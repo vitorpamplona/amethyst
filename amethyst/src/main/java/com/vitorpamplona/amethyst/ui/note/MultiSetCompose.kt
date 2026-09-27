@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWit
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture

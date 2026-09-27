@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
@@ -99,15 +100,11 @@ fun ChessGameScreen(
 ) {
     // Scope ViewModel to Activity so it's shared between lobby and game screens
     val activity = LocalActivity.current as FragmentActivity
-    val chessViewModel: ChessViewModelNew =
+    val chessViewModel: ChessViewModel =
         viewModel(
             viewModelStoreOwner = activity,
-            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory =
-                ChessViewModelFactory(
-                    accountViewModel.account,
-                    activity.application,
-                ),
+            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            factory = ChessViewModelFactory(accountViewModel.account),
         )
 
     val activeGames by chessViewModel.activeGames.collectAsState()

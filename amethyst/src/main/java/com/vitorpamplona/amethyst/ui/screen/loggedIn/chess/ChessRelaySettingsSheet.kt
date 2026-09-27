@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -59,7 +60,7 @@ import kotlinx.coroutines.flow.map
  */
 @Composable
 fun ChessRelaySettingsSheet(
-    chessViewModel: ChessViewModelNew,
+    chessViewModel: ChessViewModel,
     accountViewModel: AccountViewModel,
 ) {
     // Get relay information for settings display
@@ -226,7 +227,7 @@ fun ChessRelaySettingsSheet(
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun StatRow(chessViewModel: ChessViewModelNew) {
+fun StatRow(chessViewModel: ChessViewModel) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         val challengeCount by remember {
             chessViewModel.challenges.map { it.size }

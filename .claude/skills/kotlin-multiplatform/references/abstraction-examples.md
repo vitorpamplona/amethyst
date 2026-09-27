@@ -253,13 +253,13 @@ fun String.toDisplayHexKey(): String {
 
 **After:**
 ```kotlin
-// commons/commonMain/formatters/PubKeyFormatter.kt
+// commons/src/commonMain/.../commons/util/PubKeyFormatter.kt
 fun String.toDisplayHexKey(): String {
     return "${take(8)}:${takeLast(8)}"
 }
 
 // Both apps use it
-import com.vitorpamplona.amethyst.commons.formatters.toDisplayHexKey
+import com.vitorpamplona.amethyst.commons.util.toDisplayHexKey
 ```
 
 **Why successful:**

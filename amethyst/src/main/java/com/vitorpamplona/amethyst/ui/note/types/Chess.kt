@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameViewer
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_accept
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -124,10 +124,10 @@ fun RenderLiveChessChallenge(
     val gameId = event.gameId()
     val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
 
-    val chessViewModel: ChessViewModelNew =
+    val chessViewModel: ChessViewModel =
         viewModel(
-            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
+            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            factory = ChessViewModelFactory(accountViewModel.account),
         )
 
     val isOpenChallenge = event.opponentPubkey() == null

@@ -39,13 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -69,8 +67,6 @@ import org.junit.runner.RunWith
 class PlaybackErrorOverlayFitTest {
     @get:Rule
     val rule = createComposeRule()
-
-    private val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
 
     /**
      * Built outside composition on purpose: the mock and its error state are fixtures for the whole
@@ -141,10 +137,12 @@ class PlaybackErrorOverlayFitTest {
         assertButtonUsable()
         rule
             .onNodeWithText(
-                stringRes(
-                    Res.string.error_video_playback_failed_description,
-                    "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
-                ),
+                runBlocking {
+                    loadStringRes(
+                        Res.string.error_video_playback_failed_description,
+                        "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
+                    )
+                },
             ).assertDoesNotExist()
     }
 

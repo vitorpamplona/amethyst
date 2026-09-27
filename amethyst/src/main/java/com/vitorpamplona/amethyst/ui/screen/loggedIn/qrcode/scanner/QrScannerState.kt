@@ -25,7 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.qrcode.ScanFrame
+import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.StructuredAppendAccumulator
 
 /**
  * Everything the scanner UI draws, and the decision of what a frame means.

@@ -90,6 +90,7 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet

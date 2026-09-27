@@ -106,6 +106,9 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_settings
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.resources.zaps_search_keywords
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsEntry
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsIcon
 import org.jetbrains.compose.resources.StringResource
 
 /**

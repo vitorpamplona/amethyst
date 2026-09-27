@@ -53,6 +53,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.qrcode.ScanBounds
+import com.vitorpamplona.amethyst.commons.qrcode.ScanFrame
+import com.vitorpamplona.amethyst.commons.qrcode.ScanPoint
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_dark_hint

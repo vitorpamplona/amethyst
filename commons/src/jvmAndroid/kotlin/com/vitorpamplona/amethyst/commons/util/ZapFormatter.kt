@@ -24,12 +24,15 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
-private val TenGiga = BigDecimal(10_000_000_000)
-private val OneGiga = BigDecimal(1_000_000_000)
-private val TenMega = BigDecimal(10_000_000)
-private val OneMega = BigDecimal(1_000_000)
-private val TenKilo = BigDecimal(10_000)
-private val OneKilo = BigDecimal(1_000)
+val TenGiga = BigDecimal(10_000_000_000)
+val OneGiga = BigDecimal(1_000_000_000)
+val TenMega = BigDecimal(10_000_000)
+val OneMega = BigDecimal(1_000_000)
+val TenKilo = BigDecimal(10_000)
+val OneKilo = BigDecimal(1_000)
+
+/** Below this an amount rounds to nothing. Built once: it was a new `BigDecimal` per call. */
+internal val MinDisplayableAmount = BigDecimal(0.01)
 
 private val dfGBig = ThreadLocal.withInitial { DecimalFormat("#.#G") }
 private val dfGSmall = ThreadLocal.withInitial { DecimalFormat("#.0G") }
@@ -42,23 +45,28 @@ private val dfN = ThreadLocal.withInitial { DecimalFormat("#") }
  * Formats a BigDecimal amount to human-readable format with G/M/K suffixes.
  * Returns empty string for null or very small amounts.
  *
+ * Amounts are rounded half-up to a whole number of the unit before the unit is picked, so
+ * 999,500 reads "1.0M" rather than "1000k".
+ *
  * Examples:
- * - 1500 -> "1.5k"
- * - 2500000 -> "2.5M"
+ * - 1500 -> "1500"
+ * - 12500 -> "13k"
+ * - 2500000 -> "3.0M"
  * - 10000000000 -> "10G"
  */
 fun showAmount(amount: BigDecimal?): String {
     if (amount == null) return ""
-    if (amount.abs() < BigDecimal(0.01)) return ""
+    if (amount.abs() < MinDisplayableAmount) return ""
+    if (amount < TenKilo) return dfN.get()!!.format(amount)
 
-    return when {
-        amount >= TenGiga -> dfGBig.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneGiga -> dfGSmall.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenMega -> dfMBig.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfMSmall.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenKilo -> dfK.get()!!.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> dfN.get()!!.format(amount)
-    }
+    // `divide(_, 0, HALF_UP)`, not `div(_).setScale(0, HALF_UP)`: Kotlin's `div` already rounds
+    // to the dividend's scale with HALF_EVEN, so the HALF_UP never ran and 12,500 read "12k".
+    val kilos = amount.divide(OneKilo, 0, RoundingMode.HALF_UP)
+    if (kilos < OneKilo) return dfK.get()!!.format(kilos)
+    val megas = amount.divide(OneMega, 0, RoundingMode.HALF_UP)
+    if (megas < OneKilo) return (if (megas < BigDecimal.TEN) dfMSmall else dfMBig).get()!!.format(megas)
+    val gigas = amount.divide(OneGiga, 0, RoundingMode.HALF_UP)
+    return (if (gigas < BigDecimal.TEN) dfGSmall else dfGBig).get()!!.format(gigas)
 }
 
 /**
@@ -67,7 +75,7 @@ fun showAmount(amount: BigDecimal?): String {
  */
 fun showAmountWithZero(amount: BigDecimal?): String {
     if (amount == null) return "0"
-    if (amount.abs() < BigDecimal(0.01)) return "0"
+    if (amount.abs() < MinDisplayableAmount) return "0"
     return showAmount(amount)
 }
 

@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.recording_indicator_descript
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatSecondsToTime
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay

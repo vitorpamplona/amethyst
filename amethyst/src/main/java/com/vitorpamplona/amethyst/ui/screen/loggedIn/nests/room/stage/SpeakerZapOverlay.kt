@@ -46,9 +46,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
-import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import kotlinx.coroutines.delay
 
 /**
