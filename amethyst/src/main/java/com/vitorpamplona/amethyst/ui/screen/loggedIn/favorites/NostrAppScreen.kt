@@ -26,18 +26,19 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,20 +51,22 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
-import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_static
-import com.vitorpamplona.amethyst.commons.resources.favorite_app_access_title
-import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_open
-import com.vitorpamplona.amethyst.commons.resources.favorite_app_network_tor
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
@@ -73,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -130,7 +134,10 @@ private fun EmbeddedNostrAppTab(
 
     // Mint the verified launch params (a fresh token per resolve); null until the event loads. Re-minted
     // on a theme flip (the params carry the resolved theme into the sandbox host's WebView).
-    val params = remember(coordinate, EmbeddedTabHost.rebuildEpoch) { FavoriteAppLauncher.embedParams(context, coordinate) }
+    // Bumped when the user re-routes an nSite (Tor ↔ open web): the session is rebuilt with the new route,
+    // as the full-screen host relaunches itself.
+    var networkEpoch by remember(coordinate) { mutableIntStateOf(0) }
+    val params = remember(coordinate, EmbeddedTabHost.rebuildEpoch, networkEpoch) { FavoriteAppLauncher.embedParams(context, coordinate) }
     if (params == null) {
         UnavailableTab(coordinate, accountViewModel, nav)
         return
@@ -142,17 +149,20 @@ private fun EmbeddedNostrAppTab(
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
+    // Only nSites have a route of their own to choose, and only when Tor is running.
+    val torOn = if (profile.exposesNetwork && params.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1) > 0) useTor else null
 
     val scope = rememberCoroutineScope()
     var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
+    var textZoom by remember(coordinate) { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
 
     val apps by Amethyst.instance.favoriteApps.favorites
         .collectAsStateWithLifecycle()
     val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
 
     val controller =
-        remember(id, EmbeddedTabHost.rebuildEpoch) {
+        remember(id, EmbeddedTabHost.rebuildEpoch, networkEpoch) {
             EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
 
@@ -172,21 +182,50 @@ private fun EmbeddedNostrAppTab(
 
     // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(title, coordinate, isFavorite, controller) {
+        remember(title, coordinate, isFavorite, torOn, textZoom, controller) {
             EmbeddedTabChrome(
-                title = title.ifBlank { coordinate },
-                isSandbox = true,
-                onReload = { controller.reload() },
-                onOpenFull = { FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr) },
-                onInfo = { showAccess = true },
-                onPermissions = { nav.nav(Route.ConnectedAppDetail(permissionCoordinate)) },
-                isFavorite = isFavorite,
-                onFavorite = {
-                    val favId = "nostr:$coordinate"
-                    if (Amethyst.instance.favoriteApps.isFavorite(favId)) {
-                        Amethyst.instance.favoriteApps.remove(favId)
-                    } else {
-                        Amethyst.instance.favoriteApps.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                ui =
+                    BrowserPillUi(
+                        title = title.ifBlank { coordinate },
+                        chrome =
+                            BrowserChrome.State(
+                                surface = if (profile == HostProfile.WEBSITE) BrowserChrome.Surface.NSITE else BrowserChrome.Surface.NAPPLET,
+                                presentation = BrowserChrome.Presentation.EMBEDDED,
+                                url = "",
+                                startUrl = "",
+                                torOn = torOn,
+                                hasAccessInfo = true,
+                            ),
+                        isFavorite = isFavorite,
+                        textZoom = textZoom,
+                    ),
+                onEvent = { event ->
+                    if (event is BrowserPillEvent.TextZoom) {
+                        textZoom = event.percent
+                        controller.setTextZoom(event.percent)
+                    }
+                    when ((event as? BrowserPillEvent.Action)?.action) {
+                        BrowserChrome.Action.RELOAD -> controller.reload()
+                        BrowserChrome.Action.OPEN_FULL_SCREEN ->
+                            FavoriteAppLauncher.launch(context, FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()), appStillLoadingStr)
+                        BrowserChrome.Action.ACCESS_INFO -> showAccess = true
+                        BrowserChrome.Action.TOR -> {
+                            // Persist the new route, then rebuild the session so it loads that way.
+                            NappletNetworkRegistry.set(permissionCoordinate, !useTor)
+                            EmbeddedTabHost.evict(id)
+                            networkEpoch++
+                        }
+                        BrowserChrome.Action.SITE_SETTINGS -> nav.nav(Route.ConnectedAppDetail(permissionCoordinate))
+                        BrowserChrome.Action.FAVORITE -> {
+                            val favId = "nostr:$coordinate"
+                            val favorites = Amethyst.instance.favoriteApps
+                            if (favorites.isFavorite(favId)) {
+                                favorites.remove(favId)
+                            } else {
+                                favorites.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                            }
+                        }
+                        else -> Unit
                     }
                 },
             )
@@ -226,7 +265,22 @@ private fun EmbeddedNostrAppTab(
     BackHandler(enabled = canGoBack) { controller.back() }
 
     if (showAccess) {
-        AccessDialog(title, capLabels, profile.exposesNetwork, useTor) { showAccess = false }
+        Dialog(onDismissRequest = { showAccess = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                AccessInfoSheet(
+                    title = title.ifBlank { coordinate },
+                    isWebsite = profile == HostProfile.WEBSITE,
+                    capabilities = capLabels,
+                    torOn = torOn,
+                    onManagePermissions = {
+                        showAccess = false
+                        nav.nav(Route.ConnectedAppDetail(permissionCoordinate))
+                    },
+                    onDone = { showAccess = false },
+                    modifier = Modifier.widthIn(max = 560.dp),
+                )
+            }
+        }
     }
 
     Scaffold(
@@ -272,36 +326,6 @@ private fun UnavailableTab(
             )
         }
     }
-}
-
-@Composable
-private fun AccessDialog(
-    title: String,
-    capLabels: List<String>,
-    showsNetwork: Boolean,
-    useTor: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val capsBody =
-        if (capLabels.isEmpty()) {
-            stringRes(Res.string.favorite_app_access_static)
-        } else {
-            capLabels.joinToString("\n") { "•  $it" }
-        }
-    val networkBody =
-        if (showsNetwork) {
-            "\n\n" + stringRes(if (useTor) Res.string.favorite_app_network_tor else Res.string.favorite_app_network_open)
-        } else {
-            ""
-        }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (title.isBlank()) stringRes(Res.string.favorite_app_access_title) else title) },
-        text = { Text(capsBody + networkBody) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringRes(android.R.string.ok)) }
-        },
-    )
 }
 
 private fun noticeResId(notice: String): StringResource? =

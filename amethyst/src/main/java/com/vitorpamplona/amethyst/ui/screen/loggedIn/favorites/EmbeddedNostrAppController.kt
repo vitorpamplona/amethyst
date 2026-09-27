@@ -35,19 +35,27 @@ import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.consoleLevelOf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
 import java.util.concurrent.atomic.AtomicLong
 
@@ -67,7 +75,9 @@ class EmbeddedNostrAppController(
     private val params: Bundle,
 ) : EmbeddedSurfaceController,
     EmbeddedImeBridge,
-    EmbeddedMagnifierProbe {
+    EmbeddedMagnifierProbe,
+    ConsoleBridge,
+    FindBridge {
     private val incoming = Messenger(Handler(Looper.getMainLooper(), ::onServiceMessage))
     private var serviceMessenger: Messenger? = null
     private var bound = false
@@ -111,6 +121,14 @@ class EmbeddedNostrAppController(
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
     override var onMagnifierFrame: ((MagnifierFrame) -> Unit)? = null
+
+    /** The app's console output, capped at [MAX_CONSOLE_LOGS] entries. */
+    override val consoleLogs = mutableStateListOf<ConsoleLine>()
+
+    override fun clearConsoleLogs() = consoleLogs.clear()
+
+    private val _findResult = mutableStateOf<FindResult?>(null)
+    override val findResult: State<FindResult?> = _findResult
 
     private val connection =
         object : ServiceConnection {
@@ -266,6 +284,22 @@ class EmbeddedNostrAppController(
                     }
                 }
             }
+            NappletEmbedContract.MSG_FIND_RESULT -> {
+                val data = msg.data ?: return true
+                _findResult.value = FindResult(data.getInt(NappletEmbedContract.KEY_FIND_ACTIVE), data.getInt(NappletEmbedContract.KEY_FIND_TOTAL))
+            }
+            NappletEmbedContract.MSG_CONSOLE_LOG -> {
+                val data = msg.data ?: return true
+                if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
+                consoleLogs.add(
+                    ConsoleLine(
+                        consoleLevelOf(data.getString(NappletEmbedContract.KEY_CONSOLE_LEVEL).orEmpty()),
+                        data.getString(NappletEmbedContract.KEY_CONSOLE_MESSAGE).orEmpty(),
+                        data.getString(NappletEmbedContract.KEY_CONSOLE_SOURCE).orEmpty(),
+                        data.getInt(NappletEmbedContract.KEY_CONSOLE_LINE, 0),
+                    ),
+                )
+            }
             NappletEmbedContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
                 val bytes = data.getByteArray(NappletEmbedContract.KEY_MAG_BYTES) ?: return true
@@ -304,6 +338,15 @@ class EmbeddedNostrAppController(
     fun back() = send(NappletEmbedContract.MSG_BACK)
 
     fun reload() = send(NappletEmbedContract.MSG_RELOAD)
+
+    override fun find(query: String) {
+        if (query.isEmpty()) _findResult.value = null
+        send(NappletEmbedContract.MSG_FIND) { putString(NappletEmbedContract.KEY_FIND_QUERY, query) }
+    }
+
+    override fun findNext(forward: Boolean) = send(NappletEmbedContract.MSG_FIND_NEXT) { putBoolean(NappletEmbedContract.KEY_FIND_FORWARD, forward) }
+
+    fun setTextZoom(percent: Int) = send(NappletEmbedContract.MSG_SET_TEXT_ZOOM) { putInt(NappletEmbedContract.KEY_TEXT_ZOOM, percent) }
 
     /** User-triggered recovery for a stuck or failed session: reload the verified content from scratch. */
     override fun retry() {
@@ -353,5 +396,7 @@ class EmbeddedNostrAppController(
 
     private companion object {
         private val SESSION_SEQ = AtomicLong()
+
+        private const val MAX_CONSOLE_LOGS = 200
     }
 }

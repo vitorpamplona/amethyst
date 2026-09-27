@@ -20,31 +20,45 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.Manifest
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.util.TypedValue
+import android.view.ContextMenu
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.GeolocationPermissions
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -52,16 +66,29 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.Action
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -75,40 +102,72 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
  * Full-screen **direct-WebView** browser for an arbitrary URL, running in the keyless `:napplet`
- * process. Unlike the embedded browser ([NappletBrowserService], which streams its surface to the main
- * app through SurfaceControlViewHost — a path that, on current Android, forwards taps but drops scroll/
- * zoom/keyboard gestures), this hosts the WebView **directly** in its own window, so scrolling, pinch
- * zoom, and the soft keyboard all work natively — the window insets the content for the IME itself (see
- * [applyFullScreenHostInsets]). It stays just as keyless: the page JS runs here, every NIP-07
- * `window.nostr` call is brokered + consent-gated in the main process per origin, and the keys never
- * leave it.
+ * process — Amethyst's equivalent of an installed Chrome PWA window. Unlike the embedded browser
+ * ([NappletBrowserService], which streams its surface to the main app through SurfaceControlViewHost — a
+ * path that, on current Android, forwards taps but drops scroll/zoom/keyboard gestures), this hosts the
+ * WebView **directly** in its own window, so scrolling, pinch zoom, and the soft keyboard all work natively
+ * — the window insets the content for the IME itself (see [applyFullScreenHostInsets]). It stays just as
+ * keyless: the page JS runs here, every NIP-07 `window.nostr` call is brokered + consent-gated in the main
+ * process per origin, and the keys never leave it.
  *
- * Mirrors [NappletHostActivity]'s sandbox scaffolding (trusted chrome, loading screen, foreground hold)
- * but loads a live URL directly instead of serving verified blobs through a shell.
+ * PWA behaviours, beyond the page itself: its own task in Recents titled, iconed and coloured after the
+ * site ([updateTaskDescription]); system bars tinted with the page's `theme-color`; the top pill
+ * ([BrowserChromeHost], laid out by [BrowserChrome]); JS dialogs; new windows (`_blank` / `window.open`)
+ * as new browser windows with `opener` intact ([BrowserPopups]); downloads; HTML fullscreen video;
+ * camera / microphone / location behind a per-site prompt; find in page; long-press link and image menus;
+ * Web Share; and recovery from a renderer crash.
  */
 class NappletBrowserActivity : ComponentActivity() {
-    private lateinit var webView: WebView
+    private var webView: WebView? = null
 
     private var startUrl: String = "about:blank"
     private var proxyPort: Int = -1
     private var useTor: Boolean = true
     private var themeType: String = "SYSTEM"
+    private var webViewProfile: String? = null
+
+    // Key for this window's foreground lease with the broker; stable for the Activity's life.
+    private var leaseKey: String = ""
 
     private val contentFrame by lazy { FrameLayout(this) }
+    private var root: FrameLayout? = null
     private var loadingView: View? = null
+    private var crashView: View? = null
     private var resumed = false
-    private var controlSheet: NappletControlSheet? = null
-    private var consolePanel: NappletConsolePanel? = null
+
+    // The pill, find, console and page dialogs — the shared Compose chrome (see BrowserChromeHost).
+    private var chrome: BrowserChromeHost? = null
 
     // A thin determinate progress bar pinned to the top edge (browser-style), driven by the chrome
     // client's onProgressChanged; hidden at 100%.
     private val topProgressBar by lazy { buildTopProgressBar() }
+
+    // The NIP-07 shim + browser extras, injected at document start in this window and in its popups.
+    private var shimJs: String = ""
 
     // Visit-history gating: only a clean main-frame load (no error) is recorded, so a misspelled/
     // unresolved address never enters history. Reset on each main-frame page start.
     private var pendingMainFrameUrl: String? = null
     private var mainFrameLoadFailed = false
     private var lastIconHost: String? = null
+
+    // The last URL whose pin state was asked of the broker, so the several page callbacks that report the
+    // same address don't each trigger a round-trip.
+    private var lastFavoriteQueryUrl: String? = null
+
+    // What Recents shows for this task: the page's title, favicon and theme colour.
+    private var pageTitle: String? = null
+    private var pageIcon: Bitmap? = null
+    private var themeColor: Int? = null
+
+    // HTML fullscreen (a video's fullscreen button): the view WebView hands us, drawn over the whole window.
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+
+    // Page-originated alert/confirm/prompt/beforeunload: from the second dialog on a page, the user may block
+    // the rest until the next main-frame navigation (Chrome's rule), so a looping alert() can't trap them.
+    private var jsDialogsOnPage = 0
+    private var jsDialogsBlocked = false
 
     // ---- HTML file input (`<input type="file">`) ----
     // Registered as a field so it is in place before onCreate returns, which is what
@@ -117,6 +176,16 @@ class NappletBrowserActivity : ComponentActivity() {
     private val pendingFileChooser = PendingFileChooser()
 
     private val fileChooserLauncher = WebFileChooserLauncher(this) { uris -> pendingFileChooser.deliver(uris) }
+
+    // ---- site permissions (camera / microphone / location) ----
+    private val sitePermissionQueries = mutableMapOf<Long, (Map<BrowserSitePermission, Decision>) -> Unit>()
+    private var sitePermissionSeq = 0L
+    private var pendingRuntimeGrant: ((Map<String, Boolean>) -> Unit)? = null
+    private val runtimePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            pendingRuntimeGrant?.invoke(result)
+            pendingRuntimeGrant = null
+        }
 
     // ---- broker bridge (per-origin NIP-07 tokens; identical to NappletBrowserService) ----
     private var brokerMessenger: Messenger? = null
@@ -154,20 +223,30 @@ class NappletBrowserActivity : ComponentActivity() {
     private val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
     private val mintInFlight = mutableSetOf<String>()
 
+    /**
+     * Back walks out of fullscreen video, then the find bar, then the page's history, then leaves. Enabled
+     * only while one of those applies, so the system back (and its predictive animation) otherwise acts
+     * on the window itself.
+     */
     private val backCallback =
         object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (this@NappletBrowserActivity::webView.isInitialized && webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                val wv = webView
+                when {
+                    customView != null -> exitFullscreen()
+                    chrome?.handleBack() == true -> Unit
+                    wv != null && wv.canGoBack() -> wv.goBack()
+                    else -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
                 }
+                syncBackState()
             }
         }
 
     private fun syncBackState() {
-        if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
+        backCallback.isEnabled = customView != null || chrome?.wantsBack == true || webView?.canGoBack() == true
     }
 
     private val brokerConnection =
@@ -189,15 +268,34 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SandboxComposeResources.ensure(this)
 
-        startUrl = intent.getStringExtra(EXTRA_URL)?.takeIf { it.isNotBlank() } ?: run {
+        // A new window a page opened: its WebView already exists (built inside the opener's onCreateWindow).
+        val popupToken = intent.getStringExtra(EXTRA_POPUP_TOKEN)
+        val popup = BrowserPopups.take(popupToken)
+        if (popupToken != null && popup == null) {
             finish()
             return
         }
-        proxyPort = intent.getIntExtra(EXTRA_PROXY_PORT, -1)
-        useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
+
+        if (popup != null) {
+            proxyPort = popup.proxyPort
+            useTor = popup.useTor
+            themeType = popup.themeType
+            webViewProfile = popup.webViewProfile
+            leaseKey = "popup:$popupToken"
+        } else {
+            startUrl = intent.getStringExtra(EXTRA_URL)?.takeIf { it.isNotBlank() } ?: run {
+                finish()
+                return
+            }
+            proxyPort = intent.getIntExtra(EXTRA_PROXY_PORT, -1)
+            useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
+            themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
+            webViewProfile = intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE)
+            leaseKey = startUrl
+        }
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
-        themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
 
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
@@ -205,61 +303,78 @@ class NappletBrowserActivity : ComponentActivity() {
             return
         }
 
-        // Build the WebView from a context forced to the app theme so its content follows DARK/LIGHT even when
-        // the device theme differs (WebView reads the context's theme, not the window's — see nightThemedContext).
-        webView = WebView(nightThemedContext(this, themeType))
-        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
-        // profile has otherwise been used), so the storage partition must be chosen before anything else.
-        NappletWebViewProfile.apply(this, webView, intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE))
-        configureWebView(webView)
-        webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
-        webView.dropSystemBarInsets()
+        shimJs = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
         applyWebViewProxy(if (useTor) proxyPort else -1)
-
-        // NIP-07 over the direct bridge (no shell): the shim talks to native at document start for every
-        // origin; the broker scopes consent per visited origin.
-        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        WebViewCompat.addWebMessageListener(webView, NappletWebContract.BRIDGE_NAME, setOf("*"), ::onBridgeMessage)
-        val startScript = "if (window.top === window) { window.__nappletDirectBridge = true; window.__nappletNip07 = true; }\n$shim"
-        WebViewCompat.addDocumentStartJavaScript(webView, startScript, setOf("*"))
 
         bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
         onBackPressedDispatcher.addCallback(this, backCallback)
 
         val root =
             FrameLayout(this).apply {
+                setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                addView(
-                    buildControlSheet(),
-                    FrameLayout
-                        .LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.TOP,
-                        ),
-                )
-                addView(
-                    buildConsolePanel(),
-                    FrameLayout
-                        .LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.BOTTOM,
-                        ),
-                )
-                // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
-                addView(topProgressBar)
             }
+        this.root = root
+        chrome = buildChrome().also { it.attach(root) }
+        // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
+        root.addView(topProgressBar)
         setContentView(root)
         // Pad by the system bars + cutout AND the IME: on an edge-to-edge window (enforced for targetSdk
         // 35+ on Android 15+) windowSoftInputMode=adjustResize no longer shrinks the window, so without
-        // this the keyboard covers the bottom of the page. See applyFullScreenHostInsets.
+        // this the keyboard covers the bottom of the page. See applyFullScreenHostInsets. The root's own
+        // background shows through that padding, which is how the page's theme-color tints the bars.
         root.applyFullScreenHostInsets()
 
-        contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        loadingView = buildLoadingView().also { contentFrame.addView(it) }
+        val wv = buildWebView(popup)
+        contentFrame.addView(wv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        if (popup == null) {
+            loadingView = buildLoadingView().also { contentFrame.addView(it) }
+            wv.loadUrl(startUrl)
+        } else {
+            wv.url?.let { if (it.isNotBlank() && it != "about:blank") startUrl = it }
+        }
+        updateTaskDescription()
+    }
 
-        webView.loadUrl(startUrl)
+    /**
+     * Builds (or, for a popup, adopts) this window's WebView and wires every client and bridge. Also used
+     * to rebuild after a renderer crash.
+     */
+    private fun buildWebView(popup: BrowserPopups.Pending? = null): WebView {
+        val wv: WebView
+        if (popup != null) {
+            wv = popup.webView
+            // The popup was built on a placeholder context; point it at this Activity now.
+            popup.context.baseContext = nightThemedContext(this, themeType)
+        } else {
+            // Build the WebView from a context forced to the app theme so its content follows DARK/LIGHT
+            // even when the device theme differs (WebView reads the context's theme, not the window's).
+            wv = WebView(nightThemedContext(this, themeType))
+            // FIRST touch after construction: setProfile throws once the WebView has loaded content (or
+            // its profile has otherwise been used), so the storage partition must be chosen first.
+            NappletWebViewProfile.apply(this, wv, webViewProfile)
+        }
+        BrowserWebTools.applyBrowserSettings(wv)
+        wv.webViewClient = BrowserClient()
+        wv.webChromeClient = BrowserChromeClient()
+        wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
+        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), if (useTor) proxyPort else -1)
+        }
+        wv.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
+        wv.dropSystemBarInsets()
+        registerForContextMenu(wv)
+
+        if (popup != null) {
+            popup.adopt(::onBridgeMessage)
+        } else {
+            // NIP-07 over the direct bridge (no shell): the shim talks to native at document start for
+            // every origin; the broker scopes consent per visited origin.
+            WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*"), ::onBridgeMessage)
+            WebViewCompat.addDocumentStartJavaScript(wv, BrowserWebTools.browserStartScript(shimJs, imeProxy = false), setOf("*"))
+        }
+        webView = wv
+        return wv
     }
 
     // Renews the broker's foreground lease while resumed; without it the broker's watchdog would reap the
@@ -275,22 +390,18 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (this::webView.isInitialized) {
-            webView.onResume()
-        }
+        webView?.onResume()
         resumed = true
         heartbeatHandler.removeCallbacks(heartbeat)
         heartbeat.run()
     }
 
     override fun onPause() {
-        if (this::webView.isInitialized) {
-            // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
-            // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including
-            // the embedded ones in NappletBrowserService, which have no resume of their own. That left the
-            // embed frozen (dead page/connection) after returning from a full-screen excursion.
-            webView.onPause()
-        }
+        // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
+        // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including
+        // the embedded ones in NappletBrowserService, which have no resume of their own. That left the
+        // embed frozen (dead page/connection) after returning from a full-screen excursion.
+        webView?.onPause()
         resumed = false
         heartbeatHandler.removeCallbacks(heartbeat)
         setBrokerForeground(false)
@@ -306,18 +417,28 @@ class NappletBrowserActivity : ComponentActivity() {
         // A picker still up when the browser is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
         fileChooserLauncher.teardown()
-        if (this::webView.isInitialized) {
-            // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
-            // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER
-            // (embedded) WebViews living in this `:napplet` process: dead DNS (ERR_NAME_NOT_RESOLVED), DOM reads
-            // returning empty (`value == ""` on a field that visibly shows text), dead selection-highlight paint,
-            // and broken IME — all after a full-screen excursion returns to an embed. (`destroy()` requires the
-            // view to be removed from the hierarchy first; see WebView.destroy() docs.)
-            webView.stopLoading()
-            (webView.parent as? ViewGroup)?.removeView(webView)
-            webView.destroy()
-        }
+        // A dialog still up would leak its window and leave the page's JS blocked on an unanswered result.
+        chrome?.dialog?.answer?.invoke(false, null, false)
+        chrome?.permissionPrompt?.answer?.invoke(false, false)
+        customViewCallback?.onCustomViewHidden()
+        destroyWebView()
         super.onDestroy()
+    }
+
+    /**
+     * Detaches, then destroys, the WebView. Destroying a WebView while it is still attached to the window
+     * corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER (embedded)
+     * WebViews living in this `:napplet` process: dead DNS (ERR_NAME_NOT_RESOLVED), DOM reads returning
+     * empty, dead selection-highlight paint, and broken IME — all after a full-screen excursion returns to
+     * an embed. (`destroy()` requires the view to be removed from the hierarchy first.)
+     */
+    private fun destroyWebView() {
+        val wv = webView ?: return
+        webView = null
+        unregisterForContextMenu(wv)
+        wv.stopLoading()
+        (wv.parent as? ViewGroup)?.removeView(wv)
+        wv.destroy()
     }
 
     /** Reports foreground state to the broker so the main process stays resumed (Tor/relays/AUTH). */
@@ -326,7 +447,7 @@ class NappletBrowserActivity : ComponentActivity() {
             Message.obtain(null, NappletIpc.MSG_SET_FOREGROUND).apply {
                 data =
                     Bundle().apply {
-                        putString(NappletIpc.KEY_LAUNCH_TOKEN, startUrl)
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, leaseKey)
                         putBoolean(NappletIpc.KEY_FOREGROUND, foreground)
                     }
             }
@@ -343,43 +464,26 @@ class NappletBrowserActivity : ComponentActivity() {
         val msg =
             Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply {
                 replyTo = replyMessenger
-                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, startUrl) }
+                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, leaseKey) }
             }
         runCatching { broker.send(msg) }
     }
 
-    @Suppress("SetJavaScriptEnabled")
-    private fun configureWebView(wv: WebView) {
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            @Suppress("DEPRECATION")
-            databaseEnabled = false
-            allowFileAccess = false
-            allowContentAccess = false
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = false
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
-            setGeolocationEnabled(false)
-            mediaPlaybackRequiresUserGesture = true
-            builtInZoomControls = true
-            displayZoomControls = false
-            loadWithOverviewMode = true
-            useWideViewPort = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
-                safeBrowsingEnabled = true
-            }
-        }
-        WebView.setWebContentsDebuggingEnabled(false)
-        wv.webViewClient = BrowserClient()
-        wv.webChromeClient = BrowserChromeClient()
+    private fun currentUrl(): String =
+        webView?.url?.takeIf { it.isNotBlank() } ?: chrome
+            ?.ui
+            ?.chrome
+            ?.url
+            ?.takeIf { it.isNotBlank() } ?: startUrl
+
+    /** Updates what the chrome shows. */
+    private inline fun updateUi(block: BrowserPillUi.() -> BrowserPillUi) {
+        chrome?.let { it.ui = it.ui.block() }
     }
 
-    /** Captures favicon and console output, drives the top loading bar, and opens the file picker. */
+    private inline fun updateChromeState(crossinline block: BrowserChrome.State.() -> BrowserChrome.State) = updateUi { copy(chrome = chrome.block()) }
+
+    /** Captures favicon, title and console output, and hosts every page-initiated UI. */
     private inner class BrowserChromeClient : WebChromeClient() {
         /**
          * Without this override the base implementation returns false and WebView shows nothing at all, so
@@ -399,11 +503,22 @@ class NappletBrowserActivity : ComponentActivity() {
             updateLoadProgress(newProgress)
         }
 
+        override fun onReceivedTitle(
+            view: WebView,
+            title: String?,
+        ) {
+            pageTitle = title?.trim()?.takeIf { it.isNotEmpty() && it != view.url }
+            updateUi { copy(title = pageTitle ?: BrowserChrome.displayHost(chrome.url)) }
+            updateTaskDescription()
+        }
+
         override fun onReceivedIcon(
             view: WebView,
             icon: Bitmap?,
         ) {
             if (icon == null || mainFrameLoadFailed) return
+            pageIcon = icon
+            updateTaskDescription()
             val host = OmniboxInput.hostOf(view.url ?: return) ?: return
             // De-dupe: a page can fire this several times — store once per host per visit.
             if (host == lastIconHost) return
@@ -412,16 +527,97 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-            val panel = consolePanel ?: return false
-            panel.appendLog(
-                consoleMessage.messageLevel(),
-                consoleMessage.message(),
-                consoleMessage.sourceId(),
-                consoleMessage.lineNumber(),
+            val host = chrome ?: return false
+            host.appendConsole(
+                ConsoleLine(BrowserChromeHost.levelOf(consoleMessage.messageLevel()), consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber()),
             )
-            controlSheet?.updateConsoleCount(panel.entryCount)
             return true
         }
+
+        // The framework's own JS dialogs only appear when the WebView's context IS an Activity
+        // (`JsDialogHelper.canShowAlertDialog`), and this one is built from [nightThemedContext] — a
+        // configuration context, not the Activity — so without these overrides every alert() was silently
+        // dismissed, confirm() always answered false and prompt() null. The chrome shows them itself.
+        override fun onJsAlert(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = showJsDialog(PageDialogType.ALERT, url, message, null, result)
+
+        override fun onJsConfirm(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = showJsDialog(PageDialogType.CONFIRM, url, message, null, result)
+
+        override fun onJsPrompt(
+            view: WebView,
+            url: String?,
+            message: String?,
+            defaultValue: String?,
+            result: JsPromptResult,
+        ): Boolean = showJsDialog(PageDialogType.PROMPT, url, message, defaultValue, result)
+
+        override fun onJsBeforeUnload(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean = showJsDialog(PageDialogType.BEFORE_UNLOAD, url, message, null, result)
+
+        /**
+         * A `_blank` link or a user-initiated `window.open()`: open it as a new browser window, like a new
+         * Chrome tab. Without a user gesture it's refused (Chrome's popup blocker).
+         */
+        override fun onCreateWindow(
+            view: WebView,
+            isDialog: Boolean,
+            isUserGesture: Boolean,
+            resultMsg: Message,
+        ): Boolean {
+            if (!isUserGesture) return false
+            val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+            val (token, child) = BrowserPopups.create(this@NappletBrowserActivity, shimJs, proxyPort, useTor, themeType, webViewProfile)
+            transport.webView = child
+            resultMsg.sendToTarget()
+            startActivity(popupIntent(this@NappletBrowserActivity, token))
+            return true
+        }
+
+        /** `window.close()` from a window a page opened: close this window. */
+        override fun onCloseWindow(window: WebView) {
+            if (window === webView) finish()
+        }
+
+        override fun onPermissionRequest(request: PermissionRequest) = handlePermissionRequest(request)
+
+        override fun onPermissionRequestCanceled(request: PermissionRequest) {
+            chrome?.permissionPrompt = null
+        }
+
+        override fun onGeolocationPermissionsShowPrompt(
+            origin: String,
+            callback: GeolocationPermissions.Callback,
+        ) {
+            val siteOrigin = BrowserChrome.originOf(origin) ?: return callback.invoke(origin, false, false)
+            resolveSitePermissions(siteOrigin, listOf(BrowserSitePermission.LOCATION)) { granted ->
+                // Never let WebView remember it: the answer lives in the main-process registry.
+                callback.invoke(origin, BrowserSitePermission.LOCATION in granted, false)
+            }
+        }
+
+        override fun onGeolocationPermissionsHidePrompt() {
+            chrome?.permissionPrompt = null
+        }
+
+        override fun onShowCustomView(
+            view: View,
+            callback: CustomViewCallback,
+        ) = enterFullscreen(view, callback)
+
+        override fun onHideCustomView() = exitFullscreen()
     }
 
     /**
@@ -452,10 +648,7 @@ class NappletBrowserActivity : ComponentActivity() {
             val uri = request.url
             val scheme = uri.scheme?.lowercase()
             if (scheme == "http" || scheme == "https") return false
-            if (request.hasGesture()) {
-                runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
-            return true
+            return BrowserWebTools.openExternal(this@NappletBrowserActivity, uri, request.hasGesture()) { view.loadUrl(it) }
         }
 
         override fun onPageStarted(
@@ -466,9 +659,21 @@ class NappletBrowserActivity : ComponentActivity() {
             // A fresh main-frame navigation: arm history gating and show the new address.
             pendingMainFrameUrl = url
             mainFrameLoadFailed = false
+            // A window a page opened takes its first real page as its home ("scope").
+            if (startUrl == "about:blank" && url.startsWith("http")) startUrl = url
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
-            if (OmniboxInput.hostOf(url) != lastIconHost) lastIconHost = null
-            controlSheet?.updateUrl(url)
+            if (OmniboxInput.hostOf(url) != lastIconHost) {
+                lastIconHost = null
+                pageIcon = null
+                pageTitle = null
+                themeColor = null
+                applyThemeColor(null)
+            }
+            // Chrome scopes "block this page's dialogs" to the page: a new main-frame load lifts it.
+            jsDialogsOnPage = 0
+            jsDialogsBlocked = false
+            updateChromeState { copy(isLoading = true) }
+            showUrl(url)
         }
 
         override fun onReceivedError(
@@ -497,7 +702,7 @@ class NappletBrowserActivity : ComponentActivity() {
             // The page has painted its first frame — drop the loading screen.
             loadingView?.let { contentFrame.removeView(it) }
             loadingView = null
-            controlSheet?.updateUrl(url)
+            showUrl(url)
         }
 
         override fun doUpdateVisitedHistory(
@@ -505,22 +710,75 @@ class NappletBrowserActivity : ComponentActivity() {
             url: String,
             isReload: Boolean,
         ) {
-            syncBackState()
-            controlSheet?.updateUrl(url)
+            syncNavigation(view)
+            showUrl(url)
         }
 
         override fun onPageFinished(
             view: WebView,
             url: String,
         ) {
-            syncBackState()
-            controlSheet?.updateUrl(url)
+            syncNavigation(view)
+            updateChromeState { copy(isLoading = false) }
+            showUrl(url)
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
                 recordHistory(url, view.title)
                 scheduleFaviconSniff(view, url)
             }
         }
+
+        /**
+         * The renderer died (crashed or was killed for memory). Every WebView in `:napplet` shares one
+         * renderer, and returning false here would kill the whole process — taking every embedded tab with
+         * it. So drop just this WebView and offer a reload, like Chrome's "Aw, Snap!".
+         */
+        override fun onRenderProcessGone(
+            view: WebView,
+            detail: RenderProcessGoneDetail,
+        ): Boolean {
+            if (view !== webView) {
+                (view.parent as? ViewGroup)?.removeView(view)
+                view.destroy()
+                return true
+            }
+            val lastUrl = view.url?.takeIf { it.startsWith("http") } ?: startUrl
+            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}); offering a reload of $lastUrl" }
+            exitFullscreen()
+            destroyWebView()
+            showCrashView(lastUrl)
+            return true
+        }
+    }
+
+    private fun syncNavigation(view: WebView) {
+        syncBackState()
+        updateChromeState { copy(canGoBack = view.canGoBack(), canGoForward = view.canGoForward()) }
+    }
+
+    /**
+     * Pushes the displayed [url] into the chrome and, when it is a different page, asks the broker whether
+     * it is pinned — the registry lives in the main process, so the star can't know on its own.
+     */
+    private fun showUrl(url: String) {
+        updateUi {
+            if (url == chrome.url) {
+                this
+            } else {
+                // Another site: its host names it until its title arrives; its pin state is unknown until the
+                // broker answers (the star toggle sends an explicit target, so a tap meanwhile can only add).
+                val newSite = BrowserChrome.displayHost(url) != BrowserChrome.displayHost(chrome.url)
+                copy(chrome = chrome.copy(url = url), title = if (newSite) BrowserChrome.displayHost(url) else title, isFavorite = false)
+            }
+        }
+        if (url == lastFavoriteQueryUrl) return
+        lastFavoriteQueryUrl = url
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_QUERY_WEB_FAVORITE).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putString(NappletIpc.KEY_FAVORITE_URL, url) }
+            }
+        queueToBroker(msg)
     }
 
     /**
@@ -535,7 +793,7 @@ class NappletBrowserActivity : ComponentActivity() {
     ) {
         val host = OmniboxInput.hostOf(url) ?: return
         view.postDelayed({
-            if (mainFrameLoadFailed || host == lastIconHost || view.url != url) return@postDelayed
+            if (view !== webView || mainFrameLoadFailed || host == lastIconHost || view.url != url) return@postDelayed
             NappletFaviconSniffer.capture(view) { sniffedHost, bytes ->
                 if (sniffedHost == lastIconHost) return@capture
                 lastIconHost = sniffedHost
@@ -557,7 +815,7 @@ class NappletBrowserActivity : ComponentActivity() {
                         putString(NappletIpc.KEY_HISTORY_TITLE, title.orEmpty())
                     }
             }
-        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+        queueToBroker(msg)
     }
 
     /** Scales [icon] down and relays it to the broker as the favicon for [host] (PNG bytes over IPC). */
@@ -567,12 +825,7 @@ class NappletBrowserActivity : ComponentActivity() {
     ) {
         val bytes =
             runCatching {
-                val scaled =
-                    if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) {
-                        icon.scale(ICON_MAX_PX, ICON_MAX_PX)
-                    } else {
-                        icon
-                    }
+                val scaled = if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) icon.scale(ICON_MAX_PX, ICON_MAX_PX) else icon
                 ByteArrayOutputStream().use { out ->
                     scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
                     out.toByteArray()
@@ -594,17 +847,18 @@ class NappletBrowserActivity : ComponentActivity() {
                         putByteArray(NappletIpc.KEY_ICON_BYTES, bytes)
                     }
             }
-        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+        queueToBroker(msg)
     }
 
-    /** Loads a user-typed address from the in-page address bar, forcing Tor for `.onion` when available. */
+    /** Loads a user-typed address from "Edit address", forcing Tor for `.onion` when available. */
     private fun loadAddress(text: String) {
         val resolved = OmniboxInput.resolve(text) ?: return
         if (resolved.forceTor && proxyPort > 0 && !useTor) {
             useTor = true
             applyWebViewProxy(proxyPort)
+            updateChromeState { copy(torOn = true) }
         }
-        if (this::webView.isInitialized) webView.loadUrl(resolved.url)
+        webView?.loadUrl(resolved.url)
     }
 
     // ---- bridge: page <-> native (mirror of NappletBrowserService.onBridgeMessage) ----
@@ -620,6 +874,12 @@ class NappletBrowserActivity : ComponentActivity() {
         bridgeReplyProxy = replyProxy
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
+
+        // Browser conveniences (share, theme colour, blob downloads) are handled here, never brokered.
+        if (envelope.stringOrNull("type").orEmpty().startsWith("browser.")) {
+            onBrowserMessage(envelope)
+            return
+        }
 
         val scheme = sourceOrigin.scheme ?: return
         val host = sourceOrigin.host ?: return
@@ -639,10 +899,31 @@ class NappletBrowserActivity : ComponentActivity() {
         val token = originTokens[origin]
         if (token != null) {
             msg.data.putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
-            if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
+            queueToBroker(msg)
         } else {
             pendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
             requestBrowserToken(origin)
+        }
+    }
+
+    /** A `browser.*` message from [BrowserExtrasScript]. */
+    private fun onBrowserMessage(envelope: JsonObject) {
+        when (envelope.stringOrNull("type")) {
+            "browser.share" ->
+                if (resumed) {
+                    BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
+                }
+            "browser.themeColor" -> {
+                themeColor = BrowserChrome.parseCssRgb(envelope.stringOrNull("color"))
+                applyThemeColor(themeColor)
+                updateTaskDescription()
+            }
+            "browser.download" -> {
+                val data = envelope.stringOrNull("data") ?: return
+                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
+                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
+                }
+            }
         }
     }
 
@@ -653,7 +934,12 @@ class NappletBrowserActivity : ComponentActivity() {
                 replyTo = replyMessenger
                 data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
             }
-        if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
+        queueToBroker(msg)
+    }
+
+    /** Sends now when the broker is bound, else queues until it is. */
+    private fun queueToBroker(msg: Message) {
+        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
     }
 
     private fun sendToBroker(msg: Message) {
@@ -677,6 +963,19 @@ class NappletBrowserActivity : ComponentActivity() {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
                 bridgeReplyProxy?.postMessage(payload)
             }
+            NappletIpc.MSG_WEB_FAVORITE_STATE -> {
+                val url = data.getString(NappletIpc.KEY_FAVORITE_URL) ?: return true
+                val favorite = data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, false)
+                updateUi { if (url == chrome.url) copy(isFavorite = favorite) else this }
+            }
+            NappletIpc.MSG_SITE_PERMISSIONS -> {
+                val callback = sitePermissionQueries.remove(data.getLong(NappletIpc.KEY_REQUEST_ID)) ?: return true
+                callback(
+                    BrowserSitePermission.entries.associateWith { permission ->
+                        runCatching { Decision.valueOf(data.getString(NappletIpc.KEY_SITE_PERMISSION_PREFIX + permission.key).orEmpty()) }.getOrDefault(Decision.ASK)
+                    },
+                )
+            }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true
                 val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
@@ -691,6 +990,289 @@ class NappletBrowserActivity : ComponentActivity() {
         }
         return true
     }
+
+    // ---- site permissions ----
+
+    private fun handlePermissionRequest(request: PermissionRequest) {
+        val origin = BrowserChrome.originOf(request.origin.toString()) ?: return request.deny()
+        val wanted = request.resources.mapNotNull(::sitePermissionFor).distinct()
+        if (wanted.isEmpty()) return request.deny()
+        resolveSitePermissions(origin, wanted) { granted ->
+            val resources = request.resources.filter { sitePermissionFor(it) in granted }.toTypedArray()
+            if (resources.isEmpty()) request.deny() else request.grant(resources)
+        }
+    }
+
+    private fun sitePermissionFor(resource: String): BrowserSitePermission? =
+        when (resource) {
+            PermissionRequest.RESOURCE_VIDEO_CAPTURE -> BrowserSitePermission.CAMERA
+            PermissionRequest.RESOURCE_AUDIO_CAPTURE -> BrowserSitePermission.MICROPHONE
+            else -> null
+        }
+
+    /**
+     * Decides [wanted] for [origin]: the user's remembered answers first (kept per origin in the main
+     * process — the same on Tor and the open web), a prompt for anything never answered, and finally
+     * Android's own runtime permission for whatever was allowed. [done] receives what is granted.
+     */
+    private fun resolveSitePermissions(
+        origin: String,
+        wanted: List<BrowserSitePermission>,
+        done: (Set<BrowserSitePermission>) -> Unit,
+    ) {
+        querySitePermissions(origin) { decisions ->
+            val allowed = wanted.filter { decisions[it] == Decision.ALLOW }.toSet()
+            val ask = wanted.filter { decisions[it] == Decision.ASK }
+            if (ask.isEmpty()) {
+                ensureRuntimePermissions(allowed, done)
+            } else {
+                showPermissionPrompt(origin, ask) { remembered, grantNow ->
+                    // remembered: true/false = Allow while visiting / Don't allow; null = only this time or dismissed.
+                    if (remembered != null) ask.forEach { rememberSitePermission(origin, it, if (remembered) Decision.ALLOW else Decision.BLOCK) }
+                    ensureRuntimePermissions(if (grantNow) allowed + ask else allowed, done)
+                }
+            }
+        }
+    }
+
+    private fun querySitePermissions(
+        origin: String,
+        callback: (Map<BrowserSitePermission, Decision>) -> Unit,
+    ) {
+        val id = ++sitePermissionSeq
+        sitePermissionQueries[id] = callback
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_QUERY_SITE_PERMISSIONS).apply {
+                replyTo = replyMessenger
+                data =
+                    Bundle().apply {
+                        putLong(NappletIpc.KEY_REQUEST_ID, id)
+                        putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                    }
+            }
+        queueToBroker(msg)
+    }
+
+    private fun rememberSitePermission(
+        origin: String,
+        permission: BrowserSitePermission,
+        decision: Decision,
+    ) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_SITE_PERMISSION).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                        putString(NappletIpc.KEY_SITE_PERMISSION, permission.key)
+                        putString(NappletIpc.KEY_SITE_DECISION, decision.name)
+                    }
+            }
+        queueToBroker(msg)
+    }
+
+    /**
+     * The permission prompt ([com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard]):
+     * [answer] gets true (allow, remembered), false (block, remembered), or null (allow only this time, or
+     * dismissed — nothing remembered; a dismissal also denies).
+     */
+    private fun showPermissionPrompt(
+        origin: String,
+        permissions: List<BrowserSitePermission>,
+        answer: (allow: Boolean?, grantNow: Boolean) -> Unit,
+    ) {
+        val host = chrome
+        if (host == null || isFinishing || isDestroyed || host.permissionPrompt != null) {
+            answer(null, false)
+            return
+        }
+        host.permissionPrompt =
+            BrowserChromeHost.PendingPermission(
+                host = BrowserChrome.displayHost(origin),
+                security = BrowserChrome.security(host.ui.chrome),
+                permissions = permissions.toSet(),
+            ) { allow, remember ->
+                when {
+                    allow && remember -> answer(true, true)
+                    allow -> answer(null, true)
+                    remember -> answer(false, false)
+                    else -> answer(null, false)
+                }
+            }
+    }
+
+    /** Requests Android's runtime permission for each allowed site permission that lacks it. */
+    private fun ensureRuntimePermissions(
+        allowed: Set<BrowserSitePermission>,
+        done: (Set<BrowserSitePermission>) -> Unit,
+    ) {
+        val needed = allowed.associateWith(::androidPermissionFor)
+        val missing = needed.values.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }.distinct()
+        if (missing.isEmpty()) return done(allowed)
+        if (pendingRuntimeGrant != null) return done(allowed - needed.filterValues { it in missing }.keys)
+        pendingRuntimeGrant = { result ->
+            val granted = allowed.filter { ContextCompat.checkSelfPermission(this, needed.getValue(it)) == PackageManager.PERMISSION_GRANTED }.toSet()
+            if (granted.size < allowed.size) Toast.makeText(this, CommonsR.string.browser_permission_system_denied, Toast.LENGTH_LONG).show()
+            done(granted)
+        }
+        runtimePermissionLauncher.launch(missing.toTypedArray())
+    }
+
+    private fun androidPermissionFor(permission: BrowserSitePermission): String =
+        when (permission) {
+            BrowserSitePermission.CAMERA -> Manifest.permission.CAMERA
+            BrowserSitePermission.MICROPHONE -> Manifest.permission.RECORD_AUDIO
+            BrowserSitePermission.LOCATION -> Manifest.permission.ACCESS_COARSE_LOCATION
+        }
+
+    // ---- fullscreen video ----
+
+    private fun enterFullscreen(
+        view: View,
+        callback: WebChromeClient.CustomViewCallback,
+    ) {
+        if (customView != null) {
+            callback.onCustomViewHidden()
+            return
+        }
+        customView = view
+        customViewCallback = callback
+        view.setBackgroundColor(Color.BLACK)
+        // Over the whole window, outside the inset root, so the video really covers the screen.
+        (window.decorView as? FrameLayout)?.addView(view, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+        syncBackState()
+    }
+
+    private fun exitFullscreen() {
+        val view = customView ?: return
+        customView = null
+        (window.decorView as? FrameLayout)?.removeView(view)
+        WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        val callback = customViewCallback
+        customViewCallback = null
+        callback?.onCustomViewHidden()
+        syncBackState()
+    }
+
+    // ---- theme colour + Recents ----
+
+    /**
+     * Tints the system-bar areas with the page's `theme-color` (the root's padding shows through behind
+     * the transparent bars), and flips the bar icons to stay legible on it. Null restores the app theme.
+     */
+    private fun applyThemeColor(color: Int?) {
+        val root = root ?: return
+        val background = color ?: resolveThemeColor(android.R.attr.colorBackground)
+        root.setBackgroundColor(background)
+        val light = ColorUtils.calculateLuminance(background) > 0.5
+        WindowCompat.getInsetsController(window, root).apply {
+            isAppearanceLightStatusBars = light
+            isAppearanceLightNavigationBars = light
+        }
+    }
+
+    /** Makes this task look like an installed app in Recents: the site's title, icon and colour. */
+    @Suppress("DEPRECATION")
+    private fun updateTaskDescription() {
+        val label = pageTitle ?: title.ifBlank { null } ?: BrowserChrome.displayHost(currentUrl())
+        val color = themeColor ?: 0
+        // The Builder's `setIcon` that takes an `Icon` is API 37. We compile
+        // against 37, so it resolves, and the old guard was `TIRAMISU` — which
+        // meant every device from 33 to 36 called a method its framework does
+        // not have and died with NoSuchMethodError the moment a page delivered
+        // a favicon. Lint's NewApi did not flag it. The deprecated constructor
+        // takes the same three things and carries the bitmap, so it stays the
+        // path for everything below 37.
+        val description =
+            if (Build.VERSION.SDK_INT >= ICON_BUILDER_SDK) {
+                ActivityManager.TaskDescription
+                    .Builder()
+                    .setLabel(label)
+                    .apply { pageIcon?.let { setIcon(Icon.createWithBitmap(it)) } }
+                    .apply { if (color != 0) setPrimaryColor(color) }
+                    .build()
+            } else {
+                ActivityManager.TaskDescription(label, pageIcon, color)
+            }
+        runCatching { setTaskDescription(description) }
+    }
+
+    // ---- long-press menu ----
+
+    override fun onCreateContextMenu(
+        menu: ContextMenu,
+        v: View,
+        menuInfo: ContextMenu.ContextMenuInfo?,
+    ) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        val wv = v as? WebView ?: return
+        val hit = wv.hitTestResult
+        val extra = hit.extra?.takeIf { it.isNotBlank() } ?: return
+        when (hit.type) {
+            WebView.HitTestResult.SRC_ANCHOR_TYPE -> addLinkItems(menu, extra)
+            WebView.HitTestResult.IMAGE_TYPE -> addImageItems(menu, extra)
+            WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                // An image inside a link: the hit gives the image; ask the page for the link's href.
+                val href = Handler(Looper.getMainLooper()).obtainMessage()
+                wv.requestFocusNodeHref(href)
+                href.data
+                    .getString("url")
+                    ?.takeIf { it.startsWith("http") }
+                    ?.let { addLinkItems(menu, it) }
+                addImageItems(menu, extra)
+            }
+        }
+    }
+
+    private fun addLinkItems(
+        menu: ContextMenu,
+        link: String,
+    ) {
+        if (menu.size() == 0) menu.setHeaderTitle(link)
+        if (link.startsWith("http")) {
+            menu.add(CommonsR.string.browser_ctx_open_new_window).setOnMenuItemClickListener {
+                startActivity(newWindowIntent(link))
+                true
+            }
+        }
+        menu.add(CommonsR.string.browser_ctx_copy_link).setOnMenuItemClickListener {
+            BrowserWebTools.copyToClipboard(this, link)
+            true
+        }
+        menu.add(CommonsR.string.browser_ctx_share_link).setOnMenuItemClickListener {
+            BrowserWebTools.share(this, null, null, link)
+            true
+        }
+    }
+
+    private fun addImageItems(
+        menu: ContextMenu,
+        image: String,
+    ) {
+        if (menu.size() == 0) menu.setHeaderTitle(image.take(80))
+        if (image.startsWith("http") || image.startsWith("data:")) {
+            menu.add(CommonsR.string.browser_ctx_download_image).setOnMenuItemClickListener {
+                val wv = webView
+                val cookie = wv?.let { BrowserWebTools.cookieManager(it).getCookie(image) }
+                BrowserDownloads.download(this, image, wv?.settings?.userAgentString, null, null, cookie, if (useTor) proxyPort else -1)
+                true
+            }
+        }
+        if (image.startsWith("http")) {
+            menu.add(CommonsR.string.browser_ctx_copy_image_link).setOnMenuItemClickListener {
+                BrowserWebTools.copyToClipboard(this, image)
+                true
+            }
+        }
+    }
+
+    /** A plain new browser window for [url], sharing this one's route, theme and account storage. */
+    private fun newWindowIntent(url: String): Intent = intent(this, url, proxyPort, useTor, theme = themeType, webViewProfile = webViewProfile).addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+
+    // ---- network ----
 
     /**
      * Routes WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears the override.
@@ -713,11 +1295,11 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun setNetworkMode(newUseTor: Boolean) {
         useTor = newUseTor
         applyWebViewProxy(if (useTor) proxyPort else -1)
-        if (this::webView.isInitialized) webView.reload()
+        webView?.reload()
+        updateChromeState { copy(torOn = useTor) }
         // Key the persisted choice on the host actually displayed (which may differ from startUrl after
         // in-page navigation), so the preference sticks to the right site.
-        val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
-        val host = runCatching { liveUrl.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        val host = runCatching { currentUrl().toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_WEB_TOR).apply {
                 data =
@@ -736,26 +1318,178 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun barTitle(): String = title.ifBlank { runCatching { startUrl.toUri().host }.getOrNull() ?: getString(CommonsR.string.napplet_untitled) }
 
     /**
-     * The top pull-down sheet: a small grabber at the top edge (out of the corner where a site shows its
-     * own avatar) that expands to the Tor toggle (when Tor is available) and reload. The page can't draw
-     * over it. Mirrors the embedded tabs' Compose `TopControlSheet`.
+     * The window's chrome: the pull-down pill at the top (out of the corner where a site shows its own avatar),
+     * find and the console at the bottom, and the page's dialogs — the shared Compose components.
      */
-    private fun buildControlSheet(): View =
-        NappletControlSheet(
-            context = this,
-            title = barTitle(),
-            isSandbox = false,
-            onReload = { if (this::webView.isInitialized) webView.reload() },
-            torInitiallyOn = if (proxyPort > 0) useTor else null,
-            onToggleTor = { setNetworkMode(it) },
-            onInfo = null,
-            onPermissions = { openPermissions() },
-            liveUrl = startUrl,
-            onNavigate = { loadAddress(it) },
-            onConsole = { show -> consolePanel?.setShowing(show) },
-            isFavoriteInitially = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
-            onFavoriteToggle = { url, _ -> sendFavoriteToggle(url) },
-        ).also { controlSheet = it }
+    private fun buildChrome(): BrowserChromeHost =
+        BrowserChromeHost(
+            activity = this,
+            dark = isDarkTheme(),
+            initial =
+                BrowserPillUi(
+                    title = barTitle(),
+                    chrome =
+                        BrowserChrome.State(
+                            surface = BrowserChrome.Surface.WEB,
+                            presentation = BrowserChrome.Presentation.FULL_SCREEN,
+                            url = startUrl,
+                            startUrl = startUrl,
+                            torOn = if (proxyPort > 0) useTor else null,
+                        ),
+                    isFavorite = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
+                    defaultBrowserName = DefaultBrowser.label(this),
+                ),
+            listener = chromeListener,
+        )
+
+    private fun isDarkTheme(): Boolean =
+        when (themeType) {
+            "DARK" -> true
+            "LIGHT" -> false
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+
+    private val chromeListener =
+        object : BrowserChromeHost.Listener {
+            override fun onPillEvent(event: BrowserPillEvent) {
+                when (event) {
+                    is BrowserPillEvent.Action -> onAction(event.action)
+                    is BrowserPillEvent.Navigate -> loadAddress(event.input)
+                    is BrowserPillEvent.TextZoom -> {
+                        webView?.let { BrowserWebTools.setTextZoom(it, event.percent) }
+                        updateUi { copy(textZoom = event.percent) }
+                    }
+                    BrowserPillEvent.CopyOrigin -> BrowserWebTools.copyToClipboard(this@NappletBrowserActivity, currentUrl())
+                    BrowserPillEvent.PageInfo -> showPageInfo()
+                    BrowserPillEvent.Close -> finish()
+                }
+            }
+
+            override fun onFind(query: String) {
+                val wv = webView ?: return
+                if (query.isEmpty()) wv.clearMatches() else wv.findAllAsync(query)
+            }
+
+            override fun onFindNext(forward: Boolean) {
+                webView?.findNext(forward)
+            }
+
+            override fun onFindClosed() {
+                webView?.clearMatches()
+            }
+
+            override fun onPermissionChange(
+                permission: BrowserSitePermission,
+                decision: Decision,
+            ) {
+                BrowserChrome.originOf(currentUrl())?.let { rememberSitePermission(it, permission, decision) }
+            }
+
+            override fun onClearSiteData() {
+                webView?.let { BrowserWebTools.clearSiteData(this@NappletBrowserActivity, it, currentUrl()) }
+            }
+
+            override fun onPanelsChanged() = syncBackState()
+        }
+
+    private fun onAction(action: Action) {
+        val wv = webView
+        when (action) {
+            Action.BACK -> wv?.goBack()
+            Action.FORWARD -> wv?.goForward()
+            Action.RELOAD -> wv?.reload()
+            Action.STOP -> wv?.stopLoading()
+            // The star flips the shown state; the toggle sends that target explicitly.
+            Action.FAVORITE -> sendFavoriteToggle(currentUrl(), chrome?.ui?.isFavorite != true)
+            Action.SHARE -> BrowserWebTools.share(this, pageTitle, null, currentUrl())
+            Action.BACK_TO_APP -> wv?.let { BrowserWebTools.backToScope(it, startUrl) }
+            Action.COPY_LINK -> BrowserWebTools.copyToClipboard(this, currentUrl())
+            Action.DESKTOP_SITE ->
+                wv?.let {
+                    val desktop = !BrowserWebTools.isDesktopMode(it)
+                    BrowserWebTools.setDesktopMode(it, desktop)
+                    updateUi { copy(desktopSite = desktop) }
+                }
+            Action.ADD_TO_HOME_SCREEN -> addToHomeScreen()
+            Action.OPEN_IN_BROWSER_APP -> BrowserWebTools.openInOtherBrowser(this, currentUrl())
+            Action.TOR -> setNetworkMode(!useTor)
+            Action.SITE_SETTINGS -> openPermissions()
+            else -> Unit
+        }
+    }
+
+    /**
+     * Shows a page's JS dialog in the chrome, titled with the page's host. Answers at once when dialogs are
+     * blocked for this page, another is already up, or the window is going away.
+     */
+    private fun showJsDialog(
+        type: PageDialogType,
+        url: String?,
+        message: String?,
+        defaultValue: String?,
+        result: JsResult,
+    ): Boolean {
+        val host = chrome
+        if (jsDialogsBlocked) {
+            // A blocked page may no longer hold the user on it: leaving is allowed, everything else cancels.
+            if (type == PageDialogType.BEFORE_UNLOAD) result.confirm() else result.cancel()
+            return true
+        }
+        if (host == null || host.dialog != null || isFinishing || isDestroyed) {
+            result.cancel()
+            return true
+        }
+        jsDialogsOnPage++
+        host.dialog =
+            BrowserChromeHost.PendingDialog(
+                type = type,
+                host = url?.let(BrowserChrome::originOf)?.let(BrowserChrome::displayHost),
+                security = BrowserChrome.security(host.ui.chrome),
+                message = message.orEmpty(),
+                defaultValue = defaultValue.orEmpty(),
+                offerBlock = jsDialogsOnPage > 1,
+            ) { confirmed, text, block ->
+                if (block) jsDialogsBlocked = true
+                when {
+                    !confirmed -> result.cancel()
+                    result is JsPromptResult -> result.confirm(text.orEmpty())
+                    else -> result.confirm()
+                }
+            }
+        return true
+    }
+
+    /**
+     * Chrome's page info: connection, route and certificate, then this site's camera / microphone / location
+     * answers (asked of the broker first, so the sheet shows the truth) and its data.
+     */
+    private fun showPageInfo() {
+        val wv = webView ?: return
+        val origin = BrowserChrome.originOf(currentUrl())
+        val certificate = BrowserWebTools.certificateInfo(wv)
+        if (origin == null) {
+            chrome?.showPageInfo(certificate)
+            return
+        }
+        querySitePermissions(origin) { decisions ->
+            updateUi { copy(sitePermissions = decisions.filterValues { it != Decision.ASK }) }
+            chrome?.showPageInfo(certificate)
+        }
+    }
+
+    /** Asks the main process to pin a launcher shortcut that reopens this page in Amethyst's browser. */
+    private fun addToHomeScreen() {
+        val url = currentUrl()
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_ADD_TO_HOME_SCREEN).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_FAVORITE_URL, url)
+                        putString(NappletIpc.KEY_FAVORITE_LABEL, pageTitle ?: BrowserChrome.displayHost(url))
+                    }
+            }
+        queueToBroker(msg)
+    }
 
     /**
      * Ask the broker to open the editable permission screen for the site currently displayed. NIP-07 grants
@@ -763,8 +1497,7 @@ class NappletBrowserActivity : ComponentActivity() {
      * the broker launches the main activity at that Connected Apps detail.
      */
     private fun openPermissions() {
-        val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
-        val uri = runCatching { liveUrl.toUri() }.getOrNull() ?: return
+        val uri = runCatching { currentUrl().toUri() }.getOrNull() ?: return
         val scheme = uri.scheme?.takeIf { it.isNotBlank() } ?: return
         val host = uri.host?.takeIf { it.isNotBlank() } ?: return
         val origin = "$scheme://$host" + if (uri.port > 0) ":${uri.port}" else ""
@@ -772,32 +1505,30 @@ class NappletBrowserActivity : ComponentActivity() {
             Message.obtain(null, NappletIpc.MSG_OPEN_PERMISSIONS).apply {
                 data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
             }
-        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+        queueToBroker(msg)
     }
 
-    private fun sendFavoriteToggle(url: String) {
-        val host =
-            runCatching {
-                android.net.Uri
-                    .parse(url)
-                    .host
-            }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+    /**
+     * Pins or unpins [url] in the main-process registry. Sends the state the user asked for rather than a
+     * flip, and takes the broker's confirmed state back through [NappletIpc.MSG_WEB_FAVORITE_STATE].
+     */
+    private fun sendFavoriteToggle(
+        url: String,
+        isFavorite: Boolean,
+    ) {
+        val label = pageTitle ?: runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
         val msg =
             Message.obtain(null, NappletIpc.MSG_TOGGLE_WEB_FAVORITE).apply {
+                replyTo = replyMessenger
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_FAVORITE_URL, url)
-                        putString(NappletIpc.KEY_FAVORITE_LABEL, host)
+                        putString(NappletIpc.KEY_FAVORITE_LABEL, label)
+                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, isFavorite)
                     }
             }
-        if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
+        queueToBroker(msg)
     }
-
-    private fun buildConsolePanel(): View =
-        NappletConsolePanel(this).also {
-            it.onClearCallback = { controlSheet?.updateConsoleCount(0) }
-            consolePanel = it
-        }
 
     private fun buildLoadingView(): View =
         LinearLayout(this).apply {
@@ -817,6 +1548,40 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(ProgressBar(this@NappletBrowserActivity))
         }
 
+    /** Chrome's "Aw, Snap!": the page's renderer died; offer to load [url] again in a fresh WebView. */
+    private fun showCrashView(url: String) {
+        crashView?.let { contentFrame.removeView(it) }
+        crashView =
+            LinearLayout(this)
+                .apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
+                    layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+                    addView(
+                        TextView(this@NappletBrowserActivity).apply {
+                            text = getString(CommonsR.string.browser_renderer_gone)
+                            setTextColor(resolveThemeColor(android.R.attr.textColorPrimary))
+                            textSize = 18f
+                            gravity = Gravity.CENTER
+                        },
+                    )
+                    addView(
+                        Button(this@NappletBrowserActivity).apply {
+                            text = getString(CommonsR.string.browser_renderer_gone_reload)
+                            setOnClickListener {
+                                crashView?.let { contentFrame.removeView(it) }
+                                crashView = null
+                                val wv = buildWebView()
+                                contentFrame.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                                wv.loadUrl(url)
+                            }
+                        },
+                    )
+                }.also { contentFrame.addView(it) }
+        syncBackState()
+    }
+
     /**
      * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
      * [BrowserChromeClient.onProgressChanged]: visible while the page loads and gone at 100%.
@@ -834,9 +1599,11 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun updateLoadProgress(progress: Int) {
         if (progress >= 100) {
             topProgressBar.visibility = View.GONE
+            updateUi { copy(loadProgress = null, chrome = chrome.copy(isLoading = false)) }
         } else {
             topProgressBar.progress = progress
             topProgressBar.visibility = View.VISIBLE
+            updateUi { copy(loadProgress = progress / 100f) }
         }
     }
 
@@ -845,13 +1612,11 @@ class NappletBrowserActivity : ComponentActivity() {
         request: WebResourceRequest,
         message: String,
     ) {
-        val panel = consolePanel ?: return
-        panel.appendLog(ConsoleMessage.MessageLevel.ERROR, message, request.url?.toString().orEmpty(), 0)
-        controlSheet?.updateConsoleCount(panel.entryCount)
+        chrome?.appendConsole(ConsoleLine(ConsoleLine.Level.ERROR, message, request.url?.toString().orEmpty(), 0))
     }
 
     private fun resolveThemeColor(attr: Int): Int {
-        val tv = android.util.TypedValue()
+        val tv = TypedValue()
         theme.resolveAttribute(attr, tv, true)
         return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
     }
@@ -862,6 +1627,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletBrowserActivity"
+        private const val ACTIVITY_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */
         private const val FOREGROUND_HEARTBEAT_MS = 30_000L
@@ -878,6 +1644,10 @@ class NappletBrowserActivity : ComponentActivity() {
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_THEME = "theme"
         private const val EXTRA_IS_FAVORITE = "isFavorite"
+        private const val EXTRA_POPUP_TOKEN = "popupToken"
+
+        /** `TaskDescription.Builder.setIcon(Icon)` exists from this SDK on. */
+        private const val ICON_BUILDER_SDK = 37
 
         fun intent(
             context: Context,
@@ -890,7 +1660,7 @@ class NappletBrowserActivity : ComponentActivity() {
             webViewProfile: String? = null,
         ): Intent =
             Intent()
-                .setClassName(context, "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity")
+                .setClassName(context, ACTIVITY_CLASS)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_PROXY_PORT, proxyPort)
                 .putExtra(EXTRA_USE_TOR, useTor)
@@ -902,5 +1672,19 @@ class NappletBrowserActivity : ComponentActivity() {
                 .putExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE, webViewProfile)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
                 .setData(url.toUri())
+
+        /**
+         * Opens, as its own task, a window a page asked for; [token] names the popup WebView parked in
+         * [BrowserPopups]. Usable from the embedded browser's Service as well as from an Activity.
+         */
+        fun popupIntent(
+            context: Context,
+            token: String,
+        ): Intent =
+            Intent()
+                .setClassName(context, ACTIVITY_CLASS)
+                .putExtra(EXTRA_POPUP_TOKEN, token)
+                .setData("amethyst-window://$token".toUri())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
     }
 }

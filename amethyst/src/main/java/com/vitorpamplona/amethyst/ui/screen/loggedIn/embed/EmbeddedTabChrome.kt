@@ -20,30 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+
 /**
- * The controls a running app surface offers through its top pull-down sheet — described as plain data so
- * [EmbeddedTabLayer] can draw the sheet over the (z-below) surface for the active tab. Deliberately not a
- * corner pill: that's where a site usually puts the user's own avatar/menu, so the handle lives at the
- * top-center instead and only the actions the surface actually supports are shown.
+ * What a running app surface shows in its top pull-down pill, as plain data so [EmbeddedTabLayer] can draw
+ * the shared [com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill] over the (z-below) surface
+ * for the active tab. Deliberately not a corner pill: that's where a site usually puts the user's own
+ * avatar/menu, so the handle lives at the top-center instead.
+ *
+ * *Which* actions show comes from [BrowserPillUi.chrome] through
+ * [com.vitorpamplona.amethyst.commons.browser.BrowserChrome] — the same layout the full-screen windows
+ * use. Everything the user picks arrives in [onEvent]; find in page and the console are handled by the
+ * layer itself, since it draws them.
  */
 data class EmbeddedTabChrome(
-    val title: String,
-    /** A sandboxed napplet/nsite (shows the shield + "what it can access"), vs a plain web client. */
-    val isSandbox: Boolean,
-    val onReload: () -> Unit,
-    val onOpenFull: () -> Unit,
-    /** Current Tor state, or null when this surface has no Tor toggle (Tor off / locked napplet). */
-    val torOn: Boolean? = null,
-    val onToggleTor: () -> Unit = {},
-    /** The "what it can access" sheet, for sandboxed napplets/nsites; null for a plain web client. */
-    val onInfo: (() -> Unit)? = null,
-    /**
-     * Opens this app's editable permission screen (the "Connected Apps" detail) so the user can change
-     * trust level and per-capability grants as they browse; null when the surface has no managed identity.
-     */
-    val onPermissions: (() -> Unit)? = null,
-    /** Whether the current URL/app is already saved as a favorite. */
-    val isFavorite: Boolean = false,
-    /** Toggles the current site/app in the favorites registry; null when not applicable. */
-    val onFavorite: (() -> Unit)? = null,
+    val ui: BrowserPillUi,
+    val onEvent: (BrowserPillEvent) -> Unit,
+    /** Address-editor suggestions for what the user has typed. */
+    val suggestionsFor: (String) -> List<AddressSuggestion> = { emptyList() },
 )

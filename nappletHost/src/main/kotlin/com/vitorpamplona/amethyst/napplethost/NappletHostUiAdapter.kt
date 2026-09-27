@@ -29,7 +29,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
@@ -62,25 +61,29 @@ class NappletHostUiAdapter(
         // WebView creation must run on the main thread; openSession is called on a binder thread.
         mainHandler.post {
             runCatching {
-                val webView = service.createHostWebView(context, sessionId)
+                // The session's view is a container around the WebView, so a WebView lost to a renderer
+                // crash can be replaced by a fresh one in the same surface.
+                val container = FrameLayout(context)
+                val webView = service.createHostWebView(context, sessionId, container)
+                container.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 // FrameLayout.LayoutParams (a MarginLayoutParams) — the SurfaceControlViewHost container
                 // measures children with measureChildWithMargins, which casts to MarginLayoutParams.
-                webView.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
-                HostSession(sessionId, webView, service)
+                container.layoutParams = FrameLayout.LayoutParams(initialWidth, initialHeight)
+                HostSession(sessionId, container, service)
             }.onSuccess { session -> clientExecutor.execute { client.onSessionOpened(session) } }
                 .onFailure { t -> clientExecutor.execute { client.onSessionError(t) } }
         }
     }
 }
 
-/** A single embedded napplet/nsite session: the WebView is the rendered view; close tears it down. */
+/** A single embedded napplet/nsite session: the WebView's container is the rendered view; close tears it down. */
 @RequiresApi(Build.VERSION_CODES.R)
 private class HostSession(
     private val sessionId: String,
-    private val webView: WebView,
+    private val container: FrameLayout,
     private val service: NappletHostService,
 ) : SandboxedUiAdapter.Session {
-    override val view: View get() = webView
+    override val view: View get() = container
 
     override val signalOptions: Set<String> = emptySet()
 
@@ -92,8 +95,8 @@ private class HostSession(
         width: Int,
         height: Int,
     ) {
-        webView.layoutParams = FrameLayout.LayoutParams(width, height)
-        webView.requestLayout()
+        container.layoutParams = FrameLayout.LayoutParams(width, height)
+        container.requestLayout()
     }
 
     override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {

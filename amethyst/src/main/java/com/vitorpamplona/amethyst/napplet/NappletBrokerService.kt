@@ -33,6 +33,7 @@ import android.os.RemoteException
 import android.os.SystemClock
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
@@ -217,7 +219,7 @@ class NappletBrokerService : Service() {
             return true
         }
 
-        // The direct-WebView browser requests a favorite toggle for the current URL (main process only).
+        // The direct-WebView browser pins/unpins the page it shows (main process only).
         if (msg.what == NappletIpc.MSG_TOGGLE_WEB_FAVORITE) {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
@@ -225,11 +227,69 @@ class NappletBrokerService : Service() {
             val favorites = Amethyst.instance.favoriteApps
             favorites.init()
             val id = "url:$url"
-            if (favorites.isFavorite(id)) {
-                favorites.remove(id)
-            } else {
+            // The star sends the state it wants (it flips what it shows); an older client sends none: toggle.
+            val target =
+                if (data.containsKey(NappletIpc.KEY_FAVORITE_IS_FAVORITE)) {
+                    data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE)
+                } else {
+                    !favorites.isFavorite(id)
+                }
+            if (target) {
                 favorites.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
+            } else {
+                favorites.remove(id)
             }
+            msg.replyTo?.let { replyWebFavoriteState(it, url) }
+            return true
+        }
+
+        // The direct-WebView browser asks whether the page it now shows is pinned, so its star is right.
+        if (msg.what == NappletIpc.MSG_QUERY_WEB_FAVORITE) {
+            val replyTo = msg.replyTo ?: return true
+            val url = msg.data?.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
+            Amethyst.instance.favoriteApps.init()
+            replyWebFavoriteState(replyTo, url)
+            return true
+        }
+
+        // The browser asks what the user already answered for a site's camera/microphone/location.
+        if (msg.what == NappletIpc.MSG_QUERY_SITE_PERMISSIONS) {
+            val replyTo = msg.replyTo ?: return true
+            val data = msg.data ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            WebSitePermissionRegistry.init(applicationContext)
+            val reply =
+                Message.obtain(null, NappletIpc.MSG_SITE_PERMISSIONS).apply {
+                    this.data =
+                        Bundle().apply {
+                            putLong(NappletIpc.KEY_REQUEST_ID, data.getLong(NappletIpc.KEY_REQUEST_ID))
+                            putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                            BrowserSitePermission.entries.forEach { permission ->
+                                putString(NappletIpc.KEY_SITE_PERMISSION_PREFIX + permission.key, WebSitePermissionRegistry.decision(origin, permission).name)
+                            }
+                        }
+                }
+            runCatching { replyTo.send(reply) }
+            return true
+        }
+
+        // The browser relays the user's answer to a site's permission prompt; remember it per origin.
+        if (msg.what == NappletIpc.MSG_SET_SITE_PERMISSION) {
+            val data = msg.data ?: return true
+            val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
+            val permission = BrowserSitePermission.fromKey(data.getString(NappletIpc.KEY_SITE_PERMISSION)) ?: return true
+            val decision = runCatching { BrowserSitePermission.Decision.valueOf(data.getString(NappletIpc.KEY_SITE_DECISION).orEmpty()) }.getOrNull() ?: return true
+            WebSitePermissionRegistry.init(applicationContext)
+            WebSitePermissionRegistry.set(origin, permission, decision)
+            return true
+        }
+
+        // The full-screen browser's "Add to Home screen": pin a shortcut that reopens it in Amethyst.
+        if (msg.what == NappletIpc.MSG_ADD_TO_HOME_SCREEN) {
+            val data = msg.data ?: return true
+            val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return true
+            Amethyst.instance.browserIcons.init()
+            WebShortcuts.requestPin(applicationContext, url, data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty())
             return true
         }
 
@@ -457,6 +517,26 @@ class NappletBrokerService : Service() {
             replyTo.send(response)
         } catch (e: RemoteException) {
             Log.w("NappletBrokerService", "Applet host went away before reply could be delivered", e)
+        }
+    }
+
+    /** Tells a browser surface whether [url] is currently pinned, so its star shows the registry's truth. */
+    private fun replyWebFavoriteState(
+        replyTo: Messenger,
+        url: String,
+    ) {
+        val message =
+            Message.obtain(null, NappletIpc.MSG_WEB_FAVORITE_STATE).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_FAVORITE_URL, url)
+                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, Amethyst.instance.favoriteApps.isFavorite("url:$url"))
+                    }
+            }
+        try {
+            replyTo.send(message)
+        } catch (e: RemoteException) {
+            Log.w("NappletBrokerService", "Browser went away before the favorite state could be delivered", e)
         }
     }
 
