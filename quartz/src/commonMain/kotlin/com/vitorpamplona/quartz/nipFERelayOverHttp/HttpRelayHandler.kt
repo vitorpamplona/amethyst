@@ -121,9 +121,9 @@ class HttpRelayHandler(
         // Characters, as the engine's own limit counts them.
         if (max != null && text.length > max) return response.single(HttpRelayStatus.PAYLOAD_TOO_LARGE, notice(tooLarge))
 
-        // Read here as well as in the engine, to refuse the commands HTTP does not carry and to
-        // know what ends the answer and how to refuse it. The engine still parses the text itself,
-        // as socket text, so the policies that judge raw frames run.
+        // Parsed here, once: to refuse the commands HTTP does not carry, to know what ends the
+        // answer and how to refuse it, and for the session, which still runs the policies that
+        // judge the raw text before it dispatches the parsed command.
         val cmd =
             try {
                 OptimizedJsonMapper.fromJsonToCommand(text)
@@ -188,7 +188,7 @@ class HttpRelayHandler(
                 try {
                     server.serve(sink) { session ->
                         val refused = signedIn?.let { session.authenticateByTransport(it) }
-                        if (refused != null) fail(refused) else session.receive(text)
+                        if (refused != null) fail(refused) else session.receive(text, cmd)
                         ended.await()
                     }
                 } catch (e: CancellationException) {

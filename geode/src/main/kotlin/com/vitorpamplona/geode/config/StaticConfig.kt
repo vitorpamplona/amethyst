@@ -242,6 +242,8 @@ data class StaticConfig(
         val max_concurrent_requests: Int = 256,
         /** Requests one client address may run at once; over it, 429. 0 = no limit. */
         val max_requests_per_client: Int = 16,
+        /** How long a request body may take to arrive before the request is dropped with 408. */
+        val body_timeout_seconds: Long = 10,
         /** How long one answer may run before it ends on a `CLOSED` line. */
         val deadline_seconds: Long = 30,
         /** Largest request body read; larger is 413. */
@@ -270,6 +272,7 @@ data class StaticConfig(
                 HttpCommandSettings(
                     maxConcurrent = max_concurrent_requests,
                     maxPerClient = max_requests_per_client,
+                    bodyTimeout = body_timeout_seconds.seconds,
                     deadline = deadline_seconds.seconds,
                     maxBodyBytes = max_body_bytes,
                     compress = gzip,
@@ -357,6 +360,7 @@ data class StaticConfig(
     fun validate() {
         require(http.max_concurrent_requests >= 0) { "[http].max_concurrent_requests must be >= 0 (0 = no limit), got ${http.max_concurrent_requests}" }
         require(http.max_requests_per_client >= 0) { "[http].max_requests_per_client must be >= 0 (0 = no limit), got ${http.max_requests_per_client}" }
+        require(http.body_timeout_seconds > 0) { "[http].body_timeout_seconds must be > 0, got ${http.body_timeout_seconds}" }
         require(http.deadline_seconds > 0) { "[http].deadline_seconds must be > 0, got ${http.deadline_seconds}" }
         require(http.max_body_bytes > 0) { "[http].max_body_bytes must be > 0, got ${http.max_body_bytes}" }
         require(http.retry_after_seconds >= 0) { "[http].retry_after_seconds must be >= 0, got ${http.retry_after_seconds}" }

@@ -189,10 +189,25 @@ class RelaySession(
     }
 
     /**
-     * Dispatches an already-parsed command, for a transport that parsed and
-     * sized it itself (NIP-FE's HTTP bodies). [IRelayPolicy.acceptMessage]
-     * is not run here — it judges wire text — so such a caller applies the
-     * message-length limit before calling.
+     * [receive] for a transport that already parsed [parsed] out of [command]
+     * (NIP-FE's HTTP bodies): [IRelayPolicy.acceptMessage] still judges the
+     * wire text, as it would on the socket, but the frame is not parsed twice.
+     */
+    suspend fun receive(
+        command: String,
+        parsed: Command,
+    ) {
+        policy.acceptMessage(command)?.let { reason ->
+            send(NoticeMessage(reason))
+            return
+        }
+        receive(parsed)
+    }
+
+    /**
+     * Dispatches an already-parsed command. [IRelayPolicy.acceptMessage] is
+     * not run here — it judges wire text — so a caller that has the text
+     * uses the overload that takes both.
      */
     suspend fun receive(cmd: Command) {
         if (!cmd.isValid()) {

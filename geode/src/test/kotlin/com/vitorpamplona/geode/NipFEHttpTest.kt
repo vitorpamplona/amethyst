@@ -58,6 +58,7 @@ import okhttp3.Response
 import okio.GzipSource
 import okio.buffer
 import java.net.ServerSocket
+import java.net.Socket
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -66,6 +67,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -387,6 +389,65 @@ class NipFEHttpTest {
                 assertEquals(listOf("""["EOSE","q"]"""), response.lines())
             }
         }
+    }
+
+    /** Writes [request] on a plain socket to the relay at [relay] and returns the status line of the answer. */
+    private fun rawStatus(
+        relay: NormalizedRelayUrl,
+        request: String,
+    ): String =
+        Socket(
+            "127.0.0.1",
+            relay
+                .toHttp()
+                .substringAfterLast(':')
+                .trimEnd('/')
+                .toInt(),
+        ).use { socket ->
+            socket.soTimeout = 10_000
+            socket.getOutputStream().write(request.encodeToByteArray())
+            socket.getOutputStream().flush()
+            socket.getInputStream().bufferedReader().readLine()
+        }
+
+    private fun chunked(body: String) = "${body.length.toString(16)}\r\n$body\r\n0\r\n\r\n"
+
+    @Test
+    fun aMalformedContentTypeIsStillACommand() {
+        val relay = start()
+        val body = """["REQ","q",{"kinds":[1]}]"""
+        val status = rawStatus(relay, "POST / HTTP/1.1\r\nHost: x\r\nContent-Type: garbage\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n$body")
+        assertEquals("HTTP/1.1 200 OK", status)
+    }
+
+    @Test
+    fun aBodyThatNeverFinishesIsDroppedAndFreesItsSlot() {
+        val relay = start(settings = HttpCommandSettings(maxPerClient = 1, bodyTimeout = 500.milliseconds))
+        val port =
+            relay
+                .toHttp()
+                .substringAfterLast(':')
+                .trimEnd('/')
+                .toInt()
+        Socket("127.0.0.1", port).use { slow ->
+            slow.soTimeout = 10_000
+            slow.getOutputStream().write("POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\n[\"REQ\"".encodeToByteArray())
+            slow.getOutputStream().flush()
+            assertEquals("HTTP/1.1 408 Request Timeout", slow.getInputStream().bufferedReader().readLine())
+        }
+        val body = """["REQ","q",{"kinds":[1]}]"""
+        assertEquals("HTTP/1.1 200 OK", rawStatus(relay, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n$body"))
+    }
+
+    @Test
+    fun aChunkedBodyGrowsItsBufferAndStopsAtTheCap() {
+        val relay = start(settings = HttpCommandSettings(maxBodyBytes = 20_000))
+        // No Content-Length: the buffer starts small and grows past it.
+        val big = """["REQ","q",{"search":"${"x".repeat(10_000)}"}]"""
+        val head = "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
+        assertEquals("HTTP/1.1 200 OK", rawStatus(relay, head + chunked(big)))
+        val over = """["REQ","q",{"search":"${"x".repeat(30_000)}"}]"""
+        assertEquals("HTTP/1.1 413 Payload Too Large", rawStatus(relay, head + chunked(over)))
     }
 
     @Test

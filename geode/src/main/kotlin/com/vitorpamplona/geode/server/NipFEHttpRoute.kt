@@ -31,13 +31,14 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.request.contentType
 import io.ktor.server.request.header
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytesWriter
 import io.ktor.server.response.respondText
 import io.ktor.utils.io.writeStringUtf8
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 /**
  * NIP-FE over Ktor: the host half of [HttpRelayHandler], on POSTs to the relay's URL that are not
@@ -71,11 +72,11 @@ internal class NipFEHttpRoute(
      * Whether a POST to the relay's URL is a NIP-FE command: anything but NIP-86's
      * `application/nostr+json+rpc`, since commands need no `Content-Type` at all.
      */
-    fun isCommand(call: ApplicationCall): Boolean =
-        !call.request
-            .contentType()
-            .withoutParameters()
-            .match(NIP86)
+    fun isCommand(call: ApplicationCall): Boolean {
+        // Compared as text: parsing it would throw on a malformed header, and a command needs none.
+        val type = call.request.header(HttpHeaders.ContentType) ?: return true
+        return !type.substringBefore(';').trim().equals(Nip86HttpHandler.CONTENT_TYPE, ignoreCase = true)
+    }
 
     /** Answers the command in the body. Admission runs first, so a refused request spends no NIP-98 token. */
     suspend fun handle(call: ApplicationCall) {
@@ -87,13 +88,22 @@ internal class NipFEHttpRoute(
 
         val verdict =
             admission.admit(clientOf(call)) {
+                // Bounded in time too: a body trickled in forever would hold this admission slot forever.
                 val body =
-                    readBoundedBody(call, bodyCap)
-                        ?: return@admit respondLine(
+                    try {
+                        withTimeout(settings.bodyTimeout) { readBoundedBody(call, bodyCap) }
+                    } catch (_: TimeoutCancellationException) {
+                        call.response.header(HttpHeaders.Connection, "close")
+                        return@admit respondLine(
                             call,
-                            HttpRelayStatus.PAYLOAD_TOO_LARGE,
-                            HttpRelayHandler.notice(MachineReadablePrefix.INVALID.format("the command exceeds $bodyCap bytes")),
+                            REQUEST_TIMEOUT,
+                            HttpRelayHandler.notice(MachineReadablePrefix.INVALID.format("the body did not arrive within ${settings.bodyTimeout}")),
                         )
+                    } ?: return@admit respondLine(
+                        call,
+                        HttpRelayStatus.PAYLOAD_TOO_LARGE,
+                        HttpRelayHandler.notice(MachineReadablePrefix.INVALID.format("the command exceeds $bodyCap bytes")),
+                    )
                 handler.handle(HttpRelayRequest(call.request.header(HttpHeaders.Authorization), body), Answer(call))
             }
         when (verdict) {
@@ -213,7 +223,7 @@ internal class NipFEHttpRoute(
 
     companion object {
         val NDJSON = ContentType("application", "x-ndjson")
-        private val NIP86 = ContentType.parse(Nip86HttpHandler.CONTENT_TYPE)
+        const val REQUEST_TIMEOUT = 408
         const val WWW_AUTHENTICATE = "Nostr"
         const val ACCEL_BUFFERING = "X-Accel-Buffering"
         const val PREFLIGHT_MAX_AGE_SECONDS = 86_400

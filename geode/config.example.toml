@@ -182,6 +182,8 @@ enabled = true
 # Retry-After. 0 = no limit.
 max_concurrent_requests = 256
 max_requests_per_client = 16
+# A body still arriving after this is dropped with 408, freeing its slot.
+body_timeout_seconds = 10
 # An answer still running after this ends on a CLOSED line.
 deadline_seconds = 30
 max_body_bytes = 524288

@@ -23,6 +23,7 @@ package com.vitorpamplona.geode.server
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * NIP-FE (relay commands over HTTP) as [com.vitorpamplona.geode.KtorRelay] serves it: a `POST` to
@@ -35,6 +36,8 @@ data class HttpCommandSettings(
     val maxConcurrent: Int = 256,
     /** Requests one client address may run at once before its next gets 429; 0 is no limit. */
     val maxPerClient: Int = 16,
+    /** How long the body may take to arrive; past it, 408. It holds an admission slot meanwhile. */
+    val bodyTimeout: Duration = 10.seconds,
     /** How long one answer may run, first byte to last. */
     val deadline: Duration = HttpRelayHandler.DEFAULT_DEADLINE,
     /** The largest body read; the engine's own message limit, when it has one and it is smaller, wins. */
