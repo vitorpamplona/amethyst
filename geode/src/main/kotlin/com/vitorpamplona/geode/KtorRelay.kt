@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
+import com.vitorpamplona.geode.server.NipFEHttpRoute
 import com.vitorpamplona.geode.server.WebSocketSessionPump
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
+import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
@@ -34,6 +37,7 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.routing.get
+import io.ktor.server.routing.options
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
@@ -77,6 +81,11 @@ class KtorRelay(
     val workerGroupSize: Int? = null,
     /** Ktor CIO call-handling thread count. `null` keeps Ktor's default. */
     val callGroupSize: Int? = null,
+    /**
+     * NIP-FE: relay commands POSTed to the relay's URL, beside NIP-86. On by default; null turns them
+     * off, every POST going to NIP-86 again (and the operator should then drop `FE` from NIP-11).
+     */
+    val httpCommands: HttpCommandSettings? = HttpCommandSettings(),
 ) {
     /**
      * NIP-86 HTTP adapter. Wraps the engine's [RelayEngine.nip86Server]
@@ -103,6 +112,20 @@ class KtorRelay(
         )
 
     private val nip11Route = Nip11HttpRoute(liveJson = { relay.info.json })
+
+    /**
+     * NIP-FE. Each request runs on its own session of the same engine, so the websocket's policies
+     * and limits apply. A NIP-98 token must name `relay.url` read as http(s), or one of the
+     * configured alternate URLs (a .onion).
+     */
+    private val nipFERoute =
+        httpCommands?.let { settings ->
+            val origins = (listOf(relay.url) + settings.alternateUrls).map { it.toHttp() }
+            NipFEHttpRoute(
+                handler = HttpRelayHandler(relay.server, origins = { origins }, deadline = settings.deadline),
+                settings = settings,
+            )
+        }
 
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
@@ -164,12 +187,18 @@ class KtorRelay(
                                 get(path) {
                                     nip11Route.handle(call)
                                 }
-                                // NIP-86: POST application/nostr+json+rpc with a NIP-98
-                                // signed Authorization header → JSON-RPC dispatch.
-                                // Always mounted; an empty admin allow-list on the engine just means
-                                // every request fails the allow-list check (403).
+                                // Two POSTs share the relay URL, told apart by Content-Type:
+                                //  - NIP-86: application/nostr+json+rpc with a NIP-98 signed
+                                //    Authorization header → JSON-RPC dispatch. Always mounted; an
+                                //    empty admin allow-list just means every call fails it (403).
+                                //  - NIP-FE: anything else is one REQ/COUNT/EVENT frame, answered
+                                //    as NDJSON in the socket's own frames.
                                 post(path) {
-                                    nip86Route.handle(call)
+                                    val commands = nipFERoute
+                                    if (commands != null && commands.isCommand(call)) commands.handle(call) else nip86Route.handle(call)
+                                }
+                                nipFERoute?.let { route ->
+                                    options(path) { route.preflight(call) }
                                 }
                                 webSocket(path) {
                                     if (shuttingDown) {

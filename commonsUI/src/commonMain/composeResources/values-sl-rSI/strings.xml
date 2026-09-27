@@ -363,7 +363,6 @@
     <string name="relays"> Releji</string>
     <string name="website">Spletna stran</string>
     <string name="lightning_address">Lightning naslov</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopira Nsec ID (tvoje geslo) v odložišče za varnostno kopiranje</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
     <string name="unblock">Deblokiraj</string>
@@ -472,14 +471,11 @@
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
-    <string name="account_backup_tips2_md">## Varnostna kopija ključev in varnostni nasveti \n\nVaš račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo vašo digitalno identiteto. \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš. \n- Amethyst ustvarjalci vas ne bojo **nikoli** vprašali po vašem privatnem ključu. \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel.</string>
-    <string name="account_backup_tips3_md">Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla. \n\nČe izgubiš geslo, obnova ključa ni več mogoča.</string>
     <string name="backup_keys_nudge_title">Varno shrani ključe</string>
     <string name="backup_keys_nudge_body">Vaš zasebni ključ je edini način za dostop do tega računa. Če ga izgubite, ga ne boste mogli več obnoviti. Shranite ga na varno mesto.</string>
     <string name="backup_keys_nudge_backup_now">Varno shrani zdaj</string>
     <string name="backup_keys_nudge_already_saved">shranjeno</string>
     <string name="backup_keys_nudge_dismiss">Opusti</string>
-    <string name="encrypt_and_copy_my_secret_key">Šifriraj in kopiraj moj privatni ključ</string>
     <string name="badge_award_image_for">Slika nagradne značke za %1$s</string>
     <string name="badge_award_image">"Slika nagradne značke</string>
     <string name="new_badge_award_notif">Prejel/a si novo nagradno značko</string>
@@ -3316,7 +3312,6 @@
     <string name="copied_note_text_to_clipboard">Tekst zapiska kopiran v odložišče</string>
     <string name="copied_to_clipboard">Kopirano v odložišče</string>
     <string name="copied_user_id_to_clipboard">Avtorjev @npub kopiran v odložišče</string>
-    <string name="copy_my_secret_key">Kopiraj moj privatni ključ</string>
     <string name="copy_to_clipboard">Kopiraj v odložišče</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Ni bilo mogoče sestaviti LNUrl iz "lightning" naslova '%1$s'. Preverite uporabnikove nastavitve</string>
     <string name="could_not_check_downloaded_file">Ni bilo mogoče preveriti prenesene datoteke po nalaganju: %1$s</string>
@@ -4844,10 +4839,8 @@
     <string name="share_hls_video">Naloži HLS</string>
     <string name="share_or_save">Deli ali shrani</string>
     <string name="shorts">Kratki posnetki</string>
-    <string name="show_encrypted_private_key_qr_code">Pokaži QR kodo šifriranega zasebnega ključa</string>
     <string name="show_messages_in_notifications_setting_description">V zavihek Obvestila vključite neposredna in skupinska sporočila. Izklopite, če želite sporočila ohraniti samo v zavihku Sporočila.</string>
     <string name="show_messages_in_notifications_setting_title">Prikaži sporočilo</string>
-    <string name="show_private_key_qr_code">Pokaži QR kodo zasebnega ključa</string>
     <string name="sign_request_rejected2">Zahteva za vpis zavrnjena</string>
     <string name="sign_request_rejected_description">Prepričajte se, da je aplikacija za podpisovanje odobrila to transakcijo</string>
     <string name="signer_illegal_state_exception_description">Zunanji podpisnik je vrnil neobičajen odgovor. Morda gre za napako v aplikaciji Amethyst ali v podpisniku.</string>

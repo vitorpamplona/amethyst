@@ -184,6 +184,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true"
         android:localeConfig="@xml/locales_config"
+        android:memtagMode="${memtagMode}"
         tools:targetApi="34">
         <activity
             android:name=".ui.MainActivity"

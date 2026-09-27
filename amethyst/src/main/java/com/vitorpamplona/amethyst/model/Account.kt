@@ -1543,6 +1543,12 @@ class Account(
         note: Note,
         reaction: String,
     ) {
+        // A Marmot message reacts inside its MLS group; see AccountMarmotActions.reactToMarmotMessage.
+        marmot.marmotGroupOf(note)?.let { groupId ->
+            marmot.reactToMarmotMessage(groupId, note, reaction)
+            return
+        }
+
         // Reactions to NIP-17 groups and unsealed rumors are gift-wrapped: the
         // inner kind-7 only ever travels as ciphertext, so mining it is pure
         // waste — those targets skip the queue and sign with the plain signer.
@@ -1708,7 +1714,14 @@ class Account(
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        val myNotes = notes.filter { it.author == userProfile() && it.event != null }
+        // Marmot messages are retracted inside their group. A public NIP-09 here would e-tag
+        // the group's private rumor ids onto public relays.
+        val (marmotNotes, otherNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
+        marmotNotes.groupBy { marmot.marmotGroupOf(it)!! }.forEach { (groupId, groupNotes) ->
+            marmot.deleteMarmotMessages(groupId, groupNotes)
+        }
+
+        val myNotes = otherNotes.filter { it.author == userProfile() && it.event != null }
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
@@ -1737,6 +1750,12 @@ class Account(
     ) {
         if (!isWriteable()) return
         val targetEvent = target.event ?: return
+
+        // In a Marmot group the deletion goes to the group, not to the target's author as a DM.
+        marmot.marmotGroupOf(target)?.let { groupId ->
+            marmot.deleteMarmotMessages(groupId, notes)
+            return
+        }
 
         val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
         if (myRumors.isEmpty()) return
@@ -4025,11 +4044,9 @@ class Account(
                                 // via wasVerified=false) would silently drop
                                 // kind:7 reactions / kind:5 deletions since
                                 // they never carry a Schnorr signature.
-                                val isNew = cache.justConsume(innerEvent, null, true)
-                                val innerNote = cache.getOrCreateNote(innerEvent.id)
-                                if (isNew) {
-                                    innerNote.event = innerEvent
-                                }
+                                // Same indexing as live decryption, so a restored
+                                // kind:1009 edit is re-linked to its message too.
+                                val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(

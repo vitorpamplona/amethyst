@@ -42,8 +42,8 @@ import org.junit.Test
 /**
  * A nav-bar tap must land on the tab itself, never on whatever the user had pushed on top of one.
  *
- * The phone bottom bar gets this for free — it hides itself off tab roots, so it can only ever be
- * tapped from one. The large-screen navigation rail stays on screen the whole time, which is where
+ * The phone bottom bar shows only on tab roots and drawer destinations, so it is tapped from at most
+ * one screen above a tab. The large-screen navigation rail stays on screen the whole time, which is where
  * the gap showed: tapping Home from a thread three screens deep came back to that thread instead of
  * the feed.
  *

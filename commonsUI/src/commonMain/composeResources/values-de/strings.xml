@@ -204,7 +204,6 @@
     <string name="relays"> Relais</string>
     <string name="website">Webseite</string>
     <string name="lightning_address">Lightning-Adresse</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiert die Nsec-ID (Ihr Passwort) zur Sicherung in die Zwischenablage</string>
     <string name="send_a_direct_message">Sende eine Direktnachricht</string>
     <string name="edits_the_user_s_metadata">Bearbeitet die Benutzermetadaten</string>
     <string name="unblock">Entsperren</string>
@@ -259,9 +258,6 @@
     <string name="mark_all_known_as_read">Alle als bekannt markieren</string>
     <string name="mark_all_new_as_read">Alle als neu markieren</string>
     <string name="mark_all_as_read">Alle als gelesen markieren</string>
-    <string name="account_backup_tips2_md">## Schlüsselsicherheits-Tipps \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern. \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen. \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen. \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.</string>
-    <string name="account_backup_tips3_md">Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden. \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.</string>
-    <string name="encrypt_and_copy_my_secret_key">Verschlüsseln und kopieren Sie meinen geheimen Schlüssel</string>
     <string name="badge_award_image_for">Auszeichnungsbild für %1$s</string>
     <string name="badge_award_image">Auszeichnungsbild</string>
     <string name="new_badge_award_notif">Sie haben eine neue Auszeichnung erhalten</string>
@@ -2047,7 +2043,6 @@
     <string name="copied_note_text_to_clipboard">Notiztext in die Zwischenablage kopiert</string>
     <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
     <string name="copied_user_id_to_clipboard">Autor-ID in die Zwischenablage kopiert</string>
-    <string name="copy_my_secret_key">Meinen geheimen Schlüssel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Konnte keine LNUrl aus der Lightning-Adresse "%1$s" zusammenstellen. Überprüfen Sie die Konfiguration des Benutzers</string>
     <string name="could_not_check_downloaded_file">Die heruntergeladene Datei konnte nach dem Hochladen nicht überprüft werden: %1$s</string>
@@ -2896,10 +2891,8 @@
     <string name="share_hls_video">HLS-Upload</string>
     <string name="share_or_save">Teilen oder Speichern</string>
     <string name="shorts">Kurzvideos</string>
-    <string name="show_encrypted_private_key_qr_code">QR-Code für verschlüsselten privaten Schlüssel anzeigen</string>
     <string name="show_messages_in_notifications_setting_description">Direkt- und Gruppennachrichten im Benachrichtigungs-Tab anzeigen. Deaktivieren, um Nachrichten nur im Nachrichten-Tab zu behalten.</string>
     <string name="show_messages_in_notifications_setting_title">Nachrichten anzeigen</string>
-    <string name="show_private_key_qr_code">Privaten QR-Code anzeigen</string>
     <string name="sign_request_rejected2">Signaturanfrage abgelehnt</string>
     <string name="sign_request_rejected_description">Stellen Sie sicher, dass die Unterzeichner-Anwendung diese Transaktion autorisiert hat</string>
     <string name="signer_illegal_state_exception_description">Externer Signierer hat Daten zurückgegeben, die für die Anfrage ungewöhnlich sind. Es könnte ein Fehler in Amethyst oder im Signierer vorliegen.</string>

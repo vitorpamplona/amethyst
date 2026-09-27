@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
@@ -244,6 +247,95 @@ class AccountMarmotActions(
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
         manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+    }
+
+    /**
+     * Index a decrypted Marmot inner event: cache it, hold it on its note, and link an
+     * edit to the message it replaces. Shared by live decryption and the startup restore
+     * of the stored message log, so both see the same thing.
+     *
+     * A kind:1009 edit has no typed class, so `LocalCache` has no case for it and
+     * `justConsume` drops it ("Event Not Supported"). The note then had no event and
+     * `Note.latestMarmotEdit`, which matches on the event's kind, skipped it: an edit
+     * from White Noise decrypted fine and never showed. An edit needs nothing from the
+     * cache but its note, so it is attached directly.
+     */
+    fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent {
+        val cache = account.cache
+        val isEdit = innerEvent.kind == MarmotAppEvent.KIND_EDIT
+        val innerNote = cache.getOrCreateNote(innerEvent.id)
+        // wasVerified=true: MIP-03 inner events are unsigned rumors; MLS authenticated the sender.
+        // For an edit, "new" is whether its note was empty — which also decides whether it is
+        // persisted, so an edit is kept in the local log and survives a restart.
+        val isNew = if (isEdit) innerNote.event == null else cache.justConsume(innerEvent, null, true)
+        if (isNew || innerNote.event == null) {
+            // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
+            // message's, and only loadEvent sets it.
+            innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
+        }
+
+        // The overlay's rules (author-only, latest wins) are applied at render time by
+        // `Note.latestMarmotEdit`: the target's author may not be known yet.
+        if (isEdit) {
+            MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
+                cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
+            }
+        }
+        return IndexedInnerEvent(innerNote, isNew)
+    }
+
+    /** [note] holds the inner event; [isNew] is true the first time this client indexed it. */
+    class IndexedInnerEvent(
+        val note: Note,
+        val isNew: Boolean,
+    )
+
+    /**
+     * The Marmot group [note] was received or sent in, or null when it is not a
+     * Marmot message.
+     *
+     * Only chat rows are indexed, so pass the MESSAGE a reaction or deletion is
+     * about, not the reaction itself.
+     */
+    fun marmotGroupOf(note: Note): HexKey? = account.marmotGroupList.groupIdForNote(note.idHex)
+
+    /**
+     * React to a Marmot message inside its group.
+     *
+     * A Marmot message is an unsigned rumor, which the generic reaction path
+     * handles as a NIP-17 private note: it gift-wrapped the kind:7 to the
+     * author as a DM. That never reached the group, so no other client showed
+     * it, and it moved group activity out of the group's channel. The reaction
+     * is an ordinary inner kind:7 (MIP-03), encrypted to the group like any
+     * message.
+     */
+    suspend fun reactToMarmotMessage(
+        nostrGroupId: HexKey,
+        target: Note,
+        reaction: String,
+    ) {
+        val manager = account.marmotManager ?: return
+        val targetEvent = target.event ?: return
+        if (target.hasReacted(account.userProfile(), reaction)) return
+        val rumor = manager.buildReactionRumor(targetEvent, reaction)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+    }
+
+    /**
+     * Retract our own messages or reactions in a Marmot group with an inner
+     * kind:5, for the same reason [reactToMarmotMessage] exists: the generic
+     * private path sent a gift-wrapped NIP-09 to the target's author, so the
+     * other members never saw the deletion.
+     */
+    suspend fun deleteMarmotMessages(
+        nostrGroupId: HexKey,
+        notes: List<Note>,
+    ) {
+        val manager = account.marmotManager ?: return
+        val mine = notes.filter { it.author == account.userProfile() }.mapNotNull { it.event }
+        if (mine.isEmpty()) return
+        val rumor = manager.buildDeletionRumor(mine)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
     }
 
     /**

@@ -204,7 +204,6 @@
     <string name="relays"> Relais</string>
     <string name="website">Site Web</string>
     <string name="lightning_address">Adresse Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copie l'ID Nsec (votre mot de passe) dans le presse-papiers pour le sauvegarder</string>
     <string name="send_a_direct_message">Envoyer un message direct</string>
     <string name="edits_the_user_s_metadata">Modifie les métadonnées de l'utilisateur</string>
     <string name="unblock">Débloquer</string>
@@ -259,9 +258,6 @@
     <string name="mark_all_known_as_read">Marquer tous les Connus comme lu</string>
     <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
     <string name="mark_all_as_read">Tout marquer comme lu</string>
-    <string name="account_backup_tips2_md">## Sauvegarde des Clés et Conseils de Sécurité \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité. \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance. \n- Les développeurs d'Amethyst ne vous demanderont **jamais** votre clé secrète. \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d'utiliser un gestionnaire de mots de passe.</string>
-    <string name="account_backup_tips3_md">Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe. \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.</string>
-    <string name="encrypt_and_copy_my_secret_key">Chiffrer et copier ma clé secrète</string>
     <string name="badge_award_image_for">Image de badge pour %1$s</string>
     <string name="badge_award_image">Image du badge de récompense</string>
     <string name="new_badge_award_notif">Vous avez reçu un nouveau Badge</string>
@@ -2038,7 +2034,6 @@
     <string name="copied_note_text_to_clipboard">Copie du contenu de la note dans le presse-papiers</string>
     <string name="copied_to_clipboard">Copié dans le presse-papiers</string>
     <string name="copied_user_id_to_clipboard">Copie du @npub utilisateur dans le presse-papiers</string>
-    <string name="copy_my_secret_key">Copier ma clé secrète</string>
     <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Impossible d'assembler LNUrl à partir de l'adresse Lightning "%1$s". Vérifiez la configuration de l'utilisateur</string>
     <string name="could_not_check_downloaded_file">Impossible de vérifier le fichier téléchargé après le téléversement : %1$s</string>
@@ -2863,10 +2858,8 @@
     <string name="share_hls_video">Mise en ligne HLS</string>
     <string name="share_or_save">Partager ou Enregistrer</string>
     <string name="shorts">Shorts</string>
-    <string name="show_encrypted_private_key_qr_code">Afficher le QR code de la clé privée chiffrée</string>
     <string name="show_messages_in_notifications_setting_description">Inclure les messages directs et de groupe dans l'onglet Notifications. Désactivez pour conserver les messages uniquement dans l'onglet Messages.</string>
     <string name="show_messages_in_notifications_setting_title">Voir les messages</string>
-    <string name="show_private_key_qr_code">Afficher le QR code de la clé privée</string>
     <string name="sign_request_rejected2">Requête de signature rejetée</string>
     <string name="sign_request_rejected_description">Assurez-vous que l'application signataire a autorisé cette transaction</string>
     <string name="signer_illegal_state_exception_description">Le signataire externe a renvoyé des données qui sont étranges pour la requête. Il peut y avoir un bug sur Amethyst ou le signataire.</string>

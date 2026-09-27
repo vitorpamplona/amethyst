@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_backup_password_min_length
 import com.vitorpamplona.amethyst.commons.resources.action_copy
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_copied
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_copy_plain_warning
@@ -409,12 +410,13 @@ private fun EncryptedCopySection(nsec: String) {
         label = { Text(stringResource(Res.string.new_key_encrypt_password_label)) },
         singleLine = true,
         isError = error,
-        supportingText =
+        supportingText = {
             if (error) {
-                { Text(stringResource(Res.string.backup_keys_encrypt_failed)) }
+                Text(stringResource(Res.string.backup_keys_encrypt_failed))
             } else {
-                null
-            },
+                Text(stringResource(Res.string.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH))
+            }
+        },
         visualTransformation =
             if (showChars) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
@@ -450,7 +452,7 @@ private fun EncryptedCopySection(nsec: String) {
                 }
             }
         },
-        enabled = password.isNotBlank() && !working,
+        enabled = Nip49.isLongEnough(password) && !working,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,

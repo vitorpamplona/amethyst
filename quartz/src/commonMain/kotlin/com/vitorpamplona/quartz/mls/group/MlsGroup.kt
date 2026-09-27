@@ -1992,7 +1992,9 @@ class MlsGroup private constructor(
                 }
             check(candidates.isNotEmpty()) {
                 "UpdatePath at common ancestor carries no ciphertext for us " +
-                    "(my_leaf=$myLeafIndex, my_node=$myNodeIdx, resolution=$resolution, " +
+                    "(sender_leaf=$senderLeafIndex, leaf_count=${tree.leafCount}, filtered_dp=$filteredDp, " +
+                    "filtered_cp=$filteredCp, common_ancestor=$commonAncestorNode, new_leaves=$newLeavesInCommit, " +
+                    "my_leaf=$myLeafIndex, my_node=$myNodeIdx, resolution=$resolution, " +
                     "held_path_nodes=${pathPrivateKeys.keys.sorted()}, " +
                     "encrypted_path_secrets=${pathNode.encryptedPathSecret.size})"
             }

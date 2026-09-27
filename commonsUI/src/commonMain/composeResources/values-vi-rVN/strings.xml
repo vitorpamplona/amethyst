@@ -212,7 +212,6 @@
     <string name="relays"> Relay</string>
     <string name="website">Trang web</string>
     <string name="lightning_address">Địa chỉ Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Sao chép Nsec ID (mật khẩu của bạn) vào clipboard để sao lưu</string>
     <string name="send_a_direct_message">Gửi tin nhắn trực tiếp</string>
     <string name="edits_the_user_s_metadata">Chỉnh sửa siêu dữ liệu người dùng</string>
     <string name="unblock">Bỏ chặn</string>
@@ -267,9 +266,6 @@
     <string name="mark_all_known_as_read">Đánh dấu tất cả đã biết là đã đọc</string>
     <string name="mark_all_new_as_read">Đánh dấu tất cả mới là đã đọc</string>
     <string name="mark_all_as_read">Đánh dấu tất cả là đã đọc</string>
-    <string name="account_backup_tips2_md">## Mẹo sao lưu khóa và bảo mật \n\nTài khoản của bạn được bảo mật bằng một khóa bí mật. Khóa là một chuỗi ký tự dài bắt đầu bằng **nsec1**. Bất kỳ ai có quyền truy cập vào khóa bí mật này đều có thể đăng bài và thay đổi danh tính của bạn. \n\n- **Không** đưa khóa bí mật của bạn vào bất kỳ trang web hoặc phần mềm nào mà bạn không tin tưởng. \n- Các nhà phát triển Amethyst sẽ **không bao giờ** yêu cầu khóa bí mật của bạn. \n- **Hãy** giữ bản sao lưu an toàn của khóa bí mật để khôi phục tài khoản. Chúng tôi khuyến nghị sử dụng trình quản lý mật khẩu.</string>
-    <string name="account_backup_tips3_md">Để bảo mật thêm, bạn có thể mã hóa khóa của mình bằng mật khẩu. Khóa này bắt đầu bằng **ncryptsec1** và không thể sử dụng nếu không có mật khẩu của bạn. \n\nNếu bạn mất mật khẩu, bạn sẽ không thể khôi phục khóa của mình.</string>
-    <string name="encrypt_and_copy_my_secret_key">Mã hóa và sao chép khóa bí mật của tôi</string>
     <string name="badge_award_image_for">Hình ảnh huy hiệu được trao cho %1$s</string>
     <string name="badge_award_image">"Hình ảnh huy hiệu được trao</string>
     <string name="new_badge_award_notif">Bạn đã nhận được huy hiệu mới</string>
@@ -1983,7 +1979,6 @@
     <string name="copied_note_text_to_clipboard">Đã sao chép nội dung ghi chú vào clipboard</string>
     <string name="copied_to_clipboard">Đã sao chép vào clipboard</string>
     <string name="copied_user_id_to_clipboard">Đã sao chép @npub của tác giả vào clipboard</string>
-    <string name="copy_my_secret_key">Sao chép khóa bí mật của tôi</string>
     <string name="copy_to_clipboard">Sao chép vào clipboard</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Không thể tạo LNUrl từ Địa chỉ Lightning "%1$s". Hãy kiểm tra cài đặt của người dùng</string>
     <string name="could_not_check_downloaded_file">Không thể kiểm tra tệp đã tải xuống sau khi tải lên: %1$s</string>
@@ -2746,10 +2741,8 @@
     <string name="share_as_image_url">Chia sẻ dưới dạng URL hình ảnh</string>
     <string name="share_hls_video">Tải lên HLS</string>
     <string name="share_or_save">Chia sẻ hoặc Lưu</string>
-    <string name="show_encrypted_private_key_qr_code">Hiển thị mã QR khóa riêng tư đã mã hóa</string>
     <string name="show_messages_in_notifications_setting_description">Bao gồm tin nhắn trực tiếp và nhóm trên tab Thông báo. Tắt để chỉ giữ tin nhắn trong tab Tin nhắn.</string>
     <string name="show_messages_in_notifications_setting_title">Hiển thị tin nhắn</string>
-    <string name="show_private_key_qr_code">Hiển thị mã QR khóa riêng tư</string>
     <string name="sign_request_rejected2">Yêu cầu ký bị từ chối</string>
     <string name="sign_request_rejected_description">Hãy đảm bảo ứng dụng ký đã cho phép giao dịch này</string>
     <string name="signer_illegal_state_exception_description">Trình ký bên ngoài trả về dữ liệu không hợp lệ cho yêu cầu. Có thể có lỗi trong Amethyst hoặc trong trình ký.</string>

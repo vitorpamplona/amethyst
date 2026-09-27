@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
  * exclusive of the system navigation-bar inset. Used by FAB callers that want to
- * reserve the same vertical space when the bar hides itself on canPop entries. */
+ * reserve the same vertical space when the bar hides itself on in-app pushes. */
 val AppBottomBarHeight = 50.dp
 
 @Composable
@@ -94,9 +94,9 @@ fun AppBottomBar(
     // permanently docked drawer (Expanded).
     if (LocalScreenLayout.current.isLargeScreen) return
 
-    // Hide the bar on entries that aren't a tab root (drawer or in-app
-    // pushes). Mirrors the back-arrow rule in canPop().
-    if (nav.canPop()) return
+    // Hide the bar on in-app pushes. Tab roots, Home and screens opened from
+    // the drawer keep it, even though the drawer ones still show a back arrow.
+    if (!nav.showsBottomBar()) return
 
     val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()

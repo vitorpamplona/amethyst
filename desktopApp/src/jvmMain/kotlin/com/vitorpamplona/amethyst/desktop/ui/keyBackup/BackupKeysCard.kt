@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.LockState
 import com.vitorpamplona.amethyst.commons.privacylock.lockStateFor
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_backup_password_min_length
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_copied
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_copy
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_copy_encrypted
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.resources.backup_keys_show_qr
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_title
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_subtitle
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_title
+import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.security.DesktopLockScreen
 import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
@@ -314,7 +316,16 @@ private fun RevealedSecret(
     nsec: String,
     onHide: () -> Unit,
 ) {
-    MonospaceKeyValue(value = nsec, isSensitive = true)
+    KeyTranscriptionGrid(
+        bech32 = nsec,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(4.dp),
+                ).padding(horizontal = 12.dp, vertical = 16.dp),
+    )
 
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -363,12 +374,13 @@ private fun EncryptedCopy(nsec: String) {
         label = { Text(stringResource(Res.string.backup_keys_encrypt_password_label)) },
         singleLine = true,
         isError = error,
-        supportingText =
+        supportingText = {
             if (error) {
-                { Text(stringResource(Res.string.backup_keys_encrypt_failed)) }
+                Text(stringResource(Res.string.backup_keys_encrypt_failed))
             } else {
-                null
-            },
+                Text(stringResource(Res.string.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH))
+            }
+        },
         visualTransformation =
             if (showChars) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
@@ -406,7 +418,7 @@ private fun EncryptedCopy(nsec: String) {
                 }
             }
         },
-        enabled = password.isNotBlank() && !working,
+        enabled = Nip49.isLongEnough(password) && !working,
     ) {
         Icon(
             symbol = MaterialSymbols.ContentCopy,
@@ -431,19 +443,11 @@ private fun EncryptedCopy(nsec: String) {
 }
 
 @Composable
-private fun MonospaceKeyValue(
-    value: String,
-    isSensitive: Boolean = false,
-) {
+private fun MonospaceKeyValue(value: String) {
     Text(
         value,
         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-        color =
-            if (isSensitive) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
             Modifier
                 .fillMaxWidth()

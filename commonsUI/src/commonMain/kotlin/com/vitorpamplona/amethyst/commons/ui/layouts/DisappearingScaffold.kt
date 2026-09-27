@@ -199,7 +199,7 @@ private fun ScaffoldLayout(
                 }.firstOrNull()?.measure(looseConstraints)
             }
         // When the bar lambda is provided but its content emits nothing (e.g. AppBottomBar
-        // hides itself on canPop entries, or while the keyboard is up), reserve the
+        // hides itself on in-app pushes, or while the keyboard is up), reserve the
         // system-nav-bar inset so the FAB and content stay clear of the navigation bar instead
         // of sliding under it. Subtract the IME inset: the root imePadding has already lifted the
         // whole scaffold above the keyboard, and the IME inset spans the nav-bar band, so

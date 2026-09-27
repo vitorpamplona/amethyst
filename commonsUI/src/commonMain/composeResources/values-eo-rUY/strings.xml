@@ -218,7 +218,6 @@
     <string name="relays"> Plusendiloj</string>
     <string name="website">Retejo</string>
     <string name="lightning_address">Lightning-Adreso</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopii la Nsec ID (vian pasvorton) al la tondujo por sekurkopio</string>
     <string name="send_a_direct_message">Sendi rektan mesaĝon</string>
     <string name="edits_the_user_s_metadata">Redakti metadatumojn de uzanto</string>
     <string name="unblock">Malbloki</string>
@@ -273,9 +272,6 @@
     <string name="mark_all_known_as_read">Marki ĉiujn Konatajn legitaj</string>
     <string name="mark_all_new_as_read">Marki ĉiujn Novajn legitaj</string>
     <string name="mark_all_as_read">Marki ĉiujn legitajn</string>
-    <string name="account_backup_tips2_md">## Konsiletoj pri Ŝlosila Sekurkopiao kaj Sekureco \n\nVia konto estas sekurigita per sekreta ŝlosilo. La ŝlosilo estas longa sinsekvo de signoj komencanta per **nsec1**. Ĉiu kiu havas aliron al ĉi tiu sekreta ŝlosilo povas afiŝi kaj ŝanĝi vian identecon. \n\n- **Ne** metu vian sekretan ŝlosilon en ajnan retejon aŭ programaron, kiun vi ne fidas. \n- Amethyst-programistoj **neniam** petos vian sekretan ŝlosilon. \n- **Faru** sekuran sekurkopion de via sekreta ŝlosilo por reakiro de konto. Ni rekomendas uzi pasvortan administrilon.</string>
-    <string name="account_backup_tips3_md">Por plia sekureco, vi povas ĉifri vian ŝlosilon per pasvorto. Ĉi tiu ŝlosilo komenciĝas per **ncryptsec1** kaj ne povas esti uzata sen via pasvorto. \n\nSe vi perdas vian pasvorton, vi ne povos reakiri vian ŝlosilon.</string>
-    <string name="encrypt_and_copy_my_secret_key">Ĉifri kaj kopii mian seketan ŝlosilon</string>
     <string name="badge_award_image_for">Ŝildeto-premia bildo por %1$s</string>
     <string name="badge_award_image">"Insigna premibildeto</string>
     <string name="new_badge_award_notif">Vi ricevis novan ŝildeto-premion</string>
@@ -2014,7 +2010,6 @@
     <string name="copied_note_text_to_clipboard">Kopiita tekston de noto al tondujo</string>
     <string name="copied_to_clipboard">Kopiita al poŝujo</string>
     <string name="copied_user_id_to_clipboard">Kopiita @npub de aŭtoro al tondujo</string>
-    <string name="copy_my_secret_key">Kopii mian sekretan ŝlosilon</string>
     <string name="copy_to_clipboard">Kopii al poŝujo</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Ne eblis kunmeti LNUrl el Lightning-Adreso "%1$s". Kontrolu la agordon de la uzanto</string>
     <string name="could_not_check_downloaded_file">Ne eblis kontroli la elŝutitan dosieron post alŝuto: %1$s</string>
@@ -2813,10 +2808,8 @@
     <string name="share_hls_video">HLS Alŝuto</string>
     <string name="share_or_save">Kunhavigi aŭ Konservi</string>
     <string name="shorts">Mallongaj videoj</string>
-    <string name="show_encrypted_private_key_qr_code">Montri ĉifritan privatan ŝlosilon QR-kode</string>
     <string name="show_messages_in_notifications_setting_description">Inkluzivi rektajn kaj grupajn mesaĝojn en la Sciiga langeto. Malŝaltu por konservi mesaĝojn nur en la Mesaĝa langeto.</string>
     <string name="show_messages_in_notifications_setting_title">Montri Mesaĝojn</string>
-    <string name="show_private_key_qr_code">Montri privatan ŝlosilon QR-kode</string>
     <string name="sign_request_rejected2">Subskrib-peto rifuzita</string>
     <string name="sign_request_rejected_description">Certigu ke la subskribista aplikaĵo aŭtoris ĉi tiun transakcion</string>
     <string name="signer_illegal_state_exception_description">La ekstera subskribanto resendis utilan ŝarĝon kiu estas stranga por la peto. Povas ekzisti eraro en Amethyst aŭ en la Subskribanto.</string>

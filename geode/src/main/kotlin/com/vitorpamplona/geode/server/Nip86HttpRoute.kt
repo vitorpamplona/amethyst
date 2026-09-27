@@ -26,9 +26,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.header
-import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respondText
-import io.ktor.utils.io.readAvailable
 
 /**
  * Ktor adapter for the canonical NIP-86 HTTP flow encapsulated by
@@ -55,7 +53,12 @@ internal class Nip86HttpRoute(
     private val handler: Nip86HttpHandler,
 ) {
     suspend fun handle(call: ApplicationCall) {
-        val body = readBoundedBody(call, handler.maxBodyBytes) ?: return // 413 already sent
+        val body =
+            readBoundedBody(call, handler.maxBodyBytes) ?: return call.respondText(
+                "request body exceeds ${handler.maxBodyBytes}-byte cap",
+                ContentType.Text.Plain,
+                HttpStatusCode.PayloadTooLarge,
+            )
         val authHeader = call.request.header(HttpHeaders.Authorization)
 
         when (val r = handler.handle(authHeader, body)) {
@@ -109,43 +112,6 @@ internal class Nip86HttpRoute(
                 )
             }
         }
-    }
-
-    /**
-     * Bounded read using [cap]. Returns null after sending a 413 if
-     * the request body exceeds the cap — either the declared
-     * `Content-Length` or what we actually pull off the wire.
-     */
-    private suspend fun readBoundedBody(
-        call: ApplicationCall,
-        cap: Int,
-    ): ByteArray? {
-        val declared = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-        if (declared != null && declared > cap) {
-            call.respondText(
-                "request body exceeds $cap-byte cap",
-                ContentType.Text.Plain,
-                HttpStatusCode.PayloadTooLarge,
-            )
-            return null
-        }
-        val ch = call.receiveChannel()
-        val buf = ByteArray(cap + 1)
-        var pos = 0
-        while (pos <= cap) {
-            val read = ch.readAvailable(buf, pos, buf.size - pos)
-            if (read <= 0) break
-            pos += read
-        }
-        if (pos > cap) {
-            call.respondText(
-                "request body exceeds $cap-byte cap",
-                ContentType.Text.Plain,
-                HttpStatusCode.PayloadTooLarge,
-            )
-            return null
-        }
-        return buf.copyOfRange(0, pos)
     }
 
     /**

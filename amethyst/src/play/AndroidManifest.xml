@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Android 17 (API 37) Local Network Protection gates the mDNS/multicast
+         device discovery the Cast SDK relies on behind this dangerous runtime
+         permission; without it the picker silently finds zero receivers.
+         Play flavor only — F-Droid ships no casting at all. Older OSes have no
+         LNP and ignore the unknown permission. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
     <application
         android:name=".Amethyst">
 

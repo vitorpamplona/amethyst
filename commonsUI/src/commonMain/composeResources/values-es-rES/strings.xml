@@ -217,7 +217,6 @@
     <string name="relays"> Retransmisores</string>
     <string name="website">Sitio web</string>
     <string name="lightning_address">Dirección Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copia el ID Nsec (tu contraseña) en el portapapeles para hacer una copia de seguridad</string>
     <string name="send_a_direct_message">Enviar un mensaje directo</string>
     <string name="edits_the_user_s_metadata">Edita los metadatos del usuario</string>
     <string name="unblock">Desbloquear</string>
@@ -272,9 +271,6 @@
     <string name="mark_all_known_as_read">Marcar los conocidos como leídos</string>
     <string name="mark_all_new_as_read">Marcar los nuevos como leídos</string>
     <string name="mark_all_as_read">Marcar todos como leídos</string>
-    <string name="account_backup_tips2_md">## Consejos sobre la protección y la copia de seguridad de las claves \n\nTu cuenta está protegida por una clave secreta. La clave es una larga secuencia de caracteres que empieza por **nsec1**. Cualquiera que tenga acceso a esta clave secreta puede publicar y cambiar tu identidad. \n\n- **No** guardes la clave secreta en ningún sitio web o software en los que no confíes. \n- Los desarrolladores de Amethyst **nunca** te pedirán la clave secreta. \n- **Sí** puedes realizar una copia de seguridad de la clave secreta para recuperar la cuenta. Para ello, te recomendamos usar un gestor de contraseñas.</string>
-    <string name="account_backup_tips3_md">Para mayor seguridad, puedes cifrar la clave con una contraseña. Esta clave empieza por **ncryptsec1** y no puede utilizarse sin tu contraseña. \n\nSi pierdes la contraseña, no podrás recuperar tu clave.</string>
-    <string name="encrypt_and_copy_my_secret_key">Cifrar y copiar mi clave secreta</string>
     <string name="badge_award_image_for">Imagen del Badge para %1$s</string>
     <string name="badge_award_image">"Imagen de premio de insignia</string>
     <string name="new_badge_award_notif">Has recibido un nuevo Badge</string>
@@ -2011,7 +2007,6 @@
     <string name="copied_note_text_to_clipboard">Texto de nota copiado al portapapeles</string>
     <string name="copied_to_clipboard">Copiado al portapapeles</string>
     <string name="copied_user_id_to_clipboard">@npub del autor copiado al portapapeles</string>
-    <string name="copy_my_secret_key">Copiar mi clave secreta</string>
     <string name="copy_to_clipboard">Copiar al portapapeles</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">No se pudo ensamblar la LNUrl desde la dirección de Lightning "%1$s". Comprueba la configuración del usuario.</string>
     <string name="could_not_check_downloaded_file">No se pudo comprobar el archivo descargado después de cargar: %1$s</string>
@@ -2826,10 +2821,8 @@
     <string name="share_hls_video">Subida HLS</string>
     <string name="share_or_save">Compartir o guardar</string>
     <string name="shorts">Cortos</string>
-    <string name="show_encrypted_private_key_qr_code">Mostrar código QR de clave privada cifrada</string>
     <string name="show_messages_in_notifications_setting_description">Incluye mensajes directos y de grupo en la pestaña de Notificaciones. Desactívalo para mantener los mensajes solo en la pestaña de Mensajes.</string>
     <string name="show_messages_in_notifications_setting_title">Mostrar mensajes</string>
-    <string name="show_private_key_qr_code">Mostrar código QR de clave privada</string>
     <string name="sign_request_rejected2">Solicitud de firma rechazada</string>
     <string name="sign_request_rejected_description">Asegúrate de que la aplicación firmante haya autorizado esta transacción.</string>
     <string name="signer_illegal_state_exception_description">El firmante externo devolvió una carga útil que no concuerda con la solicitud. Es posible que haya un error, ya sea en Amethyst o en el firmante.</string>
