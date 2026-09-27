@@ -109,10 +109,10 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDif
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
@@ -397,11 +397,11 @@ private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, Stri
                 stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_relays)
             }
         is AdvertisedRelayListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_relays)
-        is ChannelListDiff -> rejoinLabels(diff.channels.removed.size)
+        is PublicChatListDiff -> rejoinLabels(diff.channels.removed.size)
         is CommunityListDiff -> rejoinLabels(diff.communities.removed.size)
         is EphemeralChatListDiff -> rejoinLabels(diff.rooms.removed.size)
         is FavoriteAlgoFeedsListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_feeds)
-        is HashtagListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_topics)
+        is InterestListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_topics)
         // Geohashes are places, not topics: the screen counts "places gone" under "Followed
         // locations", so the button has to agree with the page it sits on.
         is GeohashListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_places)

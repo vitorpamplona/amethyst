@@ -116,7 +116,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
@@ -287,7 +287,7 @@ fun CalendarEventDetailScreen(
                         targetAddress = targetAddress,
                     )
 
-                is CalendarEvent ->
+                is CalendarCollectionEvent ->
                     CollectionBody(
                         note = targetNote,
                         accountViewModel = accountViewModel,
@@ -432,7 +432,7 @@ private fun CollectionBody(
     nav: INav,
     targetAddress: Address,
 ) {
-    val event = note.event as? CalendarEvent ?: return
+    val event = note.event as? CalendarCollectionEvent ?: return
     val title = remember(note.idHex) { event.title() }
     val memberAddresses = remember(note.idHex) { event.calendarEventAddresses() }
 
@@ -736,7 +736,7 @@ private fun InCalendarsSection(
                         .clickable {
                             nav.nav(
                                 Route.CalendarEventDetail(
-                                    kind = CalendarEvent.KIND,
+                                    kind = CalendarCollectionEvent.KIND,
                                     pubKeyHex = calendar.pubKey,
                                     dTag = calendar.dTag(),
                                 ),
@@ -889,11 +889,11 @@ private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEve
 }
 
 @Composable
-private fun rememberCalendarsContaining(targetAddress: Address): State<List<CalendarEvent>> {
+private fun rememberCalendarsContaining(targetAddress: Address): State<List<CalendarCollectionEvent>> {
     val calendars =
         remember(targetAddress) {
             LocalCache
-                .observeEvents<CalendarEvent>(Filter(kinds = listOf(CalendarEvent.KIND)))
+                .observeEvents<CalendarCollectionEvent>(Filter(kinds = listOf(CalendarCollectionEvent.KIND)))
                 .map { all ->
                     all
                         .filter { it.calendarEventAddresses().contains(targetAddress) }

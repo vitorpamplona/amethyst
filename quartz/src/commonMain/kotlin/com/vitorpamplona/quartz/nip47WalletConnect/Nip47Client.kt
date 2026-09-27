@@ -27,10 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetMethod
@@ -115,7 +115,7 @@ class Nip47Client(
     suspend fun payInvoice(
         bolt11: String,
         amount: Long? = null,
-    ): LnZapPaymentRequestEvent =
+    ): NwcRequestEvent =
         buildRequest(
             if (amount != null) {
                 PayInvoiceMethod.create(bolt11, amount)
@@ -132,17 +132,17 @@ class Nip47Client(
         pubkey: String,
         preimage: String? = null,
         tlvRecords: List<TlvRecord>? = null,
-    ): LnZapPaymentRequestEvent = buildRequest(PayKeysendMethod.create(amount, pubkey, preimage, tlvRecords))
+    ): NwcRequestEvent = buildRequest(PayKeysendMethod.create(amount, pubkey, preimage, tlvRecords))
 
     /**
      * Builds a get_balance request event.
      */
-    suspend fun getBalance(): LnZapPaymentRequestEvent = buildRequest(GetBalanceMethod.create())
+    suspend fun getBalance(): NwcRequestEvent = buildRequest(GetBalanceMethod.create())
 
     /**
      * Builds a get_info request event.
      */
-    suspend fun getInfo(): LnZapPaymentRequestEvent = buildRequest(GetInfoMethod.create())
+    suspend fun getInfo(): NwcRequestEvent = buildRequest(GetInfoMethod.create())
 
     /**
      * Builds a make_invoice request event.
@@ -152,17 +152,17 @@ class Nip47Client(
         description: String? = null,
         descriptionHash: String? = null,
         expiry: Long? = null,
-    ): LnZapPaymentRequestEvent = buildRequest(MakeInvoiceMethod.create(amount, description, descriptionHash, expiry))
+    ): NwcRequestEvent = buildRequest(MakeInvoiceMethod.create(amount, description, descriptionHash, expiry))
 
     /**
      * Builds a lookup_invoice request event by payment hash.
      */
-    suspend fun lookupInvoiceByHash(paymentHash: String): LnZapPaymentRequestEvent = buildRequest(LookupInvoiceMethod.createByHash(paymentHash))
+    suspend fun lookupInvoiceByHash(paymentHash: String): NwcRequestEvent = buildRequest(LookupInvoiceMethod.createByHash(paymentHash))
 
     /**
      * Builds a lookup_invoice request event by BOLT11 invoice.
      */
-    suspend fun lookupInvoiceByInvoice(invoice: String): LnZapPaymentRequestEvent = buildRequest(LookupInvoiceMethod.createByInvoice(invoice))
+    suspend fun lookupInvoiceByInvoice(invoice: String): NwcRequestEvent = buildRequest(LookupInvoiceMethod.createByInvoice(invoice))
 
     /**
      * Builds a list_transactions request event.
@@ -174,17 +174,17 @@ class Nip47Client(
         offset: Int? = null,
         unpaid: Boolean? = null,
         type: String? = null,
-    ): LnZapPaymentRequestEvent = buildRequest(ListTransactionsMethod.create(from, until, limit, offset, unpaid, type))
+    ): NwcRequestEvent = buildRequest(ListTransactionsMethod.create(from, until, limit, offset, unpaid, type))
 
     /**
      * Builds a get_budget request event.
      */
-    suspend fun getBudget(): LnZapPaymentRequestEvent = buildRequest(GetBudgetMethod.create())
+    suspend fun getBudget(): NwcRequestEvent = buildRequest(GetBudgetMethod.create())
 
     /**
      * Builds a sign_message request event.
      */
-    suspend fun signMessage(message: String): LnZapPaymentRequestEvent = buildRequest(SignMessageMethod.create(message))
+    suspend fun signMessage(message: String): NwcRequestEvent = buildRequest(SignMessageMethod.create(message))
 
     /**
      * Builds a make_hold_invoice request event.
@@ -196,24 +196,24 @@ class Nip47Client(
         descriptionHash: String? = null,
         expiry: Long? = null,
         minCltvExpiryDelta: Int? = null,
-    ): LnZapPaymentRequestEvent = buildRequest(MakeHoldInvoiceMethod.create(amount, paymentHash, description, descriptionHash, expiry, minCltvExpiryDelta))
+    ): NwcRequestEvent = buildRequest(MakeHoldInvoiceMethod.create(amount, paymentHash, description, descriptionHash, expiry, minCltvExpiryDelta))
 
     /**
      * Builds a cancel_hold_invoice request event.
      */
-    suspend fun cancelHoldInvoice(paymentHash: String): LnZapPaymentRequestEvent = buildRequest(CancelHoldInvoiceMethod.create(paymentHash))
+    suspend fun cancelHoldInvoice(paymentHash: String): NwcRequestEvent = buildRequest(CancelHoldInvoiceMethod.create(paymentHash))
 
     /**
      * Builds a settle_hold_invoice request event.
      */
-    suspend fun settleHoldInvoice(preimage: String): LnZapPaymentRequestEvent = buildRequest(SettleHoldInvoiceMethod.create(preimage))
+    suspend fun settleHoldInvoice(preimage: String): NwcRequestEvent = buildRequest(SettleHoldInvoiceMethod.create(preimage))
 
     /**
      * Builds a request event from any [Request] object.
      * This is the low-level method used by all convenience methods above.
      */
-    suspend fun buildRequest(request: Request): LnZapPaymentRequestEvent =
-        LnZapPaymentRequestEvent.createRequest(
+    suspend fun buildRequest(request: Request): NwcRequestEvent =
+        NwcRequestEvent.createRequest(
             request = request,
             walletServicePubkey = walletPubKeyHex,
             signer = signer,
@@ -225,7 +225,7 @@ class Nip47Client(
     /**
      * Decrypts and parses a response event from the wallet.
      */
-    suspend fun parseResponse(event: LnZapPaymentResponseEvent): Response = event.decrypt(signer)
+    suspend fun parseResponse(event: NwcResponseEvent): Response = event.decrypt(signer)
 
     /**
      * Decrypts and parses a notification event from the wallet.
@@ -240,7 +240,7 @@ class Nip47Client(
      */
     fun responseFilter(requestEventId: HexKey): Filter =
         Filter(
-            kinds = listOf(LnZapPaymentResponseEvent.KIND),
+            kinds = listOf(NwcResponseEvent.KIND),
             authors = listOf(walletPubKeyHex),
             tags = mapOf("e" to listOf(requestEventId)),
         )
@@ -251,7 +251,7 @@ class Nip47Client(
      */
     fun allResponsesFilter(since: Long? = null): Filter =
         Filter(
-            kinds = listOf(LnZapPaymentResponseEvent.KIND),
+            kinds = listOf(NwcResponseEvent.KIND),
             authors = listOf(walletPubKeyHex),
             tags = mapOf("p" to listOf(signer.pubKey)),
             since = since,

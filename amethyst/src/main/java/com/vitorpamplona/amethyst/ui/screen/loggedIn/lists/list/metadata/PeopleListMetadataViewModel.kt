@@ -31,7 +31,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -83,7 +83,7 @@ class PeopleListMetadataViewModel : ViewModel() {
     }
 
     fun load(dTag: String) {
-        peopleList = account.peopleLists.selectList(dTag)
+        peopleList = account.followSets.selectList(dTag)
         name.value = TextFieldValue(peopleList?.title ?: "")
         picture.value = TextFieldValue(peopleList?.image ?: "")
         description.value = TextFieldValue(peopleList?.description ?: "")
@@ -95,14 +95,14 @@ class PeopleListMetadataViewModel : ViewModel() {
         accountViewModel.launchSigner {
             val peopleList = peopleList
             if (peopleList == null) {
-                accountViewModel.account.peopleLists.addFollowList(
+                accountViewModel.account.followSets.addFollowList(
                     listName = name.value.text,
                     listDescription = description.value.text,
                     listImage = picture.value.text,
                     account = accountViewModel.account,
                 )
             } else {
-                accountViewModel.account.peopleLists.updateMetadata(
+                accountViewModel.account.followSets.updateMetadata(
                     listName = name.value.text,
                     listDescription = description.value.text,
                     listImage = picture.value.text,

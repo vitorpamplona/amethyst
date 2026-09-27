@@ -96,12 +96,11 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -209,7 +208,7 @@ fun RenderSoftwareApplication(
 }
 
 /**
- * Latest NIP-82 [SoftwareReleaseEvent] version for [app], kept live.
+ * Latest NIP-82 [ReleaseArtifactSetEvent] version for [app], kept live.
  *
  * Releases (kind 30063) are separate events that point back to the app via an
  * `i` tag rather than an `a` tag, so they are never indexed as replies to the
@@ -230,7 +229,7 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
         remember(app.pubKey, app.id) {
             val filter =
                 Filter(
-                    kinds = listOf(SoftwareReleaseEvent.KIND),
+                    kinds = listOf(ReleaseArtifactSetEvent.KIND),
                     authors = listOf(app.pubKey),
                     tags = mapOf(AppIdTag.TAG_NAME to listOf(app.appId())),
                 )
@@ -243,13 +242,13 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
     return flow.collectAsStateWithLifecycle(initialValue = null)
 }
 
-fun findLatestNip82Release(app: SoftwareApplicationEvent): SoftwareReleaseEvent? = latestNip82Release(nip82ReleaseNotesFor(app), app)
+fun findLatestNip82Release(app: SoftwareApplicationEvent): ReleaseArtifactSetEvent? = nip82ReleasesFor(app).maxByOrNull { it.createdAt }
 
 /** Picks the newest NIP-82 release for [app] out of an already-narrowed [notes] collection. */
 private fun latestNip82Release(
     notes: Collection<Note>,
     app: SoftwareApplicationEvent,
-): SoftwareReleaseEvent? {
+): ReleaseArtifactSetEvent? {
     val prefix = "${app.dTag()}@"
     return notes
         .mapNotNull { it.asNip82ReleaseFor(prefix) }
@@ -257,32 +256,25 @@ private fun latestNip82Release(
 }
 
 /** kind-30063 addressables authored by [app] whose `d` tag is `<app-id>@<version>`. */
-private fun nip82ReleaseNotesFor(app: SoftwareApplicationEvent): Set<Note> {
+private fun nip82ReleasesFor(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> {
     val prefix = "${app.dTag()}@"
-    return LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
-        val ev = addr.event ?: return@filterIntoSet false
-        ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
-    }
+    return LocalCache.addressables
+        .filterIntoSet(ReleaseArtifactSetEvent.KIND, app.pubKey) { _, addr ->
+            val ev = addr.event ?: return@filterIntoSet false
+            ev.dTag().startsWith(prefix) && ev.isNip82SoftwareRelease()
+        }.mapNotNull { it.event as? ReleaseArtifactSetEvent }
 }
 
 /**
- * Re-reads this note as the NIP-82 release for [prefix] (`<app-id>@`). kind 30063
- * collides with NIP-51 `ReleaseArtifactSetEvent`, which is what `EventFactory`
- * builds, so we re-parse matching tag arrays as the NIP-82 form.
+ * This note as the NIP-82 release for [prefix] (`<app-id>@`). kind 30063 is shared
+ * with NIP-51 release artifact sets, so only events carrying the NIP-82 tags qualify.
  */
-private fun Note.asNip82ReleaseFor(prefix: String): SoftwareReleaseEvent? =
-    when (val ev = event) {
-        null -> null
-        is SoftwareReleaseEvent -> ev.takeIf { it.dTag().startsWith(prefix) }
-        else -> if (ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)) ev.asSoftwareRelease() else null
-    }
-
-fun findAllNip82Releases(app: SoftwareApplicationEvent): List<SoftwareReleaseEvent> {
-    val prefix = "${app.dTag()}@"
-    return nip82ReleaseNotesFor(app)
-        .mapNotNull { it.asNip82ReleaseFor(prefix) }
-        .sortedByDescending { it.createdAt }
+private fun Note.asNip82ReleaseFor(prefix: String): ReleaseArtifactSetEvent? {
+    val ev = event as? ReleaseArtifactSetEvent ?: return null
+    return ev.takeIf { it.dTag().startsWith(prefix) && it.isNip82SoftwareRelease() }
 }
+
+fun findAllNip82Releases(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> = nip82ReleasesFor(app).sortedByDescending { it.createdAt }
 
 @Composable
 fun AppIcon(
@@ -486,25 +478,17 @@ fun RenderSoftwareRelease(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // kind 30063 is shared between NIP-51 ReleaseArtifactSetEvent and NIP-82 SoftwareReleaseEvent;
-    // EventFactory always returns the NIP-51 class, so we re-parse the same tag array as the
-    // NIP-82 form when the tag signature matches.
-    val rawEvent = note.event ?: return
-    val event: SoftwareReleaseEvent =
-        if (rawEvent is SoftwareReleaseEvent) {
-            rawEvent
-        } else if (rawEvent.isNip82SoftwareRelease()) {
-            rawEvent.asSoftwareRelease()
-        } else {
-            return
-        }
+    // kind 30063 is shared between NIP-51 release artifact sets and NIP-82 software
+    // releases; only render the NIP-82 form here.
+    val event = note.event as? ReleaseArtifactSetEvent ?: return
+    if (!event.isNip82SoftwareRelease()) return
 
     RenderSoftwareReleaseBody(event = event, accountViewModel = accountViewModel, nav = nav)
 }
 
 @Composable
 fun RenderSoftwareReleaseBody(
-    event: SoftwareReleaseEvent,
+    event: ReleaseArtifactSetEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
     showAppId: Boolean = true,

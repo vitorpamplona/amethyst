@@ -30,13 +30,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -45,11 +45,11 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 val HomePostsFromCommunityKinds =
     listOf(
         TextNoteEvent.KIND,
-        LongTextNoteEvent.KIND,
+        LongFormContentEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
         PollEvent.KIND,
-        WikiNoteEvent.KIND,
+        WikiArticleEvent.KIND,
         NipTextEvent.KIND,
         CommunityPostApprovalEvent.KIND,
         CommentEvent.KIND,
@@ -57,8 +57,8 @@ val HomePostsFromCommunityKinds =
         PictureEvent.KIND,
         VideoNormalEvent.KIND,
         VideoShortEvent.KIND,
-        VideoHorizontalEvent.KIND,
-        VideoVerticalEvent.KIND,
+        AddressableNormalVideoEvent.KIND,
+        AddressableShortVideoEvent.KIND,
     )
 
 /** The same set, as the `k` tag values a NIP-72 post approval carries. */

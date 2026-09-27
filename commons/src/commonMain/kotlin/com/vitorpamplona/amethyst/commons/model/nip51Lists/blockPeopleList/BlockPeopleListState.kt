@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -42,20 +42,20 @@ import kotlinx.coroutines.flow.stateIn
 class BlockPeopleListState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val decryptionCache: PeopleListDecryptionCache,
+    val decryptionCache: FollowSetDecryptionCache,
     val scope: CoroutineScope,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blockListNote = cache.getOrCreateAddressableNote(getBlockListAddress())
 
-    fun getBlockListAddress() = PeopleListEvent.createBlockAddress(signer.pubKey)
+    fun getBlockListAddress() = FollowSetEvent.createBlockAddress(signer.pubKey)
 
     fun getBlockListFlow(): StateFlow<NoteState> = blockListNote.flow().metadata.stateFlow
 
-    fun getBlockList(): PeopleListEvent? = blockListNote.event as? PeopleListEvent
+    fun getBlockList(): FollowSetEvent? = blockListNote.event as? FollowSetEvent
 
     suspend fun blockListWithBackup(note: Note): List<MuteTag> {
-        val event = note.event as? PeopleListEvent
+        val event = note.event as? FollowSetEvent
         return event?.let { decryptionCache.usersAndWords(it) } ?: emptyList()
     }
 
@@ -70,32 +70,32 @@ class BlockPeopleListState(
                 emptyList(),
             )
 
-    suspend fun hideUser(pubkeyHex: String): PeopleListEvent {
+    suspend fun hideUser(pubkeyHex: String): FollowSetEvent {
         val blockList = getBlockList()
 
         return if (blockList != null) {
-            PeopleListEvent.add(
+            FollowSetEvent.add(
                 earlierVersion = blockList,
                 person = UserTag(pubkeyHex),
                 isPrivate = true,
                 signer = signer,
             )
         } else {
-            PeopleListEvent.create(
-                title = PeopleListEvent.BLOCK_LIST_D_TAG,
+            FollowSetEvent.create(
+                title = FollowSetEvent.BLOCK_LIST_D_TAG,
                 person = UserTag(pubkeyHex),
                 isPrivate = true,
                 signer = signer,
-                dTag = PeopleListEvent.BLOCK_LIST_D_TAG,
+                dTag = FollowSetEvent.BLOCK_LIST_D_TAG,
             )
         }
     }
 
-    suspend fun showUser(pubkeyHex: String): PeopleListEvent? {
+    suspend fun showUser(pubkeyHex: String): FollowSetEvent? {
         val blockList = getBlockList()
 
         return if (blockList != null) {
-            PeopleListEvent.remove(
+            FollowSetEvent.remove(
                 earlierVersion = blockList,
                 person = UserTag(pubkeyHex),
                 signer = signer,
@@ -105,11 +105,11 @@ class BlockPeopleListState(
         }
     }
 
-    suspend fun showWord(word: String): PeopleListEvent? {
+    suspend fun showWord(word: String): FollowSetEvent? {
         val blockList = getBlockList()
 
         return if (blockList != null) {
-            PeopleListEvent.remove(
+            FollowSetEvent.remove(
                 earlierVersion = blockList,
                 person = WordTag(word),
                 signer = signer,
@@ -119,20 +119,20 @@ class BlockPeopleListState(
         }
     }
 
-    suspend fun showUsers(pubkeys: List<String>): PeopleListEvent? {
+    suspend fun showUsers(pubkeys: List<String>): FollowSetEvent? {
         if (pubkeys.isEmpty()) return null
         val blockList = getBlockList() ?: return null
-        return PeopleListEvent.removeAll(
+        return FollowSetEvent.removeAll(
             earlierVersion = blockList,
             persons = pubkeys.map { UserTag(it) },
             signer = signer,
         )
     }
 
-    suspend fun showWords(words: List<String>): PeopleListEvent? {
+    suspend fun showWords(words: List<String>): FollowSetEvent? {
         if (words.isEmpty()) return null
         val blockList = getBlockList() ?: return null
-        return PeopleListEvent.removeAll(
+        return FollowSetEvent.removeAll(
             earlierVersion = blockList,
             persons = words.map { WordTag(it) },
             signer = signer,

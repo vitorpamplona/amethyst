@@ -23,10 +23,11 @@ package com.vitorpamplona.quartz.nip61Nutzaps.redemption
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
-fun TagArrayBuilder<NutzapRedemptionEvent>.redeemedNutzap(nutzap: EventHintBundle<NutzapEvent>) =
+fun TagArrayBuilder<CashuSpendingHistoryEvent>.redeemedNutzap(nutzap: EventHintBundle<NutzapEvent>) =
     add(
         arrayOfNotNull(
             "e",
@@ -36,4 +37,4 @@ fun TagArrayBuilder<NutzapRedemptionEvent>.redeemedNutzap(nutzap: EventHintBundl
         ),
     )
 
-fun TagArrayBuilder<NutzapRedemptionEvent>.notifySender(nutzap: EventHintBundle<NutzapEvent>) = add(PTag.assemble(nutzap.event.pubKey, nutzap.authorHomeRelay))
+fun TagArrayBuilder<CashuSpendingHistoryEvent>.notifySender(nutzap: EventHintBundle<NutzapEvent>) = add(PTag.assemble(nutzap.event.pubKey, nutzap.authorHomeRelay))

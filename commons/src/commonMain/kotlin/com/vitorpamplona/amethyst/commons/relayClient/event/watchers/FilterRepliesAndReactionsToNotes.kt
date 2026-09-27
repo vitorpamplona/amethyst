@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -46,11 +46,11 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -62,7 +62,7 @@ val RepliesAndReactionsKinds =
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         ReportEvent.KIND,
-        LnZapEvent.KIND,
+        ZapReceiptEvent.KIND,
         OnchainZapEvent.KIND,
         Bolt12ZapEvent.KIND,
         OtsEvent.KIND,
@@ -89,9 +89,9 @@ val RootScopedRepliesKinds =
 
 val RepliesAndReactionsKinds2 =
     listOf(
-        DeletionEvent.KIND,
-        NIP90ContentDiscoveryResponseEvent.KIND,
-        NIP90StatusEvent.KIND,
+        DeletionRequestEvent.KIND,
+        DvmContentDiscoveryResponseEvent.KIND,
+        DvmStatusEvent.KIND,
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
         // NIP-34 status events (1630/1631/1632/1633). Rooted at the target

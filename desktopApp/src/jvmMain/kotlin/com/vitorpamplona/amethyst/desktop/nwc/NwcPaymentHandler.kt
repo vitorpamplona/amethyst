@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47Client
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
@@ -93,7 +93,7 @@ class NwcPaymentHandler(
 
         // Create payment request event
         val requestEvent =
-            LnZapPaymentRequestEvent.create(
+            NwcRequestEvent.create(
                 lnInvoice = bolt11,
                 walletServicePubkey = nwcConnection.pubKeyHex,
                 signer = nwcSigner,
@@ -126,7 +126,7 @@ class NwcPaymentHandler(
         suspendCancellableCoroutine { continuation ->
             val filter =
                 Filter(
-                    kinds = listOf(LnZapPaymentResponseEvent.KIND),
+                    kinds = listOf(NwcResponseEvent.KIND),
                     authors = listOf(nwcConnection.pubKeyHex),
                     tags = mapOf("e" to listOf(requestId)),
                 )
@@ -138,7 +138,7 @@ class NwcPaymentHandler(
                 subId = subId,
                 filters = listOf(filter),
                 onEvent = { event, relay ->
-                    if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
+                    if (event is NwcResponseEvent && event.requestId() == requestId) {
                         // Move verify + cache mutation + decrypt off the relay's
                         // WebSocket reader thread; Schnorr verify is non-trivial
                         // CPU work and shouldn't block frame parsing.
@@ -313,7 +313,7 @@ class NwcPaymentHandler(
         suspendCancellableCoroutine { continuation ->
             val filter =
                 Filter(
-                    kinds = listOf(LnZapPaymentResponseEvent.KIND),
+                    kinds = listOf(NwcResponseEvent.KIND),
                     authors = listOf(nwcConnection.pubKeyHex),
                     tags = mapOf("e" to listOf(requestId)),
                 )
@@ -325,7 +325,7 @@ class NwcPaymentHandler(
                 subId = subId,
                 filters = listOf(filter),
                 onEvent = { event, _ ->
-                    if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
+                    if (event is NwcResponseEvent && event.requestId() == requestId) {
                         @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             if (!localCache.justVerify(event)) return@launch

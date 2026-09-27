@@ -45,10 +45,9 @@ Notables that surprise people:
   (`zapRequest?.content.orEmpty()`) — receipts are searchable by the zapper's comment.
 - **Kind 0 / 31990** index many profile fields space-joined (name, about, nip05, lud16,
   website, picture URL, …).
-- **Kind 30063 is claimed twice** (`ReleaseArtifactSetEvent` in nip51Lists and the experimental
-  `SoftwareReleaseEvent`); `EventFactory` resolves 30063 to `ReleaseArtifactSetEvent`, so
-  `title()\ndescription()` is what actually gets indexed — `SoftwareReleaseEvent.indexableContent()`
-  is dead on the store path.
+- **Kind 30063** (`ReleaseArtifactSetEvent`) serves both NIP-51 release artifact sets and NIP-82
+  software releases: it indexes `title()\ndescription()`, plus the release notes in `content` only
+  for NIP-82 releases (NIP-51 `content` can be encrypted private items).
 - Poll kinds (1068, 6969) append each option label on its own line.
 
 ## MANDATORY maintenance when you touch this surface

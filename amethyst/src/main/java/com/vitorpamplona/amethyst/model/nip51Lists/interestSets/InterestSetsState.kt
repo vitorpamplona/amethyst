@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.Interest
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import kotlinx.coroutines.CoroutineScope
@@ -106,12 +106,12 @@ class InterestSetsState(
 
     fun getInterestSet(dTag: String) = listFeedFlow.value.getSet(dTag)
 
-    fun DeletionEvent.hasAnyDeletedInterestSets() = deleteAddressesWithKind(InterestSetEvent.KIND) || deletesAnyEventIn(interestSetEventIds.value)
+    fun DeletionRequestEvent.hasAnyDeletedInterestSets() = deleteAddressesWithKind(InterestSetEvent.KIND) || deletesAnyEventIn(interestSetEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->
             if (event.pubKey == signer.pubKey) {
-                event is InterestSetEvent || (event is DeletionEvent && event.hasAnyDeletedInterestSets())
+                event is InterestSetEvent || (event is DeletionRequestEvent && event.hasAnyDeletedInterestSets())
             } else {
                 false
             }
@@ -178,7 +178,7 @@ class InterestSetsState(
         account: Account,
     ) {
         val event = getInterestSetEvent(identifier)
-        val template = DeletionEvent.build(listOf(event))
+        val template = DeletionRequestEvent.build(listOf(event))
         val deletionEvent = account.signer.sign(template)
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
     }

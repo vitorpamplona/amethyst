@@ -26,10 +26,10 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 
-fun TagArrayBuilder<LongTextNoteEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<LongFormContentEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
-fun TagArrayBuilder<LongTextNoteEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
+fun TagArrayBuilder<LongFormContentEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
 
-fun TagArrayBuilder<LongTextNoteEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<LongFormContentEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
 
-fun TagArrayBuilder<LongTextNoteEvent>.publishedAt(publishedAt: Long) = addUnique(PublishedAtTag.assemble(publishedAt))
+fun TagArrayBuilder<LongFormContentEvent>.publishedAt(publishedAt: Long) = addUnique(PublishedAtTag.assemble(publishedAt))

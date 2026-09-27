@@ -281,7 +281,7 @@ In `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/EventFactory.kt`
 ```kotlin
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 ```
-2. Add a dispatch branch inside the `when (kind)` near the other NIP-90 kinds (next to line 736 `NIP90StatusEvent.KIND -> ...`):
+2. Add a dispatch branch inside the `when (kind)` near the other NIP-90 kinds (next to line 736 `DvmStatusEvent.KIND -> ...`):
 ```kotlin
 DvmHeartbeatEvent.KIND -> DvmHeartbeatEvent(id, pubKey, createdAt, tags, content, sig)
 ```
@@ -304,7 +304,7 @@ private val knownDTagReaders =
 
 - [ ] **Step 6: Update the design doc §2**
 
-In `amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md`, replace the §2 bullet that says the class "extends `BaseReplaceableEvent`" / "Overrides `dTag()`" with the as-built wording: extends `BaseAddressableEvent` (the codebase convention for 10xxx events with real `d` tags, e.g. `FollowListEvent`), so `dTag()`/`address()`/`addressTag()` come from the base; note `MAX_AGE_SECONDS`, `isFreshAt`, and the `knownDTagReaders` entry live in quartz too (commons imports them).
+In `amethyst/plans/2026-09-10-dvm-heartbeat-liveness.md`, replace the §2 bullet that says the class "extends `BaseReplaceableEvent`" / "Overrides `dTag()`" with the as-built wording: extends `BaseAddressableEvent` (the codebase convention for 10xxx events with real `d` tags, e.g. `StarterPackEvent`), so `dTag()`/`address()`/`addressTag()` come from the base; note `MAX_AGE_SECONDS`, `isFreshAt`, and the `knownDTagReaders` entry live in quartz too (commons imports them).
 
 - [ ] **Step 7: Run the tests to verify they pass**
 

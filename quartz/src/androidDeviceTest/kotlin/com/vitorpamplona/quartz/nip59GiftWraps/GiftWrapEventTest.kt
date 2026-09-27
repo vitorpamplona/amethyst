@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.test.runTest
@@ -65,7 +65,7 @@ class GiftWrapEventTest {
             val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
             eventsReceiverGets.forEach {
                 val event = it.unwrapThrowing(receiver)
-                if (event is SealedRumorEvent) {
+                if (event is SealEvent) {
                     val innerData = event.unsealThrowing(receiver)
                     assertEquals(message, innerData.content)
                 } else {
@@ -77,7 +77,7 @@ class GiftWrapEventTest {
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
                 val event = it.unwrapThrowing(sender)
-                if (event is SealedRumorEvent) {
+                if (event is SealEvent) {
                     val innerData = event.unsealThrowing(sender)
                     assertEquals(message, innerData.content)
                 } else {
@@ -118,7 +118,7 @@ class GiftWrapEventTest {
                 val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
                 eventsReceiverGets.forEach {
                     val event = it.unwrapThrowing(receiver)
-                    if (event is SealedRumorEvent) {
+                    if (event is SealEvent) {
                         val innerData = event.unsealThrowing(receiver)
                         assertEquals(message, innerData.content)
                     } else {
@@ -131,7 +131,7 @@ class GiftWrapEventTest {
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
                 val event = it.unwrapThrowing(sender)
-                if (event is SealedRumorEvent) {
+                if (event is SealEvent) {
                     val innerData = event.unsealThrowing(sender)
                     assertEquals(message, innerData.content)
                 } else {
@@ -155,7 +155,7 @@ class GiftWrapEventTest {
                 )
             // MsgFor the Receiver
             val encMsgFromSenderToReceiver =
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = senderMessage,
                     encryptTo = receiver.pubKey,
                     signer = sender,
@@ -184,7 +184,7 @@ class GiftWrapEventTest {
 
             // MsgFor the Sender
             val encMsgFromSenderToSender =
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = senderMessage,
                     encryptTo = sender.pubKey,
                     signer = sender,
@@ -221,10 +221,10 @@ class GiftWrapEventTest {
             assertNotNull(giftWrapToReceiver)
 
             val unwrappedMsgForSenderBySender = giftWrapToSender.unwrapThrowing(sender)
-            assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
-            assertTrue(unwrappedMsgForSenderBySender is SealedRumorEvent)
+            assertEquals(SealEvent.KIND, unwrappedMsgForSenderBySender.kind)
+            assertTrue(unwrappedMsgForSenderBySender is SealEvent)
 
-            if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
+            if (unwrappedMsgForSenderBySender is SealEvent) {
                 val unwrappedRumorToSenderBySender = unwrappedMsgForSenderBySender.unsealThrowing(sender)
                 assertEquals("Hi There!", unwrappedRumorToSenderBySender.content)
 
@@ -242,10 +242,10 @@ class GiftWrapEventTest {
             }
 
             val unwrappedMsgForReceiverByReceiver = giftWrapToReceiver.unwrapThrowing(receiver)
-            assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverByReceiver.kind)
-            assertTrue(unwrappedMsgForReceiverByReceiver is SealedRumorEvent)
+            assertEquals(SealEvent.KIND, unwrappedMsgForReceiverByReceiver.kind)
+            assertTrue(unwrappedMsgForReceiverByReceiver is SealEvent)
 
-            if (unwrappedMsgForReceiverByReceiver is SealedRumorEvent) {
+            if (unwrappedMsgForReceiverByReceiver is SealEvent) {
                 val unwrappedRumorToReceiverByReceiver = unwrappedMsgForReceiverByReceiver.unsealThrowing(receiver)
                 assertEquals("Hi There!", unwrappedRumorToReceiverByReceiver.content)
 
@@ -273,7 +273,7 @@ class GiftWrapEventTest {
                 )
 
             val msgFromSenderToReceiverA =
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = senderMessage,
                     encryptTo = receiverA.pubKey,
                     signer = sender,
@@ -302,7 +302,7 @@ class GiftWrapEventTest {
             assertEquals(giftWrapForReceiverA.recipientPubKey(), receiverA.pubKey)
 
             val msgFromSenderToReceiverB =
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = senderMessage,
                     encryptTo = receiverB.pubKey,
                     signer = sender,
@@ -331,7 +331,7 @@ class GiftWrapEventTest {
             assertEquals(giftWrapForReceiverB.recipientPubKey(), receiverB.pubKey)
 
             val msgFromSenderToSender =
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = senderMessage,
                     encryptTo = sender.pubKey,
                     signer = sender,
@@ -371,9 +371,9 @@ class GiftWrapEventTest {
             assertNotNull(giftWrapForReceiverB)
 
             val unwrappedMsgForSenderBySender = giftWrapToSender.unwrapThrowing(sender)
-            assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
+            assertEquals(SealEvent.KIND, unwrappedMsgForSenderBySender.kind)
 
-            if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
+            if (unwrappedMsgForSenderBySender is SealEvent) {
                 unwrappedMsgForSenderBySender.unsealOrNull(receiverA)?.let { _ ->
                     fail()
                 }
@@ -399,9 +399,9 @@ class GiftWrapEventTest {
             }
 
             val unwrappedMsgForReceiverAByReceiverA = giftWrapForReceiverA.unwrapThrowing(receiverA)
-            assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverAByReceiverA.kind)
+            assertEquals(SealEvent.KIND, unwrappedMsgForReceiverAByReceiverA.kind)
 
-            if (unwrappedMsgForReceiverAByReceiverA is SealedRumorEvent) {
+            if (unwrappedMsgForReceiverAByReceiverA is SealEvent) {
                 val unwrappedRumorToReceiverAByReceiverA = unwrappedMsgForReceiverAByReceiverA.unsealThrowing(receiverA)
                 assertEquals("Who is going to the party tonight?", unwrappedRumorToReceiverAByReceiverA.content)
 
@@ -426,9 +426,9 @@ class GiftWrapEventTest {
             }
 
             val unwrappedMsgForReceiverBByReceiverB = giftWrapForReceiverB.unwrapThrowing(receiverB)
-            assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverBByReceiverB.kind)
+            assertEquals(SealEvent.KIND, unwrappedMsgForReceiverBByReceiverB.kind)
 
-            if (unwrappedMsgForReceiverBByReceiverB is SealedRumorEvent) {
+            if (unwrappedMsgForReceiverBByReceiverB is SealEvent) {
                 unwrappedMsgForReceiverBByReceiverB.unsealOrNull(receiverA)?.let { unwrappedRumorToReceiverBByReceiverA ->
                     fail()
                 }
@@ -617,7 +617,7 @@ class GiftWrapEventTest {
         assertEquals(signer.pubKey, wrap.recipientPubKey())
 
         val event = wrap.unwrapThrowing(signer)
-        return if (event is SealedRumorEvent) {
+        return if (event is SealEvent) {
             event.unsealThrowing(signer)
         } else {
             println(event.toJson())

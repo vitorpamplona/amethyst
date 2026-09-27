@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.respon
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip44EncryptResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.SignPsbtResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.SignResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 class ForegroundRequestHandler(
     val loggedInUser: HexKey,
@@ -86,7 +86,7 @@ class ForegroundRequestHandler(
         parser = Nip44DecryptResponse::parse,
     )
 
-    suspend fun decryptZapEvent(event: LnZapRequestEvent) =
+    suspend fun decryptZapEvent(event: ZapRequestEvent) =
         launcher.launchWaitAndParse(
             requestIntentBuilder = { DecryptZapRequest.assemble(event, loggedInUser, packageName) },
             parser = DecryptZapResponse::parse,

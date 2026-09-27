@@ -68,7 +68,7 @@ The NIP-42 plumbing and a first-cut permission gate are already in place:
 | Settings screen (global policy + per-relay list) | `amethyst/.../ui/screen/loggedIn/relayauth/RelayAuthSettingsScreen.kt` |
 | Global policy setting, persisted local-only | `AccountSettings.defaultRelayAuthPolicy`, `LocalPreferences` key `DEFAULT_RELAY_AUTH_POLICY` |
 | Blocked-relay list (kind 10006) | `amethyst/.../model/nip51Lists/blockedRelays/BlockedRelayListState.kt` (`.flow`) |
-| Follow checks | `Account.isFollowing(...)`, `Account.allFollows.flow.value.authors`, `FollowListsState.isUserInFollowSets(...)` |
+| Follow checks | `Account.isFollowing(...)`, `Account.allFollows.flow.value.authors`, `StarterPacksState.isUserInFollowSets(...)` |
 | DM / NIP-65 relay lookups | `DmRelayListState`, `Nip65RelayListState` (+ per-user via `LocalCache`) |
 
 ## The gap
@@ -180,7 +180,7 @@ class RelayAuthContext(val relayUrl: String, val purposes: List<AuthPurpose>)
    - `IF_IN_MY_LIST` → `ALLOW` if relay ∈ my relay lists, else fall through
    - `TRUSTED_FOLLOWS` *(new — see idea A below)* → `ALLOW` if relay ∈ my lists
      **or** any counterparty in `ctx.purposes` is followed (`Account.allFollows`
-     / `FollowListsState.isUserInFollowSets`) and the purpose permits it; else
+     / `StarterPacksState.isUserInFollowSets`) and the purpose permits it; else
      fall through.
 4. **Fall-through**: `ASK` if the purpose is attributable (we can show a reason);
    otherwise `DENY` silently (don't prompt for anonymous stranger challenges).

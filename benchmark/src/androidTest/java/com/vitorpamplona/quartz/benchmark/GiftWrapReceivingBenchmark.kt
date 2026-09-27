@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.runBlocking
@@ -62,7 +62,7 @@ class GiftWrapReceivingBenchmark {
         runBlocking {
             GiftWrapEvent.create(
                 event =
-                    SealedRumorEvent.create(
+                    SealEvent.create(
                         event =
                             sender.sign(
                                 ChatMessageEvent.build(
@@ -84,7 +84,7 @@ class GiftWrapReceivingBenchmark {
     fun createSeal(
         sender: NostrSigner,
         receiver: NostrSigner,
-    ): SealedRumorEvent =
+    ): SealEvent =
         runBlocking {
             val msg =
                 sender.sign(
@@ -101,7 +101,7 @@ class GiftWrapReceivingBenchmark {
                     },
                 )
 
-            SealedRumorEvent.create(
+            SealEvent.create(
                 event = msg,
                 encryptTo = receiver.pubKey,
                 signer = sender,

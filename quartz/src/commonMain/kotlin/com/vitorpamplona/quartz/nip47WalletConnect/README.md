@@ -92,8 +92,8 @@ nip47WalletConnect/
 ├── NwcErrorCode.kt                # Error codes enum + NwcError
 ├── NwcTransaction.kt              # Transaction, state, budget, TLV models
 ├── NwcInfoEvent.kt                # Kind 13194 — wallet capabilities
-├── LnZapPaymentRequestEvent.kt    # Kind 23194 — client → wallet request
-├── LnZapPaymentResponseEvent.kt   # Kind 23195 — wallet → client response
+├── NwcRequestEvent.kt    # Kind 23194 — client → wallet request
+├── NwcResponseEvent.kt   # Kind 23195 — wallet → client response
 ├── NwcNotificationEvent.kt        # Kind 23197 — wallet → client notification
 ├── NostrWalletConnectRequestCache.kt   # Request decryption cache
 ├── NostrWalletConnectResponseCache.kt  # Response decryption cache
@@ -107,8 +107,8 @@ nip47WalletConnect/
 | Kind  | Class                        | Direction       | Purpose              |
 |-------|------------------------------|-----------------|----------------------|
 | 13194 | `NwcInfoEvent`               | Wallet → Relay  | Service capabilities |
-| 23194 | `LnZapPaymentRequestEvent`   | Client → Wallet | NWC request          |
-| 23195 | `LnZapPaymentResponseEvent`  | Wallet → Client | NWC response         |
+| 23194 | `NwcRequestEvent`   | Client → Wallet | NWC request          |
+| 23195 | `NwcResponseEvent`  | Wallet → Client | NWC response         |
 | 23196 | `NwcNotificationEvent`       | Wallet → Client | Notification (NIP-04, legacy) |
 | 23197 | `NwcNotificationEvent`       | Wallet → Client | Notification (NIP-44) |
 
@@ -161,7 +161,7 @@ val clientSigner = NostrSignerInternal(
 
 ```kotlin
 val balanceRequest = GetBalanceMethod.create()
-val event = LnZapPaymentRequestEvent.createRequest(
+val event = NwcRequestEvent.createRequest(
     request = balanceRequest,
     walletServicePubkey = nwcConfig.pubKeyHex,
     signer = clientSigner,
@@ -172,7 +172,7 @@ val event = LnZapPaymentRequestEvent.createRequest(
 To use NIP-44 encryption instead of NIP-04:
 
 ```kotlin
-val event = LnZapPaymentRequestEvent.createRequest(
+val event = NwcRequestEvent.createRequest(
     request = GetInfoMethod.create(),
     walletServicePubkey = nwcConfig.pubKeyHex,
     signer = clientSigner,
@@ -238,7 +238,7 @@ val request: Request = requestEvent.decryptRequest(walletSigner)
 val balanceResponse = GetBalanceSuccessResponse(
     GetBalanceSuccessResponse.GetBalanceResult(balance = 2100000L)
 )
-val responseEvent = LnZapPaymentResponseEvent.createResponse(
+val responseEvent = NwcResponseEvent.createResponse(
     response = balanceResponse,
     requestEvent = requestEvent,
     signer = walletSigner,
@@ -249,7 +249,7 @@ val errorResponse = NwcErrorResponse(
     resultType = NwcMethod.PAY_INVOICE,
     error = NwcError(NwcErrorCode.INSUFFICIENT_BALANCE, "Not enough funds"),
 )
-val errorEvent = LnZapPaymentResponseEvent.createResponse(
+val errorEvent = NwcResponseEvent.createResponse(
     response = errorResponse,
     requestEvent = requestEvent,
     signer = walletSigner,

@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
@@ -84,7 +84,7 @@ fun chatFooterHasMeta(
 ): Boolean {
     val event = note.event ?: return false
     val geo = event.geoHashOrScope()
-    return event is PrivateDmEvent ||
+    return event is EncryptedDmEvent ||
         event.expiration() != null ||
         (geo != null && geo != suppressGeohash) ||
         event.strongPoWOrNull() != null ||
@@ -132,7 +132,7 @@ fun ChatMessageFooter(
         }
 
         if (showTime) {
-            val hasGlyph = note.isPinnedInRelayGroup() || event is PrivateDmEvent || event?.expiration() != null || geo != null || pow != null
+            val hasGlyph = note.isPinnedInRelayGroup() || event is EncryptedDmEvent || event?.expiration() != null || geo != null || pow != null
             if (hasGlyph) Spacer(StdHorzSpacer)
 
             // Drafts aren't published, so no relay/delivery detail; everything else gets

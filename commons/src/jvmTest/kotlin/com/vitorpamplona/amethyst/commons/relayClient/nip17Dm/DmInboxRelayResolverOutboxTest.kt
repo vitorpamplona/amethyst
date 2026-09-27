@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -60,11 +60,11 @@ class DmInboxRelayResolverOutboxTest {
         )
 
     private fun dm10050(inbox: List<NormalizedRelayUrl>) =
-        ChatMessageRelayListEvent(
+        DmRelayListEvent(
             id = "c".repeat(64),
             pubKey = peer,
             createdAt = 1_700_000_050,
-            tags = ChatMessageRelayListEvent.createTagArray(inbox),
+            tags = DmRelayListEvent.createTagArray(inbox),
             content = "",
             sig = dummySig(),
         )
@@ -115,7 +115,7 @@ class DmInboxRelayResolverOutboxTest {
             // Indexer knows WHERE the peer writes (10002) but not their 10050.
             client.scriptEvent(AdvertisedRelayListEvent.KIND, indexer, listOf(outbox10002(listOf(peerOutbox))))
             // The peer's own write relay serves their 10050.
-            client.scriptEvent(ChatMessageRelayListEvent.KIND, peerOutbox, listOf(dm10050(listOf(peerDmInbox))))
+            client.scriptEvent(DmRelayListEvent.KIND, peerOutbox, listOf(dm10050(listOf(peerDmInbox))))
 
             val resolver =
                 DmInboxRelayResolver(
@@ -136,7 +136,7 @@ class DmInboxRelayResolverOutboxTest {
         runBlocking {
             val client = ScriptedClient()
             // No 10002 on the indexer; the write relay is only known from cache.
-            client.scriptEvent(ChatMessageRelayListEvent.KIND, peerOutbox, listOf(dm10050(listOf(peerDmInbox))))
+            client.scriptEvent(DmRelayListEvent.KIND, peerOutbox, listOf(dm10050(listOf(peerDmInbox))))
 
             val resolver =
                 DmInboxRelayResolver(

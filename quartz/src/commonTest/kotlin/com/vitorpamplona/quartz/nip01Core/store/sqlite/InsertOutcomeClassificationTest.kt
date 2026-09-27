@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -111,8 +111,8 @@ class InsertOutcomeClassificationTest : BaseDBTest() {
     fun olderAddressableIsRejectedAsSuperseded() =
         forEachDB { db ->
             val time = TimeUtils.now()
-            val older = signer.sign(LongTextNoteEvent.build("v1", "title", dTag = "blog", createdAt = time))
-            val newer = signer.sign(LongTextNoteEvent.build("v2", "title", dTag = "blog", createdAt = time + 1))
+            val older = signer.sign(LongFormContentEvent.build("v1", "title", dTag = "blog", createdAt = time))
+            val newer = signer.sign(LongFormContentEvent.build("v2", "title", dTag = "blog", createdAt = time + 1))
 
             assertEquals(IEventStore.InsertOutcome.Accepted, db.batchInsert(listOf<Event>(newer))[0])
             assertRejected(RejectionReason.SUPERSEDED, db.batchInsert(listOf<Event>(older))[0])

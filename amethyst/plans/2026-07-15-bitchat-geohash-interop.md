@@ -55,7 +55,7 @@ Bitchat's Nostr side has two chat features. Amethyst is a pure-Nostr client
 
 1. **Encrypted DMs (Phase 2).** Port the `bitchat1:` binary packet
    (`BitchatPacket` TLV + `NoisePayloadType`) into quartz, wrap/unwrap it in the
-   existing NIP-17 stack (`GiftWrapEvent`/`SealedRumorEvent`/`ChatMessageEvent`),
+   existing NIP-17 stack (`GiftWrapEvent`/`SealEvent`/`ChatMessageEvent`),
    handle geohash DMs (to a per-geohash pubkey) and delivery/read receipts.
    Add `amy geochat dm` for interop testing.
 2. **Desktop UI.** The shared pieces (quartz events, `GeoRelayDirectory`) are

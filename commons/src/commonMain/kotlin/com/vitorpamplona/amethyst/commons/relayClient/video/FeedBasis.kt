@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.commons.relayClient.video
 
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 // The media types the video/shorts feeds will admit. HLS playlists are in here because a
 // blossom-hosted manifest is `https://host/<sha256>` with no extension at all, so the MIME is the
@@ -57,8 +57,8 @@ val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet(
 val PictureAndVideoKinds =
     listOf(
         PictureEvent.KIND,
-        VideoHorizontalEvent.KIND,
-        VideoVerticalEvent.KIND,
+        AddressableNormalVideoEvent.KIND,
+        AddressableShortVideoEvent.KIND,
         VideoNormalEvent.KIND,
         VideoShortEvent.KIND,
     )
@@ -66,12 +66,12 @@ val PictureAndVideoKinds =
 val PictureAndVideoKTags =
     listOf(
         PictureEvent.KIND.toString(),
-        VideoHorizontalEvent.KIND.toString(),
-        VideoVerticalEvent.KIND.toString(),
+        AddressableNormalVideoEvent.KIND.toString(),
+        AddressableShortVideoEvent.KIND.toString(),
         VideoNormalEvent.KIND.toString(),
         VideoShortEvent.KIND.toString(),
     )
-val PictureAndVideoLegacyKinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND)
-val PictureAndVideoLegacyKTags = listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString())
+val PictureAndVideoLegacyKinds = listOf(FileMetadataEvent.KIND, FileStorageHeaderEvent.KIND)
+val PictureAndVideoLegacyKTags = listOf(FileMetadataEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString())
 val LegacyMimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES
 val LegacyMimeTypeMap = mapOf("m" to LegacyMimeTypes)

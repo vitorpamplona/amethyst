@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -349,7 +349,7 @@ class SQLiteEventStore(
             invalidateAll = true
             return
         }
-        if (event is DeletionEvent && deletedRows > 0) {
+        if (event is DeletionRequestEvent && deletedRows > 0) {
             // Only a kind-5 that actually removed rows costs a rebuild.
             // The common case — a delete broadcast for events this relay
             // never stored — deletes nothing and records as a plain row,

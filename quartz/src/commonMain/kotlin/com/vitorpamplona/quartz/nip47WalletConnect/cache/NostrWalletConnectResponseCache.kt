@@ -23,15 +23,15 @@ package com.vitorpamplona.quartz.nip47WalletConnect.cache
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 
 class NostrWalletConnectResponseCache(
     signer: NostrSigner,
 ) {
     private val decryptionCache =
-        object : LruCache<LnZapPaymentResponseEvent, NWCResponseDecryptCache>(50) {
-            override fun create(key: LnZapPaymentResponseEvent): NWCResponseDecryptCache? =
+        object : LruCache<NwcResponseEvent, NWCResponseDecryptCache>(50) {
+            override fun create(key: NwcResponseEvent): NWCResponseDecryptCache? =
                 if (key.content.isNotBlank() && key.canDecrypt(signer)) {
                     NWCResponseDecryptCache(signer)
                 } else {
@@ -39,16 +39,16 @@ class NostrWalletConnectResponseCache(
                 }
         }
 
-    fun cachedResponse(event: LnZapPaymentResponseEvent): Response? = decryptionCache[event]?.cached()
+    fun cachedResponse(event: NwcResponseEvent): Response? = decryptionCache[event]?.cached()
 
-    suspend fun decryptResponse(event: LnZapPaymentResponseEvent) = decryptionCache[event]?.decrypt(event)
+    suspend fun decryptResponse(event: NwcResponseEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class NWCResponseDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<LnZapPaymentResponseEvent, Response>(signer) {
+) : DecryptCache<NwcResponseEvent, Response>(signer) {
     override suspend fun decryptAndParse(
-        event: LnZapPaymentResponseEvent,
+        event: NwcResponseEvent,
         signer: NostrSigner,
     ) = event.decrypt(signer)
 }

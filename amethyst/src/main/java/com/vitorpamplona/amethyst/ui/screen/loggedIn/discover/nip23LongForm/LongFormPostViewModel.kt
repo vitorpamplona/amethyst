@@ -91,7 +91,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -266,7 +266,7 @@ class LongFormPostViewModel :
         } else {
             val noteEvent = version?.event
 
-            if (noteEvent is LongTextNoteEvent) {
+            if (noteEvent is LongFormContentEvent) {
                 title = TextFieldValue(noteEvent.title() ?: "")
                 summary = TextFieldValue(noteEvent.summary() ?: "")
                 publishedAt = noteEvent.publishedAt() ?: noteEvent.createdAt
@@ -300,12 +300,12 @@ class LongFormPostViewModel :
 
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
-        if (draftEvent is LongTextNoteEvent) {
+        if (draftEvent is LongFormContentEvent) {
             loadFromDraft(draftEvent)
         }
     }
 
-    private fun loadFromDraft(draftEvent: LongTextNoteEvent) {
+    private fun loadFromDraft(draftEvent: LongFormContentEvent) {
         title = TextFieldValue(draftEvent.title() ?: "")
         summary = TextFieldValue(draftEvent.summary() ?: "")
         publishedAt = draftEvent.publishedAt() ?: draftEvent.createdAt
@@ -441,7 +441,7 @@ class LongFormPostViewModel :
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
-        return LongTextNoteEvent.build(
+        return LongFormContentEvent.build(
             description = tagger.message,
             title = title.text.trim(),
             summary = summary.text.trim().ifBlank { null },

@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.AddDMRelayListDialog
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 
 @Preview
 @Composable
@@ -88,7 +88,7 @@ fun ObserveRelayListForDMsAndDisplayIfNotFound(
 @Composable
 fun ObserveRelayListForDMs(
     accountViewModel: AccountViewModel,
-    inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
+    inner: @Composable (relayListEvent: DmRelayListEvent?) -> Unit,
 ) {
     ObserveRelayListForDMs(
         pubkey = accountViewModel.account.userProfile().pubkeyHex,
@@ -102,13 +102,13 @@ fun ObserveRelayListForDMs(
 fun ObserveRelayListForDMs(
     pubkey: HexKey,
     accountViewModel: AccountViewModel,
-    inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
+    inner: @Composable (relayListEvent: DmRelayListEvent?) -> Unit,
 ) {
     LoadAddressableNote(
-        ChatMessageRelayListEvent.createAddress(pubkey),
+        DmRelayListEvent.createAddress(pubkey),
     ) { relayList ->
         if (relayList != null) {
-            val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList, accountViewModel)
+            val relayListEvent by observeNoteEvent<DmRelayListEvent>(relayList, accountViewModel)
 
             inner(relayListEvent)
         }

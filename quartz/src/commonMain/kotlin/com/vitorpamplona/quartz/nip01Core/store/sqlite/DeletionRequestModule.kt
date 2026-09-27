@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 
 class DeletionRequestModule(
     val hasher: (db: SQLiteConnection) -> TagNameValueHasher,
@@ -83,7 +83,7 @@ class DeletionRequestModule(
         event: Event,
         db: SQLiteConnection,
     ): Int {
-        if (event !is DeletionEvent) return 0
+        if (event !is DeletionRequestEvent) return 0
 
         val idValues = event.deleteEventIds()
         val addresses = event.deleteAddresses()

@@ -137,9 +137,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.channels
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -147,11 +147,11 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
@@ -181,11 +181,11 @@ internal fun LazyListScope.listDiffItems(
 ): Boolean {
     when (val diff = conflict.diff) {
         is RelayListDiff -> relayListItems(diff, conflict, nav)
-        is ChannelListDiff -> publicChatItems(diff, conflict, accountViewModel, nav)
+        is PublicChatListDiff -> publicChatItems(diff, conflict, accountViewModel, nav)
         is CommunityListDiff -> communityItems(diff, conflict, accountViewModel, nav)
         is EphemeralChatListDiff -> ephemeralRoomItems(diff, conflict, nav)
         is FavoriteAlgoFeedsListDiff -> favoriteFeedItems(diff, conflict, accountViewModel, nav)
-        is HashtagListDiff -> topicItems(diff.hashtags, (conflict.saved as? HashtagListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false, nav)
+        is InterestListDiff -> topicItems(diff.hashtags, (conflict.saved as? InterestListEvent)?.publicHashtags().orEmpty(), diff.privateItems, isPlace = false, nav)
         is GeohashListDiff -> topicItems(diff.geohashes, (conflict.saved as? GeohashListEvent)?.publicGeohashes().orEmpty(), diff.privateItems, isPlace = true, nav)
         is TrustProviderListDiff -> trustProviderItems(diff, conflict, accountViewModel, nav)
         is PaymentTargetsDiff -> paymentTargetItems(diff, conflict)
@@ -284,11 +284,11 @@ private fun framingOf(type: BackupEventType): RelayFraming =
 
 private fun savedRelaysOf(event: Event): List<NormalizedRelayUrl> =
     when (event) {
-        is ChatMessageRelayListEvent -> event.relays()
+        is DmRelayListEvent -> event.relays()
         is KeyPackageRelayListEvent -> event.relays()
         is SearchRelayListEvent -> event.publicRelays()
         is IndexerRelayListEvent -> event.publicRelays()
-        is RelayFeedsListEvent -> event.publicRelays()
+        is FavoriteRelayListEvent -> event.publicRelays()
         is BlockedRelayListEvent -> event.publicRelays()
         is TrustedRelayListEvent -> event.publicRelays()
         is PrivateOutboxRelayListEvent -> event.publicRelays()
@@ -494,12 +494,12 @@ private fun SpaceTile(
 }
 
 private fun LazyListScope.publicChatItems(
-    diff: ChannelListDiff,
+    diff: PublicChatListDiff,
     conflict: ReplaceableBackupConflict,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val saved = (conflict.saved as? ChannelListEvent)?.tags?.channels().orEmpty()
+    val saved = (conflict.saved as? PublicChatListEvent)?.tags?.channels().orEmpty()
     spaceGrid("chat-", fates(saved, diff.channels) { it.eventId }, { it.eventId }) { tag, fate, modifier ->
         LoadPublicChatChannel(tag.eventId) { channel ->
             // Subscribes to the channel's metadata on relays and recomposes when it arrives.

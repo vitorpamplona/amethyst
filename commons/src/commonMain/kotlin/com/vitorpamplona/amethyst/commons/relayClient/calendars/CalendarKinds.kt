@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.calendars
 
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
 // Appointments are the only kinds shown in the main calendar feed/views. RSVPs and
@@ -34,6 +34,6 @@ val AllCalendarKinds =
     listOf(
         CalendarTimeSlotEvent.KIND,
         CalendarDateSlotEvent.KIND,
-        CalendarEvent.KIND,
+        CalendarCollectionEvent.KIND,
         CalendarRSVPEvent.KIND,
     )

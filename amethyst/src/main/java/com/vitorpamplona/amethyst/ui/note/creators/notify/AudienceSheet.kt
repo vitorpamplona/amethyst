@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.AudienceList
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceListKind
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceMember
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_add_anyway
 import com.vitorpamplona.amethyst.commons.resources.audience_add_people
@@ -545,9 +545,9 @@ private fun MemberBadge(
  */
 @Composable
 fun rememberAudienceLists(accountViewModel: AccountViewModel): List<AudienceList> {
-    val peopleLists by accountViewModel.account.peopleLists.uiListFlow
+    val peopleLists by accountViewModel.account.followSets.uiListFlow
         .collectAsStateWithLifecycle()
-    val followPacks by accountViewModel.account.followLists.uiListFlow
+    val followPacks by accountViewModel.account.starterPacks.uiListFlow
         .collectAsStateWithLifecycle()
 
     return remember(peopleLists, followPacks) {

@@ -181,8 +181,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
@@ -192,38 +192,38 @@ import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
 import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -241,7 +241,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
@@ -251,45 +251,45 @@ import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequest
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
@@ -299,19 +299,19 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -325,8 +325,6 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.redemption.NutzapRedemptionEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.token.TokenEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -340,16 +338,16 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -358,7 +356,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableA
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -366,47 +364,47 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.DvmEventCountRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.DvmEventCountResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.DvmEventPowDelegationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.DvmEventPowDelegationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.DvmEventPublishScheduleRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.DvmEventPublishScheduleResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.DvmEventTimestampingRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.DvmEventTimestampingResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.DvmImageGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.DvmImageGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.DvmImageToVideoRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.DvmImageToVideoResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.DvmMalwareScanRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.DvmMalwareScanResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.DvmOpReturnRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.DvmOpReturnResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.DvmPeopleSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.DvmPeopleSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.DvmTextExtractionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.DvmTextExtractionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.DvmTextToSpeechRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.DvmTextToSpeechResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.DvmTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.DvmTranslationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.DvmUserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.DvmVideoConversionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.DvmVideoConversionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.DvmVideoTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.DvmVideoTranslationResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -570,7 +568,7 @@ class EventFactory {
                 BookmarkListEvent.KIND -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
                 OldBookmarkListEvent.KIND -> OldBookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarDateSlotEvent.KIND -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
-                CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
+                CalendarCollectionEvent.KIND -> CalendarCollectionEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
                 CallAnswerEvent.KIND -> CallAnswerEvent(id, pubKey, createdAt, tags, content, sig)
@@ -585,19 +583,19 @@ class EventFactory {
                 CashuSpendingHistoryEvent.KIND -> CashuSpendingHistoryEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuWalletEvent.KIND -> CashuWalletEvent(id, pubKey, createdAt, tags, content, sig)
                 ChatEvent.KIND -> ChatEvent(id, pubKey, createdAt, tags, content, sig)
-                PutUserEvent.KIND -> PutUserEvent(id, pubKey, createdAt, tags, content, sig)
-                RemoveUserEvent.KIND -> RemoveUserEvent(id, pubKey, createdAt, tags, content, sig)
-                EditMetadataEvent.KIND -> EditMetadataEvent(id, pubKey, createdAt, tags, content, sig)
-                DeleteEventEvent.KIND -> DeleteEventEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupPutUserEvent.KIND -> GroupPutUserEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupRemoveUserEvent.KIND -> GroupRemoveUserEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupEditMetadataEvent.KIND -> GroupEditMetadataEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupDeleteEventEvent.KIND -> GroupDeleteEventEvent(id, pubKey, createdAt, tags, content, sig)
                 CreateGroupEvent.KIND -> CreateGroupEvent(id, pubKey, createdAt, tags, content, sig)
                 DeleteGroupEvent.KIND -> DeleteGroupEvent(id, pubKey, createdAt, tags, content, sig)
-                CreateInviteEvent.KIND -> CreateInviteEvent(id, pubKey, createdAt, tags, content, sig)
-                JoinRequestEvent.KIND -> JoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                LeaveRequestEvent.KIND -> LeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupCreateInviteEvent.KIND -> GroupCreateInviteEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupJoinRequestEvent.KIND -> GroupJoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupLeaveRequestEvent.KIND -> GroupLeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupMetadataEvent.KIND -> GroupMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupAdminsEvent.KIND -> GroupAdminsEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupMembersEvent.KIND -> GroupMembersEvent(id, pubKey, createdAt, tags, content, sig)
-                SupportedRolesEvent.KIND -> SupportedRolesEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupRolesEvent.KIND -> GroupRolesEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupParticipantsEvent.KIND -> GroupParticipantsEvent(id, pubKey, createdAt, tags, content, sig)
                 // kind:39005 is shared by two relay-signed, addressable events that never coexist on
                 // one relay: NIP-29's group pin list (relay29 family) and Buzz's NIP-CW thread
@@ -618,10 +616,10 @@ class EventFactory {
                     } else {
                         GroupPinnedEvent(id, pubKey, createdAt, tags, content, sig)
                     }
-                UpdatePinListEvent.KIND -> UpdatePinListEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupUpdatePinListEvent.KIND -> GroupUpdatePinListEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
-                RelayFeedsListEvent.KIND -> RelayFeedsListEvent(id, pubKey, createdAt, tags, content, sig)
+                FavoriteRelayListEvent.KIND -> FavoriteRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 JesterEvent.KIND -> JesterEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameChallengeEvent.KIND -> LiveChessGameChallengeEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameAcceptEvent.KIND -> LiveChessGameAcceptEvent(id, pubKey, createdAt, tags, content, sig)
@@ -630,13 +628,13 @@ class EventFactory {
                 LiveChessDrawOfferEvent.KIND -> LiveChessDrawOfferEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelHideMessageEvent.KIND -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
-                ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)
+                PublicChatListEvent.KIND -> PublicChatListEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
                 ChatMessageEncryptedFileHeaderEvent.KIND -> ChatMessageEncryptedFileHeaderEvent(id.ifBlank { EventHasher.hashId(pubKey, createdAt, kind, tags, content) }, pubKey, createdAt, tags, content, sig)
                 ChatMessageEvent.KIND -> ChatMessageEvent(id.ifBlank { EventHasher.hashId(pubKey, createdAt, kind, tags, content) }, pubKey, createdAt, tags, content, sig)
-                ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                DmRelayListEvent.KIND -> DmRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
                 CommentEvent.KIND -> CommentEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -644,21 +642,21 @@ class EventFactory {
                 CommunityPostApprovalEvent.KIND -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityRulesEvent.KIND -> CommunityRulesEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
-                DeletionEvent.KIND -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
+                DeletionRequestEvent.KIND -> DeletionRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 DraftWrapEvent.KIND -> DraftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
-                EmojiPackSelectionEvent.KIND -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
+                EmojiListEvent.KIND -> EmojiListEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdentitiesEvent.KIND -> ExternalIdentitiesEvent(id, pubKey, createdAt, tags, content, sig)
                 FedimintEvent.KIND -> FedimintEvent(id, pubKey, createdAt, tags, content, sig)
-                FileHeaderEvent.KIND -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                FileMetadataEvent.KIND -> FileMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
                 FileStorageEvent.KIND -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
                 FileStorageHeaderEvent.KIND -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 FhirResourceEvent.KIND -> FhirResourceEvent(id, pubKey, createdAt, tags, content, sig)
-                FollowListEvent.KIND -> FollowListEvent(id, pubKey, createdAt, tags, content, sig)
+                StarterPackEvent.KIND -> StarterPackEvent(id, pubKey, createdAt, tags, content, sig)
                 FundraiserEvent.KIND -> FundraiserEvent(id, pubKey, createdAt, tags, content, sig)
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
                 CyberspaceBagEvent.KIND -> CyberspaceBagEvent(id, pubKey, createdAt, tags, content, sig)
@@ -701,9 +699,9 @@ class EventFactory {
                 UserGraspListEvent.KIND -> UserGraspListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiAuthorListEvent.KIND -> GoodWikiAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
-                GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
+                ZapGoalEvent.KIND -> ZapGoalEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoriteAlgoFeedsListEvent.KIND -> FavoriteAlgoFeedsListEvent(id, pubKey, createdAt, tags, content, sig)
-                HashtagListEvent.KIND -> HashtagListEvent(id, pubKey, createdAt, tags, content, sig)
+                InterestListEvent.KIND -> InterestListEvent(id, pubKey, createdAt, tags, content, sig)
                 HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
                 HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
                 IndexerRelayListEvent.KIND -> IndexerRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -713,23 +711,23 @@ class EventFactory {
                 InteractiveStoryReadingStateEvent.KIND -> InteractiveStoryReadingStateEvent(id, pubKey, createdAt, tags, content, sig)
                 LabelEvent.KIND -> LabelEvent(id, pubKey, createdAt, tags, content, sig)
                 KindMuteSetEvent.KIND -> KindMuteSetEvent(id, pubKey, createdAt, tags, content, sig)
-                LabeledBookmarkListEvent.KIND -> LabeledBookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
+                BookmarkSetEvent.KIND -> BookmarkSetEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesChatMessageEvent.KIND -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesClipEvent.KIND -> LiveActivitiesClipEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesEvent.KIND -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesRaidEvent.KIND -> LiveActivitiesRaidEvent(id, pubKey, createdAt, tags, content, sig)
-                LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
-                LnZapPaymentRequestEvent.KIND -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                LnZapPaymentResponseEvent.KIND -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                ZapReceiptEvent.KIND -> ZapReceiptEvent(id, pubKey, createdAt, tags, content, sig)
+                NwcRequestEvent.KIND -> NwcRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NwcResponseEvent.KIND -> NwcResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 OfferEvent.KIND -> OfferEvent(id, pubKey, createdAt, tags, content, sig)
                 DebitEvent.KIND -> DebitEvent(id, pubKey, createdAt, tags, content, sig)
                 ManageEvent.KIND -> ManageEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcInfoEvent.KIND -> NwcInfoEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.LEGACY_KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
-                LnZapPrivateEvent.KIND -> LnZapPrivateEvent(id, pubKey, createdAt, tags, content, sig)
-                LnZapRequestEvent.KIND -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                LongTextNoteEvent.KIND -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                PrivateZapEvent.KIND -> PrivateZapEvent(id, pubKey, createdAt, tags, content, sig)
+                ZapRequestEvent.KIND -> ZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                LongFormContentEvent.KIND -> LongFormContentEvent(id, pubKey, createdAt, tags, content, sig)
                 MarketplaceEvent.KIND -> MarketplaceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
@@ -758,55 +756,54 @@ class EventFactory {
                 NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
                 NutzapEvent.KIND -> NutzapEvent(id, pubKey, createdAt, tags, content, sig)
                 NutzapInfoEvent.KIND -> NutzapInfoEvent(id, pubKey, createdAt, tags, content, sig)
-                NutzapRedemptionEvent.KIND -> NutzapRedemptionEvent(id, pubKey, createdAt, tags, content, sig)
                 NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmStatusEvent.KIND -> DvmStatusEvent(id, pubKey, createdAt, tags, content, sig)
                 DvmHeartbeatEvent.KIND -> DvmHeartbeatEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextExtractionRequestEvent.KIND -> NIP90TextExtractionRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextExtractionResponseEvent.KIND -> NIP90TextExtractionResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90SummarizationRequestEvent.KIND -> NIP90SummarizationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90SummarizationResponseEvent.KIND -> NIP90SummarizationResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TranslationRequestEvent.KIND -> NIP90TranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TranslationResponseEvent.KIND -> NIP90TranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextGenerationRequestEvent.KIND -> NIP90TextGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextGenerationResponseEvent.KIND -> NIP90TextGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ImageGenerationRequestEvent.KIND -> NIP90ImageGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ImageGenerationResponseEvent.KIND -> NIP90ImageGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90VideoConversionRequestEvent.KIND -> NIP90VideoConversionRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90VideoConversionResponseEvent.KIND -> NIP90VideoConversionResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90VideoTranslationRequestEvent.KIND -> NIP90VideoTranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90VideoTranslationResponseEvent.KIND -> NIP90VideoTranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ImageToVideoRequestEvent.KIND -> NIP90ImageToVideoRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ImageToVideoResponseEvent.KIND -> NIP90ImageToVideoResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextToSpeechRequestEvent.KIND -> NIP90TextToSpeechRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90TextToSpeechResponseEvent.KIND -> NIP90TextToSpeechResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ContentDiscoveryResponseEvent.KIND -> NIP90ContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90UserDiscoveryRequestEvent.KIND -> NIP90UserDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ContentSearchRequestEvent.KIND -> NIP90ContentSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90ContentSearchResponseEvent.KIND -> NIP90ContentSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90PeopleSearchRequestEvent.KIND -> NIP90PeopleSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90PeopleSearchResponseEvent.KIND -> NIP90PeopleSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventCountRequestEvent.KIND -> NIP90EventCountRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventCountResponseEvent.KIND -> NIP90EventCountResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90MalwareScanRequestEvent.KIND -> NIP90MalwareScanRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90MalwareScanResponseEvent.KIND -> NIP90MalwareScanResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventTimestampingRequestEvent.KIND -> NIP90EventTimestampingRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventTimestampingResponseEvent.KIND -> NIP90EventTimestampingResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90OpReturnRequestEvent.KIND -> NIP90OpReturnRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90OpReturnResponseEvent.KIND -> NIP90OpReturnResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventPublishScheduleRequestEvent.KIND -> NIP90EventPublishScheduleRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventPublishScheduleResponseEvent.KIND -> NIP90EventPublishScheduleResponseEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventPowDelegationRequestEvent.KIND -> NIP90EventPowDelegationRequestEvent(id, pubKey, createdAt, tags, content, sig)
-                NIP90EventPowDelegationResponseEvent.KIND -> NIP90EventPowDelegationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextExtractionRequestEvent.KIND -> DvmTextExtractionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextExtractionResponseEvent.KIND -> DvmTextExtractionResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmSummarizationRequestEvent.KIND -> DvmSummarizationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmSummarizationResponseEvent.KIND -> DvmSummarizationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTranslationRequestEvent.KIND -> DvmTranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTranslationResponseEvent.KIND -> DvmTranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextGenerationRequestEvent.KIND -> DvmTextGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextGenerationResponseEvent.KIND -> DvmTextGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmImageGenerationRequestEvent.KIND -> DvmImageGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmImageGenerationResponseEvent.KIND -> DvmImageGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmVideoConversionRequestEvent.KIND -> DvmVideoConversionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmVideoConversionResponseEvent.KIND -> DvmVideoConversionResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmVideoTranslationRequestEvent.KIND -> DvmVideoTranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmVideoTranslationResponseEvent.KIND -> DvmVideoTranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmImageToVideoRequestEvent.KIND -> DvmImageToVideoRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmImageToVideoResponseEvent.KIND -> DvmImageToVideoResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextToSpeechRequestEvent.KIND -> DvmTextToSpeechRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmTextToSpeechResponseEvent.KIND -> DvmTextToSpeechResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmContentDiscoveryRequestEvent.KIND -> DvmContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmContentDiscoveryResponseEvent.KIND -> DvmContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmUserDiscoveryRequestEvent.KIND -> DvmUserDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmUserDiscoveryResponseEvent.KIND -> DvmUserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmContentSearchRequestEvent.KIND -> DvmContentSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmContentSearchResponseEvent.KIND -> DvmContentSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmPeopleSearchRequestEvent.KIND -> DvmPeopleSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmPeopleSearchResponseEvent.KIND -> DvmPeopleSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventCountRequestEvent.KIND -> DvmEventCountRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventCountResponseEvent.KIND -> DvmEventCountResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmMalwareScanRequestEvent.KIND -> DvmMalwareScanRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmMalwareScanResponseEvent.KIND -> DvmMalwareScanResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventTimestampingRequestEvent.KIND -> DvmEventTimestampingRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventTimestampingResponseEvent.KIND -> DvmEventTimestampingResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmOpReturnRequestEvent.KIND -> DvmOpReturnRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmOpReturnResponseEvent.KIND -> DvmOpReturnResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventPublishScheduleRequestEvent.KIND -> DvmEventPublishScheduleRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventPublishScheduleResponseEvent.KIND -> DvmEventPublishScheduleResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventPowDelegationRequestEvent.KIND -> DvmEventPowDelegationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                DvmEventPowDelegationResponseEvent.KIND -> DvmEventPowDelegationResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 OnchainZapEvent.KIND -> OnchainZapEvent(id, pubKey, createdAt, tags, content, sig)
                 Bolt12ZapEvent.KIND -> Bolt12ZapEvent(id, pubKey, createdAt, tags, content, sig)
                 Bolt12ZapIntentEvent.KIND -> Bolt12ZapIntentEvent(id, pubKey, createdAt, tags, content, sig)
                 Bolt12OfferListEvent.KIND -> Bolt12OfferListEvent(id, pubKey, createdAt, tags, content, sig)
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PaymentTargetsEvent.KIND -> PaymentTargetsEvent(id, pubKey, createdAt, tags, content, sig)
-                PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
+                FollowSetEvent.KIND -> FollowSetEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureCurationSetEvent.KIND -> PictureCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
@@ -823,7 +820,7 @@ class EventFactory {
                 Podcasting20EpisodeEvent.KIND -> Podcasting20EpisodeEvent(id, pubKey, createdAt, tags, content, sig)
                 Podcasting20TrailerEvent.KIND -> Podcasting20TrailerEvent(id, pubKey, createdAt, tags, content, sig)
                 ProductEvent.KIND -> ProductEvent(id, pubKey, createdAt, tags, content, sig)
-                PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptedDmEvent.KIND -> EncryptedDmEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicMessageEvent.KIND -> PublicMessageEvent(id, pubKey, createdAt, tags, content, sig)
@@ -842,7 +839,7 @@ class EventFactory {
                 PublicationIndexEvent.KIND -> PublicationIndexEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicationContentEvent.KIND -> PublicationContentEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayReviewEvent.KIND -> RelayReviewEvent(id, pubKey, createdAt, tags, content, sig)
-                ContactCardEvent.KIND -> ContactCardEvent(id, pubKey, createdAt, tags, content, sig)
+                UserAssertionEvent.KIND -> UserAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 EventAssertionEvent.KIND -> EventAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableAssertionEvent.KIND -> AddressableAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdAssertionEvent.KIND -> ExternalIdAssertionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -875,24 +872,23 @@ class EventFactory {
                 ControlEditionEvent.KIND -> ControlEditionEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteListEvent.KIND -> ConcordInviteListEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteBundleEvent.KIND -> ConcordInviteBundleEvent(id, pubKey, createdAt, tags, content, sig)
-                SealedRumorEvent.KIND -> SealedRumorEvent(id, pubKey, createdAt, tags, content, sig)
+                SealEvent.KIND -> SealEvent(id, pubKey, createdAt, tags, content, sig)
                 SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 SimpleGroupListEvent.KIND -> SimpleGroupListEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareApplicationEvent.KIND -> SoftwareApplicationEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareAssetEvent.KIND -> SoftwareAssetEvent(id, pubKey, createdAt, tags, content, sig)
                 StallEvent.KIND -> StallEvent(id, pubKey, createdAt, tags, content, sig)
-                StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
+                UserStatusEvent.KIND -> UserStatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 ThreadEvent.KIND -> ThreadEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
-                TokenEvent.KIND -> TokenEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentEvent.KIND -> TorrentEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentCommentEvent.KIND -> TorrentCommentEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustedRelayListEvent.KIND -> TrustedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustProviderListEvent.KIND -> TrustProviderListEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoCurationSetEvent.KIND -> VideoCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
-                VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
-                VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
+                AddressableNormalVideoEvent.KIND -> AddressableNormalVideoEvent(id, pubKey, createdAt, tags, content, sig)
+                AddressableShortVideoEvent.KIND -> AddressableShortVideoEvent(id, pubKey, createdAt, tags, content, sig)
                 TextTrackEvent.KIND -> TextTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoCollaborationEvent.KIND -> VideoCollaborationEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoNormalEvent.KIND -> VideoNormalEvent(id, pubKey, createdAt, tags, content, sig)
@@ -901,7 +897,7 @@ class EventFactory {
                 VoiceReplyEvent.KIND -> VoiceReplyEvent(id, pubKey, createdAt, tags, content, sig)
                 WakeUpEvent.KIND -> WakeUpEvent(id, pubKey, createdAt, tags, content, sig)
                 WebBookmarkEvent.KIND -> WebBookmarkEvent(id, pubKey, createdAt, tags, content, sig)
-                WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                WikiArticleEvent.KIND -> WikiArticleEvent(id, pubKey, createdAt, tags, content, sig)
                 WorkoutRecordEvent.KIND -> WorkoutRecordEvent(id, pubKey, createdAt, tags, content, sig)
                 ExerciseTemplateEvent.KIND -> ExerciseTemplateEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)

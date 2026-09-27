@@ -25,7 +25,7 @@ import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.serialization.Serializable
 import java.util.Locale
 
@@ -207,7 +207,7 @@ class AccountZapPreferencesInternal(
     // and so the on-chain-eligible subset round-trips back for them; on load it
     // is unioned into [zapAmountChoices]. See AccountSyncedSettings.
     var onchainZapAmountChoices: List<Long> = DefaultOnchainZapAmounts,
-    val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+    val defaultZapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
 )
 
 @Serializable

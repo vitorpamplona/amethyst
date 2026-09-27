@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
  * Marker for NIP-59 wrappers that carry an inner-event id once decrypted —
- * GiftWrapEvent (and its subclasses) and SealedRumorEvent. Lets callers walk
+ * GiftWrapEvent (and its subclasses) and SealEvent. Lets callers walk
  * to the wrapped event without branching on the concrete wrapper type.
  */
 interface HasInnerEvent {

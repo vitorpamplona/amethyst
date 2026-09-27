@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -951,7 +951,7 @@ class GrapeRankCrawler(
                             // deleter-must-be-author check the caller runs rejects it.
                             val chunkIds = authorChunk.flatMap { idsByAuthor[it].orEmpty() }
                             for (idChunk in chunkIds.chunked(AUTHORS_PER_FILTER)) {
-                                add(Filter(kinds = listOf(DeletionEvent.KIND), authors = authorChunk, tags = mapOf("e" to idChunk)))
+                                add(Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = authorChunk, tags = mapOf("e" to idChunk)))
                             }
                         }
                     }

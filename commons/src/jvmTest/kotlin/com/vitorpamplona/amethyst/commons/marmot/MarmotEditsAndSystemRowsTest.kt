@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -130,7 +130,7 @@ class MarmotEditsAndSystemRowsTest {
             val forged =
                 MarmotAppEvent.build(
                     pubKey = impostor,
-                    kind = DeletionEvent.KIND,
+                    kind = DeletionRequestEvent.KIND,
                     content = "",
                     createdAt = 1_800_000_000L,
                     tags = arrayOf(arrayOf("e", mine.innerEvent.id)),
@@ -168,7 +168,7 @@ class MarmotEditsAndSystemRowsTest {
             val forged =
                 MarmotAppEvent.build(
                     pubKey = f.signer.pubKey,
-                    kind = DeletionEvent.KIND,
+                    kind = DeletionRequestEvent.KIND,
                     content = "",
                     createdAt = 1_800_000_000L,
                     tags = arrayOf(arrayOf("e", absent)),

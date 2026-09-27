@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 
 sealed interface SignerResult<T : IResult> {
     sealed interface RequestAddressed<T : IResult> : SignerResult<T> {
@@ -83,7 +83,7 @@ data class DecryptionResult(
 ) : IResult
 
 data class ZapEventDecryptionResult(
-    val privateEvent: LnZapPrivateEvent,
+    val privateEvent: PrivateZapEvent,
 ) : IResult
 
 data class DerivationResult(

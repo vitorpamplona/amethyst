@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -238,7 +238,7 @@ class BuzzRelayLiveInteropTest {
             val (ws2, frames2) = authedSocket(joiner)
             val join =
                 joiner.sign(
-                    JoinRequestEvent.build(channelId),
+                    GroupJoinRequestEvent.build(channelId),
                 )
             ws2.send("""["EVENT",${join.toJson()}]""")
             val joinOk = frames2.nextOf("OK")
@@ -250,7 +250,7 @@ class BuzzRelayLiveInteropTest {
             assertTrue("true" in frames2.nextOf("OK"), "post after join should be accepted")
 
             // LEAVE: kind 9022, the NIP-29 leave request.
-            val leave = joiner.sign(LeaveRequestEvent.build(channelId))
+            val leave = joiner.sign(GroupLeaveRequestEvent.build(channelId))
             ws2.send("""["EVENT",${leave.toJson()}]""")
             assertTrue("true" in frames2.nextOf("OK"), "leave (9022) should be accepted")
 

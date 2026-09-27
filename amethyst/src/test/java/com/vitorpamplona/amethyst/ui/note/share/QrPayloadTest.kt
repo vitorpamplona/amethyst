@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -79,9 +79,9 @@ class QrPayloadTest {
         runTest {
             // build(description, title, summary, image, publishedAt, dTag, createdAt, init)
             // — `title` is a required positional; `dTag` must be named.
-            // LongTextNoteEvent.kt:148-157.
+            // LongFormContentEvent.kt:148-157.
             val event =
-                LongTextNoteEvent
+                LongFormContentEvent
                     .build("body", "My Article", dTag = "my-article") {}
                     .let { aliceSigner.sign(it) }
             val note = AddressableNote(event.address())

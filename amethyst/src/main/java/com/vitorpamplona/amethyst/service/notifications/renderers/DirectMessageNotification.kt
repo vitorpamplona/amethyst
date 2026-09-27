@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conver
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -64,7 +64,7 @@ object DirectMessageNotification {
     suspend fun notify(
         context: Context,
         account: Account,
-        event: PrivateDmEvent,
+        event: EncryptedDmEvent,
     ) {
         if (account.signer.pubKey != event.verifiedRecipientPubKey()) return
         notifyRoom(context, account, event.id, event.createdAt, event.chatroomKey(account.signer.pubKey), decrypt = true)

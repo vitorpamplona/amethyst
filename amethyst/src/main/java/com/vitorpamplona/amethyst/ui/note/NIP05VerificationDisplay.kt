@@ -84,7 +84,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
@@ -219,14 +219,14 @@ fun DisplayStatus(
     nav: INav,
 ) {
     val noteState by observeNote(addressableNote, accountViewModel)
-    val noteEvent = noteState.note.event as? StatusEvent ?: return
+    val noteEvent = noteState.note.event as? UserStatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)
 }
 
 @Composable
 fun DisplayStatus(
-    event: StatusEvent,
+    event: UserStatusEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -266,7 +266,7 @@ fun DisplayStatusInner(
     nav: INav,
 ) {
     when (type) {
-        StatusEvent.MUSIC -> {
+        UserStatusEvent.MUSIC -> {
             Icon(
                 imageVector = CustomHashTagIcons.Tunestr,
                 null,

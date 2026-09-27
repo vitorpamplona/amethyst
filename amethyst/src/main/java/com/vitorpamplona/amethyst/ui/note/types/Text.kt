@@ -60,7 +60,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 
 enum class ReplyRenderType {
     FULL,
@@ -129,7 +129,7 @@ fun RenderTextEvent(
                     // Zap receipts are signed by the recipient's lightning provider;
                     // label the reply with the zap sender instead of the service key.
                     val zapSender =
-                        if (parentNote.event is LnZapEvent) {
+                        if (parentNote.event is ZapReceiptEvent) {
                             observeZapSender(parentNote, accountViewModel).value
                         } else {
                             null

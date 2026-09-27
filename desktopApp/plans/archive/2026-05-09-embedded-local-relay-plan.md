@@ -290,7 +290,7 @@ SQLiteEventStore's `DeletionRequestModule` already handles this via BEFORE INSER
 - When kind 5 event inserted → trigger deletes referenced events
 - Trigger also prevents re-insertion of deleted events
 
-**Desktop hook**: In `DesktopLocalCache.consume()`, when a `DeletionEvent` is consumed, the write-through to `LocalRelayStore.enqueue()` handles it — the store's trigger does the rest.
+**Desktop hook**: In `DesktopLocalCache.consume()`, when a `DeletionRequestEvent` is consumed, the write-through to `LocalRelayStore.enqueue()` handles it — the store's trigger does the rest.
 
 #### Pruning Strategy
 Add to `LocalRelayStore`:

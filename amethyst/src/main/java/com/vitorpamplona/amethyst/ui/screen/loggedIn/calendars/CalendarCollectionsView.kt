@@ -76,7 +76,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Composable
@@ -153,7 +153,7 @@ fun CalendarCollectionCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = note.event as? CalendarEvent ?: return
+    val event = note.event as? CalendarCollectionEvent ?: return
     val title = remember(note.idHex) { event.title() }
     val description = remember(note.idHex) { event.content.take(180) }
     val count = remember(note.idHex) { event.calendarEventAddresses().size }
@@ -241,7 +241,7 @@ fun CalendarCollectionCard(
  * arrived from relays yet or aren't appointments. Returns a list compatible with
  * [IcsExport.calendarToIcs].
  */
-private fun collectMembers(calendar: CalendarEvent): List<Pair<Address, Any>> =
+private fun collectMembers(calendar: CalendarCollectionEvent): List<Pair<Address, Any>> =
     calendar
         .calendarEventAddresses()
         .mapNotNull { addr ->

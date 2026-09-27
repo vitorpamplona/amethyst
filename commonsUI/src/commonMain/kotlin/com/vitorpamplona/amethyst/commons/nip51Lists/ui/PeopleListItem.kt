@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.follow_set_copy_action_btn_label

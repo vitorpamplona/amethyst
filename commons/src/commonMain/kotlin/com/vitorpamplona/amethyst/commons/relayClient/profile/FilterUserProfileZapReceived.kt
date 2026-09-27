@@ -26,11 +26,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 
-val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND)
+val UserProfileZapReceiverKinds = listOf(ZapReceiptEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND)
 
 fun filterUserProfileZapsReceived(
     cache: ICacheProvider,

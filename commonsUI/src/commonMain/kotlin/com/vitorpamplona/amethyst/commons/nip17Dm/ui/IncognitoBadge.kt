@@ -29,11 +29,11 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.theme.IncognitoIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 
 @Composable
 fun IncognitoBadge(baseNote: Note) {
-    if (baseNote.event is PrivateDmEvent) {
+    if (baseNote.event is EncryptedDmEvent) {
         Icon(
             symbol = MaterialSymbols.NoEncryption,
             contentDescription = null,

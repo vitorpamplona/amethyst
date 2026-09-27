@@ -27,16 +27,16 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
     LoadAddressableNote(
-        EmojiPackSelectionEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
+        EmojiListEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->
                 event.taggedAddresses().toImmutableList()
             }
 

@@ -32,14 +32,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayFacet
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -144,14 +144,14 @@ object RelayCommands {
             Flat(
                 "dm",
                 "dm",
-                ChatMessageRelayListEvent.KIND,
+                DmRelayListEvent.KIND,
                 setOf("chat", "inbox-dm"),
                 // allRelays(), not relays(): every Flat here is read for SELF,
                 // and the filtered accessor drops local entries meant for
                 // attacker-supplied lists — making a deliberately configured
                 // local relay report as no configuration at all.
                 read = { c, pk -> c.dmInboxOf(pk)?.allRelays().orEmpty() },
-                build = { c, r -> ChatMessageRelayListEvent.create(r, c.signer) },
+                build = { c, r -> DmRelayListEvent.create(r, c.signer) },
             ),
             Flat(
                 "key-package",
@@ -220,10 +220,10 @@ object RelayCommands {
             Flat(
                 "feeds",
                 "feeds",
-                RelayFeedsListEvent.KIND,
+                FavoriteRelayListEvent.KIND,
                 setOf("favorites", "relay_feeds"),
-                read = { c, pk -> (c.latestReplaceable(pk, RelayFeedsListEvent.KIND) as? RelayFeedsListEvent)?.decryptRelays(c.signer).orEmpty() },
-                build = { c, r -> RelayFeedsListEvent.create(r, c.signer) },
+                read = { c, pk -> (c.latestReplaceable(pk, FavoriteRelayListEvent.KIND) as? FavoriteRelayListEvent)?.decryptRelays(c.signer).orEmpty() },
+                build = { c, r -> FavoriteRelayListEvent.create(r, c.signer) },
             ),
         )
 

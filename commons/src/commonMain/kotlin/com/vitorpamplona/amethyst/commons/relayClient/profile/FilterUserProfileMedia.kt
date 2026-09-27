@@ -29,17 +29,17 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 val UserProfileMediaKinds =
     listOf(
         PictureEvent.KIND,
         ProfileGalleryEntryEvent.KIND,
-        VideoVerticalEvent.KIND,
-        VideoHorizontalEvent.KIND,
+        AddressableShortVideoEvent.KIND,
+        AddressableNormalVideoEvent.KIND,
         VideoNormalEvent.KIND,
         VideoShortEvent.KIND,
     )

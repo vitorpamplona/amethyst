@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -100,7 +100,7 @@ object RecipientRelayFetcher {
             Filter(
                 kinds =
                     listOf(
-                        ChatMessageRelayListEvent.KIND,
+                        DmRelayListEvent.KIND,
                         KeyPackageRelayListEvent.KIND,
                         AdvertisedRelayListEvent.KIND,
                     ),
@@ -113,7 +113,7 @@ object RecipientRelayFetcher {
                 idleTimeoutMs = idleTimeoutMs,
             )
 
-        var dm: ChatMessageRelayListEvent? = null
+        var dm: DmRelayListEvent? = null
         var kp: KeyPackageRelayListEvent? = null
         var nip65: AdvertisedRelayListEvent? = null
         for (event in events) {
@@ -122,7 +122,7 @@ object RecipientRelayFetcher {
             // route someone else's wrapped welcome to the wrong inbox.
             if (event.pubKey != pubKey) continue
             when (event) {
-                is ChatMessageRelayListEvent -> {
+                is DmRelayListEvent -> {
                     if (dm == null || event.createdAt > dm.createdAt) dm = event
                 }
 

@@ -35,9 +35,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 private fun isFeedNote(event: Event?): Boolean =
@@ -317,11 +317,11 @@ class DesktopReadsFeedFilter(
 
     override fun feed(): List<Note> =
         cache.notes
-            .filterIntoSet { _, note -> note.event is LongTextNoteEvent && !note.isHiddenFor(hidden()) }
+            .filterIntoSet { _, note -> note.event is LongFormContentEvent && !note.isHiddenFor(hidden()) }
             .sortedWith(DefaultFeedOrder)
             .take(limit())
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is LongTextNoteEvent && !it.isHiddenFor(hidden()) }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is LongFormContentEvent && !it.isHiddenFor(hidden()) }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
@@ -342,7 +342,7 @@ class DesktopNotificationFeedFilter(
             setOf(
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
-                LnZapEvent.KIND,
+                ZapReceiptEvent.KIND,
             )
     }
 

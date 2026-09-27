@@ -42,10 +42,10 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
@@ -68,10 +68,10 @@ class EventProcessor(
     private val draftHandler = DraftEventHandler(account, cache)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
-    private val sealHandler = SealedRumorEventHandler(account, cache, this)
+    private val sealHandler = SealEventHandler(account, cache, this)
 
-    private val zapRequest = LnZapRequestEventHandler(account.privateZapsDecryptionCache)
-    private val zapEvent = LnZapEventHandler(account.privateZapsDecryptionCache)
+    private val zapRequest = ZapRequestEventHandler(account.privateZapsDecryptionCache)
+    private val zapEvent = ZapReceiptEventHandler(account.privateZapsDecryptionCache)
 
     private val groupEventHandler = GroupEventHandler(account, cache)
 
@@ -112,9 +112,9 @@ class EventProcessor(
 
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
 
-            is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
+            is SealEvent -> sealHandler.add(event, eventNote, publicNote)
 
-            is LnZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
+            is ZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
         }
     }
 
@@ -153,9 +153,9 @@ class EventProcessor(
             is ChatroomKeyable -> chatHandler.delete(event, note)
             is DraftWrapEvent -> draftHandler.delete(event, note)
             is GiftWrapEvent -> giftWrapHandler.delete(event, note)
-            is SealedRumorEvent -> sealHandler.delete(event, note)
-            is LnZapRequestEvent -> zapRequest.delete(event, note)
-            is LnZapEvent -> zapEvent.delete(event, note)
+            is SealEvent -> sealHandler.delete(event, note)
+            is ZapRequestEvent -> zapRequest.delete(event, note)
+            is ZapReceiptEvent -> zapEvent.delete(event, note)
         }
     }
 
@@ -389,7 +389,7 @@ class GiftWrapEventHandler(
 /**
  * Shared Marmot Welcome handler used by both [GiftWrapEventHandler]
  * (in case a Welcome arrives directly inside a kind:1059 with no Seal
- * layer) and [SealedRumorEventHandler] (the actual production path —
+ * layer) and [SealEventHandler] (the actual production path —
  * Welcomes are wrapped GiftWrap → Seal → Welcome per
  * [com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap]).
  */
@@ -453,31 +453,31 @@ private suspend fun processMarmotWelcomeFlow(
     }
 }
 
-class SealedRumorEventHandler(
+class SealEventHandler(
     private val account: Account,
     private val cache: LocalCache,
     private val eventProcessor: EventProcessor,
-) : EventHandler<SealedRumorEvent> {
+) : EventHandler<SealEvent> {
     override suspend fun add(
-        event: SealedRumorEvent,
+        event: SealEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
         val rumorId = event.innerEventId
         if (rumorId == null) {
-            processNewSealedRumor(event, eventNote, publicNote)
+            processNewSeal(event, eventNote, publicNote)
         } else {
             // Replayed seal: re-link the rumor to its delivering envelope so
             // broadcast can republish the wrap after a cache rebuild.
             // publicNote is the outermost event of this unwrap chain — the
             // kind-1059 wrap normally, the seal itself when it arrived bare.
             publicNote.event?.let { envelope -> cache.getOrCreateNote(rumorId).recordRumorHost(envelope) }
-            processExistingSealedRumor(rumorId, publicNote)
+            processExistingSeal(rumorId, publicNote)
         }
     }
 
     override suspend fun delete(
-        event: SealedRumorEvent,
+        event: SealEvent,
         eventNote: Note,
     ) {
         event.innerEventId?.let { rumorId ->
@@ -488,8 +488,8 @@ class SealedRumorEventHandler(
         }
     }
 
-    private suspend fun processNewSealedRumor(
-        event: SealedRumorEvent,
+    private suspend fun processNewSeal(
+        event: SealEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
@@ -524,7 +524,7 @@ class SealedRumorEventHandler(
         eventNote.flowSet?.metadata?.invalidateData()
     }
 
-    private suspend fun processExistingSealedRumor(
+    private suspend fun processExistingSeal(
         rumorId: String,
         publicNote: Note,
     ) {
@@ -536,11 +536,11 @@ class SealedRumorEventHandler(
     }
 }
 
-class LnZapRequestEventHandler(
+class ZapRequestEventHandler(
     val decryptionCache: PrivateZapCache,
-) : EventHandler<LnZapRequestEvent> {
+) : EventHandler<ZapRequestEvent> {
     override suspend fun add(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
@@ -550,7 +550,7 @@ class LnZapRequestEventHandler(
     }
 
     override suspend fun delete(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         eventNote: Note,
     ) {
         if (event.isPrivateZap()) {
@@ -559,11 +559,11 @@ class LnZapRequestEventHandler(
     }
 }
 
-class LnZapEventHandler(
+class ZapReceiptEventHandler(
     val decryptionCache: PrivateZapCache,
-) : EventHandler<LnZapEvent> {
+) : EventHandler<ZapReceiptEvent> {
     override suspend fun delete(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         eventNote: Note,
     ) {
         event.zapRequest?.let { req ->

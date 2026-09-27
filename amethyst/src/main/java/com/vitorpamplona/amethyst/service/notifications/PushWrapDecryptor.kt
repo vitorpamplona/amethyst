@@ -36,7 +36,7 @@ import kotlinx.coroutines.CancellationException
  *
  * Once decrypted, the inner event is fed into [LocalCache]. From there the
  * normal `Account.newNotesPreProcessor` → `GiftWrapEventHandler` →
- * `SealedRumorEventHandler` chain unwraps any remaining layers, and
+ * `SealEventHandler` chain unwraps any remaining layers, and
  * [NotificationDispatcher] picks up the final payload and notifies.
  */
 object PushWrapDecryptor {

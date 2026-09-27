@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlin.test.Test
@@ -46,7 +46,7 @@ class SearchSeedTest {
 
     @Test
     fun aKindWindowArrivesAsTheSameKinds() {
-        val seed = SearchSeed.ofKinds(LongTextNoteEvent.KIND)
+        val seed = SearchSeed.ofKinds(LongFormContentEvent.KIND)
         assertEquals("kind:article", QuerySerializer.serialize(seed))
         assertEquals(seed, throughTheField(seed))
     }
@@ -196,7 +196,7 @@ class SearchSeedTest {
         assertTrue(SearchQuery(scopes = persistentListOf(ExternalScope("isbn", "123"))).pinsToNotes)
         assertTrue(SearchQuery(groups = persistentListOf("abc")).pinsToNotes)
         // Every seeded feed window pins it too.
-        assertTrue(SearchSeed.ofKinds(LongTextNoteEvent.KIND).pinsToNotes)
+        assertTrue(SearchSeed.ofKinds(LongFormContentEvent.KIND).pinsToNotes)
     }
 
     @Test

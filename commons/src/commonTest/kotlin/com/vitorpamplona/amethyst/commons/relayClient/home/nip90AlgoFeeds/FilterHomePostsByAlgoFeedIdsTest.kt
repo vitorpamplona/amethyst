@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.home.nip90AlgoFeeds
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -83,7 +83,7 @@ class FilterHomePostsByAlgoFeedIdsTest {
         val listen = filters.single()
         assertEquals(dvmRelay, listen.relay)
         assertEquals(
-            listOf(NIP90ContentDiscoveryResponseEvent.KIND, NIP90StatusEvent.KIND),
+            listOf(DvmContentDiscoveryResponseEvent.KIND, DvmStatusEvent.KIND),
             listen.filter.kinds,
         )
         val eTag = listen.filter.tags?.get("e")

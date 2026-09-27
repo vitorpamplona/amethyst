@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.coroutines.test.runTest
@@ -129,7 +129,7 @@ class SharedNoteCardTest {
     fun article_prefersItsTitle() =
         runTest {
             val note =
-                LongTextNoteEvent
+                LongFormContentEvent
                     .build("the body", "My Article", dTag = "a1") {}
                     .let { aliceSigner.sign(it) }
 

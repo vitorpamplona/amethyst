@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.toLongValue
 
@@ -49,13 +49,13 @@ data class RoomZap(
 ) {
     companion object {
         /**
-         * Project a kind-9735 [LnZapEvent] into a [RoomZap]. The
+         * Project a kind-9735 [ZapReceiptEvent] into a [RoomZap]. The
          * source pubkey is the embedded kind-9734 request author —
          * the actual zapper — NOT the receipt's own `pubKey`, which
          * is the lnurl service provider's signing key. Falls back to
          * the receipt issuer only when the request can't be parsed.
          */
-        fun from(event: LnZapEvent): RoomZap =
+        fun from(event: ZapReceiptEvent): RoomZap =
             RoomZap(
                 eventId = event.id,
                 sourcePubkey = event.zapRequest?.pubKey ?: event.pubKey,
@@ -95,7 +95,7 @@ class RoomZapsAggregator {
 
     /** Apply one zap and return the post-evict snapshot. */
     fun apply(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         nowSec: Long,
         windowSec: Long,
     ): Map<String, List<RoomZap>> = apply(RoomZap.from(event), nowSec, windowSec)

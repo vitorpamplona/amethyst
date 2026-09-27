@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.collections.immutable.toImmutableList
 
 private const val WORDS_PER_MINUTE = 225
@@ -77,7 +77,7 @@ fun RenderLongFormContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? LongTextNoteEvent ?: return
+    val noteEvent = note.event as? LongFormContentEvent ?: return
 
     LongFormHeader(noteEvent, note, accountViewModel)
 }
@@ -85,7 +85,7 @@ fun RenderLongFormContent(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LongFormHeader(
-    noteEvent: LongTextNoteEvent,
+    noteEvent: LongFormContentEvent,
     note: Note,
     accountViewModel: AccountViewModel,
 ) {

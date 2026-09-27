@@ -100,7 +100,7 @@ class RelayGroupsDiscoverySubAssembler(
             account.relayGroupList.liveRelayGroupServers.value.forEach { server ->
                 RelayUrlNormalizer.normalizeOrNull(server)?.let(::add)
             }
-            addAll(account.relayFeedsList.flow.value)
+            addAll(account.favoriteRelayList.flow.value)
         }
 
     override fun user(key: RelayGroupsDiscoveryQueryState) = key.account.userProfile()
@@ -156,7 +156,7 @@ class RelayGroupsDiscoverySubAssembler(
                     }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
-                    key.account.relayFeedsList.flow.sample(500).collectLatest {
+                    key.account.favoriteRelayList.flow.sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },

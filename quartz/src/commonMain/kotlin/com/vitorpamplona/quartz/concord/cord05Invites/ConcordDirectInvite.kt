@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
@@ -57,7 +57,7 @@ object ConcordDirectInvite {
         createdAt: Long,
     ): GiftWrapEvent {
         val rumor = RumorAssembler.assembleRumor<Event>(senderSigner.pubKey, createdAt, KIND, emptyArray(), json(invite))
-        val seal = SealedRumorEvent.create(rumor, recipientPubKey, senderSigner, createdAt = createdAt)
+        val seal = SealEvent.create(rumor, recipientPubKey, senderSigner, createdAt = createdAt)
 
         // Wrap with a random ephemeral key, adding the ["k","3313"] index tag.
         val wrapSigner = NostrSignerInternal(KeyPair())
@@ -80,7 +80,7 @@ object ConcordDirectInvite {
         recipientSigner: NostrSigner,
     ): CommunityInvite? {
         val seal = wrap.unwrapOrNull(recipientSigner) ?: return null
-        if (seal !is SealedRumorEvent) return null
+        if (seal !is SealEvent) return null
         val rumor = seal.unsealOrNull(recipientSigner) ?: return null
         if (rumor.kind != KIND) return null
         return ConcordJson.decodeOrNull<CommunityInvite>(rumor.content)

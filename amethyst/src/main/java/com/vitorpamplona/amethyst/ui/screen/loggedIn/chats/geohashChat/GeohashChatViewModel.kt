@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,7 +122,7 @@ class GeohashChatViewModel : ViewModel() {
             val signer = NostrSignerInternal(keyPair)
             val template =
                 if (mine.isNotEmpty()) {
-                    DeletionEvent.build(mine)
+                    DeletionRequestEvent.build(mine)
                 } else {
                     val hint = note.toEventHint<Event>() ?: return@launch
                     ReactionEvent.build(reaction, hint)
