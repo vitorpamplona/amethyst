@@ -754,7 +754,7 @@ private fun LazyListScope.trustProviderItems(
                     Icon(symbol = MaterialSymbols.Group, contentDescription = null, tint = tones.changed)
                 }
                 Column {
-                    Text(stringRes(Res.string.backup_review_services_changed, affected.toString(), services.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(pluralStringResource(Res.plurals.backup_review_services_changed, services.size, affected.toString(), services.size.toString()), fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold)
                     Text(stringRes(Res.string.backup_review_services_changed_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                 }
             }

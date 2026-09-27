@@ -144,6 +144,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
@@ -420,7 +421,7 @@ private fun PeopleSearch(
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
         leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null) },
-        placeholder = { Text(stringRes(Res.string.backup_review_search_people, count.toString())) },
+        placeholder = { Text(pluralStringRes(Res.plurals.backup_review_search_people, count, count.toString())) },
     )
 }
 

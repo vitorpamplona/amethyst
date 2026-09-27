@@ -214,7 +214,12 @@
     <string name="geocache_hunt_new">Nowe polowanie…</string>
     <string name="geocache_hunt_none_yet">Nie dokonałeś jeszcze polowania.</string>
     <string name="geocache_hunt_already_on">Już podczas tego polowania</string>
-    <string name="geocache_caches_here">%1$d skrzynek tutaj</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d skrzynka tutaj</item>
+        <item quantity="few">%1$d skrzynki tutaj</item>
+        <item quantity="many">%1$d skrzynek tutaj</item>
+        <item quantity="other">%1$d skrzynki tutaj</item>
+    </plurals>
     <string name="geocache_photo_remove">Usuń to zdjęcie</string>
     <string name="geocache_archived_notice">Ta skrzynka została zarchiwizowana. Nie jest już w grze.</string>
     <string name="geocache_ftf_won_by">Pierwszy, który znalazł – zgłoszone przez %1$s</string>
@@ -273,7 +278,6 @@
     <string name="geocache_map_recenter">Wyśrodkuj na mnie</string>
     <string name="geocache_map_long_press">Naciśnij i przytrzymaj mapę, aby ukryć skrzynkę</string>
     <string name="geocache_map_open">Otwórz</string>
-    <string name="geocache_map_pin_count">%1$d skrzynek</string>
     <string name="geocache_new_section_where">Gdzie</string>
     <string name="geocache_new_section_what">Co</string>
     <string name="geocache_new_section_extras">Dodatki</string>
@@ -301,7 +305,12 @@
     <string name="geocache_new_needs_location">Wybierz gdzie skrzynka jest ukryta.</string>
     <string name="geocache_hunt_progress">Znaleziono %1$d z %2$d</string>
     <string name="geocache_hunt_start">Rozpocznij polowanie</string>
-    <string name="geocache_hunt_caches">%1$d skrzynek</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d skrzynka</item>
+        <item quantity="few">%1$d skrzynki</item>
+        <item quantity="many">%1$d skrzynek</item>
+        <item quantity="other">%1$d skrzynki</item>
+    </plurals>
     <string name="geocache_hunt_title">Tytuł</string>
     <string name="geocache_hunt_description">Opis</string>
     <string name="geocache_hunt_banner">Obraz banera</string>
@@ -352,7 +361,12 @@
     <string name="qr_scanner_no_code_in_image">Nie znaleziono kodu QR na tym obrazku</string>
     <string name="qr_scanner_clipboard_empty">Nic w schowku do skanowania</string>
     <string name="qr_scanner_pick_one">Wybierz żądany kod</string>
-    <string name="qr_scanner_sequence_progress">Zdobyto %1$s z %2$s części — kontynuuj</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">Zdobyto %1$s z %2$s części — kontynuuj</item>
+        <item quantity="few">Zdobyto %1$s z %2$s części — kontynuuj</item>
+        <item quantity="many">Zdobyto %1$s z %2$s części — kontynuuj</item>
+        <item quantity="other">Zdobyto %1$s z %2$s części — kontynuuj</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Zresetuj zoom</string>
     <string name="qr_scanner_unsupported_title">Ametyst nie może otworzyć tego kodu</string>
     <string name="qr_scanner_unsupported_secret">Ten kod zawiera klucz prywatny lub hasło parowania, dlatego jego treść nie jest tutaj wyświetlana. Należy skorzystać z odpowiedniego ekranu, na którym należy go wprowadzić.</string>
@@ -5475,16 +5489,35 @@
     <string name="cyberspace_bag_cancel">Stop</string>
     <string name="cyberspace_bag_measuring">Wycena wyszukiwania na tym urządzeniu…</string>
     <string name="cyberspace_bag_progress">Przeszukano %1$s z %2$s regionów</string>
-    <string name="cyberspace_bag_too_slow_minutes">Poza zasięgiem: około %1$d minut wyszukiwania na tym urządzeniu</string>
-    <string name="cyberspace_bag_too_slow_hours">Poza zasięgiem: około %1$d godzin wyszukiwania na tym urządzeniu</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">Poza zasięgiem: około %1$d minuty wyszukiwania na tym urządzeniu</item>
+        <item quantity="few">Poza zasięgiem: około %1$d minut wyszukiwania na tym urządzeniu</item>
+        <item quantity="many">Poza zasięgiem: około %1$d minut wyszukiwania na tym urządzeniu</item>
+        <item quantity="other">Poza zasięgiem: około %1$d minuty wyszukiwania na tym urządzeniu</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">Poza zasięgiem: około %1$d godziny wyszukiwania na tym urządzeniu</item>
+        <item quantity="few">Poza zasięgiem: około %1$d godzin wyszukiwania na tym urządzeniu</item>
+        <item quantity="many">Poza zasięgiem: około %1$d godzin wyszukiwania na tym urządzeniu</item>
+        <item quantity="other">Poza zasięgiem: około %1$d godziny wyszukiwania na tym urządzeniu</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">W pudełku nie ma podpowiedzi o nazwie</string>
     <string name="cyberspace_bag_damaged">Znaleziono region, ale nie udało się odczytać jego zawartości</string>
-    <string name="cyberspace_bag_dropped">%1$d element ukryty w tym miejscu nie pasował do swojej sygnatury podpisu i został usunięty</string>
-    <string name="cyberspace_bag_dropped_many">%1$d ukrytych tutaj elementów nie pasowało do swoich sygnatur i zostało usuniętych</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">%1$d element ukryty w tym miejscu nie pasował do swojej sygnatury podpisu i został usunięty</item>
+        <item quantity="few">%1$d elementy ukryte tutaj nie pasowały do swoich sygnatur i zostały usunięte</item>
+        <item quantity="many">%1$d ukrytych tutaj elementów nie pasowało do swoich sygnatur i zostało usuniętych</item>
+        <item quantity="other">%1$d ukrytego tutaj elementu nie pasowało do swoich sygnatur i zostało usuniętych</item>
+    </plurals>
     <string name="cyberspace_bag_empty">Otworzyłem, a w środku nic nie było</string>
     <string name="cyberspace_bag_unsigned">Brak podpisu, więc autor to tylko domysł</string>
     <string name="cyberspace_bag_unknown_kind">Element typu %1$d, którego ten klient nie wyświetla</string>
-    <string name="cyberspace_bag_opaque">%1$d bajtów danych, których ten klient nie odczytuje</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d bajt danych, których ten klient nie odczytuje</item>
+        <item quantity="few">%1$d bajty danych, których ten klient nie odczytuje</item>
+        <item quantity="many">%1$d bajtów danych, których ten klient nie odczytuje</item>
+        <item quantity="other">%1$d bajta danych, których ten klient nie odczytuje</item>
+    </plurals>
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">Zablokuj %1$s ponownie</string>
     <string name="backup_action_keep_count">Zachowaj %1$s</string>
@@ -5783,13 +5816,23 @@
     <string name="backup_review_renamed">zmieniono nazwę</string>
     <string name="backup_review_renamed_tag">Zmieniono nazwę</string>
     <string name="backup_review_saved">Na tym urządzeniu</string>
-    <string name="backup_review_search_people">Szukaj %1$s osób</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">Szukaj %1$s osoby</item>
+        <item quantity="few">Szukaj %1$s osób</item>
+        <item quantity="many">Szukaj %1$s osób</item>
+        <item quantity="other">Szukaj %1$s osoby</item>
+    </plurals>
     <string name="backup_review_searching_tag">Szukam</string>
     <string name="backup_review_service">Serwis</string>
     <string name="backup_review_service_followers">Obserwujący</string>
     <string name="backup_review_service_rank">Ranking</string>
     <string name="backup_review_service_topics">Tematy</string>
-    <string name="backup_review_services_changed">Zmieniono %1$s z %2$s serwisów</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">Zmieniono %1$s z %2$s serwisu</item>
+        <item quantity="few">Zmieniono %1$s z %2$s serwisów</item>
+        <item quantity="many">Zmieniono %1$s z %2$s serwisów</item>
+        <item quantity="other">Zmieniono %1$s z %2$s serwisu</item>
+    </plurals>
     <string name="backup_review_services_changed_explainer">Teraz pochodzą od kogoś innego albo od nikogo</string>
     <string name="backup_review_still_blocked">Nadal zablokowana</string>
     <string name="backup_review_storing_tag">Przechowywanie</string>

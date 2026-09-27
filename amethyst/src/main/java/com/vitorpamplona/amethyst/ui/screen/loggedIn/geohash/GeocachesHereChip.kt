@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_caches_here
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal.GeocachesHereFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
@@ -121,7 +121,7 @@ private fun GeocachesHereCount(
             tint = palette.live,
         )
         Text(
-            text = stringRes(Res.string.geocache_caches_here, count),
+            text = pluralStringRes(Res.plurals.geocache_caches_here, count, count),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
