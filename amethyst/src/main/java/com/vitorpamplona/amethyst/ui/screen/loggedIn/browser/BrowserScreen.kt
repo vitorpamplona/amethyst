@@ -745,7 +745,11 @@ private fun RecentRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                entry.host,
+                // Host and path, not just the host: two pages of one site usually carry the
+                // same <title>, so `primal.net/home` and `primal.net` arrived as two rows
+                // reading "Primal / primal.net" and there was no way to tell them apart or
+                // to know which one a tap would open.
+                remember(entry.url, entry.host) { recentSubtitle(entry.url, entry.host) },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -818,3 +822,20 @@ private fun SiteIcon(
 
 /** The host of [url] for a favorite's default label, falling back to the raw string. */
 private fun hostOf(url: String): String = OmniboxInput.hostOf(url) ?: url
+
+/**
+ * The second line of a Recent row: what a reader needs to tell two rows of one site apart.
+ *
+ * The scheme and a bare trailing slash are noise at this size, so they go; everything after the
+ * host stays, because that is the part that differs. Falls back to the host when the URL has
+ * nothing more to say.
+ */
+internal fun recentSubtitle(
+    url: String,
+    host: String,
+): String {
+    val schemeEnd = url.indexOf("://")
+    val afterScheme = if (schemeEnd > 0) url.substring(schemeEnd + 3) else url
+    val trimmed = afterScheme.removeSuffix("/")
+    return trimmed.ifBlank { host }
+}

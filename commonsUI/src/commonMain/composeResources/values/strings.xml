@@ -5479,6 +5479,7 @@
     <string name="browser_pill_add_home">Add to Home</string>
     <string name="browser_pill_desktop">Desktop site</string>
     <string name="browser_pill_other_browser">Open in browser</string>
+    <string name="browser_pill_other_browser_named">Open in %1$s</string>
     <string name="browser_pill_full_screen">Full screen</string>
     <string name="browser_pill_left_site">You left %1$s</string>
     <string name="browser_pill_back_to_app">Back to app</string>
