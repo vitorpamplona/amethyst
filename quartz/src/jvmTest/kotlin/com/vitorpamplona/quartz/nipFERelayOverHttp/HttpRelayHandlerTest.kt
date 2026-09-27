@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
@@ -362,22 +361,6 @@ class HttpRelayHandlerTest {
             })
         val signed = HttpRelayHandler(optingIn, origins = { listOf(origin) }).ask(HttpRelayCommand.REQ, body, token(HttpRelayCommand.REQ, body))
         assertEquals(200, signed.status, signed.lines.toString())
-    }
-
-    @Test
-    fun aHostsSingleUseVerifierThatIsFullIsA429() {
-        val h = HttpRelayHandler(MemoryRelay(backend, false), origins = { listOf(origin) }, verifier = Nip98AuthVerifier(maxReplayEntries = 4))
-
-        // A token's id is its hash, so tokens signed the same second over the same body are one token:
-        // every one here names its own body.
-        fun body(n: Int) = """{"kinds":[$n]}"""
-        val victim = token(HttpRelayCommand.REQ, body(0))
-        assertEquals(200, h.ask(HttpRelayCommand.REQ, body(0), victim).status)
-        for (n in 1..3) assertEquals(200, h.ask(HttpRelayCommand.REQ, body(n), token(HttpRelayCommand.REQ, body(n))).status)
-        val flooding = h.ask(HttpRelayCommand.REQ, body(4), token(HttpRelayCommand.REQ, body(4)))
-        assertEquals(429, flooding.status, "a full cache refuses the new token: ${flooding.lines}")
-        val replayed = h.ask(HttpRelayCommand.REQ, body(0), victim)
-        assertEquals(401, replayed.status, "and still remembers the old one: ${replayed.lines}")
     }
 
     @Test

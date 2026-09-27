@@ -95,12 +95,6 @@ class HttpRelayHandler(
     private val origins: () -> List<String>,
     /** How long one answer may run, first byte to last. [Duration.INFINITE] turns the deadline off. */
     private val deadline: Duration = DEFAULT_DEADLINE,
-    /**
-     * Tokens are not single-use: a request can land on any instance, which a per-process memory of
-     * spent tokens cannot follow, and the body's hash already limits a captured token to the one
-     * command it signs, inside its window.
-     */
-    private val verifier: Nip98AuthVerifier = Nip98AuthVerifier(rejectReplays = false),
     /** Frames queued ahead of a slow reader before the answer is cut short. */
     private val maxQueuedFrames: Int = DEFAULT_MAX_QUEUED_FRAMES,
     /** How long past the deadline the last line may take before the reader counts as stalled. */
@@ -301,24 +295,18 @@ class HttpRelayHandler(
         val token = scheme + header.substring(scheme.length).trim()
         val accepted = origins().map { it.trimEnd('/') + request.command.path }
         if (accepted.isEmpty()) return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("this relay names no url to sign"))
-        return when (val r = verifier.verify(token, "POST", accepted, request.body)) {
-            is Nip98AuthVerifier.Result.Verified -> {
-                Proof.Signed(r.pubkey)
-            }
-
-            is Nip98AuthVerifier.Result.Missing -> {
-                Proof.Anonymous
-            }
-
-            // A full replay cache, in a verifier that keeps one, is the relay's limit, not the token's fault.
-            is Nip98AuthVerifier.Result.Malformed -> {
-                if (MachineReadablePrefix.parse(r.reason) == MachineReadablePrefix.RATE_LIMITED) {
-                    Proof.Refused(r.reason)
-                } else {
-                    Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("NIP-98 ${r.reason}"))
-                }
+        // A fresh verifier each time: it remembers the tokens it accepts, and a NIP-FE token is not
+        // single-use. A request can land on any instance, which no one process's memory can follow,
+        // and the body's hash already limits a captured token to the command it signs, in its window.
+        var refusal: Nip98AuthVerifier.Result.Malformed? = null
+        for (url in accepted) {
+            when (val r = Nip98AuthVerifier().verify(token, "POST", url, request.body)) {
+                is Nip98AuthVerifier.Result.Verified -> return Proof.Signed(r.pubkey)
+                is Nip98AuthVerifier.Result.Missing -> return Proof.Anonymous
+                is Nip98AuthVerifier.Result.Malformed -> refusal = refusal ?: r
             }
         }
+        return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("NIP-98 ${refusal?.reason}"))
     }
 
     private fun closed(reason: String) = withoutSubId(ClosedMessage(HttpRelayCommand.SUB_ID, reason).toJson())
