@@ -155,7 +155,7 @@ class RelayFeedViewModel :
                     emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? DmRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
+                emit(convert((currentUser.value?.dmRelayListNote?.event as? DmRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -179,13 +179,13 @@ class RelayFeedViewModel :
 
     @OptIn(FlowPreview::class)
     fun subscribeTo(user: User) {
-        if (currentUser != user) {
+        if (currentUser.value != user) {
             currentUser.tryEmit(user)
         }
     }
 
     fun unsubscribeTo(user: User) {
-        if (currentUser == user) {
+        if (currentUser.value == user) {
             currentUser.tryEmit(null)
             invalidateData()
         }

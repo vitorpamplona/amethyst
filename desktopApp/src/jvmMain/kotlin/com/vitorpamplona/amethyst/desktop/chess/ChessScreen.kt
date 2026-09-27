@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -116,6 +117,11 @@ fun ChessScreen(
                 scope = scope,
             )
         }
+    // The polling runs on this screen's scope, which outlives an account switch: stop the old
+    // account's view model when `remember` replaces it, or both keep polling.
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.stopPolling() }
+    }
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val broadcastStatus by viewModel.broadcastStatus.collectAsState()
     val activeGames by viewModel.activeGames.collectAsState()

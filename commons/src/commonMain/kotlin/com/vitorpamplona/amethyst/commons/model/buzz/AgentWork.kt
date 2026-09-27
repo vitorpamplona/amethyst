@@ -132,7 +132,9 @@ object AgentWorkBoard {
         (runs.map { from(it) } + jobs.map { from(it) })
             .sortedWith(
                 compareBy<AgentWorkItem> { it.state.ordinal }
-                    .thenByDescending { it.upvotes ?: 0 }
+                    // Upvotes are the queue's priority signal only. Elsewhere they would put an old
+                    // upvoted job above a fresh one, and every job above every workflow run.
+                    .thenByDescending { if (it.state == AgentWorkState.QUEUED) it.upvotes ?: 0 else 0 }
                     .thenByDescending { it.updatedAt },
             )
 }

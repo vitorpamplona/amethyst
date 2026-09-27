@@ -1686,3 +1686,68 @@ The same sweep finds 46 more movable files outside `ui/`. The notable groups are
 (`InFlightInvoices`, `PaymentPromptLedger`, the `bud10` resolver trio),
 `service/playback` leaves (`HlsLivenessCache`, `SessionRegistry`,
 `WssDataStreamCollector`, the player control buttons), and `model/MediaAspectRatioCache`.
+
+### Audit of this round
+
+Three reviewers read the 69 moved files. I read the chess merge and the hand edits. The
+edits kept behaviour: `codePointAtKmp`/`codePointCharCount` match the JDK calls,
+`padStart` matches `%02d` for every Int, `toInt()` throws the same exception as
+`parseInt`, and lifecycle's `ViewModelProvider` calls the `KClass` factory overload
+first. None of the findings below came from the move; all are on `main`.
+
+**Fixed:**
+
+- **Zap amounts rounded half-even** (`showAmount`, `showAmountInteger`). Kotlin's
+  `BigDecimal.div` already rounds to the dividend's scale with HALF_EVEN, so the
+  `setScale(0, HALF_UP)` after it never ran: 12,500 read "12k" and 2,500,000 read "2M".
+  The unit was also picked before rounding, so 999,500 read "1000k". Both now use
+  `divide(_, 0, HALF_UP)` and pick the unit after rounding. The `BigDecimal(0.01)` built
+  on every call is now a constant. The `showAmount` KDoc examples were wrong and now match
+  what it returns. `ZapFormatterTest` covers this.
+- **`AgentWorkBoard.merge` sorted every band by upvotes.** Its KDoc says upvotes order
+  only the queue. An old upvoted job sat above a fresh one in Shipped, and every job sat
+  above every workflow run in Working. Upvotes now count only in the queue.
+- **`SuspendableConfirmation`** could resume its continuation twice: a button tap plus
+  an outside-tap dismiss before the dialog recomposed away threw "Already resumed". A
+  cancelled upload also left the dialog up with dead buttons. It now resumes only while
+  active, and clears the dialog on cancellation, but only if the dialog is still its own.
+  `SuspendableConfirmationTest` covers this.
+- **`TorDialogViewModel.save`** parsed the SOCKS port even with the field hidden. Junk
+  typed while External was selected blocked saving Internal or Off. It also took 0 or
+  70000. Now only External requires a port in 1..65535; otherwise the last saved port is
+  kept. `TorDialogViewModelTest` covers this.
+- **`ExpandingCirclesAnimation`** built its infinite transition before checking
+  `isRecording`. The composer toolbar always shows the record button, so it asked for a
+  frame on every vsync while the composer was open. The transition now exists only while
+  recording. The circles and the stop dot read their animated values in `graphicsLayer`,
+  so a frame redraws a layer instead of recomposing.
+- **`DebouncedPublisher.flush`** treated a job whose `publish()` was already running as
+  pending. Leaving the nav picker while a publish waited on a remote signer cancelled it
+  and started a second signing request. `flush` now acts only during the delay. A new case
+  in `DebouncedPublisherTest` covers this.
+- **`RelayFeedViewModel`:**
+  - The DM list's first emission read `nip65RelayListNote` as a `DmRelayListEvent`,
+    which is always null. It now reads `dmRelayListNote`.
+  - `subscribeTo`/`unsubscribeTo` compared the `MutableStateFlow` itself to a `User`,
+    so `unsubscribeTo` never cleared it. They now compare `.value`.
+- **`ScheduledFlag`** built a `DateFormat` on every composition of a feed card. It is
+  now remembered per start time.
+- **`CashuWalletDiscovery`:** up to 50 relays finishing at once could write the crawl
+  progress out of order, so it stepped backwards. The write is now monotonic.
+- **Desktop `ChessScreen`:** polling runs on the screen's scope. When `remember` replaced
+  the view model on an account switch, the old one kept polling. A `DisposableEffect` now
+  stops it.
+
+**Reported, not changed (need an owner's call):**
+
+- `FilterLastMessageFollowingPublicChats` asks each relay for kind 41 with `limit = 1`
+  across all followed channels, so only one channel's metadata comes back per relay. One
+  busy channel can also fill the kind-42 `limit = 100`. The fix (a limit per channel, or a
+  filter per channel) changes relay load.
+- `PitchShifter`'s brute-force WSOLA search costs about 500 multiply-adds per output
+  sample, and the loop never checks for cancellation. Decimating the correlation changes
+  the audio, and a cancellation check changes its API.
+- `RelayFeedViewModel.invalidateData` re-emits the same user into a `StateFlow`, which
+  drops it, so a refresh only spins for a second.
+- `ScheduledFlag` still reads `TimeUtils.now()` once, so a card composed before the start
+  time keeps the date after it passes.

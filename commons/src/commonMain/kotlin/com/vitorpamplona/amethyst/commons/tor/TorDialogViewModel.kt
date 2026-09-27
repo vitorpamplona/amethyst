@@ -65,8 +65,12 @@ class TorDialogViewModel : ViewModel() {
             )
         }
 
+    /** The last port that was actually saved, kept when the field is hidden and holds junk. */
+    private var savedSocksPort = TorSettings().externalSocksPort
+
     fun reset(torSettings: TorSettings) {
         torType.value = torSettings.torType
+        savedSocksPort = torSettings.externalSocksPort
         socksPortStr.value = torSettings.externalSocksPort.toString()
         onionRelaysViaTor.value = torSettings.onionRelaysViaTor
         dmRelaysViaTor.value = torSettings.dmRelaysViaTor
@@ -81,10 +85,26 @@ class TorDialogViewModel : ViewModel() {
         mediaUploadsViaTor.value = torSettings.mediaUploadsViaTor
     }
 
-    fun save(): TorSettings =
-        TorSettings(
+    /**
+     * The port field is only shown for [TorType.EXTERNAL], so only then is a bad value the user's
+     * to fix: it throws, and the dialog shows its "invalid port" message. With the field hidden, a
+     * leftover unparsable value must not block saving Internal or Off; the last saved port stays.
+     */
+    fun save(): TorSettings {
+        val typedPort =
+            socksPortStr.value
+                .trim()
+                .toIntOrNull()
+                ?.takeIf { it in 1..65535 }
+        val port =
+            when {
+                typedPort != null -> typedPort
+                torType.value == TorType.EXTERNAL -> throw IllegalArgumentException("Invalid SOCKS port: ${socksPortStr.value}")
+                else -> savedSocksPort
+            }
+        return TorSettings(
             torType = torType.value,
-            externalSocksPort = socksPortStr.value.toInt(),
+            externalSocksPort = port,
             onionRelaysViaTor = onionRelaysViaTor.value,
             dmRelaysViaTor = dmRelaysViaTor.value,
             newRelaysViaTor = newRelaysViaTor.value,
@@ -97,6 +117,7 @@ class TorDialogViewModel : ViewModel() {
             nip05VerificationsViaTor = nip05VerificationsViaTor.value,
             mediaUploadsViaTor = mediaUploadsViaTor.value,
         )
+    }
 
     fun setPreset(preset: TorPresetType) {
         when (preset) {

@@ -44,17 +44,24 @@ class SuspendableConfirmation {
     suspend fun awaitConfirmation(): Boolean =
         mutex.withLock {
             suspendCancellableCoroutine { continuation ->
-                state =
+                var callbacks: ConfirmationCallbacks? = null
+
+                // The dialog can fire two of its callbacks (a button tap and an outside-tap
+                // dismiss) before the recomposition that removes it; only the first may resume.
+                fun answer(confirmed: Boolean) {
+                    if (state === callbacks) state = null
+                    if (continuation.isActive) continuation.resume(confirmed)
+                }
+
+                callbacks =
                     ConfirmationCallbacks(
-                        onConfirm = {
-                            state = null
-                            continuation.resume(true)
-                        },
-                        onCancel = {
-                            state = null
-                            continuation.resume(false)
-                        },
+                        onConfirm = { answer(true) },
+                        onCancel = { answer(false) },
                     )
+                state = callbacks
+
+                // An upload cancelled while waiting must not leave a dialog with dead buttons.
+                continuation.invokeOnCancellation { if (state === callbacks) state = null }
             }
         }
 }

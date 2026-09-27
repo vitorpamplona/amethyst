@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.audio
 
+import androidx.compose.animation.core.InfiniteTransition
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -29,6 +30,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,12 +40,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,110 +64,53 @@ fun ExpandingCirclesAnimation(
     isRecording: Boolean,
     primaryColor: Color = MaterialTheme.colorScheme.primary,
 ) {
+    // The composer shows this button all the time. An infinite transition asks for a frame on
+    // every vsync for as long as it is composed, so it only exists while recording.
+    if (isRecording) {
+        ExpandingCircles(modifier, primaryColor)
+    }
+}
+
+@Composable
+private fun ExpandingCircles(
+    modifier: Modifier,
+    primaryColor: Color,
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "expanding_circles")
 
-    // First circle animation
-    val scale1 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2.5f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle1_scale",
-    )
-
-    val alpha1 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle1_alpha",
-    )
-
-    // Second circle animation (offset by 500ms)
-    val scale2 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2.5f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, delayMillis = 500, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle2_scale",
-    )
-
-    val alpha2 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, delayMillis = 500, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle2_alpha",
-    )
-
-    // Third circle animation (offset by 1000ms)
-    val scale3 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2.5f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, delayMillis = 1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle3_scale",
-    )
-
-    val alpha3 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1500, delayMillis = 1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "circle3_alpha",
-    )
-
-    if (!isRecording) return
-
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // Circle 1
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .scale(scale1)
-                    .alpha(alpha1)
-                    .background(primaryColor.copy(alpha = 0.3f), CircleShape),
-        )
-
-        // Circle 2
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .scale(scale2)
-                    .alpha(alpha2)
-                    .background(primaryColor.copy(alpha = 0.2f), CircleShape),
-        )
-
-        // Circle 3
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .scale(scale3)
-                    .alpha(alpha3)
-                    .background(primaryColor.copy(alpha = 0.1f), CircleShape),
-        )
+        ExpandingCircle(infiniteTransition, delayMillis = 0, color = primaryColor.copy(alpha = 0.3f), label = "circle1")
+        ExpandingCircle(infiniteTransition, delayMillis = 500, color = primaryColor.copy(alpha = 0.2f), label = "circle2")
+        ExpandingCircle(infiniteTransition, delayMillis = 1000, color = primaryColor.copy(alpha = 0.1f), label = "circle3")
     }
+}
+
+@Composable
+private fun BoxScope.ExpandingCircle(
+    transition: InfiniteTransition,
+    delayMillis: Int,
+    color: Color,
+    label: String,
+) {
+    val spec =
+        infiniteRepeatable<Float>(
+            animation = tween(durationMillis = 1500, delayMillis = delayMillis, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        )
+    val scale = transition.animateFloat(initialValue = 0f, targetValue = 2.5f, animationSpec = spec, label = "${label}_scale")
+    val alpha = transition.animateFloat(initialValue = 1f, targetValue = 0f, animationSpec = spec, label = "${label}_alpha")
+
+    // Read in the draw phase so each frame redraws the layer instead of recomposing.
+    Box(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    this.alpha = alpha.value
+                }.background(color, CircleShape),
+    )
 }
 
 /**
@@ -218,16 +161,17 @@ fun FloatingRecordingIndicator(
         ) {
             // Pulsing stop square
             val infiniteTransition = rememberInfiniteTransition(label = "recording_stop")
-            val dotAlpha by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 0.5f,
-                animationSpec =
-                    infiniteRepeatable(
-                        animation = tween(durationMillis = 1000),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                label = "dot_alpha",
-            )
+            val dotAlpha =
+                infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 0.5f,
+                    animationSpec =
+                        infiniteRepeatable(
+                            animation = tween(durationMillis = 1000),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                    label = "dot_alpha",
+                )
 
             Icon(
                 symbol = MaterialSymbols.Stop,
@@ -235,7 +179,7 @@ fun FloatingRecordingIndicator(
                 tint = Color.White,
                 modifier =
                     Modifier
-                        .alpha(dotAlpha)
+                        .graphicsLayer { alpha = dotAlpha.value }
                         .padding(end = 8.dp),
             )
 

@@ -45,6 +45,13 @@ class DebouncedPublisher(
 ) {
     private var pending: Job? = null
 
+    /**
+     * True only while [pending] is still waiting out its delay. Once [publish] has started, the
+     * job is still active but there is nothing left to hurry: flushing then would cancel a publish
+     * that may be parked on a remote signer and start a second one.
+     */
+    private var waiting = false
+
     /** Records an edit: restarts the wait, so a run of edits publishes once, after the last one. */
     fun schedule() = start(debounceMs)
 
@@ -53,15 +60,17 @@ class DebouncedPublisher(
      * pending, so a caller can flush on every exit path without publishing the same state twice.
      */
     fun flush() {
-        if (pending?.isActive != true) return
+        if (!waiting || pending?.isActive != true) return
         start(0)
     }
 
     private fun start(delayMs: Long) {
         pending?.cancel()
+        waiting = true
         pending =
             launch {
                 delay(delayMs)
+                waiting = false
                 publish()
             }
     }

@@ -46,14 +46,17 @@ private val dfN =
 
 fun showAmountInteger(amount: BigDecimal?): String {
     if (amount == null) return ""
-    if (amount.abs() < BigDecimal(0.01)) return ""
+    if (amount.abs() < MinDisplayableAmount) return ""
+    if (amount < TenKilo) return dfN.get()?.format(amount) ?: ""
 
-    return when {
-        amount >= OneGiga -> dfG.get()?.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        amount >= OneMega -> dfM.get()?.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        amount >= TenKilo -> dfK.get()?.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP)) ?: ""
-        else -> dfN.get()?.format(amount) ?: ""
-    }
+    // Round before picking the unit, so 999,500 reads "1M" rather than "1000k".
+    // `divide(_, 0, HALF_UP)` rather than `div(_).setScale(0, HALF_UP)`: Kotlin's `div` already
+    // rounds to the dividend's scale with HALF_EVEN, which left 12,500 as "12k".
+    val kilos = amount.divide(OneKilo, 0, RoundingMode.HALF_UP)
+    if (kilos < OneKilo) return dfK.get()?.format(kilos) ?: ""
+    val megas = amount.divide(OneMega, 0, RoundingMode.HALF_UP)
+    if (megas < OneKilo) return dfM.get()?.format(megas) ?: ""
+    return dfG.get()?.format(amount.divide(OneGiga, 0, RoundingMode.HALF_UP)) ?: ""
 }
 
 fun showAmountInteger(amount: Int?): String {
@@ -64,7 +67,7 @@ fun showAmountInteger(amount: Int?): String {
 
 fun showAmountIntegerWithZero(amount: BigDecimal?): String {
     if (amount == null) return "0"
-    if (amount.abs() < BigDecimal(0.01)) return "0"
+    if (amount.abs() < MinDisplayableAmount) return "0"
 
     return showAmountInteger(amount)
 }

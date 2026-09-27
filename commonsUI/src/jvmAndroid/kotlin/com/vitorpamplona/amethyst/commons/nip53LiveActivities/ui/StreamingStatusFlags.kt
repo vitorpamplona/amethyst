@@ -112,16 +112,19 @@ fun OfflineFlag() {
 
 @Composable
 fun ScheduledFlag(starts: Long?) {
+    // Remembered: this sits on feed cards, and building a DateFormat loads locale data each time.
     val startsIn =
-        starts?.let {
-            if (it > TimeUtils.now()) {
-                SimpleDateFormat
-                    .getDateTimeInstance(
-                        DateFormat.SHORT,
-                        DateFormat.SHORT,
-                    ).format(Date(starts * 1000))
-            } else {
-                null
+        remember(starts) {
+            starts?.let {
+                if (it > TimeUtils.now()) {
+                    SimpleDateFormat
+                        .getDateTimeInstance(
+                            DateFormat.SHORT,
+                            DateFormat.SHORT,
+                        ).format(Date(starts * 1000))
+                } else {
+                    null
+                }
             }
         }
 

@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -101,6 +102,31 @@ class DebouncedPublisherTest {
             advanceUntilIdle()
 
             assertEquals(1, published)
+        }
+
+    @Test
+    fun flushDuringAnInFlightPublishDoesNotRestartIt() =
+        runTest {
+            // A publish can sit for seconds waiting on a remote signer. Leaving the screen then
+            // flushes; that must not cancel the signing request and send a second one.
+            var started = 0
+            var finished = 0
+            val publisher =
+                publisher {
+                    started++
+                    delay(5_000)
+                    finished++
+                }
+
+            publisher.schedule()
+            advanceTimeBy(debounce + 100)
+            assertEquals(1, started)
+
+            publisher.flush()
+            advanceUntilIdle()
+
+            assertEquals(1, started)
+            assertEquals(1, finished)
         }
 
     @Test

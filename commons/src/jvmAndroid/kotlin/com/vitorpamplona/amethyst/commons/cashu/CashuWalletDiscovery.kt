@@ -36,6 +36,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -157,7 +158,12 @@ class CashuWalletDiscovery(
                         }
                     },
                     onRelayComplete = {
-                        _state.value = State.Crawling(completed.incrementAndGet(), relays.size)
+                        // Up to MAX_CONCURRENT_RELAYS relays finish at once: a coroutine preempted
+                        // between the increment and the write would move the progress backwards.
+                        val done = completed.incrementAndGet()
+                        _state.update { current ->
+                            if (current is State.Crawling && current.relaysCompleted >= done) current else State.Crawling(done, relays.size)
+                        }
                     },
                 )
             }
