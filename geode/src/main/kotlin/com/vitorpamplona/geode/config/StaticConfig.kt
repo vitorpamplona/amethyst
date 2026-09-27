@@ -44,6 +44,8 @@ data class StaticConfig(
     val options: OptionsSection = OptionsSection(),
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
+    val identity: IdentitySection = IdentitySection(),
+    val membership: MembershipSection = MembershipSection(),
     val negentropy: NegentropySection = NegentropySection(),
     /** `[[mirror]]` entries — upstream relays this relay streams from. */
     val mirror: List<MirrorSection> = emptyList(),
@@ -289,6 +291,42 @@ data class StaticConfig(
     )
 
     /**
+     * The relay's own Nostr identity — the NIP-11 `self` key that signs
+     * relay-authored events (NIP-43 membership lists, roles, add/remove).
+     * Resolved by [RelayIdentity.resolve]:
+     *
+     *  - [secret_key]: the key itself, `nsec1…` or 64-char hex. Wins over
+     *    [secret_key_file].
+     *  - [secret_key_file]: a file holding the key (nsec or hex). Created
+     *    with a freshly generated key (owner-only permissions) when it
+     *    doesn't exist yet.
+     *
+     * Neither set: no identity, unless [MembershipSection.enabled] needs
+     * one — then the key lives in `<[AdminSection.state_file]>.relay-key`
+     * (generated on first boot), or, with no state file either, in memory
+     * only (a new identity every restart, with a warning).
+     */
+    data class IdentitySection(
+        val secret_key: String? = null,
+        val secret_key_file: String? = null,
+    )
+
+    /**
+     * NIP-43 relay membership. [enabled] turns the relay members-only: the
+     * NIP-86 pubkey allow list becomes the member list (and gates writes
+     * even while empty), kind 28934 join requests carrying an invite code
+     * from NIP-86 `createclaim` add members, kind 28936 leave requests
+     * remove them, and the relay publishes signed kind 13534 / 33534 /
+     * 8000 / 8001 events. Needs the relay identity ([IdentitySection]).
+     * [request_window_seconds] bounds how far a join/leave request's
+     * `created_at` may drift from the relay's clock.
+     */
+    data class MembershipSection(
+        val enabled: Boolean = false,
+        val request_window_seconds: Long = 300,
+    )
+
+    /**
      * Boot-time sanity check for values the TOML types can't constrain.
      * Throws [IllegalArgumentException] (fail-loud at startup) rather
      * than letting a nonsensical knob degrade the running relay — a zero
@@ -299,6 +337,9 @@ data class StaticConfig(
     fun validate() {
         database.readers?.let {
             require(it >= 1) { "[database].readers must be >= 1 (got $it); a 0/negative pool can never answer a query" }
+        }
+        require(membership.request_window_seconds > 0) {
+            "[membership].request_window_seconds must be > 0 (got ${membership.request_window_seconds})"
         }
         database.optimize_interval_seconds?.let {
             require(it > 0) {

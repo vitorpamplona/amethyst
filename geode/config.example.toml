@@ -183,3 +183,32 @@ require_auth = false
 # state is in-memory only and forgotten on every restart. Convention
 # is to place this next to the SQLite event-store file.
 # state_file = "/var/lib/geode/events.db.admin.json"
+
+[identity]
+# The relay's own Nostr key — advertised as `self` in the NIP-11 doc and
+# used to sign relay-authored events (NIP-43 member lists and roles).
+# Either the key itself (nsec1… or 64-char hex; wins if both are set) …
+# secret_key = "nsec1..."
+# … or a file holding it, created with a fresh key (mode 0600) when
+# missing. With neither set, and [membership] enabled, geode keeps a
+# generated key at "<[admin].state_file>.relay-key" (in memory only,
+# with a warning, when there is no state file).
+# secret_key_file = "/var/lib/geode/relay.key"
+
+[membership]
+# NIP-43 relay membership. When enabled:
+#  - writes are members-only; the NIP-86 pubkey allow list IS the member
+#    list (allowpubkey / unallowpubkey / banpubkey change membership) and
+#    gates writes even while empty;
+#  - kind 28934 join requests carrying an invite code (NIP-86
+#    createclaim; codes stay valid until deleteclaim) add the author,
+#    kind 28936 leave requests (with a NIP-70 "-" tag) remove them;
+#  - the relay publishes, signed by [identity]: kind 13534 (members +
+#    their role ids), 33534 (roles from createrole/editrole; deleterole
+#    publishes a NIP-09 deletion), 8000 / 8001 (member added / removed);
+#  - NIP-11 advertises 43, and the NIP-86 role/claim methods are offered
+#    (they are not advertised at all while this is off).
+# See geode/plans/2026-09-27-nip43-membership.md.
+# enabled = false
+# How far a join/leave request's created_at may be from the relay's clock.
+# request_window_seconds = 300

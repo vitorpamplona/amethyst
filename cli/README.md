@@ -457,7 +457,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy admin RELAY allow-event ID [--reason R]` / `unallow-event ID` / `list-allowed-events` / `list-needing-moderation` | Event allow list (approve an event: it also lifts any ban) and the moderation queue. |
 | `amy admin RELAY create-role ID [--label L] [--description D] [--color HUE] [--order N]` / `edit-role ID …` / `delete-role ID` | NIP-43 member roles (kind 33534); `--color` is a hue 0–360. |
 | `amy admin RELAY assign-role HEX ROLE` / `unassign-role HEX ROLE` | Give / take a role. |
-| `amy admin RELAY create-claim CODE` / `delete-claim CODE` / `list-claims` | NIP-43 invite codes for kind 28934 join requests. |
+| `amy admin RELAY create-claim CODE` / `delete-claim CODE` / `list-claims` | NIP-43 invite codes for kind 28934 join requests. The role and claim methods only exist on relays that run NIP-43 (geode: `[membership] enabled = true`, which then publishes the 13534 / 33534 events); elsewhere they fail with `method not supported`. |
 | `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` / `list-disallowed-kinds` | Kind allow / deny lists. |
 | `amy admin RELAY block-ip IP [--reason R]` / `unblock-ip IP` / `list-blocked-ips` | IP block list. |
 | `amy admin RELAY change-name S` / `change-description S` / `change-icon URL` | Relay metadata. |
