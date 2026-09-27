@@ -5263,11 +5263,47 @@
     <string name="cordn_coordinators_title">कोर्डन समायोजक</string>
     <string name="cordn_coordinators_search_keywords">कोर्डन समायोजक जोडें हटाएँ मिटाएँ स्वास्थ्य सेवासंगणक एमएलएस॰ चर्चा अनुक्रमण</string>
     <string name="cordn_keypackages_title">कोर्डन कुंचिका पोटलियाँ</string>
+    <string name="cordn_keypackages_search_keywords">कोर्डन कुंचिका पोटली प्रकाशन आमन्त्रण अन्तिम उपाय समायोजक एमएलएस॰</string>
+    <string name="cordn_backup_title">कोर्डन सुरक्षित अनुकृति</string>
+    <string name="cordn_backup_search_keywords">कोर्डन सुरक्षित अनुकृति पुनःस्थापन निर्यात आयात पारणवाक्याम्श समूह पुनःप्राप्ति</string>
+    <string name="chat_type_cordn_title">कोर्डन समूह</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
          and the new-conversation picker. -->
+    <string name="cordn_group_untitled">समूह %1$s</string>
+    <string name="cordn_group_no_messages_yet">कोई सन्देश नहीं अब तक</string>
+    <string name="cordn_group_via_coordinator">कोर्डन समूह। %1$s पर उपलब्ध</string>
+    <string name="cordn_preview_deleted">सन्देश मिटाया गया</string>
+    <string name="cordn_preview_voice_note">ध्वनि टीका</string>
+    <string name="cordn_preview_photo">चित्र</string>
+    <string name="cordn_preview_video">चलचित्र</string>
+    <string name="cordn_preview_file">अभिलेख</string>
+    <string name="new_conversation_cordn_title">कोर्डन समूह</string>
+    <string name="new_conversation_cordn_chip">समायोजित</string>
+    <string name="new_conversation_cordn_cta">कोर्डन समूह बनाएँ</string>
+    <string name="cordn_invitations_entry">क्या आप एक कोर्डन समूह में आमन्त्रित हैं।</string>
+    <string name="cordn_invitations_entry_action">आमन्त्रण पुनरीक्षण</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <string name="cordn_hub_title">कोर्डन</string>
+    <string name="cordn_hub_link">समूह योजक का निरीक्षण</string>
+    <string name="cordn_migrate_section_send">इस संचारयन्त्र से विस्थापन</string>
+    <string name="cordn_migrate_section_receive">अन्य संचारयन्त्र से प्राप्त करें</string>
+    <string name="cordn_keypackages_section">प्रकाशित कुंचिका पोटलियाँ</string>
+    <string name="cordn_link_section_input">योजक</string>
+    <string name="cordn_coordinators_section_yours">समायोजक आपके द्वारा उपयुक्त</string>
+    <string name="cordn_coordinators_section_discover">स्व घोषणा</string>
+    <string name="cordn_coordinators_section_manual">एक को जोडें स्वयम हाथ से</string>
+    <string name="cordn_backup_section_passphrase">पारणवाक्याम्श</string>
+    <string name="cordn_backup_section_export">सुरक्षित अनुकृति बनाएँ</string>
+    <string name="cordn_backup_section_restore">सुरक्षित अनुकृति से पुनःस्थापन</string>
+    <string name="cordn_hub_section_service">समायोजक</string>
+    <string name="cordn_hub_section_device">इस यन्त्र</string>
+    <string name="cordn_hub_coordinators">समायोजक</string>
+    <string name="cordn_hub_keypackages">कुंचिका पोटलियाँ</string>
+    <string name="cordn_hub_backup">सुरक्षित अनुकृति तथा पुनःस्थापन</string>
+    <string name="cordn_hub_backup_desc">पारणवाक्याम्श द्वारा रहस्यीकृत एक अभिलेख जो आप रखते हैं</string>
+    <string name="cordn_hub_migrate">अन्य संचारयन्त्र तक विस्थापन</string>
     <string name="sno_object_title">त्रिमा वस्तु</string>
     <string name="sno_object_details">%1$d अस्र। %2$d मुख</string>
     <string name="sno_object_unreadable">इस त्रिमा वस्तु का पठन असफल। नियम %1$s</string>
