@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
@@ -79,15 +80,27 @@ abstract class RelayServerBase(
      * @param send Callback the server uses to send JSON messages to this client.
      *             Implementations must be safe to call from any coroutine.
      */
-    fun connect(send: (String) -> Unit): RelaySession =
+    fun connect(send: (String) -> Unit): RelaySession = connect(SessionSink.of(send))
+
+    /**
+     * Registers a new client connection whose frames go to [sink], typed where
+     * the engine has the type, already signed in as [authenticatedUsers] when
+     * the transport proved them itself (a NIP-98 header; see
+     * [RelaySession.initialAuthenticatedUsers]).
+     */
+    fun connect(
+        sink: SessionSink,
+        authenticatedUsers: Set<HexKey> = emptySet(),
+    ): RelaySession =
         connections.register(
             RelaySession(
                 policy = buildPolicy(),
                 store = backend,
                 scope = scope,
-                onSend = send,
+                sink = sink,
                 onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
+                initialAuthenticatedUsers = authenticatedUsers,
             ),
         )
 
@@ -102,8 +115,15 @@ abstract class RelayServerBase(
     suspend fun serve(
         send: (String) -> Unit,
         incoming: suspend (RelaySession) -> Unit,
+    ) = serve(SessionSink.of(send), emptySet(), incoming)
+
+    /** [serve] over a [SessionSink], signed in as [authenticatedUsers] from the start. */
+    suspend fun serve(
+        sink: SessionSink,
+        authenticatedUsers: Set<HexKey>,
+        incoming: suspend (RelaySession) -> Unit,
     ) {
-        val session = connect(send)
+        val session = connect(sink, authenticatedUsers)
         try {
             incoming(session)
         } finally {
