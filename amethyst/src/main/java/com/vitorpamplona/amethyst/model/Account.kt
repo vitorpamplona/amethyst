@@ -4017,11 +4017,9 @@ class Account(
                                 // via wasVerified=false) would silently drop
                                 // kind:7 reactions / kind:5 deletions since
                                 // they never carry a Schnorr signature.
-                                val isNew = cache.justConsume(innerEvent, null, true)
-                                val innerNote = cache.getOrCreateNote(innerEvent.id)
-                                if (isNew) {
-                                    innerNote.event = innerEvent
-                                }
+                                // Same indexing as live decryption, so a restored
+                                // kind:1009 edit is re-linked to its message too.
+                                val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(
