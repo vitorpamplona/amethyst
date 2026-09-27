@@ -136,4 +136,34 @@ class RelayGroupMigrationDetectorTest {
         assertEquals(mapOf(current.toKey() to setOf(admin, friend)), restored)
         assertEquals(setOf(admin, friend), RelayGroupAdminCache.adminsOf(current))
     }
+
+    @Test
+    fun restoringFromDiskKeepsRememberCallsThatLandedFirst() {
+        val other = GroupId("other", newRelay)
+        // The async disk read completes after the UI already recorded a fresher roster.
+        RelayGroupAdminCache.remember(current, setOf(friend))
+
+        val merged = RelayGroupAdminCache.restore(mapOf(current.toKey() to setOf(admin), other.toKey() to setOf(stranger)))
+
+        assertEquals(setOf(friend), RelayGroupAdminCache.adminsOf(current), "the in-memory entry is newer and wins")
+        assertEquals(setOf(stranger), RelayGroupAdminCache.adminsOf(other), "disk-only entries are restored")
+        assertEquals(RelayGroupAdminCache.flow.value, merged)
+    }
+
+    @Test
+    fun adminCacheIsCappedDroppingTheLeastRecentlyChanged() {
+        val first = GroupId("g0", newRelay)
+        RelayGroupAdminCache.remember(first, setOf(admin))
+        repeat(RelayGroupAdminCache.MAX_GROUPS) { i -> RelayGroupAdminCache.remember(GroupId("g${i + 1}", newRelay), setOf(admin)) }
+
+        assertEquals(RelayGroupAdminCache.MAX_GROUPS, RelayGroupAdminCache.flow.value.size)
+        assertTrue(RelayGroupAdminCache.adminsOf(first).isEmpty(), "the oldest entry is evicted")
+        assertEquals(setOf(admin), RelayGroupAdminCache.adminsOf(GroupId("g${RelayGroupAdminCache.MAX_GROUPS}", newRelay)))
+
+        // A restore past the cap trims too, keeping the in-memory (newer) entries.
+        val fromDisk = (0 until RelayGroupAdminCache.MAX_GROUPS).associate { GroupId("disk$it", newRelay).toKey() to setOf(friend) }
+        RelayGroupAdminCache.restore(fromDisk)
+        assertEquals(RelayGroupAdminCache.MAX_GROUPS, RelayGroupAdminCache.flow.value.size)
+        assertEquals(setOf(admin), RelayGroupAdminCache.adminsOf(GroupId("g${RelayGroupAdminCache.MAX_GROUPS}", newRelay)))
+    }
 }

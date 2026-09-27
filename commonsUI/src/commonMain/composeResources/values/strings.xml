@@ -2856,6 +2856,7 @@
     <string name="relay_members_you_are_member">You are a member</string>
     <string name="relay_members_invite_code">Invite code</string>
     <string name="relay_members_invite_code_hint">This relay admits members with an invite code from its operator</string>
+    <string name="relay_members_unverifiable">This relay does not publish its identity key (NIP-11 self), so its member list cannot be verified</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
     <string name="relay_members_added">%1$d members added to relay</string>

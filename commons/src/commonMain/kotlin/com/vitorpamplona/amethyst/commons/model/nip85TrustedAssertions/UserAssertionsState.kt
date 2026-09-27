@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlin.concurrent.Volatile
 
 /**
  * The account's own kind:30382 contact cards — one card per target user, signed
@@ -65,14 +66,19 @@ class UserAssertionsState(
     // The account's own kind-3 follow list, whose `p` tags may carry NIP-02 petnames.
     private val followListNote: AddressableNote by lazy { cache.getOrCreateAddressableNote(ContactListEvent.createAddress(signer.pubKey)) }
 
-    // pubkey -> petname for the latest follow list, rebuilt only when that list changes.
+    // pubkey -> petname for the latest follow list, rebuilt only when that list changes. An immutable
+    // snapshot published through a volatile field: the flows rebuild it on an IO thread while
+    // composition reads it through [cachedFollowListPetname], and a racing rebuild only costs a
+    // redundant (identical) index, never a torn one.
     private class PetnameIndex(
         val event: ContactListEvent,
         val petnames: Map<HexKey, String>,
     )
 
+    @Volatile
     private var petnameIndex: PetnameIndex? = null
 
+    /** Looks [target] up in [followList]'s index, rebuilding it when stale. Parses tags: keep off the main thread. */
     private fun followListPetname(
         followList: ContactListEvent?,
         target: HexKey,
@@ -150,9 +156,14 @@ class UserAssertionsState(
             .stateFlow
             .map { followListPetname(it.note.event as? ContactListEvent, target.pubkeyHex) }
             .distinctUntilChanged()
+            .flowOn(Dispatchers.IO)
 
-    /** Synchronous counterpart of [followListPetnameFlow]. */
-    fun cachedFollowListPetname(target: User): String? = followListPetname(followListNote.event as? ContactListEvent, target.pubkeyHex)
+    /**
+     * Synchronous counterpart of [followListPetnameFlow], for initial values in composition: it only
+     * reads the last index the flows built (possibly for the previous version of the follow list —
+     * the flow corrects it right after) and never parses the follow list on the calling thread.
+     */
+    fun cachedFollowListPetname(target: User): String? = petnameIndex?.petnames?.get(target.pubkeyHex)
 
     /**
      * The name the account knows [target] by, for rendering: the NIP-85 nickname when it has a
@@ -178,9 +189,10 @@ class UserAssertionsState(
         }
 
     /**
-     * The name to render for [target], per the NIP-81 policy: the nickname the
-     * account gave them wins over the profile's own display name, then the
-     * account's NIP-02 follow-list petname, falling back to the short npub.
+     * The name to render for [target]: the NIP-85 nickname the account gave them (NIP-81 policy),
+     * then the account's NIP-02 follow-list petname — the user's own local name for the contact, so
+     * it too wins over the profile's self-chosen name — then the profile's display name, falling
+     * back to the short npub.
      */
     fun displayNameFlow(target: User): Flow<String> =
         combine(

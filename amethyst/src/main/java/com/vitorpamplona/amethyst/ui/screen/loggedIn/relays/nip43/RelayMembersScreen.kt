@@ -55,9 +55,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
@@ -72,13 +74,14 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_loading
 import com.vitorpamplona.amethyst.commons.resources.relay_members_request_join
 import com.vitorpamplona.amethyst.commons.resources.relay_members_request_leave
 import com.vitorpamplona.amethyst.commons.resources.relay_members_title
+import com.vitorpamplona.amethyst.commons.resources.relay_members_unverifiable
 import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -107,20 +110,37 @@ fun RelayMembersScreen(
     var members by remember { mutableStateOf<List<RelayMember>>(emptyList()) }
     var roles by remember { mutableStateOf<Map<String, RelayRole>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
+    // The relay publishes no NIP-11 `self`, so nothing it serves can be verified as relay-signed.
+    var isUnverifiable by remember { mutableStateOf(false) }
     var isMember by remember { mutableStateOf(false) }
     var joinRequestSent by remember { mutableStateOf(false) }
     var leaveRequestSent by remember { mutableStateOf(false) }
     var inviteCode by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-    // NIP-43 lists (13534) and roles (33534) MUST be signed by the relay's NIP-11 `self`.
-    // Filter by it once the doc resolves; until then, take whatever the relay serves.
-    val relayInfo by loadRelayInfo(normalizedRelayUrl)
-    val relaySelf = relayInfo.self
-
-    LaunchedEffect(normalizedRelayUrl, relaySelf) {
+    // NIP-43 lists (13534) and roles (33534) MUST be signed by the relay's NIP-11 `self`. Resolve it
+    // first (loading state meanwhile) and fetch once, by that author only. A relay that publishes no
+    // `self` gets an explanatory state instead of lists anyone could have signed.
+    LaunchedEffect(normalizedRelayUrl) {
         launch(Dispatchers.IO) {
-            val authors = relaySelf?.let { listOf(it) }
+            var relaySelf: HexKey? = null
+            Amethyst.instance.nip11Cache.loadRelayInfo(
+                relay = normalizedRelayUrl,
+                onInfo = { relaySelf = it.self },
+                onError = { _, _, _ -> },
+            )
+
+            val self = relaySelf
+            if (self == null) {
+                members = emptyList()
+                roles = emptyMap()
+                isMember = false
+                isUnverifiable = true
+                isLoading = false
+                return@launch
+            }
+
+            val authors = listOf(self)
             val filters =
                 listOf(
                     Filter(kinds = listOf(RelayMembershipListEvent.KIND), authors = authors, limit = 1),
@@ -135,14 +155,13 @@ fun RelayMembersScreen(
             val membershipEvent =
                 events
                     ?.mapNotNull { it as? RelayMembershipListEvent }
+                    ?.filter { it.pubKey == self }
                     ?.maxByOrNull { it.createdAt }
 
-            // Only trust role definitions from whoever signed the member list.
-            val roleSigner = relaySelf ?: membershipEvent?.pubKey
             roles =
                 events
                     ?.mapNotNull { it as? RelayRoleEvent }
-                    ?.filter { it.pubKey == roleSigner }
+                    ?.filter { it.pubKey == self }
                     ?.groupBy { it.roleId() }
                     ?.mapValues { (_, versions) -> versions.maxBy { it.createdAt }.role() }
                     ?: emptyMap()
@@ -150,6 +169,7 @@ fun RelayMembersScreen(
             val memberList = membershipEvent?.membersWithRoles() ?: emptyList()
             members = memberList
             isMember = memberList.any { it.pubKey == accountViewModel.account.signer.pubKey }
+            isUnverifiable = false
             isLoading = false
         }
     }
@@ -218,7 +238,7 @@ fun RelayMembersScreen(
                 }
             } else if (members.isEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -230,8 +250,9 @@ fun RelayMembersScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringRes(Res.string.relay_members_empty),
+                        text = stringRes(if (isUnverifiable) Res.string.relay_members_unverifiable else Res.string.relay_members_empty),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
                 }
             } else {
