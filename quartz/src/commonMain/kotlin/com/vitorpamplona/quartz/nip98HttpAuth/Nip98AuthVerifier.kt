@@ -42,7 +42,8 @@ import kotlin.math.abs
  *  2. Decoded body is a kind-27235 event with a valid Schnorr signature.
  *  3. The event's `created_at` is within ±[toleranceSeconds] of now.
  *  4. The `method` tag matches the HTTP method.
- *  5. The `u` tag matches the requested URL.
+ *  5. The `u` tag is the requested URL, or one of them: a server reachable at more than one
+ *     address (a clearnet host and an .onion) accepts a token signed at any.
  *  6. If a body is present, the `payload` tag matches `sha256(body)` hex.
  *  7. With [rejectReplays], the token has not been accepted before.
  *
@@ -80,11 +81,18 @@ class Nip98AuthVerifier(
 
     private val seenLock = Mutex()
 
-    @OptIn(ExperimentalEncodingApi::class)
     suspend fun verify(
         authorizationHeader: String?,
         method: String,
         url: String,
+        body: ByteArray?,
+    ): Result = verify(authorizationHeader, method, listOf(url), body)
+
+    @OptIn(ExperimentalEncodingApi::class)
+    suspend fun verify(
+        authorizationHeader: String?,
+        method: String,
+        urls: Collection<String>,
         body: ByteArray?,
     ): Result {
         if (authorizationHeader.isNullOrBlank()) return Result.Missing
@@ -130,8 +138,8 @@ class Nip98AuthVerifier(
         if (!auth.method().equals(method, ignoreCase = true)) {
             return Result.Malformed("method mismatch: expected $method, got ${auth.method()}")
         }
-        if (auth.url() != url) {
-            return Result.Malformed("url mismatch: expected $url, got ${auth.url()}")
+        if (auth.url() !in urls) {
+            return Result.Malformed("url mismatch: expected ${urls.joinToString(" or ")}, got ${auth.url()}")
         }
         if (body != null && body.isNotEmpty()) {
             val expected = sha256(body).toHexKey()

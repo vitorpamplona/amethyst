@@ -21,14 +21,12 @@
 package com.vitorpamplona.quartz.nipFERelayOverHttp
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelayServerBase
 import com.vitorpamplona.quartz.nip01Core.relay.server.SessionSink
-import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -38,8 +36,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
@@ -294,8 +290,8 @@ class HttpRelayHandler(
     }
 
     /**
-     * A NIP-98 header, checked against the address it names when that is one of [origins], so a token
-     * signed at the .onion verifies there. It must bind the body's hash: it authorizes one command.
+     * A NIP-98 header, checked against every address in [origins], so a token signed at the .onion
+     * verifies there. It must bind the body's hash: it authorizes one command.
      * Another scheme (a proxy's Basic, a client's Bearer) is not addressed to the relay and is ignored.
      */
     private suspend fun proofOf(request: HttpRelayRequest): Proof {
@@ -304,8 +300,8 @@ class HttpRelayHandler(
         if (!header.regionMatches(0, scheme, 0, scheme.length, ignoreCase = true)) return Proof.Anonymous
         val token = scheme + header.substring(scheme.length).trim()
         val accepted = origins().map { it.trimEnd('/') + request.command.path }
-        val url = claimedUrl(token)?.takeIf { it in accepted } ?: accepted.firstOrNull() ?: return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("this relay names no url to sign"))
-        return when (val r = verifier.verify(token, "POST", url, request.body)) {
+        if (accepted.isEmpty()) return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("this relay names no url to sign"))
+        return when (val r = verifier.verify(token, "POST", accepted, request.body)) {
             is Nip98AuthVerifier.Result.Verified -> {
                 Proof.Signed(r.pubkey)
             }
@@ -324,15 +320,6 @@ class HttpRelayHandler(
             }
         }
     }
-
-    /** The `u` a NIP-98 token names, read as the verifier reads it, or null when it does not decode. */
-    @OptIn(ExperimentalEncodingApi::class)
-    private fun claimedUrl(token: String): String? =
-        runCatching {
-            val json = Base64.decode(token.removePrefix(Nip98AuthVerifier.SCHEME).trim()).decodeToString()
-            val event = OptimizedJsonMapper.fromJson(json)
-            HTTPAuthorizationEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig).url()
-        }.getOrNull()
 
     private fun closed(reason: String) = withoutSubId(ClosedMessage(HttpRelayCommand.SUB_ID, reason).toJson())
 

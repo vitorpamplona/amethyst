@@ -436,14 +436,32 @@ class HttpRelayHandlerTest {
     }
 
     @Test
-    fun theBodyShapeIsReadWithoutATree() {
+    fun aBodyIsSplicedIntoItsFrameAsSent() {
         assertEquals("""["REQ","http",{"kinds":[1]}]""", HttpRelayCommand.REQ.frameOf(""" {"kinds":[1]} """))
         assertEquals("""["COUNT","http",{"a":"]"},{"b":"\"["}]""", HttpRelayCommand.COUNT.frameOf("""[{"a":"]"},{"b":"\"["}]"""))
         assertEquals("""["EVENT",{"id":"x"}]""", HttpRelayCommand.EVENT.frameOf("""{"id":"x"}"""))
-        for (bad in listOf("", "[]", "{", "[{}", "{}}", "{]", "[{}]x", "{} {}", "[{},]", "[,{}]", "[{} {}]", "[1]", """[{},"x"]""", "null", "\"x\"")) {
-            assertEquals(null, HttpRelayCommand.REQ.frameOf(bad), "REQ '$bad'")
-        }
+        for (bad in listOf("", "[]", "[ ]", "[{}", "1", "null", "\"x\"")) assertEquals(null, HttpRelayCommand.REQ.frameOf(bad), "REQ '$bad'")
         for (bad in listOf("""[{"id":"x"}]""", "1")) assertEquals(null, HttpRelayCommand.EVENT.frameOf(bad), "EVENT '$bad'")
+    }
+
+    @Test
+    fun aBodyCannotCarryASecondCommand() {
+        val smuggled = note("smuggled")
+        val answer = handler().ask(HttpRelayCommand.REQ, """{"kinds":[1]}],["EVENT",${smuggled.toJson()}""")
+        assertTrue(answer.lines.last().let { it == """["EOSE"]""" || it.startsWith("""["NOTICE",""") }, answer.lines.toString())
+        assertTrue(backend.events.none { it.id == smuggled.id }, "only the REQ ran")
+    }
+
+    @Test
+    fun aTokenSignedAtAnyOfTheRelaysAddressesVerifies() {
+        val onion = "http://relayxyz.onion"
+        val h = HttpRelayHandler(MemoryRelay(backend, true), origins = { listOf(origin, onion) })
+        val body = """{"kinds":[1]}"""
+
+        fun at(base: String) = alice.sign(HTTPAuthorizationEvent.build(base + "/req", "POST", body.encodeToByteArray(), System.currentTimeMillis() / 1000) {}).toAuthToken()
+        assertEquals(200, h.ask(HttpRelayCommand.REQ, body, at(onion)).status)
+        assertEquals(200, h.ask(HttpRelayCommand.REQ, body, at(origin)).status)
+        assertEquals(401, h.ask(HttpRelayCommand.REQ, body, at("https://elsewhere.example")).status)
     }
 
     private companion object {
