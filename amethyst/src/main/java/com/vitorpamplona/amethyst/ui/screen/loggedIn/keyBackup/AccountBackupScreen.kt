@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,6 +77,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -128,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -201,6 +204,9 @@ private fun AccountBackupScreenContent(
             Modifier
                 .fillMaxSize()
                 .padding(it)
+                .consumeWindowInsets(it)
+                // Keeps the password fields and the Encrypt button above the keyboard.
+                .imePaddingSafe()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -385,6 +391,7 @@ private fun EncryptedKeyCard(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var expanded by remember { mutableStateOf(false) }
     var password by remember { mutableStateOf("") }
@@ -394,8 +401,8 @@ private fun EncryptedKeyCard(
     var encrypted by remember { mutableStateOf<String?>(null) }
     var showQr by remember { mutableStateOf(false) }
 
-    // Drop the result while in the background. The typed password is kept so switching to a
-    // password manager to fetch it doesn't wipe the fields.
+    // Drop the result while in the background. A password not yet used is kept so switching to
+    // a password manager to fetch it doesn't wipe the fields; a used one is cleared on success.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         encrypted = null
         showQr = false
@@ -423,6 +430,9 @@ private fun EncryptedKeyCard(
                 working = false
                 if (result != null) {
                     encrypted = result
+                    // The password has done its job: don't leave it in the fields behind the result.
+                    password = ""
+                    repeated = ""
                 } else {
                     Toast.makeText(context, loadStringRes(Res.string.failed_to_encrypt_key), Toast.LENGTH_SHORT).show()
                 }
@@ -533,7 +543,16 @@ private fun EncryptedKeyCard(
                                     keyboardType = KeyboardType.Password,
                                     imeAction = ImeAction.Done,
                                 ),
-                            keyboardActions = KeyboardActions(onDone = { encrypt() }),
+                            keyboardActions =
+                                KeyboardActions(
+                                    onDone = {
+                                        // Close the keyboard so the result and its buttons are visible. Not via
+                                        // clearFocus(): that hands focus to the embed tab's RemoteImeView, which
+                                        // keeps the keyboard up.
+                                        keyboardController?.hide()
+                                        encrypt()
+                                    },
+                                ),
                             visualTransformation = visualTransformation,
                         )
 
