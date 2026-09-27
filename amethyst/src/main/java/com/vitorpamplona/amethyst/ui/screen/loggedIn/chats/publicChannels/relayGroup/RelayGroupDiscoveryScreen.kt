@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.toGroupConstraints
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_live
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -96,10 +98,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -250,7 +250,7 @@ private fun WatchAccountForRelayGroupDiscovery(
         .collectAsStateWithLifecycle()
     val joinedServers by accountViewModel.account.relayGroupList.liveRelayGroupServers
         .collectAsStateWithLifecycle()
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+    val favoriteRelays by accountViewModel.account.favoriteRelayList.flow
         .collectAsStateWithLifecycle()
 
     // Discovery only shows groups whose 39000 is signed by the host relay's own key (NIP-29's
@@ -349,7 +349,7 @@ private fun RelayRailHeader(
     val info = loadRelayInfo(relay)
     val host = relay.displayUrl()
     val name = info.value.name?.takeIf { it.isNotBlank() } ?: host
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+    val favoriteRelays by accountViewModel.account.favoriteRelayList.flow
         .collectAsStateWithLifecycle()
     val isFavorite = relay in favoriteRelays
 

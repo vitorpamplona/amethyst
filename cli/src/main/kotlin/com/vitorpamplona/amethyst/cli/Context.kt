@@ -66,7 +66,7 @@ import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
@@ -760,11 +760,11 @@ class Context(
      * for [pubKey], or `null` if Amy has never observed one. Used by
      * `dm send` to resolve where to deliver a wrap.
      */
-    suspend fun dmInboxOf(pubKey: HexKey): ChatMessageRelayListEvent? =
+    suspend fun dmInboxOf(pubKey: HexKey): DmRelayListEvent? =
         store
             .query<Event>(
-                Filter(authors = listOf(pubKey), kinds = listOf(ChatMessageRelayListEvent.KIND), limit = 1),
-            ).firstOrNull() as? ChatMessageRelayListEvent
+                Filter(authors = listOf(pubKey), kinds = listOf(DmRelayListEvent.KIND), limit = 1),
+            ).firstOrNull() as? DmRelayListEvent
 
     /**
      * Latest known kind:10051 KeyPackage relay list (MIP-00) for

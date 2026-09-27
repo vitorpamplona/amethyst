@@ -45,9 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
+import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_clear
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_coordinator
@@ -60,6 +60,11 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_no_coordinator
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_not_joinable
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_paste
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_relays
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_request
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_request_disclosure
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_request_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_request_sent
+import com.vitorpamplona.amethyst.commons.resources.cordn_link_scan
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_section_input
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -102,8 +107,8 @@ fun CordnLinkScreen(
     var requesting by remember { mutableStateOf(false) }
     val runtime = accountViewModel.account.cordnRuntime
     val scope = rememberCoroutineScope()
-    val requestFailed = stringRes(R.string.cordn_link_request_failed)
-    val asked = stringRes(R.string.cordn_link_request_sent)
+    val requestFailed = stringRes(Res.string.cordn_link_request_failed)
+    val asked = stringRes(Res.string.cordn_link_request_sent)
     var scanning by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
 
@@ -163,7 +168,7 @@ fun CordnLinkScreen(
                             Text(stringResource(Res.string.cordn_link_paste))
                         }
                         OutlinedButton(onClick = { scanning = true }) {
-                            Text(stringRes(R.string.cordn_link_scan))
+                            Text(stringRes(Res.string.cordn_link_scan))
                         }
                         if (input.isNotEmpty()) {
                             OutlinedButton(
@@ -265,7 +270,7 @@ fun CordnLinkScreen(
                             enabled = !requesting,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringRes(R.string.cordn_link_request))
+                            Text(stringRes(Res.string.cordn_link_request))
                         }
 
                         Text(
@@ -274,7 +279,7 @@ fun CordnLinkScreen(
                             // KeyPackage under this account's own key and tells
                             // the coordinator this account wants into this
                             // group, whether or not anyone ever answers (§8.4).
-                            text = stringRes(R.string.cordn_link_request_disclosure),
+                            text = stringRes(Res.string.cordn_link_request_disclosure),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

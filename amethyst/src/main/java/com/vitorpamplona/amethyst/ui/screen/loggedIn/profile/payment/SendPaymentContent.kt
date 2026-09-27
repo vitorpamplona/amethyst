@@ -98,8 +98,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.amethyst.commons.util.showAmount
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -139,7 +139,7 @@ data class PaymentMethodUi(
 /** One entry of the zap-type selector (Public / Private / Anonymous / Non-Zap). */
 @Immutable
 data class ZapTypeOption(
-    val type: LnZapEvent.ZapType,
+    val type: ZapReceiptEvent.ZapType,
     val label: String,
     val explainer: String,
 )
@@ -270,8 +270,8 @@ fun SendPaymentContent(
     showMessageField: Boolean,
     messageLabel: String,
     zapTypes: ImmutableList<ZapTypeOption>?,
-    selectedZapType: LnZapEvent.ZapType,
-    onZapTypeChange: (LnZapEvent.ZapType) -> Unit,
+    selectedZapType: ZapReceiptEvent.ZapType,
+    onZapTypeChange: (ZapReceiptEvent.ZapType) -> Unit,
     receiptNote: String?,
     stage: PaymentFlowStage,
     canSend: Boolean,
@@ -630,8 +630,8 @@ private fun AmountSection(
 @Composable
 private fun ReceiptSection(
     zapTypes: ImmutableList<ZapTypeOption>?,
-    selectedZapType: LnZapEvent.ZapType,
-    onZapTypeChange: (LnZapEvent.ZapType) -> Unit,
+    selectedZapType: ZapReceiptEvent.ZapType,
+    onZapTypeChange: (ZapReceiptEvent.ZapType) -> Unit,
     receiptNote: String?,
     enabled: Boolean,
 ) {
@@ -771,10 +771,10 @@ private val previewFromSources =
 
 private val previewZapTypes =
     listOf(
-        ZapTypeOption(LnZapEvent.ZapType.PUBLIC, "Public", "Everybody can see the transaction and message"),
-        ZapTypeOption(LnZapEvent.ZapType.PRIVATE, "Private", "Sender and receiver can see each other and read the message"),
-        ZapTypeOption(LnZapEvent.ZapType.ANONYMOUS, "Anonymous", "Receiver does not know who sent the payment"),
-        ZapTypeOption(LnZapEvent.ZapType.NONZAP, "Non-Zap", "No trace on Nostr, only in Lightning"),
+        ZapTypeOption(ZapReceiptEvent.ZapType.PUBLIC, "Public", "Everybody can see the transaction and message"),
+        ZapTypeOption(ZapReceiptEvent.ZapType.PRIVATE, "Private", "Sender and receiver can see each other and read the message"),
+        ZapTypeOption(ZapReceiptEvent.ZapType.ANONYMOUS, "Anonymous", "Receiver does not know who sent the payment"),
+        ZapTypeOption(ZapReceiptEvent.ZapType.NONZAP, "Non-Zap", "No trace on Nostr, only in Lightning"),
     ).toImmutableList()
 
 @Composable
@@ -822,7 +822,7 @@ private fun SendPaymentLightningPreview() {
             showMessageField = true,
             messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = previewZapTypes,
-            selectedZapType = LnZapEvent.ZapType.PUBLIC,
+            selectedZapType = ZapReceiptEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
             receiptNote = null,
             stage = PaymentFlowStage.Editing,
@@ -858,7 +858,7 @@ private fun SendPaymentClinkFixedPreview() {
             showMessageField = false,
             messageLabel = "",
             zapTypes = null,
-            selectedZapType = LnZapEvent.ZapType.PUBLIC,
+            selectedZapType = ZapReceiptEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
             receiptNote = "Direct Lightning payment — no zap receipt is published on Nostr.",
             stage = PaymentFlowStage.Editing,
@@ -894,7 +894,7 @@ private fun SendPaymentInProgressPreview() {
             showMessageField = true,
             messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = null,
-            selectedZapType = LnZapEvent.ZapType.PUBLIC,
+            selectedZapType = ZapReceiptEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
             receiptNote = "The nutzap event delivers the ecash itself, so it is always published.",
             stage = PaymentFlowStage.InProgress("Locking and sending ecash…", progress = 0.55f),
@@ -930,7 +930,7 @@ private fun SendPaymentSuccessPreview() {
             showMessageField = true,
             messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = previewZapTypes,
-            selectedZapType = LnZapEvent.ZapType.PUBLIC,
+            selectedZapType = ZapReceiptEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
             receiptNote = null,
             stage = PaymentFlowStage.Success("Payment sent!", "1,000 sats to Alice"),
@@ -966,7 +966,7 @@ private fun SendPaymentFailurePreview() {
             showMessageField = true,
             messageLabel = "Comment",
             zapTypes = null,
-            selectedZapType = LnZapEvent.ZapType.PUBLIC,
+            selectedZapType = ZapReceiptEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
             receiptNote = "An on-chain zap receipt is published on Nostr so the recipient can find the payment.",
             stage = PaymentFlowStage.Failure("Insufficient funds to cover the amount plus the network fee."),

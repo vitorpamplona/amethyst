@@ -266,15 +266,8 @@
     <string name="mark_all_known_as_read">Segna tutti i conosciuti come letti</string>
     <string name="mark_all_new_as_read">Segna tutti i nuovi come letti</string>
     <string name="mark_all_as_read">Segna tutti come letti</string>
-    <string name="account_backup_tips2_md">        ## Suggerimenti per il backup e la sicurezza della chiave
-        \n\nIl tuo account è protetto da una chiave segreta. La chiave è una lunga sequenza di caratteri che inizia con **nsec1**. Chiunque abbia accesso a questa chiave segreta può pubblicare e modificare la tua identità.
-        \n\n- **Non** inserire la tua chiave segreta in nessun sito web o software di cui non ti fidi.
-        \n- Gli sviluppatori di Amethyst non chiederanno **mai** la tua chiave segreta.
-        \n- **Conserva** un backup sicuro della tua chiave segreta per il recupero dell'account. Si consiglia l'uso di un gestore di password.
-    </string>
-    <string name="account_backup_tips3_md">        Per maggiore sicurezza, puoi cifrare la tua chiave con una password. Questa chiave inizia con **ncryptsec1** e non può essere utilizzata senza la tua password.
-        \n\nSe perdi la password, non potrai recuperare la tua chiave.
-    </string>
+    <string name="account_backup_tips2_md">## Suggerimenti per il backup e la sicurezza della chiave \n\nIl tuo account è protetto da una chiave segreta. La chiave è una lunga sequenza di caratteri che inizia con **nsec1**. Chiunque abbia accesso a questa chiave segreta può pubblicare e modificare la tua identità. \n\n- **Non** inserire la tua chiave segreta in nessun sito web o software di cui non ti fidi. \n- Gli sviluppatori di Amethyst non chiederanno **mai** la tua chiave segreta. \n- **Conserva** un backup sicuro della tua chiave segreta per il recupero dell'account. Si consiglia l'uso di un gestore di password.</string>
+    <string name="account_backup_tips3_md">Per maggiore sicurezza, puoi cifrare la tua chiave con una password. Questa chiave inizia con **ncryptsec1** e non può essere utilizzata senza la tua password. \n\nSe perdi la password, non potrai recuperare la tua chiave.</string>
     <string name="encrypt_and_copy_my_secret_key">Cifra e copia la mia chiave segreta</string>
     <string name="badge_award_image_for">Immagine premio badge per %1$s</string>
     <string name="badge_award_image">"Immagine del premio badge</string>
@@ -947,9 +940,7 @@
     <string name="push_server_none_explainer">Disabilita le notifiche push</string>
     <string name="push_server_uses_app_explainer">Usa l'app %1$s</string>
     <string name="push_server_install_app">Configurazione notifiche push</string>
-    <string name="push_server_install_app_description">        Per ricevere notifiche push, installa qualsiasi app che supporta [Unified Push](https://unifiedpush.org/), come [Ntfy](https://ntfy.sh/).
-        Dopo l'installazione, seleziona l'app che desideri usare nelle Impostazioni.
-    </string>
+    <string name="push_server_install_app_description">Per ricevere notifiche push, installa qualsiasi app che supporta [Unified Push](https://unifiedpush.org/), come [Ntfy](https://ntfy.sh/). Dopo l'installazione, seleziona l'app che desideri usare nelle Impostazioni.</string>
     <string name="send_the_seller_a_message">Invia un messaggio al venditore</string>
     <string name="hi_there_is_this_still_available">Ciao, è ancora disponibile?</string>
     <string name="classifieds_title">Titolo</string>
@@ -1986,15 +1977,7 @@
     <string name="could_not_fetch_invoice_from_details">Impossibile recuperare la fattura da %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Impossibile aprire il file compresso</string>
     <string name="couldnt_find_nwc_wallets">Wallet non trovato</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst non ha trovato app wallet compatibili con Nostr Wallet Connect (NWC).
-\n\nCosa puoi fare:
-\n\t1. Verifica il supporto NWC: controlla che la tua app wallet preferita sia compatibile con Nostr Wallet Connect.
-\n\t2. Crea connessione: vai nella tua app wallet e crea una nuova connessione NWC.
-\n\t3. Collega ad Amethyst: la tua app wallet ti offrirà solitamente tre opzioni:
-\n\t\t3.1 Collegamento automatico: un pulsante per aprire e connettersi automaticamente ad Amethyst. In tal caso, clicca quel pulsante, apri Amethyst e premi salva nella nuova schermata.
-\n\t\t3.2 Collegamento manuale: un URI di connessione che puoi copiare e incollare tramite l'icona di incolla in questa schermata.
-\n\t\t3.3 Codice QR: il wallet crea un codice QR che puoi leggere tramite il pulsante QR in questa schermata.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst non ha trovato app wallet compatibili con Nostr Wallet Connect (NWC). \n\nCosa puoi fare: \n\t1. Verifica il supporto NWC: controlla che la tua app wallet preferita sia compatibile con Nostr Wallet Connect. \n\t2. Crea connessione: vai nella tua app wallet e crea una nuova connessione NWC. \n\t3. Collega ad Amethyst: la tua app wallet ti offrirà solitamente tre opzioni: \n\t\t3.1 Collegamento automatico: un pulsante per aprire e connettersi automaticamente ad Amethyst. In tal caso, clicca quel pulsante, apri Amethyst e premi salva nella nuova schermata. \n\t\t3.2 Collegamento manuale: un URI di connessione che puoi copiare e incollare tramite l'icona di incolla in questa schermata. \n\t\t3.3 Codice QR: il wallet crea un codice QR che puoi leggere tramite il pulsante QR in questa schermata.</string>
     <string name="create">Crea</string>
     <string name="d">g</string>
     <string name="danger_zone">Zona pericolosa</string>
@@ -2645,11 +2628,8 @@
     <string name="proxy_section">Relay proxy</string>
     <string name="proxy_section_explainer">Relay aggregatori che l'app deve usare per scaricare i tuoi feed, come filter.nostr.wine. Questo sostituisce il modello outbox e farà connettere l'app solo ai relay nelle tue liste.</string>
     <string name="public_chat">Chat Pubblica</string>
-    <string name="public_chat_explainer">Le chat pubbliche sono visibili a tutti su Nostr e chiunque
-        può parteciparvi. Sono ideali per comunità aperte su argomenti specifici.
-        La moderazione può essere controllata eliminando i post sui relay associati</string>
-    <string name="public_chat_relays_explainer">Inserisci tra 1 e 3 relay che ospitano questo gruppo.
-        I client Nostr usano questa impostazione per sapere da dove scaricare i messaggi e dove inviare i tuoi messaggi.</string>
+    <string name="public_chat_explainer">Le chat pubbliche sono visibili a tutti su Nostr e chiunque può parteciparvi. Sono ideali per comunità aperte su argomenti specifici. La moderazione può essere controllata eliminando i post sui relay associati</string>
+    <string name="public_chat_relays_explainer">Inserisci tra 1 e 3 relay che ospitano questo gruppo. I client Nostr usano questa impostazione per sapere da dove scaricare i messaggi e dove inviare i tuoi messaggi.</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">Metadati chat pubblica</string>
     <string name="public_chats">Chat pubbliche</string>
@@ -2674,10 +2654,7 @@
     <string name="read_only_user">Utente in sola lettura</string>
     <string name="record_a_message_description">Tieni premuto per registrare un messaggio</string>
     <string name="relay_chat">Chat relay</string>
-    <string name="relay_chat_explainer">Le chat relay sono gruppi di chat controllati dal loro relay di riferimento.
-        Sono visibili a tutti su Nostr e chiunque può parteciparvi.
-        Sono ideali per comunità aperte su argomenti specifici. Alcuni di questi gruppi sono effimeri
-    e quindi i messaggi della chat scompaiono nel tempo</string>
+    <string name="relay_chat_explainer">Le chat relay sono gruppi di chat controllati dal loro relay di riferimento. Sono visibili a tutti su Nostr e chiunque può parteciparvi. Sono ideali per comunità aperte su argomenti specifici. Alcuni di questi gruppi sono effimeri e quindi i messaggi della chat scompaiono nel tempo</string>
     <string name="relay_chat_title">Chat relay</string>
     <string name="relay_management_tab_events">Eventi</string>
     <string name="relay_management_tab_ips">IP</string>
@@ -2923,4 +2900,5 @@
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
 </resources>

@@ -771,11 +771,11 @@ Options, for the maintainer to pick:
 
 ### Next work, in recommended order (needs maintainer go-ahead per item)
 
-- **Tier 4 unlocks** (small, mechanical): `NappletProtocolJson`
+- **Tier 4 unlocks** — **done 2026-09-26**, see the last section. (Was: small, mechanical: `NappletProtocolJson`
   `java.util.Base64` → `kotlin.io.encoding.Base64` (frees
   `NappletIdentityWatch`); `ScheduledPostStore` Jackson+`java.io.File` →
   kotlinx-serialization+okio (frees `ScheduledPostWorkGate`).
-  `LargeSoftCache` stays parked (needs a WeakReference expect/actual).
+  `LargeSoftCache` stays parked (needs a WeakReference expect/actual).)
 - **Wave 2: LocalCache move-group** — **part A landed (2026-09-19)**, see the
   section below. Part B (repoint `desktopApp`, delete `DesktopLocalCache.kt`)
   is the remaining half.
@@ -934,7 +934,7 @@ measured picture.
   are handled; the 9 without a dedicated `EventCache` overload
   (`TextNoteEvent`, `ContactListEvent`, `CommentEvent`,
   `AdvertisedRelayListEvent`, `BlossomServersEvent`, `BookmarkListEvent`,
-  `OldBookmarkListEvent`, `ChatMessageRelayListEvent`, `FollowListEvent`) fall
+  `OldBookmarkListEvent`, `DmRelayListEvent`, `StarterPackEvent`) fall
   into the generic replaceable/addressable group.
 - **13 of 13 core read methods match** by name and signature.
 - **Feed retention is already aligned** — both platforms hold feed content
@@ -982,7 +982,7 @@ a deletion: ~500 lines of genuinely Desktop-specific state survive, and the
    concentrated in five places (metadata, contact list, follow pack, live
    activity, `clear`) and re-derive cleanly from the event after consume.
 4. **Two Desktop-shaped `consume` overloads do not generalize** — the NIP-47
-   `LnZapPaymentRequestEvent` one takes a `zappedNote` and an `onResponse`
+   `NwcRequestEvent` one takes a `zappedNote` and an `onResponse`
    callback, and the response one drives `paymentTracker` + `appScope`. Android
    reaches the same tracker through account state. Keep them Desktop-side.
 5. **`clear()`** has only 2 production call sites (`Main.kt`, logout/account
@@ -1302,3 +1302,452 @@ through an `ingest` helper that pins what the cache built for the lifetime of
 the test instance, the way a screen holds the notes it is showing in the app,
 and keeps the forced GC in the test that failed so the contract is asserted
 rather than left to the heap.
+
+## 2026-09-26 — Tier 4 unlocks, the strings drift, and the UI stragglers
+
+### Tier 4: two jvmAndroid groups promoted to `commonMain`
+
+- **Napplet wire protocol.** `NappletProtocolJson`, `NappletIdentityWatch` and
+  `NappletRequestRouter` moved to `commons/commonMain/…/napplet`. The only
+  pins were `java.util.Base64` and one `System.currentTimeMillis()`. Base64 is
+  now `kotlin.io.encoding.Base64`, decoding with `PaddingOption.PRESENT_OPTIONAL`
+  because `java.util.Base64.getDecoder()` accepted unpadded input and applets
+  may send it. The clock is `TimeUtils.now()`.
+- **Scheduled posts.** `ScheduledPostStore` had already dropped Jackson for
+  kotlinx-serialization; what pinned it was `java.io.File` and a POSIX
+  `chmod`. It now takes an okio `Path` plus a `FileSystem` (default
+  `platformFileSystem`), and a `String` constructor so callers need no okio,
+  the same shape as `FileSystemNip95BlobStore`. The owner-only permission is a
+  new `expect fun restrictFileToOwner(path, tag)`:
+  `Files.setPosixFilePermissions` on jvmAndroid, POSIX `chmod(0600)` on iOS.
+  The temp-file swap is `FileSystem.atomicMove`, which replaces an existing
+  target on every platform, so the old "rename, else delete and rename again"
+  fallback went with it. `ScheduledPostWorkGate`, `ScheduledPostPublisher` and
+  `ScheduledPostNotifier` came along; none had a JVM pin of its own.
+
+### The strings drift, fixed
+
+Between the 2026-09-22 move and today, the cordn UI and the backup-conflict
+review added **447 keys** to `amethyst/src/main/res` (`cordn_*`, `backup_*`),
+taking it from 190 keys back to 597. All 447 moved with
+`tools/strings-migrate/migrate.py` (1,131 elements over 57 locales) and the 18
+files that read them were repointed. The non-mechanical sites:
+
+- `stringRes(context, …)` inside `suspend` senders (`sendAttachment`,
+  `sendVoiceNote`) → `loadStringRes(…)`. `adminFailureText` became `suspend`;
+  its only caller is already in `scope.launch`.
+- The backup review kept its labels as `@StringRes Int` (`DiffGroup.label`,
+  `ReviewRow.*Res`, `eventTypeName()`, the `countTiles`/`moneyHero`/`laneItems`
+  params) → `StringResource` / `PluralStringResource`.
+- `rememberPresentation` resolved labels inside `remember { }` through
+  `LocalResources`. Compose resources have no non-suspend accessor, so the 16
+  labels `presentationOf` writes into item text are resolved in composition into
+  a map, and the map is the `remember` key.
+- `androidx.compose.ui.res.pluralStringResource` → the compose-resources one.
+
+Six moved keys have no reader today (`cordn_backup_restore_title`,
+`cordn_coordinators_relays`, `cordn_create_admin_only_me`,
+`cordn_create_coordinator`, `cordn_send`, `cordn_voice_play`). They moved
+rather than being deleted; dropping them is the feature owner's call.
+`pow_notification_sending` stays in Android `res/`: the PoW foreground service
+reads it synchronously.
+
+The rule is now written down in `.claude/CLAUDE.md` ("Strings"), in
+`commonsUI/ARCHITECTURE.md`, and in the `android-expert` and
+`find-missing-translations` skills: new strings go in `commonsUI`
+composeResources, even for Android-only screens.
+
+### UI stragglers moved to `commonsUI`
+
+A survey against `main` found that most of "Batch 4" had already landed in
+other PRs (`dde228d2`, `1a563cf2`, `8dd409cb`, `1f1b6dab`): the theme
+constants (in `commonsUI/…/theme/Shape.kt`, not the `Sizes.kt` this plan
+named), the feed shell, the top bars, `M3ActionDialog`, `NoteComposeLayout`,
+`RepostLayout` and the toast queue. This round moved what was left that had no
+real blocker:
+
+| Moved | To | Note |
+|---|---|---|
+| `NewItemsBubble` (from `ChatroomHeaderCompose.kt`) | `commonsUI/…/ui/components` | |
+| `ChatHeaderLayout`, `LeftPictureLayout` | `commonsUI/…/ui/layouts` | Their `@Preview`s use app drawables, `TimeAgo` and `TextCount`, so the previews stay app-side in `*Preview.kt` files |
+| `listItem/SlimListItemLayout` | `commonsUI/…/ui/layouts/listItem` | Same preview split; `@VisibleForTesting` dropped (no androidx.annotation in commonMain) |
+| `WatchScrollToTop` (list/grid/pager overloads) | `commonsUI/…/ui/feeds` | The `CardFeedContentState` overload stays in the app |
+| app `StickToTopOnPrepend` | deleted | It was a copy of the commons one. The commons copy now collects with `collectAsStateWithLifecycle`, as the app copy did |
+| `ChannelFeedState`, `ChannelFeedContentState` | `commons/commonMain/…/feeds` | `checkNotInMainThread()` → `LocalCache.appHost.assertNotMainThread()`, which Android wires to the same check |
+| `ClickableBuzzInviteLink`, `ClickableConcordInviteLink`, `ClickableRelayGroupLink`, `ClickableRelayUrl`, `OutlinedThinPaddingTextField` | `commonsUI/…/ui/components` | |
+| app `ClickableEmail`, `ClickablePhone` | deleted | Android now uses the commons ones (`mailto:` / `tel:` through `LocalUriHandler`) instead of `ACTION_SEND` / `ACTION_DIAL` intents. The commons `ClickablePhone` is new. Desktop still renders phone numbers as plain text, on purpose |
+
+**Still app-side, with the reason:**
+
+- `AmethystClickableIcon`: 9 lines around an Android debug action; moving it
+  only pushes `LocalContext` into its two callers.
+- `ScreenLayout`: needs `LocalConfiguration` → `LocalWindowInfo`, and the
+  window-size-class breakpoints inlined.
+- `SlidingCarousel`: needs `animatedViewerChromeInset` hoisted out of the
+  viewer-chrome file.
+- `AudioWaveformReadOnly`: needs two enums from the Android-only waveform
+  library replaced.
+- `FileAttachmentCard`: needs `extractFilename` hoisted.
+- `PdfFetcher`: needs the disk cache injected.
+- `ClickablePhone` / `ClickableEmail` on Desktop: deliberately unchanged.
+- **`AmethystTheme` split** (the pure scheme/typography half to commonsUI; the
+  `Amethyst.instance` overload and the system-bar `SideEffect` stay).
+- **`TimeAgo` split**: the labels, `NowProvider` and the style enum are pure;
+  the absolute and short formatters need expect/actual over
+  `android.text.format`.
+- **Palette unification**: Desktop's `PlatformColorScheme` and the app palette
+  differ in primary, secondary, surfaces and outlines, and every shared token
+  (`placeholderText`, `chatBubbleThem`, …) is frozen from the app palette. This
+  is a design decision, not a move.
+
+### Audit of the 2026-09-26 round
+
+The four commits were reviewed file by file against the originals. They had no
+functional bugs. The follow-ups:
+
+- **Compose resources keep XML whitespace; Android didn't.** This is older than this
+  round (it dates back to the first string moves), and it is the one real
+  regression. aapt collapses every whitespace run in an unquoted value and trims
+  the ends; Compose draws the XML text verbatim. So the values wrapped over
+  indented lines (`account_backup_tips2_md`, `push_server_install_app_description`,
+  `couldnt_find_nwc_wallets_description`, the chat explainers, and 349 translated
+  values) rendered with a leading line break and eight spaces. In the `_md` strings
+  CommonMark turns that into a code block. Crowdin also exports a translator's stray
+  edge space, which aapt used to drop, for example ` miejsca zniknęły` and Hindi's
+  ` दि॰` time suffix. `fix_escapes.py` now applies aapt's rule to runs holding a line
+  break or tab. In a translation it also trims an edge space its source string lacks,
+  which keeps deliberate ones like `" and "`. The Crowdin workflow already runs it
+  after every sync, and `compose_escaping_check.py` now fails on raw line breaks, so
+  a sync can't bring it back. 598 values across 54 files were repaired.
+- `rememberPresentation` read all 16 backup labels on every recomposition, even for
+  diff types that write none. It now reads only the ones its diff type uses, and
+  `BackupPresentationLabelsTest` fails if `presentationOf` asks for a label that list
+  lacks.
+- `ScheduledPostStore`: a failed stat now counts as "no file" rather than throwing
+  (okio's posix metadata throws on EACCES where `File.exists()` returned false).
+  Symlinked store files still count as present. The chmod is skipped for an injected
+  non-system `FileSystem`, and the cleanup log keeps its throwable.
+- `ClickableEmail` percent-encodes `%` in the `mailto:` URI (RFC 6068).
+- Left as-is, by design: Kotlin's Base64 rejects non-zero pad bits (`"SGl="`) that
+  Java ignored, which no browser encoder produces. `%1$d` arguments now render ASCII
+  digits in every locale, the same as every other migrated string.
+  `ChannelFeedContentState` reaches `LocalCache.appHost` for its main-thread check.
+
+## 2026-09-27 — the rest of the single-blocker UI, `TimeAgo`, and the theme
+
+### Moved
+
+| What | To | The blocker, and how it went |
+|---|---|---|
+| `ScreenLayout` tier logic, `CappedScreenContent`, the pane widths | `commonsUI/…/ui/layouts/ScreenLayout.kt` | `material3-window-size-class` (app-only): its width breakpoints (Medium ≥ 600dp, Expanded ≥ 840dp) are inlined, and `ScreenLayoutTest` (18 cases, now in commonsUI jvmTest) passes against them. `LocalConfiguration` stays in the app, which asks the shared `rememberScreenLayoutSpec(widthDp, heightDp)`, so Desktop can supply its own window size. |
+| `animatedViewerChromeInset`, `rememberViewerControlsVisibility` | `commonsUI/…/ui/components/ViewerChrome.kt` | They sat in a file full of Android window code. Only `ImmersiveSystemBarsEffect` (Window/insets controller) stays. |
+| `SlidingCarousel` | `commonsUI/…/ui/components` | needed the inset above |
+| `AudioWaveformReadOnly` | `commonsUI/…/ui/components` | two enums from the Android-only audiowaveform library, now local enums with the same values |
+| `FileAttachmentCard` (+ `FileAttachmentRow`, now public) | `commonsUI/…/ui/components` | `extractFilename` hoisted to `commons/…/util/MimeTypeLabels.kt` |
+| `PdfFetcher` | `commonsUI/src/jvmAndroid/…/service/pdf` | `Amethyst.instance.diskCache` → a `diskCache` parameter. commonsUI jvmAndroid gained `okhttp-coroutines` (already on every module that ships OkHttp). |
+| `TimeAgoFormatter` (`timeAgo*`, `timeAbsolute*`, `dateFormatter`, `lastSeenSentence`, `timeAgoShort`, `TimeAgoLabels`) | `commonsUI/…/ui/note/TimeAgoFormatter.kt` | `android.text.format` — see below |
+| `ToggleableTimeAgoText`, `TimeAgo`, `NormalTimeAgo`, `TimeAgoStyle`, `NowProvider`, `LocalNowSeconds` | `commonsUI/…/ui/note/elements` | followed the formatter |
+| `AmethystTheme`'s scheme, typography and providers | `commonsUI/…/ui/theme/AmethystTheme.kt` (`AmethystMaterialTheme`, `amethystDark/LightColors`, `isDarkTheme`, `previewColor`, `toFontFamily`) | The app's `AmethystTheme` resolves the prefs, calls it, then tints the system bars. The Vico chart colours stay app-side (Vico is Android-only here). |
+
+**The date-format seam.** `PlatformDateFormat.kt` (commonsUI) has four expects:
+
+- `DateSkeletonFormatter(skeleton)`:
+  - Android: `getBestDateTimePattern` in a `ThreadLocal` `SimpleDateFormat`, exactly the old code.
+  - JVM: `DateTimeFormatter.ofLocalizedPattern` (JDK 19+, the same CLDR skeleton lookup), cached per locale and zone.
+  - iOS: `NSDateFormatter.setLocalizedDateFormatFromTemplate`.
+- `calendarYearAndDay`: `Calendar` on jvmAndroid, `NSCalendar` on iOS.
+- `rememberTimeOfDayFormatter`:
+  - Android: `DateFormat.getTimeFormat(context)` per call, as before, so the system 12/24-hour setting is still followed.
+  - JVM: the locale's SHORT time.
+  - iOS: `NSDateFormatterShortStyle`.
+- `relativeTimeSpanShort`:
+  - Android: `DateUtils`, as before.
+  - Elsewhere: the compact "5m" form.
+
+`DateSkeletonFormatterTest` pins the JVM side: en-US vs en-GB order from the same instance after a locale switch, the three skeletons, day/year boundaries, and the same-day branch of `timeAbsoluteWith`.
+
+Desktop still has its own `ToggleableTimeAgoText` and the older `commons/…/util/TimeAgoFormatter.kt` (hard-coded English units, `DateFormat.MEDIUM`). Merging those onto this one is the Desktop phase.
+
+### What is left in `amethyst/ui`, measured (2026-09-27)
+
+A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after this round:
+
+- **80 files have no blocker left.**
+  - Many are headless and belong in `commons`, not `commonsUI`: the filter assemblers and
+    `*LastRead`, `NewMessageTagger`, `SplitConversor`, `PubKeyFormatter`, `SettingsCatalog`,
+    and the Tor status/dialog VM.
+  - The Compose ones include the chat bubble set (`ChatBubbleLayout`, `ChatGroupPosition`,
+    `JumboEmoji`, `NewDateOrSubjectDivisor`, `AutoScrollToNewest`). It moved to `commonsUI`
+    in the follow-up below. Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of it.
+- **`AccountViewModel` is the wall:**
+  - 892 files touch it, and 310 touch nothing else app-side. Yet swapping it for an interface frees only 76 files by itself, because the rest call hub composables that are blocked themselves.
+  - The ui files use 210 distinct members of it. The note renderers use 28.
+  - Only ~10 note renderers become movable with a context interface alone.
+- **The real levers are about ten hub composables**, each blocking the ui files that call it:
+
+  | Hub | Files blocked |
+  |---|---|
+  | `UserProfilePicture` | 123 |
+  | `RouteMaker` | 89 |
+  | `UsernameDisplay` | 77 |
+  | `Loaders` | 66 |
+  | `DisappearingScaffold` | 64 (AVM only, 53 lines) |
+  | `RichTextViewer` | 62 |
+  | `NoteCompose` | 58 |
+  | `FeedContentStateView` / `FeedView` | AVM only |
+
+  Also on the list:
+  - the `reqCommand` `observe*` helpers (176 files; they take `accountViewModel` themselves);
+  - the flavour-only `TranslatableRichTextViewer` (54 files), which wants a slot or a CompositionLocal.
+- **Two corrections to the MOVE-AFTER table above:**
+  - `INav`/`Route` are no longer blockers: every ui file imports the commons ones.
+  - `ui/note/types` is 111 files, not ~89, and "AVM threading" understates it: the hubs matter more than the parameter.
+
+### Follow-up in the same round: the chat bubble group, and the audit
+
+- **Moved to `commonsUI/…/commons/chats/ui`**, beside `ChatDivisor` and
+  `UserDisplayNameLayout`: `ChatBubbleLayout`, `ChatGroupPosition`, `JumboEmoji`,
+  `NewDateOrSubjectDivisor` and `AutoScrollToNewest`. `AutoScrollToNewest` and
+  `CHAT_GROUP_WINDOW_SECONDS` went from `internal` to public so the app can reach them.
+  Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of this one (no group
+  position, jumbo emoji, swipe-to-reply or reaction row). Replacing it is the Desktop
+  phase.
+- **Audit follow-ups:**
+  - `PdfFetcher` takes the disk cache as a provider, read on the IO dispatcher, so a PDF
+    card composing on a cold start doesn't build the app's lazy cache on the main thread.
+  - The two DM lists resolve `TimeAgoLabels` once per list instead of once per row.
+  - The iOS `DateSkeletonFormatter` rebuilds on a locale change, as Android's does. (The
+    JVM one also keys on the time zone; iOS caches its system zone until reset, so keying on
+    it there would cost lookups and still not notice.)
+  - `ScreenLayoutTest` pins the inclusive 600dp boundary.
+  - Two stale KDoc links and a same-package import are fixed.
+  - The generated baseline profile has its stable-name entries repointed:
+    `NowProviderKt`, and the five theme functions now in `AmethystThemeKt`. Its R8
+    lambda entries were already stale before this round (it still lists
+    `MarkDownStyleOnDark` under `ThemeKt`), and the new theme root
+    (`AmethystThemeKt;->AmethystMaterialTheme`, `isDarkTheme`) has no entries at all, so
+    **regenerate the profile** after these moves.
+
+### Second audit, and one Desktop decision
+
+- **Fixed:**
+  - `PdfPreviewCard` closed its cache snapshot on the main thread, after `withContext(IO)`
+    returned. That was older than this branch. Closing takes the same global DiskLruCache
+    lock as opening, so `PdfFetcher.useSnapshot` now fetches, runs the block and closes, all
+    in one IO block, leaving no suspension point for cancellation to leak through.
+  - The PDF viewer's `onDispose` now closes its handle on the app IO scope, under the
+    render mutex.
+  - JVM and iOS built a time-of-day formatter per feed item; they now share one cached
+    instance. `NSDateFormatter` is costly to build.
+  - `timeAgoShort` no longer allocates an unused fallback lambda per tick on Android.
+  - The iOS skeleton formatter keys on the locale only, like Android. iOS caches its system
+    zone until reset, so keying on the zone cost lookups and still never saw a change.
+  - New tests: `JumboEmojiTest` (counts, ZWJ/skin tone/flag/keycap sequences, bubble
+    shapes). `ScreenLayoutTest` moved to commonsUI jvmTest, beside the code it tests.
+- **Desktop needs `jdk.localedata` before it uses these formatters.**
+  - `desktopApp/build.gradle.kts` `nativeDistributions.modules(...)` doesn't include it,
+    so the packaged runtime carries only en/root CLDR data.
+  - `DateTimeFormatter.ofLocalizedPattern` then gives en-GB `Jan 5, 2024` and de-DE
+    `2024 Jan 5`, and the JDK tests (full runtime) can't see it.
+  - Desktop's existing `java.time` formatting (`DesktopScheduleAtPicker`) already has the
+    same gap.
+  - Adding the module costs about +28 MB to the unpacked runtime. That is a packaging
+    call, left for the Desktop phase.
+
+## 2026-09-27 (later) — the unblocked `ui/` files, and one chess view model
+
+### How the list was rebuilt
+
+The morning's "80 files have no blocker" count was not saved, so it was recomputed
+with a script (not committed; it is a one-off) that:
+
+- indexes every public top-level declaration in `amethyst/src/{main,play,fdroid}`;
+- follows each file's imports **and** its same-package references (the
+  under-count this plan's header warns about);
+- marks a file blocked by `android.*`, a non-KMP `androidx.*`, `R.`/`BuildConfig`,
+  or a library the shared modules lack;
+- takes the fixpoint, then assigns each survivor a module and source set from what it
+  (transitively) uses: Compose UI, `Res` or a `commonsUI` symbol means `commonsUI`;
+  `java.*`/JVM tokens or a jvmAndroid-only `commons` symbol means `jvmAndroid`.
+
+It found **96** such files under `ui/` (142 app-wide). 68 of the `ui/` ones moved
+(plus `service/uploads/SuspendableConfirmation`, which one of them needs), 3 were app
+copies of existing `commons` code and were deleted, and 25 stay, for the reasons below.
+
+### Moved
+
+**To `commons`**
+
+| Package | Files |
+|---|---|
+| `model` | `ConcordLastRead`, `MarmotGroupLastRead`, `RelayGroupLastRead` (beside `privateChatLastReadRoute`) |
+| `model/chats` | `ConcordServerRoomNote`, `RelayGroupServerRoomNote`, `HistoryDateFormat` (jvmAndroid) |
+| `model/composer` | `NewMessageTagger`, `DraftTagState`, `IExpiration`, `SplitConversor`, `PreviewState` (jvmAndroid) |
+| `model/navigation` | `RouteTextArgs`, `ShareToDMRouteRewriter` |
+| `model/buzz` | `AgentWork` |
+| `model/nip29RelayGroups` | `GroupDiscoveryConstraintResolver` (was `dal/GroupDiscoveryConstraint.kt`; renamed because the matcher it resolves to already owns that file name here) |
+| `model/nip47WalletConnect` | `TransactionRowLabels` |
+| `model/nip72Communities` | `CommunityRulesLookup` |
+| `model/nip92IMeta` | `ImetaContent` |
+| `relayClient/chatrooms` (new) | the five `Filter*` functions of the chatroom-list assembler |
+| `relayClient/channel/relayGroup` | `RelayGroupOpenThreadsFilterAssembler`, `RelayGroupsDiscoveryFilter` |
+| `relayClient/hashtag` (new), `relayClient/geocaches`, `relayClient/polls/results` | `FilterPostsByHashtags`, `GeocacheListingKinds`, `RelayPollResponseLoader` |
+| `feeds` | `FilterByListParams`, `UserFeedState`, `StringFeedState`, `SupportedContent` |
+| `viewmodels` | `RelayFeedViewModel`, `UserExternalIdentitiesViewModel` |
+| `service/upload` | `MediaUploadTracker`, `HlsPublishState`, `SuspendableConfirmation` |
+| `audio`, `music`, `qrcode`, `cashu`, `mediaServers`, `tor` | `PitchShifter`; `MusicFormatting`; `ScanResult` + `StructuredAppendAccumulator`; `CashuWalletDiscovery` (jvmAndroid); `MediaServerHealth` (jvmAndroid); `TorDialogViewModel` |
+| `util` | `DebouncedPublisher`, `TimeFormatUtils` + `ZapFormatterNoDecimals` (jvmAndroid) |
+
+**To `commonsUI`**
+
+| Package | Files |
+|---|---|
+| `ui/components` | `InformationDialog`, `UrlPreviewCard` (both jvmAndroid) |
+| `ui/text` | `MentionPreservingInputTransformation` (its `MENTION_REGEX` is now public; the app's `UrlUserTagOutputTransformation` shares it) |
+| `ui/navigation/navs` | `ObservableNav`, `TwoPaneNav`, `ShareToDMNav` |
+| `ui/navigation/bottombars`, `ui/insets`, `ui/theme`, `ui/settings` (new) | `TabReselectCoordinator`; `KeyboardState`; `ColorSchemePreview` (jvmAndroid: it formats with `String.format`); `SettingsCatalog` |
+| feature `ui/` packages | `account/ui/login/LoginErrorManager`, `clink/ui/ClinkBudgetDialog`, `cordn/ui/{BusyLabel,SettingsFormBlock}`, `nip46RemoteSigner/ui/Nip46ActivityUi`, `nip52Calendar/ui/CalendarsViewMode`, `nip53LiveActivities/ui/StreamingStatusFlags`, `nip72ModCommunities/ui/CommunityRulesViolationBanner`, `relays/ui/SubPurposeLabels`, `service/upload/ui/StrippingFailureDialog` |
+| `audio` | `VoicePreset`, `RecordingIndicators` (jvmAndroid) |
+
+Most files moved unchanged apart from the package line. The exceptions, all for
+`commonMain`:
+
+- `formatTrackDuration` went from `internal` to public so the app's music renderers can
+  still call it. Its `"%d:%02d".format(...)` is now a `padStart`, because `String.format`
+  is JVM-only.
+- `RouteTextArgs`: `codePointAt` / `Character.charCount` → the commons
+  `codePointAtKmp` / `codePointCharCount`, which mirror the JDK ones.
+- `TorDialogViewModel`: `Integer.parseInt` → `toInt()`. Both throw
+  `NumberFormatException` on the JVM.
+- `UserExternalIdentitiesViewModel.Factory`: `create(Class<T>)` → the multiplatform
+  `create(KClass<T>, CreationExtras)`, as `PollResultsViewModel` already does.
+- `Dispatchers.IO` needs `import kotlinx.coroutines.IO` in common code, and
+  `RelayFeedViewModel`'s `javaClass.simpleName` log is now `this::class.simpleName`.
+
+A tooling note for the next sweep: stripping comments with a regex before scanning
+identifiers breaks on a `/*` inside a string (`"image/*"`), which swallows code up to the
+next `*/`. Tokenize strings and comments together. And scan bodies, not only imports,
+for inline `android.`/`java.` names and `javaClass`.
+
+Eleven pure unit tests moved with their code to `commons` jvmTest (NewMessageTagger key
+parsing, PitchShifter, RouteTextArgs, ShareToDMRouteRewriter, DebouncedPublisher,
+RelayGroupDiscoveryConstraint, StructuredAppendAccumulator, SupportedContent,
+TransactionRowLabels, CommunityRulesLookup) and `commonsUI` jvmTest
+(SettingsCatalogFilter).
+
+**Deleted app copies** (callers repointed at the `commons` original):
+`ui/note/PubKeyFormatter.kt` (the commons `toShortDisplay` is the same with an optional
+`prefixSize`), `ui/note/ZapFormatter.kt` (same functions; the commons `TenGiga`…`OneKilo`
+constants became public for `ZapFormatterNoDecimals`), and the
+`EqualImmutableLists.kt` re-export shim.
+
+### `ChessViewModelNew` and `DesktopChessViewModelNew` → one `ChessViewModel`
+
+The two classes forwarded the same ~40 members to `ChessLobbyLogic`; only the
+adapters and the scope differed. `commons/nip64Chess/ChessViewModel` now takes the
+adapters, the polling config, the dismissed-games store and an optional scope:
+
+- **Android:** `ChessViewModelFactory` builds it with the Android adapters and no
+  scope, so it runs on `viewModelScope` and stops polling in `onCleared`, as before.
+  The factory lost its unused `Application` parameter. The `viewModel(key = …)` key
+  changed from `ChessViewModelNew-<pubkey>` to `ChessViewModel-<pubkey>`, in all four
+  call sites together, so the lobby, game screen, note card and home button still share
+  one instance.
+- **Desktop:** `ChessScreen` builds it with the Desktop adapters and its
+  `rememberCoroutineScope()`, which is what `DesktopChessViewModelNew` did. The
+  `UserMetadataCache` that class owned is now remembered next to it in `ChessScreen`.
+  The debug `instanceId` (`System.identityHashCode`) went, since it isn't KMP.
+
+### Left in the app on purpose (unblocked, but not shared code)
+
+- `ui/screen/AndroidFeedViewModel`, `threadview/dal/AndroidLevelFeedViewModel`: they
+  exist to bind Android's process-wide `LocalCache`. Desktop still runs
+  `DesktopLocalCache` (Wave 2 part B).
+- `ui/navigation/ShareIntentRouting`: names the manifest's `<activity-alias>`es.
+- `ui/screen/loggedIn/embed/*` (9 files) and `browser/EmbeddedPageRequests`: bridges
+  for the Android WebView host. No other front end embeds a WebView.
+- `workouts/health/HealthConnectRationaleScreen`: Health Connect is Android-only.
+- `ui/tor/{TorManager,TorBackend,ArtiNative,ArtiGuardState,TorConnectionFailureDialog}`:
+  the in-process Arti client. Desktop drives an external Tor.
+- `ui/tor/TorServiceStatus`: `commons/tor` has its own copy that differs on purpose
+  (Android has `Bootstrapping`, Desktop has `Error`). Merging them changes every `when`
+  over it on both platforms; that's a design step, not a move.
+- `ui/actions/UrlUserTagOutputTransformation`: calls `android.util.Patterns.WEB_URL`
+  by its fully-qualified name, which an import-based scan cannot see. It needs a KMP URL
+  matcher (commons `richtext` has one) before it can move.
+- `nests/room/{lifecycle/NestRoomEventCollectors, participants/RoomParticipantActions,
+  stage/SpeakerReactionOverlay, stage/SpeakerZapOverlay}`: `internal` pieces of the
+  Android audio-room screen, which Desktop doesn't have.
+
+### Unblocked outside `ui/` (not moved in this round)
+
+The same sweep finds 46 more movable files outside `ui/`. The notable groups are
+`service/resourceusage` (9, the resource-usage ledger), `service/uploads/blossom`
+(`InFlightInvoices`, `PaymentPromptLedger`, the `bud10` resolver trio),
+`service/playback` leaves (`HlsLivenessCache`, `SessionRegistry`,
+`WssDataStreamCollector`, the player control buttons), and `model/MediaAspectRatioCache`.
+
+### Audit of this round
+
+Three reviewers read the 69 moved files. I read the chess merge and the hand edits. The
+edits kept behaviour: `codePointAtKmp`/`codePointCharCount` match the JDK calls,
+`padStart` matches `%02d` for every Int, `toInt()` throws the same exception as
+`parseInt`, and lifecycle's `ViewModelProvider` calls the `KClass` factory overload
+first. None of the findings below came from the move; all are on `main`.
+
+**Fixed:**
+
+- **Zap amounts rounded half-even** (`showAmount`, `showAmountInteger`). Kotlin's
+  `BigDecimal.div` already rounds to the dividend's scale with HALF_EVEN, so the
+  `setScale(0, HALF_UP)` after it never ran: 12,500 read "12k" and 2,500,000 read "2M".
+  The unit was also picked before rounding, so 999,500 read "1000k". Both now use
+  `divide(_, 0, HALF_UP)` and pick the unit after rounding. The `BigDecimal(0.01)` built
+  on every call is now a constant. The `showAmount` KDoc examples were wrong and now match
+  what it returns. `ZapFormatterTest` covers this.
+- **`AgentWorkBoard.merge` sorted every band by upvotes.** Its KDoc says upvotes order
+  only the queue. An old upvoted job sat above a fresh one in Shipped, and every job sat
+  above every workflow run in Working. Upvotes now count only in the queue.
+- **`SuspendableConfirmation`** could resume its continuation twice: a button tap plus
+  an outside-tap dismiss before the dialog recomposed away threw "Already resumed". A
+  cancelled upload also left the dialog up with dead buttons. It now resumes only while
+  active, and clears the dialog on cancellation, but only if the dialog is still its own.
+  `SuspendableConfirmationTest` covers this.
+- **`TorDialogViewModel.save`** parsed the SOCKS port even with the field hidden. Junk
+  typed while External was selected blocked saving Internal or Off. It also took 0 or
+  70000. Now only External requires a port in 1..65535; otherwise the last saved port is
+  kept. `TorDialogViewModelTest` covers this.
+- **`ExpandingCirclesAnimation`** built its infinite transition before checking
+  `isRecording`. The composer toolbar always shows the record button, so it asked for a
+  frame on every vsync while the composer was open. The transition now exists only while
+  recording. The circles and the stop dot read their animated values in `graphicsLayer`,
+  so a frame redraws a layer instead of recomposing.
+- **`DebouncedPublisher.flush`** treated a job whose `publish()` was already running as
+  pending. Leaving the nav picker while a publish waited on a remote signer cancelled it
+  and started a second signing request. `flush` now acts only during the delay. A new case
+  in `DebouncedPublisherTest` covers this.
+- **`RelayFeedViewModel`:**
+  - The DM list's first emission read `nip65RelayListNote` as a `DmRelayListEvent`,
+    which is always null. It now reads `dmRelayListNote`.
+  - `subscribeTo`/`unsubscribeTo` compared the `MutableStateFlow` itself to a `User`,
+    so `unsubscribeTo` never cleared it. They now compare `.value`.
+- **`ScheduledFlag`** built a `DateFormat` on every composition of a feed card. It is
+  now remembered per start time.
+- **`CashuWalletDiscovery`:** up to 50 relays finishing at once could write the crawl
+  progress out of order, so it stepped backwards. The write is now monotonic.
+- **Desktop `ChessScreen`:** polling runs on the screen's scope. When `remember` replaced
+  the view model on an account switch, the old one kept polling. A `DisposableEffect` now
+  stops it.
+
+**Reported, not changed (need an owner's call):**
+
+- `FilterLastMessageFollowingPublicChats` asks each relay for kind 41 with `limit = 1`
+  across all followed channels, so only one channel's metadata comes back per relay. One
+  busy channel can also fill the kind-42 `limit = 100`. The fix (a limit per channel, or a
+  filter per channel) changes relay load.
+- `PitchShifter`'s brute-force WSOLA search costs about 500 multiply-adds per output
+  sample, and the loop never checks for cancellation. Decimating the correlation changes
+  the audio, and a cancellation check changes its API.
+- `RelayFeedViewModel.invalidateData` re-emits the same user into a `StateFlow`, which
+  drops it, so a refresh only spins for a second.
+- `ScheduledFlag` still reads `TimeUtils.now()` once, so a card composed before the start
+  time keeps the date after it passes.

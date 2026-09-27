@@ -28,7 +28,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
@@ -72,7 +72,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
     @Test
     fun bench40DeletionRequestsEvents() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val deletions = allEvents.filterIsInstance<DeletionEvent>()
+        val deletions = allEvents.filterIsInstance<DeletionRequestEvent>()
         val deletionIds = deletions.map { it.deleteEventIds() }.flattenToSet()
         val deletionAddresses = deletions.map { it.deleteAddressIds() }.flattenToSet()
 

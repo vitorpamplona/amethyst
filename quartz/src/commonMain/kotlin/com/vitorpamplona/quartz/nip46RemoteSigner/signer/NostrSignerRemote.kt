@@ -40,8 +40,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -325,7 +325,7 @@ class NostrSignerRemote(
         throw convertExceptions("Could not get public key", result)
     }
 
-    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent {
         TODO("Not yet implemented")
     }
 

@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -64,11 +64,11 @@ fun observeUserName(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
-    val contactCards = accountViewModel.account.contactCards
-    val flow = remember(user) { contactCards.displayNameFlow(user) }
+    val userAssertions = accountViewModel.account.userAssertions
+    val flow = remember(user) { userAssertions.displayNameFlow(user) }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedDisplayName(user) })
+    return flow.collectAsStateWithLifecycle(remember(user) { userAssertions.cachedDisplayName(user) })
 }
 
 /**
@@ -83,10 +83,10 @@ fun observeUserNickname(
     user: User,
     accountViewModel: AccountViewModel,
 ): State<Nickname?> {
-    val contactCards = accountViewModel.account.contactCards
-    val flow = remember(user) { contactCards.nicknameFlow(user) }
+    val userAssertions = accountViewModel.account.userAssertions
+    val flow = remember(user) { userAssertions.nicknameFlow(user) }
 
-    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedNickname(user) })
+    return flow.collectAsStateWithLifecycle(remember(user) { userAssertions.cachedNickname(user) })
 }
 
 @Composable
@@ -132,9 +132,9 @@ fun observeUserTagFollowCount(
                 .metadata.stateFlow
                 .sample(1000)
                 .mapLatest { noteState ->
-                    (noteState.note.event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.size ?: 0
+                    (noteState.note.event as? InterestListEvent)?.let { accountViewModel.account.interestListDecryptionCache.hashtags(it) }?.size ?: 0
                 }.onStart {
-                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.size ?: 0)
+                    emit((accountViewModel.hashtagFollows(user).event as? InterestListEvent)?.let { accountViewModel.account.interestListDecryptionCache.hashtags(it) }?.size ?: 0)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
@@ -160,9 +160,9 @@ fun observeUserTagFollows(
                 .metadata.stateFlow
                 .sample(200)
                 .mapLatest { noteState ->
-                    (noteState.note.event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList()
+                    (noteState.note.event as? InterestListEvent)?.let { accountViewModel.account.interestListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList()
                 }.onStart {
-                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList())
+                    emit((accountViewModel.hashtagFollows(user).event as? InterestListEvent)?.let { accountViewModel.account.interestListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList())
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
@@ -304,16 +304,16 @@ fun observeUserIsFollowingHashtag(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(accountViewModel) {
-            accountViewModel.account.hashtagList.flow
+            accountViewModel.account.interestList.flow
                 .mapLatest { hashtags ->
                     hashtag in hashtags
                 }.onStart {
-                    emit(hashtag in accountViewModel.account.hashtagList.flow.value)
+                    emit(hashtag in accountViewModel.account.interestList.flow.value)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(hashtag in accountViewModel.account.hashtagList.flow.value)
+    return flow.collectAsStateWithLifecycle(hashtag in accountViewModel.account.interestList.flow.value)
 }
 
 @SuppressLint("StateFlowValueCalledInComposition")
@@ -373,16 +373,16 @@ fun observeUserIsFollowingRelay(
 ): State<Boolean> {
     val flow =
         remember(accountViewModel) {
-            accountViewModel.account.relayFeedsList.flowNoDefaults
+            accountViewModel.account.favoriteRelayList.flowNoDefaults
                 .mapLatest { relays ->
                     relayUrl in relays
                 }.onStart {
-                    emit(relayUrl in accountViewModel.account.relayFeedsList.flowNoDefaults.value)
+                    emit(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.relayFeedsList.flowNoDefaults.value)
+    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -439,7 +439,7 @@ fun observeUserIsFollowingChannel(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserContactCardsScore(
+fun observeUserAssertionsScore(
     user: User,
     accountViewModel: AccountViewModel,
     subscribe: Boolean = true,
@@ -459,7 +459,7 @@ fun observeUserContactCardsScore(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserContactCardsFollowerCount(
+fun observeUserAssertionsFollowerCount(
     user: User,
     accountViewModel: AccountViewModel,
 ): State<String> {

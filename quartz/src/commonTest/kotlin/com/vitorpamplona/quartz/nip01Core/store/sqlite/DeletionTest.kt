@@ -24,9 +24,9 @@ import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
@@ -51,7 +51,7 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(note2, Filter(ids = listOf(note2.id)))
             db.assertQuery(note3, Filter(ids = listOf(note3.id)))
 
-            val deletion = signer.sign(DeletionEvent.build(listOf(note1)))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(note1)))
 
             db.insert(deletion)
 
@@ -74,9 +74,9 @@ class DeletionTest : BaseDBTest() {
     fun testInsertDeleteEventOfAddressable() =
         forEachDB { db ->
             val time = TimeUtils.now()
-            val note1 = signer.sign(LongTextNoteEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
-            val note2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
-            val note3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
+            val note1 = signer.sign(LongFormContentEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
+            val note2 = signer.sign(LongFormContentEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
+            val note3 = signer.sign(LongFormContentEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
 
             db.insert(note1)
 
@@ -95,7 +95,7 @@ class DeletionTest : BaseDBTest() {
 
             // Deletion must be timestamped >= note3.createdAt for it to
             // remove the latest addressable per NIP-09.
-            val deletion = signer.sign(DeletionEvent.build(listOf(note1), createdAt = time + 100))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(note1), createdAt = time + 100))
 
             db.insert(deletion)
 
@@ -118,9 +118,9 @@ class DeletionTest : BaseDBTest() {
     fun testInsertDeleteEventOfAddressable2() =
         forEachDB { db ->
             val time = TimeUtils.now()
-            val note1 = signer.sign(LongTextNoteEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
-            val note2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
-            val note3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
+            val note1 = signer.sign(LongFormContentEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
+            val note2 = signer.sign(LongFormContentEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
+            val note3 = signer.sign(LongFormContentEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
 
             db.insert(note1)
             db.insert(note2)
@@ -130,7 +130,7 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(null, Filter(ids = listOf(note2.id)))
             db.assertQuery(note3, Filter(ids = listOf(note3.id)))
 
-            val deletion = signer.sign(DeletionEvent.buildAddressOnly(listOf(note1), createdAt = time + 100))
+            val deletion = signer.sign(DeletionRequestEvent.buildAddressOnly(listOf(note1), createdAt = time + 100))
 
             db.insert(deletion)
 
@@ -165,7 +165,7 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
             db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
 
-            val randomDeletionToWrap = signer.sign(DeletionEvent.build(listOf(wrap1)))
+            val randomDeletionToWrap = signer.sign(DeletionRequestEvent.build(listOf(wrap1)))
 
             db.insert(randomDeletionToWrap)
 
@@ -173,7 +173,7 @@ class DeletionTest : BaseDBTest() {
             db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
             db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
 
-            val deletion = me.sign(DeletionEvent.build(listOf(wrap1)))
+            val deletion = me.sign(DeletionRequestEvent.build(listOf(wrap1)))
 
             db.insert(deletion)
 
@@ -427,14 +427,14 @@ class DeletionTest : BaseDBTest() {
 
             // A deletion event from a *different* author must not remove the
             // target — only the original author can delete via NIP-09.
-            val strangerDeletion = stranger.sign(DeletionEvent.build(listOf(target)))
+            val strangerDeletion = stranger.sign(DeletionRequestEvent.build(listOf(target)))
             db.insert(strangerDeletion)
 
             db.assertQuery(target, Filter(ids = listOf(target.id)))
             db.assertQuery(strangerDeletion, Filter(ids = listOf(strangerDeletion.id)))
 
             // The owner's deletion still works after a failed third-party attempt.
-            val ownerDeletion = owner.sign(DeletionEvent.build(listOf(target)))
+            val ownerDeletion = owner.sign(DeletionRequestEvent.build(listOf(target)))
             db.insert(ownerDeletion)
             db.assertQuery(null, Filter(ids = listOf(target.id)))
         }
@@ -447,7 +447,7 @@ class DeletionTest : BaseDBTest() {
             // a second deletion that removes the first. Cross-author
             // deletion of a kind-5 must NOT work.
             val target = signer.sign(TextNoteEvent.build("target"))
-            val firstDeletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = 100))
+            val firstDeletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = 100))
 
             db.insert(target)
             db.insert(firstDeletion)
@@ -457,13 +457,13 @@ class DeletionTest : BaseDBTest() {
             // Stranger cannot delete the kind-5.
             val stranger = NostrSignerSync()
             val strangerDeletion =
-                stranger.sign(DeletionEvent.build(listOf(firstDeletion), createdAt = 200))
+                stranger.sign(DeletionRequestEvent.build(listOf(firstDeletion), createdAt = 200))
             db.insert(strangerDeletion)
             db.assertQuery(firstDeletion, Filter(ids = listOf(firstDeletion.id)))
 
             // Same author can delete their previous kind-5.
             val secondDeletion =
-                signer.sign(DeletionEvent.build(listOf(firstDeletion), createdAt = 300))
+                signer.sign(DeletionRequestEvent.build(listOf(firstDeletion), createdAt = 300))
             db.insert(secondDeletion)
             db.assertQuery(null, Filter(ids = listOf(firstDeletion.id)))
             db.assertQuery(secondDeletion, Filter(ids = listOf(secondDeletion.id)))
@@ -493,17 +493,17 @@ class DeletionTest : BaseDBTest() {
 
             // Inner author (the "sender") cannot delete a wrap addressed to
             // someone else — sender pubkey != wrap's pubkey_owner_hash.
-            val senderDeletion = sender.sign(DeletionEvent.build(listOf(wrap)))
+            val senderDeletion = sender.sign(DeletionRequestEvent.build(listOf(wrap)))
             db.insert(senderDeletion)
             db.assertQuery(wrap, Filter(ids = listOf(wrap.id)))
 
             // An unrelated third party can't delete it either.
-            val unrelatedDeletion = unrelated.sign(DeletionEvent.build(listOf(wrap)))
+            val unrelatedDeletion = unrelated.sign(DeletionRequestEvent.build(listOf(wrap)))
             db.insert(unrelatedDeletion)
             db.assertQuery(wrap, Filter(ids = listOf(wrap.id)))
 
             // The recipient (whose pubkey matches pubkey_owner_hash) can.
-            val recipientDeletion = recipient.sign(DeletionEvent.build(listOf(wrap)))
+            val recipientDeletion = recipient.sign(DeletionRequestEvent.build(listOf(wrap)))
             db.insert(recipientDeletion)
             db.assertQuery(null, Filter(ids = listOf(wrap.id)))
         }
@@ -514,7 +514,7 @@ class DeletionTest : BaseDBTest() {
             // Old addressable (will be deleted by deletion request)
             val old =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version 1",
                         "title",
                         dTag = "blog-1",
@@ -528,7 +528,7 @@ class DeletionTest : BaseDBTest() {
             // Deletion targeting the address with created_at = 1500
             val deletion =
                 signer.sign(
-                    DeletionEvent.buildAddressOnly(
+                    DeletionRequestEvent.buildAddressOnly(
                         listOf(old),
                         createdAt = 1500,
                     ),
@@ -542,7 +542,7 @@ class DeletionTest : BaseDBTest() {
             // created_at AFTER the deletion. NIP-09 says it must be kept.
             val newer =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version 2",
                         "title",
                         dTag = "blog-1",

@@ -61,15 +61,15 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
@@ -98,7 +98,7 @@ class AccountRelayGroupActions(
         channel: RelayGroupChannel,
         code: String? = null,
     ) {
-        val template = JoinRequestEvent.build(channel.groupId.id, inviteCode = code)
+        val template = GroupJoinRequestEvent.build(channel.groupId.id, inviteCode = code)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
         account.follow(channel)
     }
@@ -301,7 +301,7 @@ class AccountRelayGroupActions(
 
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */
     suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
-        val template = LeaveRequestEvent.build(channel.groupId.id)
+        val template = GroupLeaveRequestEvent.build(channel.groupId.id)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
         account.unfollow(channel)
     }
@@ -358,7 +358,7 @@ class AccountRelayGroupActions(
         ) { listOf(relay) }
 
         val edit =
-            EditMetadataEvent.build(
+            GroupEditMetadataEvent.build(
                 groupId,
                 name = name,
                 about = about,
@@ -413,7 +413,7 @@ class AccountRelayGroupActions(
         channel: RelayGroupChannel,
         code: String,
     ) {
-        val template = CreateInviteEvent.build(channel.groupId.id, code)
+        val template = GroupCreateInviteEvent.build(channel.groupId.id, code)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -426,7 +426,7 @@ class AccountRelayGroupActions(
         channel: RelayGroupChannel,
         pins: List<GroupPin>,
     ) {
-        val template = UpdatePinListEvent.build(channel.groupId.id, pins)
+        val template = GroupUpdatePinListEvent.build(channel.groupId.id, pins)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -488,7 +488,7 @@ class AccountRelayGroupActions(
         channel: RelayGroupChannel,
         pubkey: HexKey,
     ) {
-        val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
+        val template = GroupRemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -513,7 +513,7 @@ class AccountRelayGroupActions(
             } else {
                 null
             }
-        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles), buzzRole = buzzRole)
+        val template = GroupPutUserEvent.build(channel.groupId.id, listOf(pubkey to roles), buzzRole = buzzRole)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -574,7 +574,7 @@ class AccountRelayGroupActions(
         // edit when we send that tag. A plain NIP-29 relay ignores it and honours the status flag.
         val isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
         val template =
-            EditMetadataEvent.build(
+            GroupEditMetadataEvent.build(
                 channel.groupId.id,
                 name = name,
                 about = about,
@@ -602,7 +602,7 @@ class AccountRelayGroupActions(
         channel: RelayGroupChannel,
         archived: Boolean,
     ) {
-        val template = EditMetadataEvent.build(channel.groupId.id, archived = archived)
+        val template = GroupEditMetadataEvent.build(channel.groupId.id, archived = archived)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 }

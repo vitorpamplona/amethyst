@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
@@ -126,9 +126,9 @@ class RelayGroupChannel(
      * the role names a moderation UI should offer when assigning a role, since the exact
      * set is relay-defined (NIP-29 §Group management).
      */
-    var supportedRoles: List<RoleTag> = emptyList()
+    var groupRoles: List<RoleTag> = emptyList()
         private set
-    private var supportedRolesUpdatedAt: Long = 0
+    private var groupRolesUpdatedAt: Long = 0
 
     /**
      * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
@@ -181,7 +181,7 @@ class RelayGroupChannel(
         event != null ||
             members.isNotEmpty() ||
             admins.isNotEmpty() ||
-            supportedRoles.isNotEmpty() ||
+            groupRoles.isNotEmpty() ||
             pins.isNotEmpty()
 
     /** A relay group lives on exactly one relay: its host. */
@@ -260,11 +260,11 @@ class RelayGroupChannel(
         updateChannelInfo()
     }
 
-    fun updateSupportedRoles(event: SupportedRolesEvent) {
+    fun updateGroupRoles(event: GroupRolesEvent) {
         // Only newer definitions supersede; equal-or-older is dropped (no redundant emit).
-        if (event.createdAt <= supportedRolesUpdatedAt) return
-        supportedRoles = event.roles()
-        supportedRolesUpdatedAt = event.createdAt
+        if (event.createdAt <= groupRolesUpdatedAt) return
+        groupRoles = event.roles()
+        groupRolesUpdatedAt = event.createdAt
         updateChannelInfo()
     }
 

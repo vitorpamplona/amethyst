@@ -29,7 +29,7 @@ abstract class NostrSigner(val pubKey: HexKey) {
     abstract fun nip04Decrypt(ciphertext: String, fromPubKey: HexKey, onReady: (String) -> Unit)
     abstract fun nip44Encrypt(...)
     abstract fun nip44Decrypt(...)
-    abstract fun decryptZapEvent(event: LnZapRequestEvent, onReady: (LnZapRequestEvent) -> Unit)
+    abstract fun decryptZapEvent(event: ZapRequestEvent, onReady: (ZapRequestEvent) -> Unit)
 }
 ```
 

@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 fun filterShortsByAuthors(
     relay: NormalizedRelayUrl,
@@ -44,7 +44,7 @@ fun filterShortsByAuthors(
                 ExplainedFilter(
                     purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
-                    kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
+                    kinds = listOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND),
                     limit = 200,
                     since = since,
                 ),

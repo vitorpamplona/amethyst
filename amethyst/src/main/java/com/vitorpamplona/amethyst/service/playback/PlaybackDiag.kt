@@ -22,9 +22,13 @@ package com.vitorpamplona.amethyst.service.playback
 
 /**
  * Shared logcat tag for the playback diagnostic trace (source routing, player lifecycle, error
- * recovery, HLS liveness learning). Emitted with `Log.d`, so it appears only in a debug build
- * (`Log.minLevel = DEBUG`) and is silent in benchmark/release (`ERROR`). To capture a playback
- * investigation, install a debug build and run:
+ * recovery, HLS liveness learning).
+ *
+ * Emitted with `Log.d`, which fires only while `Log.minLevel <= DEBUG`. No shipped variant is
+ * there by default: [com.vitorpamplona.amethyst.Amethyst.DEFAULT_LOG_LEVEL] gives debug AND
+ * benchmark builds `INFO` (the `benchmark` build type counts as `isDebug`) and release `WARN`, so
+ * this trace is silent everywhere until `Amethyst.VERBOSE_LOGS` is flipped to true. To capture a
+ * playback investigation, set that flag, install a debug build and run:
  *
  * ```
  * adb logcat -s PlaybackDiag

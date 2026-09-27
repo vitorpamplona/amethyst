@@ -29,9 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore.StoreChange
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -186,13 +186,13 @@ class EventStoreProjectionTest {
     fun addressableUpdateMutatesSlotInPlace() =
         runBlocking {
             val time = TimeUtils.now()
-            val v1 = signer.sign(LongTextNoteEvent.build("blog v1", "title", dTag = "blog", createdAt = time))
+            val v1 = signer.sign(LongFormContentEvent.build("blog v1", "title", dTag = "blog", createdAt = time))
             observable.insert(v1)
 
             val projection =
-                projectionOf<LongTextNoteEvent>(
+                projectionOf<LongFormContentEvent>(
                     Filter(
-                        kinds = listOf(LongTextNoteEvent.KIND),
+                        kinds = listOf(LongFormContentEvent.KIND),
                         authors = listOf(v1.pubKey),
                         tags = mapOf("d" to listOf("blog")),
                     ),
@@ -201,7 +201,7 @@ class EventStoreProjectionTest {
             val seedList = projection.items
             val slot = seedList[0]
 
-            val v2 = signer.sign(LongTextNoteEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1))
+            val v2 = signer.sign(LongFormContentEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1))
             observable.insert(v2)
 
             awaitFlow(slot) { it.id == v2.id }
@@ -220,7 +220,7 @@ class EventStoreProjectionTest {
             // v1 carries tag "nostr"; v2 changes the tag to "bitcoin".
             val v1 =
                 signer.sign(
-                    LongTextNoteEvent.build("blog v1", "title", dTag = "blog", createdAt = time) {
+                    LongFormContentEvent.build("blog v1", "title", dTag = "blog", createdAt = time) {
                         hashtag("nostr")
                     },
                 )
@@ -228,9 +228,9 @@ class EventStoreProjectionTest {
 
             // Filter narrows to events that ALSO carry hashtag "nostr".
             val projection =
-                projectionOf<LongTextNoteEvent>(
+                projectionOf<LongFormContentEvent>(
                     Filter(
-                        kinds = listOf(LongTextNoteEvent.KIND),
+                        kinds = listOf(LongFormContentEvent.KIND),
                         authors = listOf(v1.pubKey),
                         tags = mapOf("t" to listOf("nostr")),
                     ),
@@ -240,7 +240,7 @@ class EventStoreProjectionTest {
 
             val v2 =
                 signer.sign(
-                    LongTextNoteEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1) {
+                    LongFormContentEvent.build("blog v2", "title", dTag = "blog", createdAt = time + 1) {
                         hashtag("bitcoin")
                     },
                 )
@@ -300,7 +300,7 @@ class EventStoreProjectionTest {
             projection.awaitLoaded()
             assertEquals(2, projection.items.size)
 
-            val deletion = signer.sign(DeletionEvent.build(listOf(a)))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(a)))
             observable.insert(deletion)
 
             val after = projection.awaitItems { it.size == 1 }
@@ -322,7 +322,7 @@ class EventStoreProjectionTest {
             val seed = projection.items
             assertEquals(1, seed.size)
 
-            val foreignDeletion = otherSigner.sign(DeletionEvent.build(listOf(a)))
+            val foreignDeletion = otherSigner.sign(DeletionRequestEvent.build(listOf(a)))
             observable.insert(foreignDeletion)
 
             // Give the projection time to process the event.

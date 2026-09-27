@@ -26,9 +26,16 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.log10
 
-/** One frame of frequency-domain magnitudes, ordered low→high Hz and normalized 0f..1f. */
+/**
+ * One frame of frequency-domain magnitudes, ordered low→high Hz and normalized 0f..1f.
+ *
+ * [durationNanos] is how much audio the frame describes (fft size / sample rate), which is how long
+ * it should stay on screen. Zero — the default — means the producer is not pacing to audio (the
+ * synthetic preview emits one per display frame), so the frame is shown as soon as it arrives.
+ */
 class Spectrum(
     val bins: FloatArray,
+    val durationNanos: Long = 0L,
 )
 
 /**

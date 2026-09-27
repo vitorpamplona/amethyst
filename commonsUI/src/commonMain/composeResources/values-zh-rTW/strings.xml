@@ -223,7 +223,7 @@
     <string name="copy_user_id">複製用户ID</string>
     <string name="unblock_user">隱藏該用户</string>
     <string name="user_is_blocked_hidden">此使用者已被封鎖／靜音。其貼文已隱藏。</string>
-    <string name="npub_hex_username">npub，hex，用户名 </string>
+    <string name="npub_hex_username">npub，hex，用户名</string>
     <string name="clear">清除</string>
     <string name="app_logo">應用標誌</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私鑰</string>
@@ -271,15 +271,8 @@
     <string name="mark_all_known_as_read">將所有已知內容標記為已讀</string>
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
-    <string name="account_backup_tips2_md">## 備份與安全提示
-        \n\n你的帳戶由一個私鑰保護。私鑰是以 **nsec1** 開頭的隨機字符串。任何擁有你的私鑰的人都可以使用你的身份發佈內容。
-        \n\n- **不要**將你的私鑰添加到任何你不信任的網站或軟件，亦不要在網上公開。
-        \n- Amethyst 開發人員**永遠不會**要求你提供私鑰。
-        \n- **請**保留你的私鑰的安全備份，以備帳戶恢復。我們建議使用密碼管理器。
-    </string>
-    <string name="account_backup_tips3_md">        爲了額外的安全性，你可以用密碼加密你的密鑰。此密鑰以 **ncryptsec1** 開頭，沒有密碼就不能使用。
-        \n\n如果你丟失密碼，你將無法恢復你的密鑰。
-    </string>
+    <string name="account_backup_tips2_md">## 備份與安全提示 \n\n你的帳戶由一個私鑰保護。私鑰是以 **nsec1** 開頭的隨機字符串。任何擁有你的私鑰的人都可以使用你的身份發佈內容。 \n\n- **不要**將你的私鑰添加到任何你不信任的網站或軟件，亦不要在網上公開。 \n- Amethyst 開發人員**永遠不會**要求你提供私鑰。 \n- **請**保留你的私鑰的安全備份，以備帳戶恢復。我們建議使用密碼管理器。</string>
+    <string name="account_backup_tips3_md">爲了額外的安全性，你可以用密碼加密你的密鑰。此密鑰以 **ncryptsec1** 開頭，沒有密碼就不能使用。 \n\n如果你丟失密碼，你將無法恢復你的密鑰。</string>
     <string name="encrypt_and_copy_my_secret_key">加密並複製我的密鑰</string>
     <string name="badge_award_image_for">頒發給 %1$s 的徽章圖片</string>
     <string name="badge_award_image">"徽章獎勵圖片</string>
@@ -968,9 +961,7 @@
     <string name="push_server_none_explainer">關閉推送通知</string>
     <string name="push_server_uses_app_explainer">使用應用 %1$s</string>
     <string name="push_server_install_app">推送通知設置</string>
-    <string name="push_server_install_app_description">        若要接收推送通知，請安裝任何支持 [Unified Push](https://unifiedpush.org/)的應用，例如 [Ntfy](https://ntfy.sh/)。
-        安裝後，請在設備中選擇你想要使用的應用程式。
-    </string>
+    <string name="push_server_install_app_description">若要接收推送通知，請安裝任何支持 [Unified Push](https://unifiedpush.org/)的應用，例如 [Ntfy](https://ntfy.sh/)。 安裝後，請在設備中選擇你想要使用的應用程式。</string>
     <string name="thread_title">主題帖</string>
     <string name="send_the_seller_a_message">向賣方發送消息</string>
     <string name="hi_there_is_this_still_available">你好，這個還能買到嗎？</string>
@@ -2022,7 +2013,7 @@
     <string name="could_not_fetch_invoice_from_details">無法從 %1$s 取得發票：%2$s</string>
     <string name="could_not_open_the_compressed_file">無法打開壓縮文件</string>
     <string name="couldnt_find_nwc_wallets">找不到錢包</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst 找不到任何支援 Nostr Wallet Connect (NWC) 的錢包應用程式。\n\n您可以這樣做：\n\t1. 確認 NWC 支援：請再次確認您偏好的錢包應用程式是否與 Nostr Wallet Connect 相容。\n\t2. 建立連線：前往您的錢包應用程式並建立新的 NWC 連線。\n\t3. 連結至 Amethyst：您的錢包通常會提供三種選項：\n\t\t3.1 自動連結：點擊按鈕自動開啟並連接到 Amethyst。若有此選項，請點擊該按鈕，開啟 Amethyst 並在新畫面上點擊儲存。\n\t\t3.2 手動連結：複製連線 URI，然後點擊此畫面上的貼上圖示直接輸入。\n\t\t3.3 QR 碼：錢包會產生 QR 碼，您可透過此畫面上的 QR 碼按鈕掃描。\n    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst 找不到任何支援 Nostr Wallet Connect (NWC) 的錢包應用程式。\n\n您可以這樣做：\n\t1. 確認 NWC 支援：請再次確認您偏好的錢包應用程式是否與 Nostr Wallet Connect 相容。\n\t2. 建立連線：前往您的錢包應用程式並建立新的 NWC 連線。\n\t3. 連結至 Amethyst：您的錢包通常會提供三種選項：\n\t\t3.1 自動連結：點擊按鈕自動開啟並連接到 Amethyst。若有此選項，請點擊該按鈕，開啟 Amethyst 並在新畫面上點擊儲存。\n\t\t3.2 手動連結：複製連線 URI，然後點擊此畫面上的貼上圖示直接輸入。\n\t\t3.3 QR 碼：錢包會產生 QR 碼，您可透過此畫面上的 QR 碼按鈕掃描。\n</string>
     <string name="create">創建</string>
     <string name="d">天</string>
     <string name="danger_zone">危險區域</string>
@@ -2664,11 +2655,8 @@
     <string name="proxy_section">代理 Relay</string>
     <string name="proxy_section_explainer">應用程式必須用來下載您的動態的聚合器 relay，例如 filter.nostr.wine。這將取代發件匣模式，使應用程式僅連線至您清單中的 relay。</string>
     <string name="public_chat">公共聊天</string>
-    <string name="public_chat_explainer">公開聊天室對所有 Nostr 使用者可見，
-        任何人皆可參與。非常適合圍繞特定主題的開放社群。
-        可透過在其 relay 上刪除貼文來進行內容管理</string>
-    <string name="public_chat_relays_explainer">請輸入 1–3 個託管此群組的 relay。
-        Nostr 客戶端使用此設定來確認下載訊息及傳送訊息的位置。</string>
+    <string name="public_chat_explainer">公開聊天室對所有 Nostr 使用者可見， 任何人皆可參與。非常適合圍繞特定主題的開放社群。 可透過在其 relay 上刪除貼文來進行內容管理</string>
+    <string name="public_chat_relays_explainer">請輸入 1–3 個託管此群組的 relay。 Nostr 客戶端使用此設定來確認下載訊息及傳送訊息的位置。</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">公開聊天室元資料</string>
     <string name="public_chats">公開聊天室</string>
@@ -2693,10 +2681,7 @@
     <string name="read_only_user">只讀用戶</string>
     <string name="record_a_message_description">按住以錄製訊息</string>
     <string name="relay_chat">Relay 聊天</string>
-    <string name="relay_chat_explainer">Relay 聊天室是由其所屬 relay 管控的聊天群組。
-        所有 Nostr 使用者均可看見，任何人皆可參與。
-        非常適合圍繞特定主題的開放社群。部分群組為臨時性質，
-    因此聊天訊息會隨時間消失</string>
+    <string name="relay_chat_explainer">Relay 聊天室是由其所屬 relay 管控的聊天群組。 所有 Nostr 使用者均可看見，任何人皆可參與。 非常適合圍繞特定主題的開放社群。部分群組為臨時性質， 因此聊天訊息會隨時間消失</string>
     <string name="relay_chat_title">Relay 聊天室</string>
     <string name="relay_management_tab_events">事件</string>
     <string name="relay_management_tab_ips">IP</string>
@@ -2941,4 +2926,5 @@
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
 </resources>

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.limitToRouteTextArg
 import com.vitorpamplona.amethyst.commons.model.navigation.minichatRouteFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -44,7 +45,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -57,12 +58,12 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -247,7 +248,7 @@ fun routeForInner(
             }
         }
 
-        is FollowListEvent -> {
+        is StarterPackEvent -> {
             Route.FollowPack(noteEvent.address())
         }
 
@@ -294,7 +295,7 @@ fun routeForInner(
             Route.GeocacheHunt(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
-        is GiftWrapEvent, is SealedRumorEvent -> {
+        is GiftWrapEvent, is SealEvent -> {
             val wrap = noteEvent as HasInnerEvent
             wrap.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)
@@ -456,7 +457,7 @@ fun routeReplyTo(
         }
 
         is ChatroomKeyable -> {
-            // Covers PrivateDmEvent (NIP-04) and BaseDMGroupEvent (NIP-17) — both
+            // Covers EncryptedDmEvent (NIP-04) and BaseDMGroupEvent (NIP-17) — both
             // implement ChatroomKeyable with identical routing semantics here.
             routeToMessage(
                 room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
@@ -477,7 +478,7 @@ fun routeReplyTo(
             }
         }
 
-        is LnZapEvent -> {
+        is ZapReceiptEvent -> {
             // A public reply can't tag a private zapper without exposing them.
             // When we hold the decrypted sender (we are the zap recipient), reply
             // in their DM room instead of the public comment composer.
@@ -532,7 +533,7 @@ suspend fun routeEditDraftTo(
             Route.NewShortNote(draft = note.idHex)
         }
 
-        is LongTextNoteEvent -> {
+        is LongFormContentEvent -> {
             Route.NewLongFormPost(draft = note.idHex)
         }
 

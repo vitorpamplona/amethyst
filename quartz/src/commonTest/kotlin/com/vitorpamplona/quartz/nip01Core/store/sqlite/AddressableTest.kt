@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,9 +36,9 @@ class AddressableTest : BaseDBTest() {
     fun testReplacingAddressables() =
         forEachDB { db ->
             val time = TimeUtils.now()
-            val version1 = signer.sign(LongTextNoteEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
-            val version2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
-            val version3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
+            val version1 = signer.sign(LongFormContentEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
+            val version2 = signer.sign(LongFormContentEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
+            val version3 = signer.sign(LongFormContentEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
 
             val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
 
@@ -65,9 +65,9 @@ class AddressableTest : BaseDBTest() {
     fun testBlockingOldAddressables() =
         forEachDB { db ->
             val time = TimeUtils.now()
-            val version1 = signer.sign(LongTextNoteEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
-            val version2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
-            val version3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
+            val version1 = signer.sign(LongFormContentEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
+            val version2 = signer.sign(LongFormContentEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
+            val version3 = signer.sign(LongFormContentEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
 
             val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
 
@@ -97,7 +97,7 @@ class AddressableTest : BaseDBTest() {
             // different content -> different ids. NIP-01 says the lower-id wins.
             val a =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version A",
                         "title",
                         dTag = "tie",
@@ -106,7 +106,7 @@ class AddressableTest : BaseDBTest() {
                 )
             val b =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version B",
                         "title",
                         dTag = "tie",
@@ -129,7 +129,7 @@ class AddressableTest : BaseDBTest() {
             val time = TimeUtils.now()
             val a =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version A",
                         "title",
                         dTag = "tie",
@@ -138,7 +138,7 @@ class AddressableTest : BaseDBTest() {
                 )
             val b =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "version B",
                         "title",
                         dTag = "tie",

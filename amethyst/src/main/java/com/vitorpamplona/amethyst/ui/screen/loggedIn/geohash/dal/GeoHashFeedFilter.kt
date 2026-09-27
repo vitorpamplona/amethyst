@@ -34,12 +34,12 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
@@ -79,10 +79,10 @@ class GeoHashFeedFilter(
     ): Boolean =
         (
             event is TextNoteEvent ||
-                event is LongTextNoteEvent ||
-                event is WikiNoteEvent ||
+                event is LongFormContentEvent ||
+                event is WikiArticleEvent ||
                 event is ChannelMessageEvent ||
-                event is PrivateDmEvent ||
+                event is EncryptedDmEvent ||
                 event is ZapPollEvent ||
                 event is AudioHeaderEvent ||
                 event is MusicTrackEvent ||

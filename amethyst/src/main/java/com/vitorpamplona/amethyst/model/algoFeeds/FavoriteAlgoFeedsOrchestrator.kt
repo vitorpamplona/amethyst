@@ -25,8 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +60,7 @@ data class FavoriteAlgoFeedsSnapshot(
     val responseRelays: Set<NormalizedRelayUrl> = emptySet(),
     val ids: Set<HexKey> = emptySet(),
     val addresses: Set<String> = emptySet(),
-    val latestStatus: NIP90StatusEvent? = null,
+    val latestStatus: DvmStatusEvent? = null,
     val errorMessage: String? = null,
 )
 
@@ -139,9 +139,9 @@ class FavoriteAlgoFeedsOrchestrator(
 
                     launch {
                         account.cache
-                            .observeLatestEvent<NIP90ContentDiscoveryResponseEvent>(
+                            .observeLatestEvent<DvmContentDiscoveryResponseEvent>(
                                 Filter(
-                                    kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND),
+                                    kinds = listOf(DvmContentDiscoveryResponseEvent.KIND),
                                     tags = mapOf("e" to listOf(requestId)),
                                     limit = 1,
                                 ),
@@ -159,9 +159,9 @@ class FavoriteAlgoFeedsOrchestrator(
 
                     launch {
                         account.cache
-                            .observeLatestEvent<NIP90StatusEvent>(
+                            .observeLatestEvent<DvmStatusEvent>(
                                 Filter(
-                                    kinds = listOf(NIP90StatusEvent.KIND),
+                                    kinds = listOf(DvmStatusEvent.KIND),
                                     tags = mapOf("e" to listOf(requestId)),
                                     limit = 1,
                                 ),

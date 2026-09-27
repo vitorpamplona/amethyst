@@ -36,8 +36,13 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.DraftTagState
+import com.vitorpamplona.amethyst.commons.model.composer.IExpiration
 import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
+import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
+import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -46,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
+import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
+import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
@@ -60,18 +67,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
@@ -109,7 +109,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -352,7 +352,7 @@ open class CommentPostViewModel :
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
         mutedNotifies = emptySet()
         notifyProvenance = emptyMap()
-        (post.event as? LnZapEvent)?.let { zap ->
+        (post.event as? ZapReceiptEvent)?.let { zap ->
             notifying = listOfNotNull(zapSenderToNotify(zap))
         }
         observeCommunityRules(post)
@@ -366,7 +366,7 @@ open class CommentPostViewModel :
      * by an ephemeral key: skip those — tagging the throwaway key is useless, and
      * tagging the decrypted sender would publicly expose a private zapper.
      */
-    private fun zapSenderToNotify(zapEvent: LnZapEvent): User? {
+    private fun zapSenderToNotify(zapEvent: ZapReceiptEvent): User? {
         val request = zapEvent.zapRequest ?: return null
         if (request.hasAnonTag()) return null
         if (request.pubKey == account.signer.pubKey) return null
@@ -554,7 +554,7 @@ open class CommentPostViewModel :
         // Replies to zaps notify the zap sender through a plain p tag (the receipt's
         // author keys above are the lightning provider). The sender chip always comes
         // back; a missing p tag in the draft means the user muted their bell.
-        (replyingTo?.event as? LnZapEvent)?.let { zap ->
+        (replyingTo?.event as? ZapReceiptEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
                 notifying = ((notifying ?: emptyList()) + sender).distinct()
                 if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
@@ -726,7 +726,7 @@ open class CommentPostViewModel :
                                     null
                                 }
                             }
-                        } else if (replyingToEvent is LnZapEvent) {
+                        } else if (replyingToEvent is ZapReceiptEvent) {
                             val sender = zapSenderToNotify(replyingToEvent)
                             // The sender's chip stays in the list; a muted bell means
                             // the user doesn't want to ping them, so don't tag them.

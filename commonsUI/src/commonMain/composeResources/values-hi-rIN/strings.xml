@@ -206,7 +206,10 @@
     <string name="geocache_hunt_new">नई खोज…</string>
     <string name="geocache_hunt_none_yet">आपने कोई खोज नहीं की अब तक।</string>
     <string name="geocache_hunt_already_on">पहले से इस खोज में लगे</string>
-    <string name="geocache_caches_here">%1$d कोष यहाँ</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d कोष यहाँ</item>
+        <item quantity="other">%1$d कोष यहाँ</item>
+    </plurals>
     <string name="geocache_photo_remove">इस चित्र को हटाएँ</string>
     <string name="geocache_archived_notice">इस कोष को संगृहीत कर दिया गया। यह अब खेल में नहीं है।</string>
     <string name="geocache_ftf_won_by">सर्वप्रथम खोज का कथन %1$s द्वारा</string>
@@ -265,7 +268,6 @@
     <string name="geocache_map_recenter">मुझ पर मध्यीकरण</string>
     <string name="geocache_map_long_press">मानचित्र पर दीर्घ दबाएँ वहाँ एक कोष छिपाने के लिए</string>
     <string name="geocache_map_open">खोलें</string>
-    <string name="geocache_map_pin_count">%1$d कोष</string>
     <string name="geocache_new_section_where">कहाँ</string>
     <string name="geocache_new_section_what">क्या</string>
     <string name="geocache_new_section_extras">अतिरिक्त</string>
@@ -293,7 +295,10 @@
     <string name="geocache_new_needs_location">कोष कहाँ छिपाया जाए चयन करें।</string>
     <string name="geocache_hunt_progress">%2$d में से %1$d प्राप्त</string>
     <string name="geocache_hunt_start">खोज आरम्भ करें</string>
-    <string name="geocache_hunt_caches">%1$d कोष</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d कोष</item>
+        <item quantity="other">%1$d कोष</item>
+    </plurals>
     <string name="geocache_hunt_title">शीर्षक</string>
     <string name="geocache_hunt_description">विवरण</string>
     <string name="geocache_hunt_banner">ध्वज चित्र</string>
@@ -342,7 +347,10 @@
     <string name="qr_scanner_no_code_in_image">उस चित्र में से कोई क्यूआर॰ चित्र अक्षरराशि प्राप्त नहीं</string>
     <string name="qr_scanner_clipboard_empty">टाँकाफलक में कुछ भी नहीं परखने के लिए</string>
     <string name="qr_scanner_pick_one">अक्षरराशि का चयन करें</string>
-    <string name="qr_scanner_sequence_progress">%2$s में से %1$s भाग प्राप्त। आगे बढें</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
+        <item quantity="other">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">विस्तारण पुनःस्थापना</string>
     <string name="qr_scanner_unsupported_title">अमेथिस्ट इस अक्षरराशि को नहीं खोल सकता</string>
     <string name="qr_scanner_unsupported_secret">इस अक्षरराशि में एक निजी कुंचिका अथवा जोडनेवाला रहस्य है। इसलिए इसकी विषयवस्तु यहाँ दिखाया नहीं जाता। अनुकूल पटल का उपयोग करें।</string>
@@ -646,15 +654,8 @@
     <string name="mark_all_known_as_read">सब ज्ञात को पढ लिया चिह्नित करें</string>
     <string name="mark_all_new_as_read">सब नये को पढ लिया चिह्नित करें</string>
     <string name="mark_all_as_read">सब को पढ लिया चिह्नित करें</string>
-    <string name="account_backup_tips2_md">## कुंचिका सुरक्षार्थ अनुकृति तथा सुरक्षा सुझाव
-        \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशित कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
-        \n\n- आपकी गुप्त कुंचिका किसी भी जालस्थान अथवा क्रमक में **ना** डालें जिसपर आपका विश्वास ना हो।
-        \n- अमेथिस्ट क्रमलेख विकासकर्ता आपकी गुप्त कुंचिका **कभी नहीं** पूछेंगे।
-        \n- आपकी गुप्त कुंचिका की एक सुरक्षित अनुकृति **अवश्य** रखें अपनी लेखा पुनः प्राप्त करने के लिए। पारणशब्ध प्रबंधन क्रमक की पुनः प्रशंसा करते हैं।
-    </string>
-    <string name="account_backup_tips3_md">        अधिक सुरक्षा के लिए आप अपनी कुंचिका का रहस्यीकरण कर सकते हैं एक पारणशब्द के साथ। यह कुंचिका आरम्भ होगी **ncryptsec1** से तथा पारणशब्द के बिना प्रयोग साध्य नहीं।
-        \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।
-    </string>
+    <string name="account_backup_tips2_md">## कुंचिका सुरक्षार्थ अनुकृति तथा सुरक्षा सुझाव \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशित कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा। \n\n- आपकी गुप्त कुंचिका किसी भी जालस्थान अथवा क्रमक में **ना** डालें जिसपर आपका विश्वास ना हो। \n- अमेथिस्ट क्रमलेख विकासकर्ता आपकी गुप्त कुंचिका **कभी नहीं** पूछेंगे। \n- आपकी गुप्त कुंचिका की एक सुरक्षित अनुकृति **अवश्य** रखें अपनी लेखा पुनः प्राप्त करने के लिए। पारणशब्ध प्रबंधन क्रमक की पुनः प्रशंसा करते हैं।</string>
+    <string name="account_backup_tips3_md">अधिक सुरक्षा के लिए आप अपनी कुंचिका का रहस्यीकरण कर सकते हैं एक पारणशब्द के साथ। यह कुंचिका आरम्भ होगी **ncryptsec1** से तथा पारणशब्द के बिना प्रयोग साध्य नहीं। \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।</string>
     <string name="backup_keys_nudge_title">अपने कुंचिकाओं को सुरक्षित रखें</string>
     <string name="backup_keys_nudge_body">आपकी गुप्त कुंचिका एकमात्र विधि है इस लेखा का अभिगमन करने के लिए। यदि आप इसे खो देते हैं तो इसे कभी भी पुनःप्राप्त नहीं कर सकते। इसे कहीं सुरक्षित रखें अभी इस समय।</string>
     <string name="backup_keys_nudge_backup_now">अभी इसी समय सुरक्षित अनुकृति बनाएँ</string>
@@ -1834,9 +1835,7 @@
     <string name="push_server_none_explainer">प्रेषित सूचनाएँ अक्षम करता है</string>
     <string name="push_server_uses_app_explainer">%1$s क्रमक का प्रयोग करता है</string>
     <string name="push_server_install_app">प्रेषित सूचना स्थापन</string>
-    <string name="push_server_install_app_description">        प्रेषित सूचनाएँ प्राप्त करने के लिए, किसी भी क्रमक की स्थापना करें जो [संयुक्त प्रेषण](https://unifiedpush.org/) का अवलम्बन करता है, जैसे [एनटीफै](https://ntfy.sh/)।
-        स्थापना पश्चात, जिस क्रमक का उपयोग करना चाहते हैं उसका चयन करें स्थापना विकल्पों में।
-    </string>
+    <string name="push_server_install_app_description">प्रेषित सूचनाएँ प्राप्त करने के लिए, किसी भी क्रमक की स्थापना करें जो [संयुक्त प्रेषण](https://unifiedpush.org/) का अवलम्बन करता है, जैसे [एनटीफै](https://ntfy.sh/)। स्थापना पश्चात, जिस क्रमक का उपयोग करना चाहते हैं उसका चयन करें स्थापना विकल्पों में।</string>
     <string name="thread_title">सूत्र</string>
     <string name="send_the_seller_a_message">विक्रेता को संदेश भेजें</string>
     <string name="hi_there_is_this_still_available">नमस्ते, क्या यह अब भी उपलब्ध है?</string>
@@ -1863,7 +1862,7 @@
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
-    <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप परितथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
+    <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप उपतथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
     <string name="metadata_strip_failed_upload">तो भी आरोहण करें</string>
     <string name="edit_draft">पाण्डुलिपि सम्पादन</string>
     <string name="login_with_qr_code">क्यूआर॰ चित्र अक्षरराशि के साथ प्रवेशांकन करें</string>
@@ -2890,6 +2889,7 @@
     <string name="community_rules_violation_wot_gate_failed">आप इस समुदाय के विश्वासजाल आवश्यकताओं को पार नहीं कर सके।</string>
     <string name="community_rules_violation_stale_rules">समुदाय का नवीनतम नियम अभिलेख पुराना होने के कारण अस्वीकृत।</string>
     <string name="marmot_groups_title">मार्मोट॰ समूह</string>
+    <string name="cordn_groups_title">कोर्डन समूह</string>
     <string name="marmot_create_group">समूह बनाएँ</string>
     <string name="marmot_create_group_title">मार्मोट॰ समूह बनाएँ</string>
     <string name="marmot_create_group_footer">एक नया एमएलएस॰ समूह बनेगा। आप सदस्य जोड सकते हैं तत्पश्चात।</string>
@@ -3249,7 +3249,7 @@
     <string name="automatically_show_url_preview_description">जालपता के पूर्वीक्षण दिखाएँ</string>
     <string name="autoplay_videos">स्वतःचालन चलचित्र</string>
     <string name="autoplay_videos_description">स्वतः चालू करें चलचित्रों को जब पटल पर दिखाई दें</string>
-    <string name="avif_metadata_strip_failed">एविफ॰ से परितथ्य नहीं मिटा सके : %1$s</string>
+    <string name="avif_metadata_strip_failed">एविफ॰ से उपतथ्य नहीं मिटा सके। %1$s</string>
     <string name="award_badge">पदक पुरस्कार</string>
     <string name="back">पीछे चलें</string>
     <string name="backup_keys">कुंचिकाएँ सुरक्षित रखें</string>
@@ -3585,17 +3585,9 @@
     <string name="could_not_fetch_invoice_from_details">चालान नहीं लाया जा सका %1$s से : %2$s</string>
     <string name="could_not_open_the_compressed_file">संकुचित अभिलेख को खोल नहीं पाए</string>
     <string name="couldnt_find_nwc_wallets">धनकोष अप्राप्त</string>
-    <string name="couldnt_find_nwc_wallets_description">अमेथिस्ट को कोई धनकोष क्रमक प्राप्य नहीं जो नोस्टर धनकोष संयोजन का अवलम्बन करता हो।
-\n\nआप यह कर सकते हैं :
-\n\t१॰ नोस्टर धनकोष संयोजन अवलम्बन का सत्यापन करें। दुबारा जाँचें की आपका मनचाहा धनकोष क्रमक नोस्टर धनकोष संयोजन के साथ संगत है।
-\n\t२॰ संयोजन बनाएँ। आपके धनकोष क्रमक में जाकर एक नया नोस्टर धनकोष संयोजन बनाएँ।
-\n\t३॰ अमेथिस्ट के साथ जोडें। आपका धनकोष क्रमक सामान्यतः तीन विकल्प देगा।
-\n\t\t३॰१ स्वचालित जोड। एक घुण्डी जिससे स्वचालित रूप से खोलें तथा अमेथिस्ट से जोडें। यदि हो तो उस घुण्डी को टाँकें तथा अमेथिस्ट खोलें तथा नव्य पटल पर अभिलेखन करें।
-\n\t\t३॰२ मनुष्यकृत जोड। एक संयोजन वैश्विकसंसाधनपरिचायक जिसकी अनुकृति करके सीधे इस पटल पर प्रविष्ट कर सकते हैं।
-\n\t\t३॰३ क्यूआर॰ चित्र अक्षरराशि। धनकोष क्रमक एक क्यूआर॰ चित्र अक्षरराशि बनएगा जिसे आप परख सकते हैं इस पटल पर क्यूआर॰ क्रमचित्र घुण्डी द्वारा।
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">अमेथिस्ट को कोई धनकोष क्रमक प्राप्य नहीं जो नोस्टर धनकोष संयोजन का अवलम्बन करता हो। \n\nआप यह कर सकते हैं : \n\t१॰ नोस्टर धनकोष संयोजन अवलम्बन का सत्यापन करें। दुबारा जाँचें की आपका मनचाहा धनकोष क्रमक नोस्टर धनकोष संयोजन के साथ संगत है। \n\t२॰ संयोजन बनाएँ। आपके धनकोष क्रमक में जाकर एक नया नोस्टर धनकोष संयोजन बनाएँ। \n\t३॰ अमेथिस्ट के साथ जोडें। आपका धनकोष क्रमक सामान्यतः तीन विकल्प देगा। \n\t\t३॰१ स्वचालित जोड। एक घुण्डी जिससे स्वचालित रूप से खोलें तथा अमेथिस्ट से जोडें। यदि हो तो उस घुण्डी को टाँकें तथा अमेथिस्ट खोलें तथा नव्य पटल पर अभिलेखन करें। \n\t\t३॰२ मनुष्यकृत जोड। एक संयोजन वैश्विकसंसाधनपरिचायक जिसकी अनुकृति करके सीधे इस पटल पर प्रविष्ट कर सकते हैं। \n\t\t३॰३ क्यूआर॰ चित्र अक्षरराशि। धनकोष क्रमक एक क्यूआर॰ चित्र अक्षरराशि बनएगा जिसे आप परख सकते हैं इस पटल पर क्यूआर॰ क्रमचित्र घुण्डी द्वारा।</string>
     <string name="create">बनाएँ</string>
-    <string name="d"> दि॰</string>
+    <string name="d">दि॰</string>
     <string name="danger_zone">संकट क्षेत्र</string>
     <string name="dark">अन्धकारमय</string>
     <string name="description">विवरण</string>
@@ -3791,7 +3783,7 @@
     <string name="git_repositories_search_close">छलनी आवृत</string>
     <string name="git_repositories_search_open">क्रमलेखकोश छलनी</string>
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
-    <string name="h"> घं॰</string>
+    <string name="h">घं॰</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>
     <string name="hash_verification_info_title">इसका अर्थ क्या है?</string>
     <string name="hash_verification_passed">यह विषयवस्तु वैसे ही है जैसे पत्र प्रकाशन पर</string>
@@ -4080,7 +4072,7 @@
     <string name="login_with_a_private_key_to_be_able_to_upload">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। आरोहण करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_like_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को चाहने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="longs">चलचित्र</string>
-    <string name="m"> मि॰</string>
+    <string name="m">मि॰</string>
     <string name="manage_emoji_packs">मेरे भावचिह्न पोटलियाँ</string>
     <string name="marmot_add_photo">चित्र जोडें</string>
     <string name="marmot_adding_user">जोडा जा रहा है %1$s…</string>
@@ -4128,8 +4120,8 @@
     <string name="messages_cant_upload_title">आरोहण असफल</string>
     <string name="messages_new_message_subject">विषय</string>
     <string name="messages_settings">सन्देश</string>
-    <string name="metadata_strip_failed_title">परितथ्य हटाने में असफल</string>
-    <string name="metadata_strip_failed_upload_cancelled">श्रव्यदृश्याभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
+    <string name="metadata_strip_failed_title">उपतथ्य हटाने में असफल</string>
+    <string name="metadata_strip_failed_upload_cancelled">श्रव्यदृश्याभिलेख से निजी उपतथ्य हटाने में असफल। आरोहण निरस्त।</string>
     <string name="migrate_bookmarks_success">स्मर्त्तव्यचिह्न सफलतापूर्वक स्थानान्तरित किए गए</string>
     <string name="missing_lud16">लैटनिंग स्थापना अनुपलब्ध</string>
     <string name="more_options">अधिक विकल्प</string>
@@ -4711,11 +4703,8 @@
     <string name="proxy_section">प्रतिनिधि पुनःप्रसारक</string>
     <string name="proxy_section_explainer">संग्रहकर्ता पुनःप्रसारक जो क्रमक द्वारा उपयुक्त होना चाहिए आपके सूचनावलियों का अवरोहण करने के लिए। जैसे कि filter.nostr.wine । यह निर्गतपेटिका प्रतिरूप को प्रतिस्थापित करेगा तथा क्रमक आपके सूचियों में पुनःप्रसारकों के साथ ही जुडेगा।</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
-    <string name="public_chat_explainer">सार्वजनिक चर्चाएँ सबके लिए दृश्यमान हैं नोस्टर पर तथा सभी
-         इनमें भाग ले सकते हैं। ये उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों के प्रसंग में।
-        नियमन का नियन्त्रण किया जा सकता है पत्रों को मिटाने से पुनःप्रसारकों में</string>
-    <string name="public_chat_relays_explainer">इस समुदाय के निवास के लिए १ - ३ पुनःप्रसारकों को जोडें।
-        नोस्टर ग्राहक इस स्थापना विकल्प का प्रयोग करेंगे यह जानने के लिए कि कहाँ से सन्देशों का अवरोहण करना है तथा कहाँ आपके सन्देश भेजने हैं।</string>
+    <string name="public_chat_explainer">सार्वजनिक चर्चाएँ सबके लिए दृश्यमान हैं नोस्टर पर तथा सभी इनमें भाग ले सकते हैं। ये उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों के प्रसंग में। नियमन का नियन्त्रण किया जा सकता है पत्रों को मिटाने से पुनःप्रसारकों में</string>
+    <string name="public_chat_relays_explainer">इस समुदाय के निवास के लिए १ - ३ पुनःप्रसारकों को जोडें। नोस्टर ग्राहक इस स्थापना विकल्प का प्रयोग करेंगे यह जानने के लिए कि कहाँ से सन्देशों का अवरोहण करना है तथा कहाँ आपके सन्देश भेजने हैं।</string>
     <string name="public_chat_relays_title">पुनःप्रसारक</string>
     <string name="public_chat_title">सार्वजनिक चर्चा उपतथ्य</string>
     <string name="public_chats">सार्वजनिक चर्चा</string>
@@ -4780,10 +4769,7 @@
     <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण प्रवेशांकन पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
     <string name="relay_auth_settings_title">पुनःप्रसारक प्रमाणीकरण</string>
     <string name="relay_chat">पुनःप्रसारक चर्चा</string>
-    <string name="relay_chat_explainer">पुनःप्रसारक चर्चाएँ आवासी पुनःप्रसारक द्वारा नियन्त्रित चर्चा समुदाएँ हैं।
-        वे नोस्टर पर सभी के लिए दृश्य हैं तथा उनमें सभी भाग ले सकते हैं।
-        वे उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों पर। इनमें से कुछ समुदाएँ अस्थायी हैं।
-    तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
+    <string name="relay_chat_explainer">पुनःप्रसारक चर्चाएँ आवासी पुनःप्रसारक द्वारा नियन्त्रित चर्चा समुदाएँ हैं। वे नोस्टर पर सभी के लिए दृश्य हैं तथा उनमें सभी भाग ले सकते हैं। वे उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों पर। इनमें से कुछ समुदाएँ अस्थायी हैं। तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
     <string name="relay_chat_title">पुनःप्रसारक चर्चाएँ</string>
     <string name="relay_explain_account_data">आपके अपने परिचय तथा स्थापना विकल्प तथा पाण्डुलिपियाँ। आपके मुख्य पुनःप्रसारकों पर।</string>
     <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने समतलों को प्रकाशित करते हैं।</string>
@@ -5071,8 +5057,8 @@
     <string name="spamming_users">कचरालेख प्रेषक</string>
     <string name="split_notifications_setting_description">दो सूचना पृष्ठसूचक दिखाएँ। अनुचरित (लोग जिनका आप अनुचरण करते हैं) तथा सभी। अपठित संकेतक चमकता है केवल आपके द्वारा अनुचरित लोगों के गतिविधियों के लिए।</string>
     <string name="split_notifications_setting_title">सूचनाएँ विभाजित करें अनुचरित के अनुसार</string>
-    <string name="strip_metadata_description">निजी परितथ्य हटाने का प्रयास करता है आलम्बित श्रव्यदृश्याभिलेखों से आरोहण पूर्व</string>
-    <string name="strip_metadata_label">निजी परितथ्य हटाएँ</string>
+    <string name="strip_metadata_description">निजी उपतथ्य हटाने का प्रयास करता है आलम्बित श्रव्यदृश्याभिलेखों से आरोहण पूर्व</string>
+    <string name="strip_metadata_label">निजी उपतथ्य हटाएँ</string>
     <string name="suggest_workouts_setting_description">सम्पन्न व्यायाम पढता है स्वास्थ्य संयोजन से (सामसंग स्वास्थ्य तथा गूगिल फिट तथा फिटबिट तथा गार्मिन इत्यादि) तथा पत्र के रूप में बाँटने का सुझाव देता है। अनुमति अनुरोध केवल संयोजन करने पर।</string>
     <string name="suggest_workouts_setting_title">व्यायामों का सुझाव बाँटनें के लिए</string>
     <string name="system">यन्त्रव्यवस्था</string>
@@ -5247,14 +5233,77 @@
     <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
          The exposure strings state what the coordinator operator learns; see
          spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <string name="cordn_badge_coordinator">समायोजक समूह</string>
+    <string name="cordn_badge_coordinator_desc">समायोजक द्वारा भेजा गया। पुनःप्रसारकों द्वारा नहीं</string>
+    <string name="cordn_exposure_title">यह समायोजक क्या देख सकता है</string>
+    <string name="cordn_exposure_dimension_content">सन्देश विषयवस्तु</string>
+    <string name="cordn_exposure_dimension_membership">समूह में कौन हैं</string>
+    <string name="cordn_exposure_dimension_messaging">कौन क्या भेजता है</string>
+    <string name="cordn_exposure_level_none">पठन असाध्य</string>
+    <string name="cordn_exposure_level_pseudonymous">एक अस्थायी कुंचिका द्वारा</string>
+    <string name="cordn_exposure_level_identified">आपकी वास्तविक लेखा से सम्बद्ध</string>
+    <string name="cordn_exposure_details">विवरण</string>
+    <string name="cordn_exposure_coordinator">समायोजक %1$s</string>
+    <string name="cordn_health_unknown">सम्पर्क अब तक किया नहीं</string>
+    <string name="cordn_health_ok">प्रतिवचनमध्य</string>
+    <string name="cordn_health_down">कोई प्रतिवचन नहीं</string>
+    <string name="cordn_link_field">cordn1…</string>
+    <string name="cordn_link_inspect">निरीक्षण</string>
+    <string name="cordn_link_paste">चिपकाएँ</string>
+    <string name="cordn_link_clear">रिक्त</string>
+    <string name="cordn_link_invalid">वह एक कोर्डन समूह योजक नहीं। %1$s</string>
+    <string name="cordn_link_group_id">समूह परिचायक</string>
+    <string name="cordn_link_coordinator">समायोजक</string>
+    <string name="cordn_link_relays">अभिगम्य इनके द्वारा</string>
     <!-- cordn entries in the settings catalog and the Messages chat-type
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
+    <string name="cordn_link_title">कोर्डन समूह योजक</string>
+    <string name="cordn_link_search_keywords">कोर्डन समायोजक समूह योजक आमन्त्रण एमएलएस॰ चर्चा उपतथ्य गोपनीयता अनावरण</string>
+    <string name="cordn_coordinators_title">कोर्डन समायोजक</string>
+    <string name="cordn_coordinators_search_keywords">कोर्डन समायोजक जोडें हटाएँ मिटाएँ स्वास्थ्य सेवासंगणक एमएलएस॰ चर्चा अनुक्रमण</string>
+    <string name="cordn_keypackages_title">कोर्डन कुंचिका पोटलियाँ</string>
+    <string name="cordn_keypackages_search_keywords">कोर्डन कुंचिका पोटली प्रकाशन आमन्त्रण अन्तिम उपाय समायोजक एमएलएस॰</string>
+    <string name="cordn_backup_title">कोर्डन सुरक्षित अनुकृति</string>
+    <string name="cordn_backup_search_keywords">कोर्डन सुरक्षित अनुकृति पुनःस्थापन निर्यात आयात पारणवाक्याम्श समूह पुनःप्राप्ति</string>
+    <string name="chat_type_cordn_title">कोर्डन समूह</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
          and the new-conversation picker. -->
+    <string name="cordn_group_untitled">समूह %1$s</string>
+    <string name="cordn_group_no_messages_yet">कोई सन्देश नहीं अब तक</string>
+    <string name="cordn_group_via_coordinator">कोर्डन समूह। %1$s पर उपलब्ध</string>
+    <string name="cordn_preview_deleted">सन्देश मिटाया गया</string>
+    <string name="cordn_preview_voice_note">ध्वनि टीका</string>
+    <string name="cordn_preview_photo">चित्र</string>
+    <string name="cordn_preview_video">चलचित्र</string>
+    <string name="cordn_preview_file">अभिलेख</string>
+    <string name="new_conversation_cordn_title">कोर्डन समूह</string>
+    <string name="new_conversation_cordn_chip">समायोजित</string>
+    <string name="new_conversation_cordn_cta">कोर्डन समूह बनाएँ</string>
+    <string name="cordn_invitations_entry">क्या आप एक कोर्डन समूह में आमन्त्रित हैं।</string>
+    <string name="cordn_invitations_entry_action">आमन्त्रण पुनरीक्षण</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <string name="cordn_hub_title">कोर्डन</string>
+    <string name="cordn_hub_link">समूह योजक का निरीक्षण</string>
+    <string name="cordn_migrate_section_send">इस संचारयन्त्र से विस्थापन</string>
+    <string name="cordn_migrate_section_receive">अन्य संचारयन्त्र से प्राप्त करें</string>
+    <string name="cordn_keypackages_section">प्रकाशित कुंचिका पोटलियाँ</string>
+    <string name="cordn_link_section_input">योजक</string>
+    <string name="cordn_coordinators_section_yours">समायोजक आपके द्वारा उपयुक्त</string>
+    <string name="cordn_coordinators_section_discover">स्व घोषणा</string>
+    <string name="cordn_coordinators_section_manual">एक को जोडें स्वयम हाथ से</string>
+    <string name="cordn_backup_section_passphrase">पारणवाक्याम्श</string>
+    <string name="cordn_backup_section_export">सुरक्षित अनुकृति बनाएँ</string>
+    <string name="cordn_backup_section_restore">सुरक्षित अनुकृति से पुनःस्थापन</string>
+    <string name="cordn_hub_section_service">समायोजक</string>
+    <string name="cordn_hub_section_device">इस यन्त्र</string>
+    <string name="cordn_hub_coordinators">समायोजक</string>
+    <string name="cordn_hub_keypackages">कुंचिका पोटलियाँ</string>
+    <string name="cordn_hub_backup">सुरक्षित अनुकृति तथा पुनःस्थापन</string>
+    <string name="cordn_hub_backup_desc">पारणवाक्याम्श द्वारा रहस्यीकृत एक अभिलेख जो आप रखते हैं</string>
+    <string name="cordn_hub_migrate">अन्य संचारयन्त्र तक विस्थापन</string>
     <string name="sno_object_title">त्रिमा वस्तु</string>
     <string name="sno_object_details">%1$d अस्र। %2$d मुख</string>
     <string name="sno_object_unreadable">इस त्रिमा वस्तु का पठन असफल। नियम %1$s</string>
@@ -5276,14 +5325,350 @@
     <string name="cyberspace_bag_cancel">रोकें</string>
     <string name="cyberspace_bag_measuring">खोज का मूल्यांकन इस यन्त्र पर…</string>
     <string name="cyberspace_bag_progress">खोज सम्पन्न %2$s में से %1$s क्षेत्रों में</string>
-    <string name="cyberspace_bag_too_slow_minutes">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</string>
-    <string name="cyberspace_bag_too_slow_hours">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</item>
+        <item quantity="other">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</item>
+        <item quantity="other">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">सहायक संकेत में नामित पेटिका में नहीं</string>
     <string name="cyberspace_bag_damaged">क्षेत्र प्राप्त। पर विषयवस्तु पढने में असफल</string>
-    <string name="cyberspace_bag_dropped">%1$d वस्तु जो यहाँ छिपाया गया था उसके हस्ताक्षर से मेल नहीं तथा परित्यक्त</string>
-    <string name="cyberspace_bag_dropped_many">%1$d वस्तु जो यहाँ छिपाए गए थे उनके हस्ताक्षरों से मेल नहीं तथा परित्यक्त</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">%1$d वस्तु जो यहाँ छिपाया गया था उसके हस्ताक्षर से मेल नहीं तथा परित्यक्त</item>
+        <item quantity="other">%1$d वस्तु जो यहाँ छिपाए गए थे उनके हस्ताक्षरों से मेल नहीं तथा परित्यक्त</item>
+    </plurals>
     <string name="cyberspace_bag_empty">खोला। पर भीतर कुछ नहीं था</string>
     <string name="cyberspace_bag_unsigned">हस्ताक्षररहित। इसलिए यह कर्ता केवल एक कथन है</string>
     <string name="cyberspace_bag_unknown_kind">प्रकार %1$d का वस्तु। जिसे यह ग्राहक चित्रित नहीं करता</string>
-    <string name="cyberspace_bag_opaque">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</item>
+        <item quantity="other">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</item>
+    </plurals>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <string name="backup_action_block_again">पुनःबाधित करें %1$s को</string>
+    <string name="backup_action_keep_count">रखें %1$s</string>
+    <string name="backup_action_rejoin">पुनःजुडें %1$s</string>
+    <string name="backup_action_remute">पुनःमौन %1$s</string>
+    <string name="backup_action_restore_count">पुनःस्थापन %1$s</string>
+    <string name="backup_action_restore_feeds">सूचनावलियाँ पुनःस्थापन</string>
+    <string name="backup_action_restore_places">स्थल पुनःस्थापन</string>
+    <string name="backup_action_restore_profile">परिचय पुनःस्थापध</string>
+    <string name="backup_action_restore_providers">प्रदाता पुनःस्थापन</string>
+    <string name="backup_action_restore_relays">पुनःप्रसारक पुनःस्थापन</string>
+    <string name="backup_action_restore_topics">विषय पुनःस्थापन</string>
+    <string name="backup_action_restore_wallet">धनकोष पुनःस्थापन</string>
+    <string name="backup_card_accept">स्वीकार</string>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s तथा %2$d जोडा</item>
+        <item quantity="other">%1$s तथा %2$d जोडे</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s तथा %2$d बाधित किया</item>
+        <item quantity="other">%1$s तथा %2$d को बाधित किए</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s तथा %2$d का अनुगमन किया</item>
+        <item quantity="other">%1$s तथा %2$d का अनुगमन किए</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s तथा %2$d से जुडे</item>
+        <item quantity="other">%1$s तथा %2$d से जुडे</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s तथा %2$d को मौनकृत किया</item>
+        <item quantity="other">%1$s तथा %2$d को मौनकृत किए</item>
+    </plurals>
+    <string name="backup_card_app_settings">आपके अमेथिस्ट समचरणीकृत क्रमक स्थापना विकल्पों को परिवर्तित किया गया एक अन्य क्रमक में और वह अमेथिस्ट नहीं था। इससे समस्याएँ उत्पन्न हो सकते हैं।</string>
+    <string name="backup_card_concord_emptied">आपने अपनी कोंकोर्ड सूची रिक्त की</string>
+    <string name="backup_card_concord_rewritten">आपने अपनी कोंकोर्ड सूची का परिवर्तन किया</string>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">आपने %1$d सीधासन्देश पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d सीधासन्देश पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">आपने %1$d इष्ट सूचनावली हटाया</item>
+        <item quantity="other">आपने %1$d इष्ट सूचनावलियों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">आपने %1$d व्यक्ति का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d व्यक्तियों का अनुगमन हटाए</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">आपने %1$d विषयसूचक का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d विषयसूचकों का अनुगमन हटाए</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">आपने %1$d अनुक्रमणीकार पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d अनुक्रमणीकार पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">आपने %1$d समूहचर्चा कुंचिका पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d समूहचर्चा कुंचिका पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">आपने %1$d सार्वजनिक चर्चा छोड दिया</item>
+        <item quantity="other">आपने %1$d सार्वजनिक चर्चाओं को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">आपने %1$d समुदाय छोड दिया</item>
+        <item quantity="other">आपने %1$d समुदायों को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">आपने %1$d समूह छोड दिया</item>
+        <item quantity="other">आपने %1$d समूहों को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">आपने %1$d चर्चाशाला छोड दिया</item>
+        <item quantity="other">आपने %1$d चर्चाशालाओं को छोड दिए</item>
+    </plurals>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">आपने %1$d की मौनावस्था हटाया</item>
+        <item quantity="other">आपने %1$d की मौनावस्था हटाए</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">आपने %1$d सार्वजनिक पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d सार्वजनिक पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <string name="backup_card_nutzap_key_removed">आपने अपनी नटज्साप कुंचिका को हटाया</string>
+    <string name="backup_card_nutzap_key_replaced">आपने अपनी नटज्साप कुंचिका का प्रतिस्थापन किया</string>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">आपने %1$d नटज्साप टकसाल हटाया</item>
+        <item quantity="other">आपने %1$d नटज्साप टकसालों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">आपने %1$d बोल्ट॰बारह प्रस्ताव हटाया</item>
+        <item quantity="other">आपने %1$d बोल्ट॰बारह प्रस्तावों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">आपने %1$d भुगतान प्राप्त करने की विधि हटाया</item>
+        <item quantity="other">आपने %1$d भुगतान प्राप्त करने के विधियों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">आपने %1$d स्थल का अनुगमन हटाया</item>
+        <item quantity="other">आपने %1$d स्थलों का अनुगमन हटाए</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">आपने %1$d निजी पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d निजी पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">आपने %1$d परिचय प्रपत्रस्थान हटाया</item>
+        <item quantity="other">आपने %1$d परिचय प्रपत्रस्थान हटाए</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">आपने %1$d पुनःप्रसारक सूचनावली हटाया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारक सूचनावलियाँ हटाए</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">आपने %1$d खोज पुनःप्रसारक हटाया</item>
+        <item quantity="other">आपने %1$d खोज पुनःप्रसारकों को हटाए</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">आपने %1$d विश्वाससेवा प्रदाता परिवर्तित किया</item>
+        <item quantity="other">आपने %1$d विश्वाससेवाओं के प्रदाता को परिवर्तित किया</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">आपने %1$d पुनःप्रसारक पर विश्वास करना रोक दिया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारकों पर विश्वास करना रोक दिए</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">आपने %1$d पुनःप्रसारक अबाधित किया</item>
+        <item quantity="other">आपने %1$d पुनःप्रसारकों को अबाधित किए</item>
+    </plurals>
+    <string name="backup_card_wallet_emptied">आपने अपना काशयू धनकोष रिक्त किया</string>
+    <string name="backup_card_wallet_rewritten">आपने अपने काशयू धनकोष को परिवर्तित किया</string>
+    <string name="backup_conflict_added">जोडे गए (%1$s)</string>
+    <string name="backup_conflict_changed">परिवर्तित (%1$s)</string>
+    <string name="backup_conflict_count_added">%1$s जोडे गए</string>
+    <string name="backup_conflict_count_changed">%1$s परिवर्तित</string>
+    <string name="backup_conflict_count_removed">%1$s हटाए गए</string>
+    <string name="backup_conflict_keep_new">नया संस्करण का उपयोग करें</string>
+    <string name="backup_conflict_private_added">आपने निजी (रहस्यीकृत) वस्तुओं को जोडा।</string>
+    <string name="backup_conflict_private_changed">आपने निजी (रहस्यीकृत) वस्तुओं का परिवर्तन भी किया। उनकी तुलना यहाँ नहीं की जा सकती।</string>
+    <string name="backup_conflict_private_cleared">आपने सभी निजी (रहस्यीकृत) वस्तुओं को हटा दिया।</string>
+    <string name="backup_conflict_relay_read_only">पठनेवशक्य</string>
+    <string name="backup_conflict_relay_read_write">पठन तथा लेखन</string>
+    <string name="backup_conflict_relay_write_only">लेखनेवशक्य</string>
+    <string name="backup_conflict_removed">हटाए गए (%1$s)</string>
+    <string name="backup_conflict_restore_mine">सुरक्षित संस्करण पुनःस्थापन</string>
+    <string name="backup_conflict_title">आपने अपना %1$s अन्य क्रमक में परिवर्तित किया</string>
+    <string name="backup_entry_algo_feed">सूचनावलियाँ</string>
+    <string name="backup_entry_chat_room">चर्चा शालाएँ</string>
+    <string name="backup_entry_community">समुदाय</string>
+    <string name="backup_entry_hashtag">विषयसूचक</string>
+    <string name="backup_entry_identity_claim">सम्बन्धित व्यक्तिगण</string>
+    <string name="backup_entry_location">स्थान</string>
+    <string name="backup_entry_mint">टकसाल</string>
+    <string name="backup_entry_nutzap_key">नटज्साप कुंचिकाएँ</string>
+    <string name="backup_entry_offer">प्रस्ताव</string>
+    <string name="backup_entry_other">अन्य प्रविष्टियाँ</string>
+    <string name="backup_entry_payment_target">भुगतान पते</string>
+    <string name="backup_entry_person">लोग</string>
+    <string name="backup_entry_profile_field">परिचय प्रपत्रस्थान</string>
+    <string name="backup_entry_public_chat">सार्वजनिक चर्चाएँ</string>
+    <string name="backup_entry_relay">पुनःप्रसारक</string>
+    <string name="backup_entry_relay_group">समूह</string>
+    <string name="backup_entry_thread">सूत्र</string>
+    <string name="backup_entry_trust_provider">विश्वाससेवा प्रदाता</string>
+    <string name="backup_entry_word">शब्द</string>
+    <string name="backup_profile_field_about">जानकारी</string>
+    <string name="backup_profile_field_banner">ध्वज</string>
+    <string name="backup_profile_field_birthday">जन्मदिन</string>
+    <string name="backup_profile_field_bot">क्रमचर चिह्न</string>
+    <string name="backup_profile_field_clink_offer">क्लिंक॰ प्रस्ताव</string>
+    <string name="backup_profile_field_display_name">प्रदर्शन नाम</string>
+    <string name="backup_profile_field_lud06">लैटनिंग जालपता</string>
+    <string name="backup_profile_field_lud16">लैटनिंग पता</string>
+    <string name="backup_profile_field_name">प्रयोक्तानाम</string>
+    <string name="backup_profile_field_nip05">नोस्टर पता</string>
+    <string name="backup_profile_field_picture">चित्र</string>
+    <string name="backup_profile_field_pronouns">सर्वनाम</string>
+    <string name="backup_profile_field_website">जालस्थान</string>
+    <string name="backup_review_allowed_tag">अनुमत</string>
+    <string name="backup_review_changed_by_other_app">अन्य क्रमक में परिवर्तित। %1$s</string>
+    <string name="backup_review_concord_body">आपके कोंकोर्ड समुदाय आपके लिए रहस्यीकृत हैं। इसलिए उनकी तुलना यहाँ नहीं की जा सकती। पुनःस्थापन उन्हीं को लौट डालेगा जिनका अभिलेखन इस यन्त्र ने किया।</string>
+    <string name="backup_review_demoted_tag">स्थानान्तरित</string>
+    <string name="backup_review_dropped_count">%1$s परित्यक्त</string>
+    <string name="backup_review_dropped_tag">परित्यक्त</string>
+    <string name="backup_review_encrypted_added">आपने उसे बनाया</string>
+    <string name="backup_review_encrypted_changed">आपने उसे परिवर्तित किया</string>
+    <string name="backup_review_encrypted_cleared">आपने उसे रिक्त किया</string>
+    <string name="backup_review_feed">सूचनावली</string>
+    <string name="backup_review_gone">चला गया</string>
+    <string name="backup_review_hashtags_you_follow">विषयसूचक जिनका आप अनुगमन करते हैं</string>
+    <string name="backup_review_inbox">आगतपेटिका</string>
+    <string name="backup_review_inbox_explainer">जहाँ अन्य आप तक अभिगमन करते हैं</string>
+    <string name="backup_review_joined">जुड गए</string>
+    <string name="backup_review_kept">रखे गए</string>
+    <string name="backup_review_kept_count">%1$s रखे गए</string>
+    <string name="backup_review_key_removed">ग्राहक कुंचिका हटाया गया</string>
+    <string name="backup_review_key_replaced">ग्राहक कुंचिका प्रतिस्थापित</string>
+    <string name="backup_review_key_warning">नटज्साप आगे से इस कुंचिका से बद्ध होंगे। यदि इस यन्त्र में वह नहीं है तो आप सम्भाव्यतः उनको यहाँ नहीं चुका सकते।</string>
+    <string name="backup_review_left">शेष</string>
+    <string name="backup_review_left_tag">शेष</string>
+    <string name="backup_review_listed_tag">सूचीबद्ध</string>
+    <string name="backup_review_moved_tag">स्थानान्तरित</string>
+    <string name="backup_review_names_and_more">%1$s तथा %2$s अधिक</string>
+    <string name="backup_review_new">नया संस्करण</string>
+    <string name="backup_review_new_count">%1$s नए</string>
+    <string name="backup_review_new_count_caption">नव्य</string>
+    <string name="backup_review_new_tag">नव्य</string>
+    <string name="backup_review_newly_blocked">नव्यतः बाधित</string>
+    <string name="backup_review_newly_muted">%1$s नए मौनकृत</string>
+    <string name="backup_review_no_longer_blocked">अब से बाधित नहीं</string>
+    <string name="backup_review_not_set">स्थापित नहीं</string>
+    <string name="backup_review_nothing_here">यहाँ कुछ नहीं</string>
+    <string name="backup_review_offer">बोल्ट॰बारह प्रस्ताव</string>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d प्रस्ताव हटाया गया</item>
+        <item quantity="other">%1$d प्रस्ताव हटाए गए</item>
+    </plurals>
+    <string name="backup_review_outbox">निर्गतपेटिका</string>
+    <string name="backup_review_outbox_explainer">आप जहाँ प्रकाशित करते हैं</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">आपको भुगतान करने की %1$d विधि हटाया गया</item>
+        <item quantity="other">आपको भुगतान करने की %1$d विधियाँ हटाए गए</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">लोग जो आपको भुगतान करते हैं उसी को देखते हैं जो इस सूची में है।</string>
+    <string name="backup_review_places_gone">स्थल हटाए गए</string>
+    <string name="backup_review_places_you_follow">स्थल जिनका आप अनुगमन करते हैं</string>
+    <string name="backup_review_private_added_body">वे अब रहस्यीकृत हैं। जो कि सम्भाव्यतः ऊपर के सार्वजनिक वस्तुओं का गन्तव्य था।</string>
+    <string name="backup_review_private_added_title">आपने वस्तुओं को निजी किया</string>
+    <string name="backup_review_private_changed_body">वे रहस्यीकृत हैं। इसलिए उनकी तुलना यहाँ नहीं की जा सकती।</string>
+    <string name="backup_review_private_changed_title">आपने निजी वस्तुओं का परिवर्तन किया</string>
+    <string name="backup_review_private_wiped_body">वे रहस्यीकृत हैं। इसलिए केवल आप देख सकते हैं कि वे क्या थे। पुनःस्थापन से सब लौटके आ जाएँगे।</string>
+    <string name="backup_review_private_wiped_title">आपने सभी निजी वस्तुओं को हटा दिया</string>
+    <string name="backup_review_receiving_tag">ग्रहण मध्य</string>
+    <string name="backup_review_renamed">पुनःनामकृत</string>
+    <string name="backup_review_renamed_tag">पुनःनामकृत</string>
+    <string name="backup_review_saved">इस यन्त्र पर</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">%1$s लोग खोजें</item>
+        <item quantity="other">%1$s लोग खोजें</item>
+    </plurals>
+    <string name="backup_review_searching_tag">खोज मध्य</string>
+    <string name="backup_review_service">सेवा</string>
+    <string name="backup_review_service_followers">अनुचर</string>
+    <string name="backup_review_service_rank">श्रेणी</string>
+    <string name="backup_review_service_topics">विषयसूची</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">%2$s में से %1$s सेवाएँ परिवर्तित</item>
+        <item quantity="other">%2$s में से %1$s सेवाएँ परिवर्तित</item>
+    </plurals>
+    <string name="backup_review_services_changed_explainer">वे अब अन्य व्यक्ति से आते है। अथवा किसी से नहीं</string>
+    <string name="backup_review_still_blocked">अभी भी बाधित</string>
+    <string name="backup_review_storing_tag">अभिलेखन मध्य</string>
+    <string name="backup_review_tab_dropped">परित्यक्त। %1$s</string>
+    <string name="backup_review_tab_edited">सम्पादित। %1$s</string>
+    <string name="backup_review_tab_new">नए। %1$s</string>
+    <string name="backup_review_title_cleared">%1$s पारित</string>
+    <string name="backup_review_title_updated">%1$s अद्यतनकृत</string>
+    <string name="backup_review_topics_gone">विषय हटाए गए</string>
+    <string name="backup_review_trust_warning">श्रेणीयाँ तथा अनुचर गिनती तथा कचरालेख छालन जो आप देखते हैं इन प्रदाताओं से आते हैं।</string>
+    <string name="backup_review_trusted_tag">विश्वसनीय</string>
+    <string name="backup_review_unblocked">%1$s अबाधित</string>
+    <string name="backup_review_unblocked_explainer">अमेथिस्ट पुनः उनसे जुडेगा</string>
+    <string name="backup_review_units_tag">इकाई</string>
+    <string name="backup_review_unmuted">%1$s मौनावस्था हटाए गए</string>
+    <string name="backup_review_unmuted_explainer">ये पुनः आपके सूचनावलियों तक अभिगम्य</string>
+    <string name="backup_review_untrusted_tag">अविश्वसनीय</string>
+    <string name="backup_review_wallet_body">आपके धनकोष के टकसाल तथा कुंचिकाएँ आपके लिए रहस्यीकृत हैं। इसलिए उनकी तुलना वस्तु प्रति वस्तु यहाँ नहीं की जा सकती। पुनःस्थापन उन्हीं को लौट डालेगा जिनका अभिलेखन इस यन्त्र ने किया।</string>
+    <string name="backup_review_was_named">पूर्वतः %1$s था</string>
+    <string name="backup_review_words_and_hashtags">शब्द तथा विषयसूचक</string>
+    <string name="backup_type_app_settings">समचरणीकृत क्रमक स्थापना विकल्प</string>
+    <string name="backup_type_app_settings_explainer">अमेथिस्ट स्थापना विकल्प समचरणीकृत आपके यन्त्रों में। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_blocked_relays">बाधित पुनःप्रसारक सूची</string>
+    <string name="backup_type_blocked_relays_explainer">पुनःप्रसारक जिनसे यह क्रमक कभी भी संयोजन नहीं करता।</string>
+    <string name="backup_type_bolt12_offers">बोल्ट॰बारह प्रस्ताव</string>
+    <string name="backup_type_bolt12_offers_explainer">लैटनिंग प्रस्ताव जिनका उपयोग करके अन्य लोग आपको भुगतान करते हैं।</string>
+    <string name="backup_type_cashu_wallet">काशयू धनकोष</string>
+    <string name="backup_type_cashu_wallet_explainer">आपके ईकाश धनकोष स्थापना विकल्प तथा टकसाल। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_communities">समुदाय सूची</string>
+    <string name="backup_type_communities_explainer">समुदाय जिनसे आप जुडे।</string>
+    <string name="backup_type_concord_communities">कोंकोर्ड समुदाय सूची</string>
+    <string name="backup_type_concord_communities_explainer">कोंकोर्ड समुदाय जिनसे आप जुडे। वे रहस्यीकृत हैं। इसलिए केवल उनकी उपस्थिति की तुलना की जा सकती है।</string>
+    <string name="backup_type_dm_relays">सीधासन्देश पुनःप्रसारक सूची</string>
+    <string name="backup_type_dm_relays_explainer">जहाँ अन्य आपके निजी सन्देश भेजते हैं।</string>
+    <string name="backup_type_ephemeral_chats">अस्थायी चर्चा सूची</string>
+    <string name="backup_type_ephemeral_chats_explainer">अस्थायी चर्चा शालाएँ जिनसे आप जुडे।</string>
+    <string name="backup_type_favorite_algo_feeds">इष्ट सूचनावली सूची</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">कलनविध्यात्मक सूचनावलियाँ जिनको आपने अभिलेखित किया।</string>
+    <string name="backup_type_follow_list">अनुचरण सूची</string>
+    <string name="backup_type_follow_list_explainer">निर्णय करता है किसके पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_geohashes">अनुचरित स्थान</string>
+    <string name="backup_type_geohashes_explainer">स्थान जहाँ से पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_hashtags">अनुचरित विषयसूचक</string>
+    <string name="backup_type_hashtags_explainer">विषयसूचक जिससे युक्त पत्र आपकी मुख्य सूचनावली में प्रकट होंगे।</string>
+    <string name="backup_type_indexer_relays">अनुक्रमणीकार पुनःप्रसारक सूची</string>
+    <string name="backup_type_indexer_relays_explainer">पुनःप्रसारक उपयुक्त अन्य लोगों के परिचय तथा पुनःप्रसारक सूचियों को प्राप्त करने के लिए।</string>
+    <string name="backup_type_key_package_relays">समूहचर्चा कुंचिका पुनःप्रसारक</string>
+    <string name="backup_type_key_package_relays_explainer">जहाँ अन्य उन कुंचिकाओं को प्राप्त करते हैं आपको रहस्यीकृत समूहचर्चाओं में जोडने के लिए।</string>
+    <string name="backup_type_mute_list">मौन सूची</string>
+    <string name="backup_type_mute_list_explainer">छिपाता है लोग शब्द विषयसूचक तथा सूत्र उन सब में से जो आप देखते हैं।</string>
+    <string name="backup_type_nutzap_info">नटज्साप प्राप्ती स्थापना विकल्प</string>
+    <string name="backup_type_nutzap_info_explainer">टकसाल तथा कुंचिका जिनका उपयोग अन्य करते हैं आपको नटज्साप भेजने के लिए।</string>
+    <string name="backup_type_other">सूची</string>
+    <string name="backup_type_other_explainer">इस यन्त्र पर अभिलेखित सूची।</string>
+    <string name="backup_type_outbox_inbox_relays">सार्वजनिक पुनःप्रसारक सूची</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">सबको बताता है आपके पत्र कहाँ प्राप्त करें तथा आपको उत्तर तथा उल्लेखों को कहाँ भेजें।</string>
+    <string name="backup_type_payment_targets">भुगतान पते</string>
+    <string name="backup_type_payment_targets_explainer">विधियाँ जिनसे अन्य लोग आपको भुगतान कर सके।</string>
+    <string name="backup_type_private_outbox_relays">निजी पुनःप्रसारक सूची</string>
+    <string name="backup_type_private_outbox_relays_explainer">जहाँ आपके पाण्डुलिपियाँ तथा निजी जानकारी रखे जाते हैं।</string>
+    <string name="backup_type_profile">परिचय</string>
+    <string name="backup_type_profile_explainer">आपका नाम चित्र चरित तथा भुगतान पते। जैसे सब को दिखते हैं वैसे।</string>
+    <string name="backup_type_public_chats">सार्वजनिक चर्चा सूची</string>
+    <string name="backup_type_public_chats_explainer">सार्वजनिक चर्चाएँ जिनसे आप जुडे।</string>
+    <string name="backup_type_relay_feeds">इष्ट पुनःप्रसारक सूचनावलियाँ</string>
+    <string name="backup_type_relay_feeds_explainer">पुनःप्रसारक जिनका आप वीक्षण करते हैं सूचनावलियों के रूप में।</string>
+    <string name="backup_type_relay_groups">समूह सूची</string>
+    <string name="backup_type_relay_groups_explainer">पुनःप्रसारक आधारित समूह जिनसे आप जुडे।</string>
+    <string name="backup_type_search_relays">खोज पुनःप्रसारक सूची</string>
+    <string name="backup_type_search_relays_explainer">उपयुक्त पुनःप्रसारक जब आप खोजते हैं।</string>
+    <string name="backup_type_trust_providers">विश्वाससेवा प्रदाता सूची</string>
+    <string name="backup_type_trust_providers_explainer">सेवाएँ जिनपर आप विश्वास करते है आपके लिए लोगों का सत्यापन तथा श्रेणीकरण करने के लिए।</string>
+    <string name="backup_type_trusted_relays">विश्वसनीय पुनःप्रसारक सूची</string>
+    <string name="backup_type_trusted_relays_explainer">पुनःप्रसारक जिनपर आप पर्याप्त विश्वास करते हैं बिना पूछे उनसे संयोजन करने के लिए।</string>
 </resources>

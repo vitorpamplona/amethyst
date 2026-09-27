@@ -273,7 +273,7 @@ private fun PermanentDrawerShell(
 
 /**
  * Hosts the navigation content. Screen width capping happens per NavHost destination
- * ([com.vitorpamplona.amethyst.ui.layouts.CappedScreenContent] via the NavigationEffects
+ * ([com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent] via the NavigationEffects
  * builders), so this pane just claims the leftover row width.
  */
 @Composable

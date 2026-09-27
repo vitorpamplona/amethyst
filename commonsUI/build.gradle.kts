@@ -160,6 +160,8 @@ kotlin {
 
                     // OkHttp for the Blossom read-auth Coil fetcher.
                     implementation(libs.okhttp)
+                    // executeAsync for PdfFetcher; already on every module that ships OkHttp.
+                    implementation(libs.okhttpCoroutines)
 
                     // Markdown rendering (richtext-commonmark). The single
                     // consumer (RenderMarkdown.kt) lives in jvmAndroid.

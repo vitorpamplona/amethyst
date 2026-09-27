@@ -56,7 +56,7 @@ class PrivateZapRequestBuilder {
 
         val fullTagsNoAnon = tags.filter { t -> t.getOrNull(0) != "anon" }.toTypedArray()
 
-        val privateEvent = LnZapPrivateEvent.create(signer, fullTagsNoAnon, content)
+        val privateEvent = PrivateZapEvent.create(signer, fullTagsNoAnon, content)
 
         val noteJson = privateEvent.toJson()
         val encryptedContent =
@@ -73,9 +73,9 @@ class PrivateZapRequestBuilder {
     }
 
     fun decryptZapEvent(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         signer: NostrSignerSync,
-    ): LnZapPrivateEvent {
+    ): PrivateZapEvent {
         if (signer.keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         val recipientPK = event.zappedAuthor().firstOrNull()
@@ -129,12 +129,12 @@ class PrivateZapRequestBuilder {
         encNote: String,
         privateKey: ByteArray,
         pubKey: HexKey,
-    ): LnZapPrivateEvent =
+    ): PrivateZapEvent =
         try {
             val note = PrivateZapEncryption.decryptPrivateZapMessage(encNote, privateKey, pubKey.hexToByteArray())
             val decryptedEvent = fromJson(note)
             if (decryptedEvent.kind == 9733) {
-                decryptedEvent as LnZapPrivateEvent
+                decryptedEvent as PrivateZapEvent
             } else {
                 throw IllegalStateException("The decrypted event is not a private zap.")
             }

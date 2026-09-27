@@ -41,7 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
-import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserAssertionsState
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nickname_cancel
@@ -62,31 +62,31 @@ import org.jetbrains.compose.resources.stringResource
  * Typing `:` offers the account's NIP-30 custom emojis; the mappings for any
  * shortcode used are embedded (also encrypted) so the nickname renders with them.
  *
- * Shared by every front end: the caller supplies the account's [contactCards]
+ * Shared by every front end: the caller supplies the account's [userAssertions]
  * and publishes the result in [onSave] (e.g. through its outbox relays). On
  * Android, compose `WatchAndLoadMyEmojiList` alongside so the emoji packs load.
  */
 @Composable
 fun EditNicknameDialog(
     user: User,
-    contactCards: ContactCardsState,
+    userAssertions: UserAssertionsState,
     onSave: (petName: String?, summary: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val nickname = rememberTextFieldState()
     val summary = rememberTextFieldState()
-    val emojiSuggestions = remember(contactCards) { EmojiSuggestionState(contactCards.emojiPacks) }
+    val emojiSuggestions = remember(userAssertions) { EmojiSuggestionState(userAssertions.emojiPacks) }
     // which field the emoji autocomplete should insert into: the last one edited
     val emojiTarget = remember { mutableStateOf<TextFieldState?>(null) }
 
     // Prefill with the card's current encrypted values, if any. Decryption can
     // be slow on external signers, so don't clobber anything already typed.
     LaunchedEffect(user) {
-        contactCards
+        userAssertions
             .petName(user.pubkeyHex)
             ?.takeIf { nickname.text.isEmpty() }
             ?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
-        contactCards
+        userAssertions
             .summary(user.pubkeyHex)
             ?.takeIf { summary.text.isEmpty() }
             ?.let { summary.setTextAndPlaceCursorAtEnd(it) }

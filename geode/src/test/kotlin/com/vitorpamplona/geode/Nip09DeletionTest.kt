@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -123,7 +123,7 @@ class Nip09DeletionTest {
         runBlocking {
             val signer = NostrSignerSync(KeyPair())
             val note = signer.sign(TextNoteEvent.build("delete me"))
-            val deletion = signer.sign(DeletionEvent.build(listOf(note), createdAt = note.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(note), createdAt = note.createdAt + 1))
 
             // Publish original, confirm it's stored.
             assertEquals(true, client.publishAndConfirm(note, setOf(relayUrl)))
@@ -139,12 +139,12 @@ class Nip09DeletionTest {
         runBlocking {
             val signer = NostrSignerSync(KeyPair())
             val note = signer.sign(TextNoteEvent.build("a"))
-            val deletion = signer.sign(DeletionEvent.build(listOf(note), createdAt = note.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(note), createdAt = note.createdAt + 1))
 
             client.publishAndConfirm(note, setOf(relayUrl))
             client.publishAndConfirm(deletion, setOf(relayUrl))
 
-            val results = query(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(signer.pubKey)))
+            val results = query(Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(signer.pubKey)))
             assertEquals(1, results.size)
             assertEquals(deletion.id, results[0].id)
         }
@@ -154,7 +154,7 @@ class Nip09DeletionTest {
         runBlocking {
             val signer = NostrSignerSync(KeyPair())
             val note = signer.sign(TextNoteEvent.build("once-upon-a-time"))
-            val deletion = signer.sign(DeletionEvent.build(listOf(note), createdAt = note.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(note), createdAt = note.createdAt + 1))
 
             client.publishAndConfirm(note, setOf(relayUrl))
             client.publishAndConfirm(deletion, setOf(relayUrl))
@@ -178,7 +178,7 @@ class Nip09DeletionTest {
             // kind-5 event itself (it's just an event), but the SQL DELETE
             // is owner-scoped, so Alice's event survives.
             val malloryDelete =
-                mallory.sign(DeletionEvent.build(listOf(aliceNote), createdAt = aliceNote.createdAt + 1))
+                mallory.sign(DeletionRequestEvent.build(listOf(aliceNote), createdAt = aliceNote.createdAt + 1))
             client.publishAndConfirm(malloryDelete, setOf(relayUrl))
 
             assertEquals(

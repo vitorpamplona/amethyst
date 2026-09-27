@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 fun filterShortsByHashtag(
     relay: NormalizedRelayUrl,
@@ -40,7 +40,7 @@ fun filterShortsByHashtag(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.MEDIA_FEED,
-                    kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
+                    kinds = listOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,
                     since = since,

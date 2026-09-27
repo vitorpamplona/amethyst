@@ -24,9 +24,17 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+/**
+ * NIP-43 kind 28934: a request to join a relay. Must carry a NIP-70 `-` tag and
+ * a `claim` tag with the invite code; the relay answers with an `OK`. Invite
+ * codes are minted by the relay (NIP-86 `createclaim`), not requested with the
+ * deprecated kind 28935.
+ */
 @Immutable
 class RelayJoinRequestEvent(
     id: HexKey,
@@ -42,12 +50,16 @@ class RelayJoinRequestEvent(
         const val KIND = 28934
 
         fun build(
-            claim: String? = null,
+            claim: String,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayJoinRequestEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            claim?.let { claim(it) }
-            initializer()
+        ): EventTemplate<RelayJoinRequestEvent> {
+            require(claim.isNotBlank()) { "NIP-43 join requests require an invite code (claim)" }
+            return eventTemplate(KIND, "", createdAt) {
+                protect()
+                claim(claim)
+                initializer()
+            }
         }
     }
 }

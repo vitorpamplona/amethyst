@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.filterHo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 class FollowPackFeedFilterSubAssembler(
     client: INostrClient,
@@ -40,7 +40,7 @@ class FollowPackFeedFilterSubAssembler(
         if (keys.isEmpty()) return emptyList()
         return keys.flatMap {
             val followPack = it.followPack.event
-            if (followPack is FollowListEvent) {
+            if (followPack is StarterPackEvent) {
                 val filter =
                     if (it.account.proxyRelayList.flow.value
                             .isEmpty()

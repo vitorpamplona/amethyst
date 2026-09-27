@@ -23,6 +23,6 @@ package com.vitorpamplona.quartz.nip52Calendar.calendar
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 
-// CalendarEvent builder extensions
+// CalendarCollectionEvent builder extensions
 
-fun TagArrayBuilder<CalendarEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<CalendarCollectionEvent>.title(title: String) = addUnique(TitleTag.assemble(title))

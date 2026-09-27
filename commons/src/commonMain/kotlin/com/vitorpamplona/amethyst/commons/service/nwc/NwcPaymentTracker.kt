@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.service.nwc
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -60,7 +60,7 @@ class NwcPaymentTracker {
     class PendingRequest(
         val expectedServicePubkey: HexKey,
         val zappedNote: Note?,
-        val onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        val onResponse: suspend (NwcResponseEvent) -> Unit,
     ) {
         // Number of kind-23195 events that targeted this request id with the
         // right `e` tag but the wrong author. Surfaced to the UI when a
@@ -74,7 +74,7 @@ class NwcPaymentTracker {
     /**
      * Registers a pending payment request.
      *
-     * @param requestId Event ID of the LnZapPaymentRequestEvent
+     * @param requestId Event ID of the NwcRequestEvent
      * @param expectedServicePubkey Wallet service pubkey from the request's `p` tag
      * @param zappedNote The note being zapped (null if not a zap payment)
      * @param onResponse Callback invoked when response arrives
@@ -83,7 +83,7 @@ class NwcPaymentTracker {
         requestId: HexKey,
         expectedServicePubkey: HexKey,
         zappedNote: Note?,
-        onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        onResponse: suspend (NwcResponseEvent) -> Unit,
     ) {
         awaitingRequests[requestId] = PendingRequest(expectedServicePubkey, zappedNote, onResponse)
     }

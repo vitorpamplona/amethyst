@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
@@ -52,4 +53,7 @@ open class PassThroughPolicy : IRelayPolicy {
     override fun accept(cmd: AuthCmd): PolicyResult<AuthCmd> = PolicyResult.Accepted(cmd)
 
     override fun canSendToSession(event: Event): Boolean = true
+
+    /** No objection. A subclass that refuses logins in [accept] (AuthCmd) must refuse here too. */
+    override suspend fun acceptTransportIdentity(pubkey: HexKey): String? = null
 }

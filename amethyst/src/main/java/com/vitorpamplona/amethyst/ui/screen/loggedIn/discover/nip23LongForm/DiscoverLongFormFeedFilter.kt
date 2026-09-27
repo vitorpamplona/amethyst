@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 open class DiscoverLongFormFeedFilter(
     val account: Account,
@@ -50,9 +50,9 @@ open class DiscoverLongFormFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.addressables.filterIntoSet(LongTextNoteEvent.KIND) { _, it ->
+            LocalCache.addressables.filterIntoSet(LongFormContentEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
+                noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
             }
         return sort(notes)
     }
@@ -70,7 +70,7 @@ open class DiscoverLongFormFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
+            noteEvent is LongFormContentEvent && params.match(noteEvent, it.relays)
         }
     }
 

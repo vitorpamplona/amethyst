@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -177,7 +177,7 @@ class ConcordPlaneKeyDeletionTest {
 
             // The banned member still derives `plane`, and every wrap above IS authored by it — so
             // this kind-5 satisfies a same-author check. It must still be refused.
-            val deletion = planeSigner().sign(DeletionEvent.build(history, createdAt = now + 10))
+            val deletion = planeSigner().sign(DeletionRequestEvent.build(history, createdAt = now + 10))
             assertEquals(true, client.publishAndConfirm(deletion, setOf(relayUrl)), "the relay accepts the event itself")
 
             assertEquals(
@@ -230,7 +230,7 @@ class ConcordPlaneKeyDeletionTest {
             assertEquals(true, client.publishAndConfirm(addressedWrap, setOf(relayUrl)))
             assertEquals(1, query(Filter(ids = listOf(addressedWrap.id))).size)
 
-            val deletion = mallory.sign(DeletionEvent.build(listOf(addressedWrap), createdAt = now + 1))
+            val deletion = mallory.sign(DeletionRequestEvent.build(listOf(addressedWrap), createdAt = now + 1))
             assertEquals(true, client.publishAndConfirm(deletion, setOf(relayUrl)))
 
             assertEquals(

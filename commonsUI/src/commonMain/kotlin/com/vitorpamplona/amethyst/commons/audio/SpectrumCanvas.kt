@@ -26,15 +26,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 
 /**
  * Collects [spectrum] into a decayed [FloatArray] and optionally runs a monotonic time clock,
  * then calls [draw] inside the Canvas draw lambda. The fast-changing state is read
  * ONLY in the draw lambda, so new frames trigger the draw phase, never recomposition.
- * Pass [animated] = false for non-time-varying styles (bars, radial) to avoid 60fps redraws.
+ *
+ * Frames are released through [SpectrumTrail] as the audio they describe comes due. The pacing loop
+ * only writes state when a frame is due, and parks entirely while nothing is queued (paused, idle),
+ * so on its own it redraws at the ~43-47 Hz the fft produces and costs nothing when silent.
+ *
+ * Pass [animated] = false for non-time-varying styles (bars, radial): that drops the monotonic clock,
+ * whose whole purpose is to redraw every frame even when the spectrum has not moved.
  */
 @Composable
 fun SpectrumCanvas(
@@ -46,18 +54,27 @@ fun SpectrumCanvas(
     draw: DrawScope.(bins: FloatArray, timeSec: Float, palette: VisualizerPalette) -> Unit,
 ) {
     val smoothed = remember { mutableStateOf(FloatArray(0)) }
-    LaunchedEffect(spectrum, decay) {
-        var prev = FloatArray(0)
-        spectrum.collect { frame ->
-            // A fresh array each frame is intentional: mutableStateOf compares by reference, so a new
-            // instance is what signals Compose to redraw. Do NOT switch to in-place mutation.
-            val next =
-                FloatArray(frame.bins.size) { i ->
-                    val prior = if (i < prev.size) prev[i] * decay else 0f
-                    if (frame.bins[i] > prior) frame.bins[i] else prior
-                }
-            smoothed.value = next
-            prev = next
+
+    val trail = remember(spectrum, decay) { SpectrumTrail(decay) }
+    val arrivals = remember(trail) { Channel<Unit>(Channel.CONFLATED) }
+    LaunchedEffect(spectrum, trail) {
+        spectrum.collect {
+            trail.offer(it)
+            arrivals.trySend(Unit)
+        }
+    }
+
+    LaunchedEffect(trail) {
+        while (true) {
+            val next = trail.nextOrNull(withFrameNanos { it })
+            if (next != null) {
+                smoothed.value = next
+            } else if (trail.isEmpty()) {
+                // Park off the frame clock until the next offer. This must follow a nextOrNull that
+                // saw the empty queue: that call records the starvation which stops the next cluster
+                // from being dumped at once to "catch up".
+                arrivals.receive()
+            }
         }
     }
 

@@ -37,7 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.nip51Lists.ui.BookmarkGroupManagementItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.article_bookmark_management_title
@@ -109,7 +109,7 @@ private fun ListManagementViewBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val bookmarkGroups by accountViewModel.account.labeledBookmarkLists.listFeedFlow
+    val bookmarkGroups by accountViewModel.account.bookmarkSets.listFeedFlow
         .collectAsStateWithLifecycle()
 
     val defaultBookmarks by accountViewModel.account.bookmarkState.bookmarks
@@ -146,7 +146,7 @@ private fun ListManagementViewBody(
             )
         }
 
-        itemsIndexed(items = bookmarkGroups, key = { _: Int, item: LabeledBookmarkList -> item.identifier }) { _, bookmarkList ->
+        itemsIndexed(items = bookmarkGroups, key = { _: Int, item: BookmarkSet -> item.identifier }) { _, bookmarkList ->
             val maybePublicBookmark = bookmarkList.publicArticleBookmarks.firstOrNull { it.address == note.address }
             val maybePrivateBookmark = bookmarkList.privateArticleBookmarks.firstOrNull { it.address == note.address }
             BookmarkGroupManagementItem(
@@ -159,7 +159,7 @@ private fun ListManagementViewBody(
                 onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.ArticleBookmark)) },
                 onAddBookmarkToGroup = { shouldBePrivate ->
                     accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
+                        accountViewModel.account.bookmarkSets.addBookmarkToList(
                             bookmark = AddressBookmark(address = note.address, relayHint = note.relayHintUrl()),
                             bookmarkListIdentifier = bookmarkList.identifier,
                             isBookmarkPrivate = shouldBePrivate,
@@ -169,7 +169,7 @@ private fun ListManagementViewBody(
                 },
                 onRemoveBookmarkFromGroup = {
                     accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
+                        accountViewModel.account.bookmarkSets.removeBookmarkFromList(
                             bookmark = AddressBookmark(address = note.address),
                             bookmarkListIdentifier = bookmarkList.identifier,
                             isBookmarkPrivate = maybePrivateBookmark != null,

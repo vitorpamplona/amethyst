@@ -36,6 +36,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 
 /** Regressions found in the audit: each failed before its fix. */
 class AuditRegressionTest {
@@ -109,6 +110,111 @@ class AuditRegressionTest {
         val node = item(arrayOf(arrayOf("d", "x"), arrayOf("z", name)))
         assertIs<ParentList.Name>(node.parentLists().single())
         assertFalse(name in node.linkedAddressIds())
+    }
+
+    // The `d` must separate two addressable targets. kind 39999 is addressable, so a colliding
+    // `d` means the second tagging silently replaces the first.
+    @Test
+    fun twoAddressableTargetsByTheSameAuthorGetDifferentDTags() {
+        val first = TaggingTarget.ByAddress(Address(39999, bob, "good-tag"))
+        val second = TaggingTarget.ByAddress(Address(39999, bob, "other-tag"))
+
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", first, alice),
+            EventTagging.dTag("awesome-tag", second, alice),
+        )
+    }
+
+    // Same idea across the other two coordinate segments: only one of the three may differ.
+    @Test
+    fun addressableTargetsDifferingOnlyByKindGetDifferentDTags() {
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "tag")), alice),
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(30023, bob, "tag")), alice),
+        )
+    }
+
+    @Test
+    fun addressableTargetsDifferingOnlyByAuthorGetDifferentDTags() {
+        assertNotEquals(
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "tag")), alice),
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, other, "tag")), alice),
+        )
+    }
+
+    // ...while the `d` stays deterministic, which is what lets a re-tag replace its own assertion
+    // instead of piling up a second one. `event-taggings.md` § "The assertion d-tag (normative)":
+    // `<author8>-<d16>-<hash8>`, only hash8 unique. The hashes are SHA-256 prefixes of the full
+    // coordinate computed outside this codebase, so the test cross-checks the derivation rather
+    // than restating it: a change of hash input would silently orphan every assertion signed.
+    @Test
+    fun theAddressablePrefixIsAuthorThenDTagThenTheHashOfTheWholeCoordinate() {
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb-good-tag-6a5e1c40-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "good-tag")), alice),
+        )
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb-other-tag-e89b797c-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "other-tag")), alice),
+        )
+        // same author8 AND same d16 as the first; only the kind differs, so only hash8 separates them
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb-good-tag-96856fd8-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(30023, bob, "good-tag")), alice),
+        )
+    }
+
+    // The draft spells this case out: an empty `d` yields an empty `d16`, hence the double hyphen.
+    @Test
+    fun anEmptyDTagSegmentLeavesADoubleHyphen() {
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb--76600e1a-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, "")), alice),
+        )
+    }
+
+    // d16 is the first 16 UTF-16 code units, verbatim and truncated — decoration, not identity.
+    @Test
+    fun aLongDTagIsTruncatedToSixteenCharactersInTheDecoration() {
+        val d = "a-very-long-d-tag-that-exceeds-sixteen"
+        assertEquals(
+            "event-tag-awesome-tag-bbbbbbbb-a-very-long-d-ta-58899d62-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, d)), alice),
+        )
+    }
+
+    // Truncating at 16 UTF-16 code units can cut an astral character in half. The id is hashed
+    // from the intact char while the wire bytes get `?` in its place, so the relay re-hashes
+    // different bytes and rejects the event. The half character is dropped instead.
+    @Test
+    fun aDTagCutMidAstralCharacterDoesNotLeaveHalfACharacterInTheD() {
+        // 15 ASCII then an emoji: the 16th code unit is the high surrogate of the pair.
+        val dTag = "a".repeat(15) + "\uD83D\uDE00" + "tail"
+        val d = EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, dTag)), alice)
+
+        assertFalse(d.any { it.isHighSurrogate() || it.isLowSurrogate() }, "the `d` still carries half a character: $d")
+        // 15 units of decoration, not 16, and hash8 is over the untruncated coordinate.
+        assertEquals("event-tag-awesome-tag-bbbbbbbb-${"a".repeat(15)}-15c09d87-aaaaaaaa", d)
+    }
+
+    // The property the above protects: what is hashed for the id must survive UTF-8 encoding,
+    // or the relay recomputes a different id. Pins the bytes, not just the string.
+    @Test
+    fun theDSurvivesAUtf8RoundTripByteForByte() {
+        val dTag = "a".repeat(15) + "\uD83D\uDE00" + "tail"
+        val d = EventTagging.dTag("awesome-tag", TaggingTarget.ByAddress(Address(39999, bob, dTag)), alice)
+
+        assertEquals(d, d.encodeToByteArray().decodeToString(), "the `d` does not survive UTF-8 encoding")
+    }
+
+    // A plain event is still named by its own id: it already covers the whole event, and hashing
+    // it would only cost a round of SHA-256 per assertion built. The `e` branch is unchanged.
+    @Test
+    fun plainEventTargetsStillUseTheirOwnId() {
+        assertEquals(
+            "event-tag-awesome-tag-11111111-aaaaaaaa",
+            EventTagging.dTag("awesome-tag", TaggingTarget.ByEventId("1".repeat(64)), alice),
+        )
     }
 
     // Authored JSON: an explicit null in a list field must not make the whole section unreadable.

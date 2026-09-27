@@ -267,15 +267,8 @@
     <string name="mark_all_known_as_read">Đánh dấu tất cả đã biết là đã đọc</string>
     <string name="mark_all_new_as_read">Đánh dấu tất cả mới là đã đọc</string>
     <string name="mark_all_as_read">Đánh dấu tất cả là đã đọc</string>
-    <string name="account_backup_tips2_md">        ## Mẹo sao lưu khóa và bảo mật
-        \n\nTài khoản của bạn được bảo mật bằng một khóa bí mật. Khóa là một chuỗi ký tự dài bắt đầu bằng **nsec1**. Bất kỳ ai có quyền truy cập vào khóa bí mật này đều có thể đăng bài và thay đổi danh tính của bạn.
-        \n\n- **Không** đưa khóa bí mật của bạn vào bất kỳ trang web hoặc phần mềm nào mà bạn không tin tưởng.
-        \n- Các nhà phát triển Amethyst sẽ **không bao giờ** yêu cầu khóa bí mật của bạn.
-        \n- **Hãy** giữ bản sao lưu an toàn của khóa bí mật để khôi phục tài khoản. Chúng tôi khuyến nghị sử dụng trình quản lý mật khẩu.
-    </string>
-    <string name="account_backup_tips3_md">        Để bảo mật thêm, bạn có thể mã hóa khóa của mình bằng mật khẩu. Khóa này bắt đầu bằng **ncryptsec1** và không thể sử dụng nếu không có mật khẩu của bạn.
-        \n\nNếu bạn mất mật khẩu, bạn sẽ không thể khôi phục khóa của mình.
-    </string>
+    <string name="account_backup_tips2_md">## Mẹo sao lưu khóa và bảo mật \n\nTài khoản của bạn được bảo mật bằng một khóa bí mật. Khóa là một chuỗi ký tự dài bắt đầu bằng **nsec1**. Bất kỳ ai có quyền truy cập vào khóa bí mật này đều có thể đăng bài và thay đổi danh tính của bạn. \n\n- **Không** đưa khóa bí mật của bạn vào bất kỳ trang web hoặc phần mềm nào mà bạn không tin tưởng. \n- Các nhà phát triển Amethyst sẽ **không bao giờ** yêu cầu khóa bí mật của bạn. \n- **Hãy** giữ bản sao lưu an toàn của khóa bí mật để khôi phục tài khoản. Chúng tôi khuyến nghị sử dụng trình quản lý mật khẩu.</string>
+    <string name="account_backup_tips3_md">Để bảo mật thêm, bạn có thể mã hóa khóa của mình bằng mật khẩu. Khóa này bắt đầu bằng **ncryptsec1** và không thể sử dụng nếu không có mật khẩu của bạn. \n\nNếu bạn mất mật khẩu, bạn sẽ không thể khôi phục khóa của mình.</string>
     <string name="encrypt_and_copy_my_secret_key">Mã hóa và sao chép khóa bí mật của tôi</string>
     <string name="badge_award_image_for">Hình ảnh huy hiệu được trao cho %1$s</string>
     <string name="badge_award_image">"Hình ảnh huy hiệu được trao</string>
@@ -954,9 +947,7 @@
     <string name="push_server_none_explainer">Tắt thông báo Push</string>
     <string name="push_server_uses_app_explainer">Sử dụng ứng dụng %1$s</string>
     <string name="push_server_install_app">Cài đặt thông báo Push</string>
-    <string name="push_server_install_app_description">        Để nhận thông báo push, hãy cài đặt ứng dụng hỗ trợ [Unified Push](https://unifiedpush.org/), chẳng hạn như [Ntfy](https://ntfy.sh/).
-        Sau khi cài đặt, hãy chọn ứng dụng bạn muốn sử dụng trong Cài đặt.
-    </string>
+    <string name="push_server_install_app_description">Để nhận thông báo push, hãy cài đặt ứng dụng hỗ trợ [Unified Push](https://unifiedpush.org/), chẳng hạn như [Ntfy](https://ntfy.sh/). Sau khi cài đặt, hãy chọn ứng dụng bạn muốn sử dụng trong Cài đặt.</string>
     <string name="thread_title">Luồng</string>
     <string name="send_the_seller_a_message">Gửi tin nhắn cho người bán</string>
     <string name="hi_there_is_this_still_available">Xin chào, mặt hàng này còn không?</string>
@@ -2000,15 +1991,7 @@
     <string name="could_not_fetch_invoice_from_details">Không thể tải hóa đơn từ %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Không thể mở tệp nén</string>
     <string name="couldnt_find_nwc_wallets">Không tìm thấy ví</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst không tìm thấy ứng dụng ví nào hỗ trợ Nostr Wallet Connect (NWC).
-\n\nBạn có thể thực hiện:
-\n\t1. Xác minh hỗ trợ NWC: Kiểm tra lại xem ứng dụng ví của bạn có tương thích với Nostr Wallet Connect không.
-\n\t2. Tạo kết nối: Vào ứng dụng ví của bạn và tạo kết nối NWC mới.
-\n\t3. Liên kết với Amethyst: Ví của bạn thường cung cấp ba tùy chọn:
-\n\t\t3.1 Liên kết tự động: Nút để tự động mở và kết nối với Amethyst. Nếu có, nhấn nút đó, mở Amethyst và nhấn lưu trên màn hình mới.
-\n\t\t3.2 Liên kết thủ công: URI kết nối mà bạn có thể sao chép và nhấn biểu tượng dán trên màn hình này để nhập trực tiếp.
-\n\t\t3.3 Mã QR: Ví tạo mã QR mà bạn có thể đọc bằng nút mã QR trên màn hình này.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst không tìm thấy ứng dụng ví nào hỗ trợ Nostr Wallet Connect (NWC). \n\nBạn có thể thực hiện: \n\t1. Xác minh hỗ trợ NWC: Kiểm tra lại xem ứng dụng ví của bạn có tương thích với Nostr Wallet Connect không. \n\t2. Tạo kết nối: Vào ứng dụng ví của bạn và tạo kết nối NWC mới. \n\t3. Liên kết với Amethyst: Ví của bạn thường cung cấp ba tùy chọn: \n\t\t3.1 Liên kết tự động: Nút để tự động mở và kết nối với Amethyst. Nếu có, nhấn nút đó, mở Amethyst và nhấn lưu trên màn hình mới. \n\t\t3.2 Liên kết thủ công: URI kết nối mà bạn có thể sao chép và nhấn biểu tượng dán trên màn hình này để nhập trực tiếp. \n\t\t3.3 Mã QR: Ví tạo mã QR mà bạn có thể đọc bằng nút mã QR trên màn hình này.</string>
     <string name="create">Tạo</string>
     <string name="d">n</string>
     <string name="danger_zone">Vùng nguy hiểm</string>
@@ -2642,11 +2625,8 @@
     <string name="proxy_section">Relay Proxy</string>
     <string name="proxy_section_explainer">Các relay tổng hợp mà ứng dụng phải sử dụng để tải feed của bạn, như filter.nostr.wine. Tùy chọn này thay thế mô hình outbox và sẽ khiến ứng dụng chỉ kết nối đến các relay trong danh sách của bạn.</string>
     <string name="public_chat">Trò chuyện công khai</string>
-    <string name="public_chat_explainer">Trò chuyện công khai hiển thị với mọi người trên Nostr và bất kỳ ai
-        cũng có thể tham gia. Chúng rất phù hợp cho các cộng đồng mở xung quanh các chủ đề cụ thể.
-        Kiểm duyệt có thể được kiểm soát bằng cách xóa bài đăng trên các relay của nó</string>
-    <string name="public_chat_relays_explainer">Nhập từ 1–3 relay lưu trữ nhóm này.
-        Các ứng dụng Nostr sử dụng cài đặt này để biết nơi tải xuống tin nhắn và gửi tin nhắn của bạn.</string>
+    <string name="public_chat_explainer">Trò chuyện công khai hiển thị với mọi người trên Nostr và bất kỳ ai cũng có thể tham gia. Chúng rất phù hợp cho các cộng đồng mở xung quanh các chủ đề cụ thể. Kiểm duyệt có thể được kiểm soát bằng cách xóa bài đăng trên các relay của nó</string>
+    <string name="public_chat_relays_explainer">Nhập từ 1–3 relay lưu trữ nhóm này. Các ứng dụng Nostr sử dụng cài đặt này để biết nơi tải xuống tin nhắn và gửi tin nhắn của bạn.</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">Siêu dữ liệu trò chuyện công khai</string>
     <string name="public_chats">Trò chuyện công khai</string>
@@ -2670,10 +2650,7 @@
     <string name="read_from_relay_description">Lượng dữ liệu tính bằng byte đã nhận được từ relay này, bao gồm các bộ lọc và sự kiện</string>
     <string name="read_only_user">Người dùng chỉ đọc</string>
     <string name="record_a_message_description">Nhấn và giữ để ghi âm tin nhắn</string>
-    <string name="relay_chat_explainer">Relay chat là các nhóm trò chuyện được kiểm soát bởi relay chủ quản.
-        Chúng hiển thị với mọi người trên Nostr và bất kỳ ai cũng có thể tham gia.
-        Chúng rất phù hợp cho các cộng đồng mở xung quanh các chủ đề cụ thể. Một số nhóm này là tạm thời
-    và do đó tin nhắn trò chuyện sẽ biến mất theo thời gian</string>
+    <string name="relay_chat_explainer">Relay chat là các nhóm trò chuyện được kiểm soát bởi relay chủ quản. Chúng hiển thị với mọi người trên Nostr và bất kỳ ai cũng có thể tham gia. Chúng rất phù hợp cho các cộng đồng mở xung quanh các chủ đề cụ thể. Một số nhóm này là tạm thời và do đó tin nhắn trò chuyện sẽ biến mất theo thời gian</string>
     <string name="relay_chat_title">Relay Chat</string>
     <string name="relay_management_tab_events">Sự kiện</string>
     <string name="relay_management_tab_ips">IP</string>
@@ -2913,4 +2890,5 @@
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
 </resources>

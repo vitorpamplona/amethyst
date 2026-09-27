@@ -92,13 +92,13 @@ class PrivateZapTests {
                 )
 
             val privateZapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = poll,
                     relays = setOf(RelayUrlNormalizer.normalize("wss://relay.damus.io/")),
                     signer = loggedIn,
                     pollOption = 0,
                     message = "",
-                    zapType = LnZapEvent.ZapType.PRIVATE,
+                    zapType = ZapReceiptEvent.ZapType.PRIVATE,
                     toUserPubHex = null,
                 )
 
@@ -151,7 +151,7 @@ class PrivateZapTests {
                 )
 
             val privateZapRequest =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = textNote,
                     relays =
                         setOf(
@@ -162,7 +162,7 @@ class PrivateZapTests {
                     signer = loggedIn,
                     pollOption = null,
                     message = "test",
-                    zapType = LnZapEvent.ZapType.PRIVATE,
+                    zapType = ZapReceiptEvent.ZapType.PRIVATE,
                     toUserPubHex = null,
                 )
 

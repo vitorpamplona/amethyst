@@ -36,21 +36,21 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 
 /** NIP-51 kind 10015: the hashtags this user follows. */
 @Composable
-fun RenderHashtagList(
+fun RenderInterestList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? HashtagListEvent ?: return
+    val noteEvent = baseNote.event as? InterestListEvent ?: return
 
     val public = remember(noteEvent) { noteEvent.publicHashtags() }
-    // HashtagListEvent exposes no private accessor of its own, but it is a PrivateTagArrayEvent
+    // InterestListEvent exposes no private accessor of its own, but it is a PrivateTagArrayEvent
     // like the rest, so its private half is read the same way InterestSetEvent reads its own.
     val private by loadPrivateItems(noteEvent, accountViewModel) { signer ->
         noteEvent.privateTags(signer)?.mapNotNull(HashtagTag::parse)

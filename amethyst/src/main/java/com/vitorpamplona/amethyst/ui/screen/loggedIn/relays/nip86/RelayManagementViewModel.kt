@@ -29,11 +29,13 @@ import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BlockedIp
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.EventNeedingModeration
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -69,11 +71,17 @@ class RelayManagementViewModel(
     private val _bannedEvents = MutableStateFlow<List<BannedEvent>>(emptyList())
     val bannedEvents: StateFlow<List<BannedEvent>> = _bannedEvents
 
+    private val _allowedEvents = MutableStateFlow<List<AllowedEvent>>(emptyList())
+    val allowedEvents: StateFlow<List<AllowedEvent>> = _allowedEvents
+
     private val _eventsNeedingModeration = MutableStateFlow<List<EventNeedingModeration>>(emptyList())
     val eventsNeedingModeration: StateFlow<List<EventNeedingModeration>> = _eventsNeedingModeration
 
     private val _allowedKinds = MutableStateFlow<List<Int>>(emptyList())
     val allowedKinds: StateFlow<List<Int>> = _allowedKinds
+
+    private val _disallowedKinds = MutableStateFlow<List<Int>>(emptyList())
+    val disallowedKinds: StateFlow<List<Int>> = _disallowedKinds
 
     private val _blockedIps = MutableStateFlow<List<BlockedIp>>(emptyList())
     val blockedIps: StateFlow<List<BlockedIp>> = _blockedIps
@@ -147,6 +155,17 @@ class RelayManagementViewModel(
         }
     }
 
+    fun loadAllowedEvents() {
+        viewModelScope.launch {
+            val response = retriever.execute(client, Nip86Request.listAllowedEvents())
+            if (response.error != null) {
+                _error.value = response.error
+            } else {
+                _allowedEvents.value = client.parseAllowedEvents(response)?.distinctBy { it.id } ?: emptyList()
+            }
+        }
+    }
+
     fun loadEventsNeedingModeration() {
         viewModelScope.launch {
             val response = retriever.execute(client, Nip86Request.listEventsNeedingModeration())
@@ -165,6 +184,17 @@ class RelayManagementViewModel(
                 _error.value = response.error
             } else {
                 _allowedKinds.value = client.parseAllowedKinds(response)?.distinctBy { it } ?: emptyList()
+            }
+        }
+    }
+
+    fun loadDisallowedKinds() {
+        viewModelScope.launch {
+            val response = retriever.execute(client, Nip86Request.listDisallowedKinds())
+            if (response.error != null) {
+                _error.value = response.error
+            } else {
+                _disallowedKinds.value = client.parseDisallowedKinds(response)?.distinctBy { it } ?: emptyList()
             }
         }
     }
@@ -189,7 +219,9 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
+                // NIP-86: banning also drops the pubkey from the allow list.
                 loadBannedPubkeys()
+                loadIfSupported(Nip86Method.LIST_ALLOWED_PUBKEYS) { loadAllowedPubkeys() }
             }
         }
     }
@@ -214,7 +246,9 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
+                // NIP-86: allowing also lifts any ban on the pubkey.
                 loadAllowedPubkeys()
+                loadIfSupported(Nip86Method.LIST_BANNED_PUBKEYS) { loadBannedPubkeys() }
             }
         }
     }
@@ -239,11 +273,26 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
+                reloadEventLists()
+            }
+        }
+    }
+
+    fun unbanEvent(eventId: String) {
+        viewModelScope.launch {
+            val response = retriever.execute(client, Nip86Request.unbanEvent(eventId))
+            if (response.error != null) {
+                _error.value = response.error
+            } else {
                 loadBannedEvents()
             }
         }
     }
 
+    /**
+     * Approves an event: NIP-86 `allowevent` puts it on the relay's event
+     * allow list and lifts any ban on it (it no longer means "unban").
+     */
     fun allowEvent(
         eventId: String,
         reason: String? = null,
@@ -253,9 +302,33 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                loadEventsNeedingModeration()
+                reloadEventLists()
             }
         }
+    }
+
+    fun unallowEvent(eventId: String) {
+        viewModelScope.launch {
+            val response = retriever.execute(client, Nip86Request.unallowEvent(eventId))
+            if (response.error != null) {
+                _error.value = response.error
+            } else {
+                loadAllowedEvents()
+            }
+        }
+    }
+
+    private fun reloadEventLists() {
+        loadIfSupported(Nip86Method.LIST_EVENTS_NEEDING_MODERATION) { loadEventsNeedingModeration() }
+        loadIfSupported(Nip86Method.LIST_BANNED_EVENTS) { loadBannedEvents() }
+        loadIfSupported(Nip86Method.LIST_ALLOWED_EVENTS) { loadAllowedEvents() }
+    }
+
+    private inline fun loadIfSupported(
+        method: String,
+        load: () -> Unit,
+    ) {
+        if (_supportedMethods.value.contains(method)) load()
     }
 
     fun changeRelayName(newName: String) {
@@ -292,6 +365,7 @@ class RelayManagementViewModel(
                 _error.value = response.error
             } else {
                 loadAllowedKinds()
+                loadIfSupported(Nip86Method.LIST_DISALLOWED_KINDS) { loadDisallowedKinds() }
             }
         }
     }
@@ -303,6 +377,7 @@ class RelayManagementViewModel(
                 _error.value = response.error
             } else {
                 loadAllowedKinds()
+                loadIfSupported(Nip86Method.LIST_DISALLOWED_KINDS) { loadDisallowedKinds() }
             }
         }
     }
@@ -337,12 +412,13 @@ class RelayManagementViewModel(
     }
 
     fun loadAllLists() {
-        val methods = _supportedMethods.value
-        if (methods.contains("listbannedpubkeys")) loadBannedPubkeys()
-        if (methods.contains("listallowedpubkeys")) loadAllowedPubkeys()
-        if (methods.contains("listbannedevents")) loadBannedEvents()
-        if (methods.contains("listeventsneedingmoderation")) loadEventsNeedingModeration()
-        if (methods.contains("listallowedkinds")) loadAllowedKinds()
-        if (methods.contains("listblockedips")) loadBlockedIps()
+        loadIfSupported(Nip86Method.LIST_BANNED_PUBKEYS) { loadBannedPubkeys() }
+        loadIfSupported(Nip86Method.LIST_ALLOWED_PUBKEYS) { loadAllowedPubkeys() }
+        loadIfSupported(Nip86Method.LIST_BANNED_EVENTS) { loadBannedEvents() }
+        loadIfSupported(Nip86Method.LIST_ALLOWED_EVENTS) { loadAllowedEvents() }
+        loadIfSupported(Nip86Method.LIST_EVENTS_NEEDING_MODERATION) { loadEventsNeedingModeration() }
+        loadIfSupported(Nip86Method.LIST_ALLOWED_KINDS) { loadAllowedKinds() }
+        loadIfSupported(Nip86Method.LIST_DISALLOWED_KINDS) { loadDisallowedKinds() }
+        loadIfSupported(Nip86Method.LIST_BLOCKED_IPS) { loadBlockedIps() }
     }
 }

@@ -143,11 +143,13 @@ messages quoted below (they surface as the NIP-01 `OK false` reason).
 kinds. A `BEFORE INSERT` trigger deletes any stored version that is *older* — meaning
 `created_at` smaller, **or equal `created_at` with lexicographically larger id** (NIP-01
 lowest-id-wins). Inserting a version that is *not* newer under that ordering leaves the stored
-row in place and fails the unique index → rejected with `RejectionReason.SUPERSEDED`
-(`duplicate: a newer version of this replaceable event is already stored`), which the relay
-session answers with `OK true` exactly like an id duplicate (NIP-01 `duplicate:` prefix; same
-reply nostr-rs-relay gives). Net contract: exactly one version stored; newest wins; ties broken
-by lowest id; older re-inserts blocked but acknowledged as already covered.
+row in place and fails the unique index → rejected with `RejectionReason.REPLACED`
+(`replaced: a newer version exists`), which the relay session answers with `OK false`: the
+event was not written, and NIP-01's `true` means accepted. Same reply strfry gives
+(`false, "replaced: have newer event"`); nostr-rs-relay answers `true, "duplicate:"` instead,
+and `RejectionReason.SUPERSEDED`, which did the same, is deprecated. Net contract: exactly one
+version stored; newest wins; ties broken by lowest id; older re-inserts blocked and reported as
+such.
 
 **STORE-W02 — addressable supersession.** Same as W01 with unique index
 `(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. Nuance: `d_tag` is populated from the
@@ -193,16 +195,15 @@ in input order; OK frames pair by event id, not order.
 exception text.** `SQLiteEventStore.classifyRowError` rolls the row's savepoint back and then
 asks the connection (which now shows pre-insert state): id already present → `DUPLICATE`;
 a stored version that beats this one at the replaceable/addressable coordinate (the exact
-complement of the supersession predicate in W01/W02) → `SUPERSEDED`; otherwise `Failed`.
+complement of the supersession predicate in W01/W02) → `REPLACED`; otherwise `Failed`.
 Message text is only a fast path and a fallback for trigger RAISEs (`blocked:`, `not allowed`),
 which leave no database-visible trace. This matters because the message is driver-specific —
 the bundled JVM driver writes `UNIQUE constraint failed: event_headers.id`, Android's throws an
 `android.database.SQLException` with a **null** message — so a text-only classifier answered
 `OK false` on Android for events the store already held. Corollary: re-offering a stored
-replaceable/addressable event **byte-for-byte** is `DUPLICATE`, not `SUPERSEDED` (it violates
-both indexes and only the id answer is driver-independent); a stale *different* version is
-still `SUPERSEDED`. Both carry the `duplicate:` prefix, so the relay reply is `OK true` either
-way.
+replaceable/addressable event **byte-for-byte** is `DUPLICATE` (`OK true`: it is stored), not
+`REPLACED` (it violates both indexes and only the id answer is driver-independent); a stale
+*different* version is `REPLACED` (`OK false`: it is not).
 
 ---
 
@@ -338,6 +339,10 @@ non-itemizable cases).
 
 Add one line per behavior change, newest first: `YYYY-MM-DD <short sha> <rule id> — what changed`.
 
+- 2026-09-27 (pending) W01/W02, W09 — a stale replaceable/addressable version is `REPLACED`
+  (`replaced:` → `OK false`) again, not `SUPERSEDED` (`duplicate:` → `OK true`): it is not
+  written, and `OK true` told the client it was. `SUPERSEDED` is deprecated. Byte-for-byte
+  re-offers stay `DUPLICATE`.
 - 2026-09-18 (pending) W09, W01/W02 — insert-failure classification now queries the database
   instead of parsing the driver's exception message (Android's is null, so duplicates were
   reported as `Failed`/`OK false`). A byte-for-byte re-offer of a stored replaceable/addressable

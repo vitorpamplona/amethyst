@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlin.test.Test
@@ -261,7 +261,7 @@ class BasicTest : BaseDBTest() {
         forEachDB { db ->
             // Pre-load a target event and a deletion that blocks re-insertion.
             val deletedTarget = signer.sign(TextNoteEvent.build("target", createdAt = 1))
-            val deletion = signer.sign(DeletionEvent.build(listOf(deletedTarget), createdAt = 100))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(deletedTarget), createdAt = 100))
             db.insert(deletion)
             db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
 

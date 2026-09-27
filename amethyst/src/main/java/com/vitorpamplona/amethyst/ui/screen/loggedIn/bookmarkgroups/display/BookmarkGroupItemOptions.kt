@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -281,7 +281,7 @@ fun BookmarkGroupItemOptionsMenu(
                             wantsToEditPost.value = true
                         }
                     }
-                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
+                } else if (note.event is LongFormContentEvent && state.isLoggedUser) {
                     M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.edit_article)) {
                         nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }

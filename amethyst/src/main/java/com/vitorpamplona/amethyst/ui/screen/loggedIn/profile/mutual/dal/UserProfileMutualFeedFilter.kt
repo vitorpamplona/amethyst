@@ -41,9 +41,9 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
@@ -83,8 +83,8 @@ class UserProfileMutualFeedFilter(
                     it.event is BirdexEvent ||
                     it.event is BirdDetectionEvent ||
                     it.event.isRenderableRepost() ||
-                    it.event is LongTextNoteEvent ||
-                    it.event is WikiNoteEvent ||
+                    it.event is LongFormContentEvent ||
+                    it.event is WikiArticleEvent ||
                     it.event is NipTextEvent ||
                     it.event is ZapPollEvent ||
                     it.event is HighlightEvent ||

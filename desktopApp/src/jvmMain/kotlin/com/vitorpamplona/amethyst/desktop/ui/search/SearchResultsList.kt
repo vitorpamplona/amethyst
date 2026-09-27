@@ -69,7 +69,7 @@ import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadge
 import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 @Composable
@@ -96,9 +96,9 @@ fun SearchResultsList(
 
     // Group notes by kind
     val textNotes = notes.filter { it.kind == 1 }
-    val articles = notes.filter { it.kind == LongTextNoteEvent.KIND }
+    val articles = notes.filter { it.kind == LongFormContentEvent.KIND }
     val polls = notes.filter { it.kind == PollEvent.KIND }
-    val otherNotes = notes.filter { it.kind != 1 && it.kind != LongTextNoteEvent.KIND && it.kind != PollEvent.KIND }
+    val otherNotes = notes.filter { it.kind != 1 && it.kind != LongFormContentEvent.KIND && it.kind != PollEvent.KIND }
 
     // Per-section collapsed state (absent = expanded)
     val collapsedSections = remember { mutableStateMapOf<String, Boolean>() }

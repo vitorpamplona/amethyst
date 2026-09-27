@@ -30,9 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSigner
 
@@ -62,7 +62,7 @@ class NostrSignerSync(
         kind: Int,
         tags: Array<Array<String>>,
     ): Boolean =
-        kind == LnZapRequestEvent.KIND &&
+        kind == ZapRequestEvent.KIND &&
             tags.any { t -> t.size > 1 && t[0] == "anon" && t[1].isBlank() }
 
     fun <T : Event> signNormal(
@@ -129,7 +129,7 @@ class NostrSignerSync(
         )
     }
 
-    fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
+    fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
 
     /**
      * NIP-BC `sign_psbt`: sign the key-path P2TR inputs of [psbtHex] this key

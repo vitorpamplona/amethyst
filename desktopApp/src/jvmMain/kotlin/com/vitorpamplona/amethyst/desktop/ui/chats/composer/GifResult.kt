@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.chats.composer
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 /** A single GIF result surfaced from a NIP-94 (kind 1063) metadata event. */
 data class GifResult(
@@ -47,7 +47,7 @@ suspend fun searchGifs(
     val trimmed = query.trim()
     val filter =
         Filter(
-            kinds = listOf(FileHeaderEvent.KIND),
+            kinds = listOf(FileMetadataEvent.KIND),
             tags = mapOf("m" to listOf("image/gif")),
             limit = limitPerRelay,
             search = trimmed.ifBlank { null },
@@ -59,7 +59,7 @@ suspend fun searchGifs(
             runCatching { client.fetchAll(relay, filter, idleTimeoutMs = 8_000L) }
                 .getOrDefault(emptyList())
         for (event in events) {
-            val fileHeader = event as? FileHeaderEvent ?: continue
+            val fileHeader = event as? FileMetadataEvent ?: continue
             val url = fileHeader.url() ?: continue
             raw.add(GifResult(url = url, description = fileHeader.content))
         }

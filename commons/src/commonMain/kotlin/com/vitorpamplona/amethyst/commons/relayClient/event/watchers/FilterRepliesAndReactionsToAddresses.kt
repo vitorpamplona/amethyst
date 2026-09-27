@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborati
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
@@ -51,7 +51,7 @@ val RepliesAndReactionsToAddressesKinds1 =
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         ReportEvent.KIND,
-        LnZapEvent.KIND,
+        ZapReceiptEvent.KIND,
         Bolt12ZapEvent.KIND,
         ZapPollEvent.KIND,
         CommentEvent.KIND,
@@ -88,7 +88,7 @@ val RootScopedRepliesToAddressesKinds =
 
 val DeletionKindList =
     listOf(
-        DeletionEvent.KIND,
+        DeletionRequestEvent.KIND,
     )
 
 val TextNoteKindList = listOf(TextNoteEvent.KIND)

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -45,14 +46,14 @@ import com.vitorpamplona.amethyst.ui.dal.NotificationFeedOrderCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -183,7 +184,7 @@ class CardFeedContentState(
         val zapsPerUser = mutableMapOf<User, MutableList<CombinedZap>>()
         val zapsPerEvent = mutableMapOf<Note, MutableList<CombinedZap>>()
         notes
-            .filter { it.event is LnZapEvent }
+            .filter { it.event is ZapReceiptEvent }
             .forEach { zapEvent ->
                 val zappedPost = zapEvent.replyTo?.lastOrNull()
                 if (zappedPost != null) {
@@ -200,7 +201,7 @@ class CardFeedContentState(
                             .add(CombinedZap(zapRequest, zapEvent))
                     }
                 } else {
-                    val event = (zapEvent.event as LnZapEvent)
+                    val event = (zapEvent.event as ZapReceiptEvent)
                     val author =
                         event.zappedAuthor().firstNotNullOfOrNull {
                             LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
@@ -361,7 +362,7 @@ class CardFeedContentState(
                     it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
-                        it.event !is LnZapEvent &&
+                        it.event !is ZapReceiptEvent &&
                         // Nutzaps are already grouped into nutzapsPerEvent (MultiSetCard)
                         // or nutzapsPerUser (NutzapUserSetCard) above, exactly like lightning
                         // zaps. Without this exclusion a nutzap would ALSO fall through to a
@@ -372,7 +373,7 @@ class CardFeedContentState(
                     val pendingInvite = if (it.event is MemberAddedNotificationEvent) pendingInvites[it.idHex] else null
                     if (pendingInvite != null) {
                         ChannelInviteCard(it, pendingInvite)
-                    } else if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
+                    } else if (it.event is EncryptedDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
                         BadgeCard(it)

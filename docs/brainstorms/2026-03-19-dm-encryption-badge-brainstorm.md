@@ -24,7 +24,7 @@ Users need to know which messages are truly private (NIP-17: relay can't see sen
 ## Implementation
 
 The badge goes in `MessageWithReactions` in ChatPane.kt, in the `detailRow` slot of `ChatMessageCompose`. Check `note.event` type:
-- `is PrivateDmEvent` → NIP-04 → lock-open gray
+- `is EncryptedDmEvent` → NIP-04 → lock-open gray
 - `is ChatMessageEvent` or `is ChatMessageEncryptedFileHeaderEvent` → NIP-17 → lock primary
 - else → no badge
 

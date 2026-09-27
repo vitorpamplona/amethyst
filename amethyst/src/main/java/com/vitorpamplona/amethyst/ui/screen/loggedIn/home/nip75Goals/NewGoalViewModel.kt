@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -89,7 +89,7 @@ class NewGoalViewModel : ViewModel() {
         val sum = summary.text.ifBlank { null }
         val web = websiteUrl.text.ifBlank { null }
 
-        return GoalEvent.build(
+        return ZapGoalEvent.build(
             description = description.text,
             amount = amountMillisats,
             relays = relays,

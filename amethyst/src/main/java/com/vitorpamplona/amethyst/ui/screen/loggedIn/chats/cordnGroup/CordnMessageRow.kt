@@ -55,9 +55,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
+import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
+import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -67,11 +71,31 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_text
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_delete
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_edit
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_go_to_message
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_pin
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_reply
+import com.vitorpamplona.amethyst.commons.resources.cordn_action_unpin
+import com.vitorpamplona.amethyst.commons.resources.cordn_chat_unread_divider
+import com.vitorpamplona.amethyst.commons.resources.cordn_chat_yesterday
+import com.vitorpamplona.amethyst.commons.resources.cordn_delete_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_delete_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_delivery_accepted
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_deleted
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_details_coordinator
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_details_cursor
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_details_sent_at
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_details_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_message_edited
+import com.vitorpamplona.amethyst.commons.resources.cordn_reactions_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
@@ -81,8 +105,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
-import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
@@ -92,11 +114,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChipView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.SectionDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.TileRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.authorNameColorFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiFontSize
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.CHAT_GROUP_WINDOW_SECONDS
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -292,7 +309,7 @@ private fun CordnBubbleContents(
     when {
         text == null ->
             Text(
-                text = stringRes(R.string.cordn_message_deleted),
+                text = stringRes(Res.string.cordn_message_deleted),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -448,7 +465,7 @@ private fun CordnReactionDetailSheet(
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             Text(
-                text = stringRes(R.string.cordn_reactions_title),
+                text = stringRes(Res.string.cordn_reactions_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             )
@@ -519,7 +536,7 @@ internal fun CordnQuotedMessage(
 
     val body =
         if (annotations.isDeleted(parent.envelope.id)) {
-            stringRes(R.string.cordn_message_deleted)
+            stringRes(Res.string.cordn_message_deleted)
         } else {
             annotations.contentOf(parent.envelope.id).orEmpty()
         }
@@ -575,7 +592,7 @@ private fun CordnQuoteActionSheet(
         Column(Modifier.padding(bottom = 24.dp)) {
             TileRow {
                 if (onGoToMessage != null) {
-                    ActionTile(MaterialSymbols.ArrowUpward, stringRes(R.string.cordn_action_go_to_message)) {
+                    ActionTile(MaterialSymbols.ArrowUpward, stringRes(Res.string.cordn_action_go_to_message)) {
                         onGoToMessage()
                         onDismiss()
                     }
@@ -594,7 +611,7 @@ private fun CordnQuoteActionSheet(
  */
 @Composable
 internal fun UnreadDivider() {
-    ChatDivisor(stringRes(R.string.cordn_chat_unread_divider), MaterialTheme.colorScheme.primary)
+    ChatDivisor(stringRes(Res.string.cordn_chat_unread_divider), MaterialTheme.colorScheme.primary)
 }
 
 /**
@@ -618,7 +635,7 @@ private fun CordnMessageFooter(
         if (isPinned) {
             Icon(
                 symbol = MaterialSymbols.PushPin,
-                contentDescription = stringRes(R.string.cordn_action_pin),
+                contentDescription = stringRes(Res.string.cordn_action_pin),
                 modifier = Modifier.size(12.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -627,7 +644,7 @@ private fun CordnMessageFooter(
 
         if (isEdited) {
             Text(
-                text = stringRes(R.string.cordn_message_edited),
+                text = stringRes(Res.string.cordn_message_edited),
                 fontSize = Font12SP,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
@@ -658,7 +675,7 @@ private fun CordnMessageFooter(
                         Spacer(StdHorzSpacer)
                         Icon(
                             symbol = MaterialSymbols.Done,
-                            contentDescription = stringRes(R.string.cordn_delivery_accepted),
+                            contentDescription = stringRes(Res.string.cordn_delivery_accepted),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.allGoodColor,
                         )
@@ -711,18 +728,18 @@ private fun CordnMessageDetailsSheet(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = stringRes(R.string.cordn_message_details_title),
+                text = stringRes(Res.string.cordn_message_details_title),
                 style = MaterialTheme.typography.titleSmall,
             )
-            DetailLine(stringRes(R.string.cordn_message_details_sent_at), sentAt)
-            DetailLine(stringRes(R.string.cordn_message_details_cursor), message.cursor.toString())
+            DetailLine(stringRes(Res.string.cordn_message_details_sent_at), sentAt)
+            DetailLine(stringRes(Res.string.cordn_message_details_cursor), message.cursor.toString())
             DetailLine(
-                stringRes(R.string.cordn_message_details_coordinator),
+                stringRes(Res.string.cordn_message_details_coordinator),
                 coordinatorDisplayName(coordinatorPubKey, label = null, accountViewModel = accountViewModel),
             )
             if (isMine) {
                 Text(
-                    text = stringRes(R.string.cordn_delivery_accepted),
+                    text = stringRes(Res.string.cordn_delivery_accepted),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.allGoodColor,
                 )
@@ -797,10 +814,10 @@ private fun CordnMessageActionSheet(
 
     if (confirmingDelete) {
         QuickActionAlertDialog(
-            title = stringRes(R.string.cordn_delete_confirm_title),
-            textContent = stringRes(R.string.cordn_delete_confirm_body),
+            title = stringRes(Res.string.cordn_delete_confirm_title),
+            textContent = stringRes(Res.string.cordn_delete_confirm_body),
             buttonIcon = MaterialSymbols.Delete,
-            buttonText = stringRes(R.string.cordn_action_delete),
+            buttonText = stringRes(Res.string.cordn_action_delete),
             onClickDoOnce = performDelete,
             onClickDontShowAgain = {
                 accountViewModel.account.settings.setHideDeleteRequestDialog()
@@ -843,7 +860,7 @@ private fun CordnMessageActionSheet(
 
             TileRow {
                 if (isLive) {
-                    ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.cordn_action_reply)) {
+                    ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(Res.string.cordn_action_reply)) {
                         onReply()
                         onDismiss()
                     }
@@ -853,7 +870,7 @@ private fun CordnMessageActionSheet(
                 // message rather than only on your own.
                 ActionTile(
                     MaterialSymbols.PushPin,
-                    stringRes(if (isPinned) R.string.cordn_action_unpin else R.string.cordn_action_pin),
+                    stringRes(if (isPinned) Res.string.cordn_action_unpin else Res.string.cordn_action_pin),
                 ) {
                     onTogglePin()
                     onDismiss()
@@ -863,11 +880,11 @@ private fun CordnMessageActionSheet(
                 // anyone else. Hiding them here is the same rule, stated where it stops
                 // being a surprise.
                 if (isMine && isLive) {
-                    ActionTile(MaterialSymbols.Edit, stringRes(R.string.cordn_action_edit)) {
+                    ActionTile(MaterialSymbols.Edit, stringRes(Res.string.cordn_action_edit)) {
                         onEdit()
                         onDismiss()
                     }
-                    ActionTile(MaterialSymbols.Delete, stringRes(R.string.cordn_action_delete), isDestructive = true) {
+                    ActionTile(MaterialSymbols.Delete, stringRes(Res.string.cordn_action_delete), isDestructive = true) {
                         // A withdrawal cannot be taken back and the coordinator keeps
                         // the ciphertext either way, so it is worth one question —
                         // unless the account has already opted out of being asked.
@@ -989,7 +1006,7 @@ internal fun DaySeparator(
     val label =
         when (day) {
             today -> stringRes(Res.string.today)
-            today.minusDays(1) -> stringRes(R.string.cordn_chat_yesterday)
+            today.minusDays(1) -> stringRes(Res.string.cordn_chat_yesterday)
             // Year included only when it is not this one: printing 2026 on every
             // divider all year is noise.
             else ->

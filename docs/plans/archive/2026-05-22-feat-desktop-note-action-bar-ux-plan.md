@@ -146,7 +146,7 @@ val zapEntries = note.zaps.mapNotNull { (request, receipt) ->
     val sender = request.author?.toBestDisplayName()
         ?: request.event?.pubKey?.take(8)
         ?: return@mapNotNull null
-    val amount = (receipt?.event as? LnZapEvent)?.amount?.toLong()
+    val amount = (receipt?.event as? ZapReceiptEvent)?.amount?.toLong()
         ?: return@mapNotNull null
     Triple(sender, amount, request.event?.content?.ifBlank { null })
 }.sortedByDescending { it.second }

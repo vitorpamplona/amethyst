@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -317,7 +317,7 @@ internal object StatusReport {
             var profile: MetadataEvent? = null
             var contacts: ContactListEvent? = null
             var relayList: AdvertisedRelayListEvent? = null
-            var dmInbox: ChatMessageRelayListEvent? = null
+            var dmInbox: DmRelayListEvent? = null
             var wallet = false
 
             // Newest-first with limit 1 gives the last-activity stamp.
@@ -330,7 +330,7 @@ internal object StatusReport {
                     MetadataEvent.KIND,
                     ContactListEvent.KIND,
                     AdvertisedRelayListEvent.KIND,
-                    ChatMessageRelayListEvent.KIND,
+                    DmRelayListEvent.KIND,
                     CashuWalletEvent.KIND,
                 )
             store.query<Event>(Filter(authors = authors, kinds = describes)) { event ->
@@ -340,7 +340,7 @@ internal object StatusReport {
                     is MetadataEvent -> if (isNewer(event, profile)) profile = event
                     is ContactListEvent -> if (isNewer(event, contacts)) contacts = event
                     is AdvertisedRelayListEvent -> if (isNewer(event, relayList)) relayList = event
-                    is ChatMessageRelayListEvent -> if (isNewer(event, dmInbox)) dmInbox = event
+                    is DmRelayListEvent -> if (isNewer(event, dmInbox)) dmInbox = event
                     is CashuWalletEvent -> wallet = true
                     else -> Unit
                 }

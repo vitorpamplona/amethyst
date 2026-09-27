@@ -29,9 +29,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.navBarItemsFromNames
 import com.vitorpamplona.amethyst.commons.model.navigation.toNames
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -265,7 +265,7 @@ class AccountVideoPlayerPreferences(
 @Stable
 class AccountZapPreferences(
     var zapAmountChoices: MutableStateFlow<ImmutableList<Long>>,
-    val defaultZapType: MutableStateFlow<LnZapEvent.ZapType>,
+    val defaultZapType: MutableStateFlow<ZapReceiptEvent.ZapType>,
 )
 
 /**

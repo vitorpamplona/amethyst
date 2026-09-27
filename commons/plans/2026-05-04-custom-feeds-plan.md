@@ -463,7 +463,7 @@ class FeedBuilderState(initial: FeedDefinition?) {
 - DVM request goes to DVM's advertised relays (from kind 31990 `relay` tags)
 - Response subscription listens on both user's relays AND DVM's relays
 - Use `MetadataPreloader` for bulk-fetching author metadata of returned notes
-- Reuse existing `NIP90ContentDiscoveryRequestEvent.build()` pattern from Quartz
+- Reuse existing `DvmContentDiscoveryRequestEvent.build()` pattern from Quartz
 
 ### Phase 7: Publish/Import (kind 31890)
 
@@ -532,7 +532,7 @@ commons/src/commonTest/kotlin/.../feeds/custom/
 | `TopFilter` | `amethyst/.../AccountSettings.kt` | Reference; `FeedSource.toTopFilter()` for bridge |
 | `FavoriteAlgoFeedsOrchestrator` | `amethyst/.../algoFeeds/` | Extract to commons for DVM reuse |
 | `FavoriteAlgoFeedsListEvent` (kind 10090) | `quartz/.../nip51Lists/` | Pinned feed sync |
-| `NIP90ContentDiscoveryRequestEvent` | `quartz/.../nip90Dvms/` | DVM request building |
+| `DvmContentDiscoveryRequestEvent` | `quartz/.../nip90Dvms/` | DVM request building |
 | `AppDefinitionEvent` (kind 31990) | `quartz/.../nip89AppHandlers/` | DVM marketplace discovery |
 | `NAddress` | `quartz/.../nip19Bech32/entities/` | naddr encode/decode |
 | `Nip19Parser` | `quartz/.../nip19Bech32/` | Detect pasted naddr |
@@ -542,7 +542,7 @@ commons/src/commonTest/kotlin/.../feeds/custom/
 | `PinnedNavBarState` | `desktopApp/.../deck/PinnedNavBarState.kt` | Reference pattern for pin state |
 | `HomeFeed` rendering | `desktopApp/.../home/` | Phase 2 content reuse |
 | `BaseAddressableEvent` | `quartz/.../nip01Core/core/` | Base for kind 31890 |
-| `PeopleListEvent` / `InterestSetEvent` | `quartz/.../nip51Lists/` | Resolve ATag -> members |
+| `FollowSetEvent` / `InterestSetEvent` | `quartz/.../nip51Lists/` | Resolve ATag -> members |
 | `MetadataPreloader` | `commons/.../relayClient/` | Bulk metadata fetch for feed results |
 | `FeedMetadataCoordinator` | `commons/.../relayClient/` | Coordinate metadata for visible notes |
 | `ComposeSubscriptionManager` | `commons/.../relayClient/` | Subscription lifecycle |

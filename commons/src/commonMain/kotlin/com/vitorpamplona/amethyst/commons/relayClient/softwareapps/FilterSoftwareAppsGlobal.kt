@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 // zapstore's relay indexes the entire software-app catalog (NIP-82), so the
 // global Apps feed always queries it in addition to the user's own relays —
@@ -57,7 +57,7 @@ fun filterSoftwareAppsGlobal(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ADD_ONS,
-                    kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
+                    kinds = listOf(SoftwareApplicationEvent.KIND, ReleaseArtifactSetEvent.KIND),
                     // Keep the limit < 100. Relays such as zapstore's score filter
                     // specificity and treat a limit >= 100 (or none) as too vague,
                     // rejecting the whole REQ with "filters are too vague".

@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -109,7 +109,7 @@ object CurationCopy {
     fun buildRemoval(
         copy: AddressableListItemEvent,
         createdAt: Long = TimeUtils.now(),
-    ) = eventTemplate<DeletionEvent>(DeletionEvent.KIND, "", createdAt) {
+    ) = eventTemplate<DeletionRequestEvent>(DeletionRequestEvent.KIND, "", createdAt) {
         add(ATag.assemble(copy.address(), null))
         add(ETag.assemble(copy.id, null, null))
         add(KindTag.assemble(AddressableListItemEvent.KIND))

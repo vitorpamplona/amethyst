@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -75,7 +75,7 @@ class ThreadAssemblerTest {
 
     private val zap =
         Note(zapId).apply {
-            event = LnZapEvent(zapId, authorKey, 1001, arrayOf(arrayOf("e", originalId), arrayOf("p", authorKey)), "", sig)
+            event = ZapReceiptEvent(zapId, authorKey, 1001, arrayOf(arrayOf("e", originalId), arrayOf("p", authorKey)), "", sig)
             replyTo = listOf(original)
         }
 

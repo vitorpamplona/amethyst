@@ -221,7 +221,7 @@ No `since` → relay reconnection replays old events. This is GOOD for our retry
 Current code:
 ```kotlin
 decryptedContent = when (event) {
-    is PrivateDmEvent -> {
+    is EncryptedDmEvent -> {
         try {
             event.decryptContent(account.signer)
         } catch (_: Exception) {
@@ -245,7 +245,7 @@ if (eventContent != null) {
 
 ```kotlin
 decryptedContent = when (event) {
-    is PrivateDmEvent -> {
+    is EncryptedDmEvent -> {
         try {
             event.decryptContent(account.signer)
         } catch (_: Exception) {

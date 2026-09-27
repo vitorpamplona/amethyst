@@ -28,6 +28,9 @@ import com.vitorpamplona.amethyst.commons.resources.child_safety_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.child_safety_standards
 import com.vitorpamplona.amethyst.commons.resources.privacy_policy
 import com.vitorpamplona.amethyst.commons.resources.privacy_policy_search_keywords
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsEntry
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsIcon
 
 /** Play build surfaces the GitHub-hosted legal policy links. */
 fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =

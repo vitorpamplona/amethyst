@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44D
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44EncryptQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.SignPsbtQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.SignQuery
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 class BackgroundRequestHandler(
     loggedInUser: HexKey,
@@ -81,7 +81,7 @@ class BackgroundRequestHandler(
         fromPubKey: HexKey,
     ) = nip44Decrypt.query(ciphertext, fromPubKey) as? SignerResult.RequestAddressed<DecryptionResult>
 
-    fun decryptZapEvent(event: LnZapRequestEvent) = decryptZap.query(event) as? SignerResult.RequestAddressed<ZapEventDecryptionResult>
+    fun decryptZapEvent(event: ZapRequestEvent) = decryptZap.query(event) as? SignerResult.RequestAddressed<ZapEventDecryptionResult>
 
     fun deriveKey(nonce: HexKey) = deriveKey.query(nonce) as? SignerResult.RequestAddressed<DerivationResult>
 

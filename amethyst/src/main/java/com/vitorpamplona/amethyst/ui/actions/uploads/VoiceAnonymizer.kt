@@ -25,6 +25,8 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import com.vitorpamplona.amethyst.commons.audio.PitchShifter
+import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

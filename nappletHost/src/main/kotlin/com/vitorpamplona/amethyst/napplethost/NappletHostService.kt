@@ -37,8 +37,11 @@ import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
 import android.view.View
+import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -47,6 +50,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
@@ -57,6 +61,7 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -113,6 +118,9 @@ class NappletHostService : Service() {
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
         @Volatile var contentServer: NappletContentServer? = null
         var webView: WebView? = null
+
+        // The session's root view; a WebView lost to a renderer crash is rebuilt inside it on retry.
+        var container: FrameLayout? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -123,6 +131,9 @@ class NappletHostService : Service() {
         // Last main-frame error state, pushed to the client so it can show an error/retry overlay over the
         // surface (the embedded surface has no error page of its own).
         var loadFailed = false
+
+        // The user's text size, re-applied when a renderer crash forces a fresh WebView.
+        var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
         val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
     }
 
@@ -185,7 +196,17 @@ class NappletHostService : Service() {
                 replyWithAdapter(tab)
             }
             NappletEmbedContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
-            NappletEmbedContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
+            NappletEmbedContract.MSG_RELOAD -> {
+                val tab = tabFor(msg) ?: return true
+                val container = tab.container
+                // After a renderer crash the tab has no WebView: the retry builds a fresh one.
+                if (tab.webView == null && container != null) {
+                    val wv = createHostWebView(container.context, tab.sessionId, container)
+                    container.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                } else {
+                    tab.webView?.reload()
+                }
+            }
             // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
             // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
             // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
@@ -197,6 +218,17 @@ class NappletHostService : Service() {
                 tab.bridgeReplyProxy?.postMessage(payload)
             }
             NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
+            NappletEmbedContract.MSG_FIND -> {
+                val wv = tabFor(msg)?.webView ?: return true
+                val query = msg.data?.getString(NappletEmbedContract.KEY_FIND_QUERY).orEmpty()
+                if (query.isEmpty()) wv.clearMatches() else wv.findAllAsync(query)
+            }
+            NappletEmbedContract.MSG_FIND_NEXT -> tabFor(msg)?.webView?.findNext(msg.data?.getBoolean(NappletEmbedContract.KEY_FIND_FORWARD, true) ?: true)
+            NappletEmbedContract.MSG_SET_TEXT_ZOOM -> {
+                val tab = tabFor(msg) ?: return true
+                tab.textZoom = msg.data?.getInt(NappletEmbedContract.KEY_TEXT_ZOOM, tab.textZoom) ?: tab.textZoom
+                tab.webView?.let { BrowserWebTools.setTextZoom(it, tab.textZoom) }
+            }
             NappletEmbedContract.MSG_FILE_CHOOSER_RESULT -> {
                 val tab = tabFor(msg) ?: return true
                 val data = msg.data ?: return true
@@ -311,10 +343,14 @@ class NappletHostService : Service() {
     fun createHostWebView(
         context: Context,
         sessionId: String,
+        container: FrameLayout,
     ): WebView {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
+        tab.container = container
+        // A rebuild after a renderer crash: release the previous content server first.
+        tab.contentServer?.close()
         val wv = WebView(nightThemedContext(context, tab.themeType))
         // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
         // profile has otherwise been used), so the storage partition must be chosen before the
@@ -342,6 +378,8 @@ class NappletHostService : Service() {
         wv.dropSystemBarInsets()
         if (tab.profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
+        wv.setFindListener { active, total, _ -> pushFindResult(tab, active, total) }
+        if (tab.textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) BrowserWebTools.setTextZoom(wv, tab.textZoom)
         tab.webView = wv
         wv.loadUrl(NappletWebContract.SHELL_URL)
         return wv
@@ -357,6 +395,7 @@ class NappletHostService : Service() {
         tab.contentServer = null
         tab.webView?.destroy()
         tab.webView = null
+        tab.container = null
     }
 
     @Suppress("SetJavaScriptEnabled")
@@ -404,6 +443,11 @@ class NappletHostService : Service() {
             filePathCallback: ValueCallback<Array<Uri>>,
             fileChooserParams: FileChooserParams,
         ): Boolean = requestFileChooser(tab, filePathCallback, fileChooserParams)
+
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            pushConsoleLog(tab, consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber())
+            return true
+        }
 
         // Setting a chrome client at all is what opts this WebView into the default JS-dialog handling,
         // and this one is built from a Service context — there is no window token to attach a dialog to,
@@ -526,11 +570,41 @@ class NappletHostService : Service() {
             request: WebResourceRequest,
             error: WebResourceError,
         ) {
+            pushConsoleLog(tab, ConsoleMessage.MessageLevel.ERROR.name, getString(R.string.napplet_console_load_error, error.errorCode, error.description?.toString().orEmpty()), request.url?.toString().orEmpty(), 0)
             // Only a main-frame failure blanks the applet; a missing sub-resource is irrelevant to whether
             // it opened.
             if (!request.isForMainFrame) return
             tab.loadFailed = true
             pushLoadState(tab, isLoading = false)
+        }
+
+        override fun onReceivedHttpError(
+            view: WebView,
+            request: WebResourceRequest,
+            errorResponse: WebResourceResponse,
+        ) {
+            pushConsoleLog(tab, ConsoleMessage.MessageLevel.ERROR.name, getString(R.string.napplet_console_http_error, errorResponse.statusCode, errorResponse.reasonPhrase.orEmpty()), request.url?.toString().orEmpty(), 0)
+        }
+
+        /**
+         * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
+         * whole process — every other tab included. Drop just this tab's WebView and report the load as
+         * failed; the tab's retry (MSG_RELOAD) rebuilds it in the same surface.
+         */
+        override fun onRenderProcessGone(
+            view: WebView,
+            detail: RenderProcessGoneDetail,
+        ): Boolean {
+            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}) for an embedded napplet/nsite" }
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.destroy()
+            if (tab.webView === view) {
+                tab.webView = null
+                tab.bridgeReplyProxy = null
+                tab.loadFailed = true
+                pushLoadState(tab, isLoading = false)
+            }
+            return true
         }
 
         override fun shouldOverrideUrlLoading(
@@ -553,6 +627,42 @@ class NappletHostService : Service() {
         val message =
             Message.obtain(null, NappletEmbedContract.MSG_STATE).apply {
                 data = Bundle().apply { putBoolean(NappletEmbedContract.KEY_CAN_GO_BACK, view.canGoBack()) }
+            }
+        runCatching { tab.clientMessenger?.send(message) }
+    }
+
+    private fun pushFindResult(
+        tab: NappletTab,
+        active: Int,
+        total: Int,
+    ) {
+        val message =
+            Message.obtain(null, NappletEmbedContract.MSG_FIND_RESULT).apply {
+                data =
+                    Bundle().apply {
+                        putInt(NappletEmbedContract.KEY_FIND_ACTIVE, active)
+                        putInt(NappletEmbedContract.KEY_FIND_TOTAL, total)
+                    }
+            }
+        runCatching { tab.clientMessenger?.send(message) }
+    }
+
+    private fun pushConsoleLog(
+        tab: NappletTab,
+        level: String,
+        text: String,
+        source: String,
+        line: Int,
+    ) {
+        val message =
+            Message.obtain(null, NappletEmbedContract.MSG_CONSOLE_LOG).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletEmbedContract.KEY_CONSOLE_LEVEL, level)
+                        putString(NappletEmbedContract.KEY_CONSOLE_MESSAGE, text)
+                        putString(NappletEmbedContract.KEY_CONSOLE_SOURCE, source)
+                        putInt(NappletEmbedContract.KEY_CONSOLE_LINE, line)
+                    }
             }
         runCatching { tab.clientMessenger?.send(message) }
     }

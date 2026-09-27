@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.followerCount
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.hops
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.rank
@@ -45,7 +45,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Persists a set of GrapeRank scores as NIP-85 kind:30382 [ContactCardEvent]
+ * Persists a set of GrapeRank scores as NIP-85 kind:30382 [UserAssertionEvent]
  * trusted assertions in the local [IEventStore] — the durable, reusable form of a
  * score run — and pushes that local card set out to the operator's relays on
  * demand. The store is the source of truth; the two halves are separable:
@@ -168,10 +168,10 @@ class GrapeRankPublisher(
         idleTimeoutMs: Long = 30_000L,
         publishTimeoutSecs: Long = 15,
     ): SyncResult {
-        val cards = store.query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(providerPubkey)))
-        val deletions = store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(providerPubkey)))
+        val cards = store.query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(providerPubkey)))
+        val deletions = store.query<Event>(Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(providerPubkey)))
 
-        val filter = Filter(kinds = listOf(ContactCardEvent.KIND, DeletionEvent.KIND), authors = listOf(providerPubkey))
+        val filter = Filter(kinds = listOf(UserAssertionEvent.KIND, DeletionRequestEvent.KIND), authors = listOf(providerPubkey))
         val groups =
             NegentropyStoreSync(
                 client = client,
@@ -214,10 +214,10 @@ class GrapeRankPublisher(
      * store. Locally-retracted cards never show up — inserting their kind:5
      * removed them — so a target can be re-carded later without fighting a ghost.
      */
-    private suspend fun existingCards(providerPubkey: HexKey): Map<HexKey, ContactCardEvent> =
+    private suspend fun existingCards(providerPubkey: HexKey): Map<HexKey, UserAssertionEvent> =
         store
-            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(providerPubkey)))
-            .filterIsInstance<ContactCardEvent>()
+            .query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(providerPubkey)))
+            .filterIsInstance<UserAssertionEvent>()
             .groupBy { it.aboutUser() }
             .mapNotNull { (target, cards) ->
                 val t = target.ifBlank { return@mapNotNull null }
@@ -230,7 +230,7 @@ class GrapeRankPublisher(
      * produces no new signature; a missing tag reads null and so differs from a
      * desired non-null value (the one-time migration onto the new tags).
      */
-    private fun cardValues(card: ContactCardEvent): Triple<Int?, Int?, Int?> = Triple(card.rank(), card.followerCount(), card.hops())
+    private fun cardValues(card: UserAssertionEvent): Triple<Int?, Int?, Int?> = Triple(card.rank(), card.followerCount(), card.hops())
 
     /** The (rank, followers, hops) triple a [ScoredCard] would write. */
     private fun desiredValues(card: ScoredCard): Triple<Int?, Int?, Int?> = Triple(card.rank, card.followers, card.hops)
@@ -254,7 +254,7 @@ class GrapeRankPublisher(
                     batch
                         .map { card ->
                             async(Dispatchers.Default) {
-                                ContactCardEvent.create(
+                                UserAssertionEvent.create(
                                     targetUser = card.target,
                                     signer = signer,
                                     createdAt = createdAt,
@@ -285,13 +285,13 @@ class GrapeRankPublisher(
      */
     private suspend fun insertRetractions(
         signer: NostrSigner,
-        cards: List<ContactCardEvent>,
+        cards: List<UserAssertionEvent>,
         createdAt: Long,
     ): Int {
         if (cards.isEmpty()) return 0
         var retracted = 0
         for (chunk in cards.chunked(DELETE_PER_EVENT)) {
-            val deletion = signer.sign(DeletionEvent.build(chunk, createdAt))
+            val deletion = signer.sign(DeletionRequestEvent.build(chunk, createdAt))
             if (insertQuietly(deletion)) retracted += chunk.size
         }
         return retracted

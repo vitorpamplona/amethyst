@@ -50,3 +50,10 @@ fun prettyMime(mime: String): String =
         "application/webbundle" -> "Web Bundle"
         else -> mime
     }
+
+/** The last path segment of [url], without query or fragment; the whole [url] when that is blank. */
+fun extractFilename(url: String): String {
+    val afterQuery = url.substringBefore('?').substringBefore('#')
+    val name = afterQuery.substringAfterLast('/', afterQuery)
+    return if (name.isBlank()) url else name
+}

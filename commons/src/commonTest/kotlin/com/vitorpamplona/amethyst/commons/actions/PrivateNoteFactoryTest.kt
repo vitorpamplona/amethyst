@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import kotlinx.coroutines.test.runTest
@@ -85,12 +85,12 @@ class PrivateNoteFactoryTest {
 
             val result =
                 NIP17Factory().createDeletionNIP17(
-                    template = DeletionEvent.build(listOf(reaction)),
+                    template = DeletionRequestEvent.build(listOf(reaction)),
                     to = listOf(bobSigner.pubKey),
                     signer = aliceSigner,
                 )
 
-            assertEquals(DeletionEvent.KIND, result.msg.kind)
+            assertEquals(DeletionRequestEvent.KIND, result.msg.kind)
             assertEquals(
                 setOf(aliceSigner.pubKey, bobSigner.pubKey),
                 result.wraps.mapNotNull { it.recipientPubKey() }.toSet(),
@@ -101,7 +101,7 @@ class PrivateNoteFactoryTest {
             val rumor = bobWrap.unwrapAndUnsealOrNull(bobSigner)
 
             assertNotNull(rumor, "recipient must be able to unwrap and unseal the deletion")
-            assertEquals(DeletionEvent.KIND, rumor.kind)
+            assertEquals(DeletionRequestEvent.KIND, rumor.kind)
             assertEquals(aliceSigner.pubKey, rumor.pubKey, "deletions only apply when the author matches")
             assertTrue(rumor.sig.isEmpty(), "the deletion travels as an unsigned rumor")
             assertTrue(

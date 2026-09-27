@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSet
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 
 /** NIP-51 kind 10003: the user's bookmarks — notes, articles, hashtags and links. */
@@ -101,14 +101,14 @@ fun RenderOldBookmarkList(
 
 /** NIP-51 kind 30003: "user-defined bookmarks categories, for when bookmarks must be in labeled separate groups". */
 @Composable
-fun RenderLabeledBookmarkList(
+fun RenderBookmarkSet(
     baseNote: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? LabeledBookmarkListEvent ?: return
+    val noteEvent = baseNote.event as? BookmarkSetEvent ?: return
 
     val public = remember(noteEvent) { noteEvent.publicBookmarks() }
     val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateBookmarks(it) }

@@ -52,13 +52,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.cordn.ui.BusyLabel
+import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_contents_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_contents_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_export
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_exported
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_passphrase
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_restore
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_restore_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_restore_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_restore_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_backup_restored
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_export
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_passphrase
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_section_restore
 import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -113,9 +128,9 @@ fun CordnBackupScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var pendingRestore by remember { mutableStateOf<Uri?>(null) }
 
-    val exported = stringRes(R.string.cordn_backup_exported)
-    val restored = stringRes(R.string.cordn_backup_restored)
-    val failed = stringRes(R.string.cordn_backup_failed)
+    val exported = stringRes(Res.string.cordn_backup_exported)
+    val restored = stringRes(Res.string.cordn_backup_restored)
+    val failed = stringRes(Res.string.cordn_backup_failed)
 
     val saver =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
@@ -179,8 +194,8 @@ fun CordnBackupScreen(
             // The app's own empty state, centred and titled, rather than a
             // sentence stranded in the top-left corner.
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -196,7 +211,7 @@ fun CordnBackupScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                text = stringRes(R.string.cordn_backup_explainer),
+                text = stringRes(Res.string.cordn_backup_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -212,7 +227,7 @@ fun CordnBackupScreen(
                             passphrase = it
                             error = null
                         },
-                        label = { Text(stringRes(R.string.cordn_backup_passphrase)) },
+                        label = { Text(stringRes(Res.string.cordn_backup_passphrase)) },
                         visualTransformation = PasswordVisualTransformation(),
                         // The dots are only half of it. Without the password
                         // keyboard type the IME treats this as ordinary prose:
@@ -230,9 +245,9 @@ fun CordnBackupScreen(
 
             SettingsSection(Res.string.cordn_backup_section_export) {
                 SettingsFormBlock {
-                    Text(stringRes(R.string.cordn_backup_contents_title), style = MaterialTheme.typography.titleSmall)
+                    Text(stringRes(Res.string.cordn_backup_contents_title), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        text = stringRes(R.string.cordn_backup_contents_body),
+                        text = stringRes(Res.string.cordn_backup_contents_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -248,7 +263,7 @@ fun CordnBackupScreen(
                         // Key derivation here is scrypt, which is slow on
                         // purpose, so a greyed-out button was the only sign
                         // anything was happening for several seconds.
-                        BusyLabel(busy, stringRes(R.string.cordn_backup_export))
+                        BusyLabel(busy, stringRes(Res.string.cordn_backup_export))
                     }
                 }
             }
@@ -256,7 +271,7 @@ fun CordnBackupScreen(
             SettingsSection(Res.string.cordn_backup_section_restore) {
                 SettingsFormBlock {
                     Text(
-                        text = stringRes(R.string.cordn_backup_restore_body),
+                        text = stringRes(Res.string.cordn_backup_restore_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -266,7 +281,7 @@ fun CordnBackupScreen(
                         enabled = !busy && passphrase.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        BusyLabel(busy, stringRes(R.string.cordn_backup_restore))
+                        BusyLabel(busy, stringRes(Res.string.cordn_backup_restore))
                     }
                 }
             }
@@ -276,8 +291,8 @@ fun CordnBackupScreen(
     pendingRestore?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
-            title = { Text(stringRes(R.string.cordn_backup_restore_confirm_title)) },
-            text = { Text(stringRes(R.string.cordn_backup_restore_confirm_body)) },
+            title = { Text(stringRes(Res.string.cordn_backup_restore_confirm_title)) },
+            text = { Text(stringRes(Res.string.cordn_backup_restore_confirm_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingRestore = null
@@ -302,7 +317,7 @@ fun CordnBackupScreen(
                         }
                     }
                 }) {
-                    Text(stringRes(R.string.cordn_backup_restore), color = MaterialTheme.colorScheme.error)
+                    Text(stringRes(Res.string.cordn_backup_restore), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {

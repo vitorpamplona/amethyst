@@ -144,7 +144,7 @@ val blockedRelayList: StateFlow<Set<NormalizedRelayUrl>> = _blockedRelayList.asS
 
 fun consumeIfRelevant(event: Event): Boolean {
     return when (event.kind) {
-        ChatMessageRelayListEvent.KIND -> { consumeDmRelayList(event as ChatMessageRelayListEvent); true }
+        DmRelayListEvent.KIND -> { consumeDmRelayList(event as DmRelayListEvent); true }
         SearchRelayListEvent.KIND -> { consumeSearchRelayList(event); true }
         BlockedRelayListEvent.KIND -> { consumeBlockedRelayList(event); true }
         else -> false

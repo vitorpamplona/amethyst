@@ -71,8 +71,8 @@ fun UserProfileDropDownMenu(
         WatchAndLoadMyEmojiList(accountViewModel)
         EditNicknameDialog(
             user = user,
-            contactCards = accountViewModel.account.contactCards,
-            onSave = { petName, summary -> accountViewModel.updateContactCardPetName(user, petName, summary) },
+            userAssertions = accountViewModel.account.userAssertions,
+            onSave = { petName, summary -> accountViewModel.updateUserAssertionPetName(user, petName, summary) },
             onDismiss = { isNicknameDialogOpen.value = false },
         )
     }

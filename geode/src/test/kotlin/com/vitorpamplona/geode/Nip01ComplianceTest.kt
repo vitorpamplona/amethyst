@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
@@ -350,7 +350,7 @@ class Nip01ComplianceTest : RelayClientTest() {
 
     /**
      * Addressable events (kind 30000-39999, NIP-01 §"Kinds") are replaced
-     * by `(pubkey, kind, d)`. Uses a real signed [LongTextNoteEvent] because
+     * by `(pubkey, kind, d)`. Uses a real signed [LongFormContentEvent] because
      * the SQLite store dispatches on the typed `AddressableEvent` subclass
      * to extract the d-tag — synthetic plain `Event`s aren't recognised.
      */
@@ -358,15 +358,15 @@ class Nip01ComplianceTest : RelayClientTest() {
     fun parameterizedReplaceableEventsKeepNewestPerDTag() =
         runBlocking {
             val signer = NostrSignerSync(KeyPair())
-            val v1 = signer.sign(LongTextNoteEvent.build("old", "title", dTag = "list-a", createdAt = 100))
-            val v2 = signer.sign(LongTextNoteEvent.build("new", "title", dTag = "list-a", createdAt = 200))
-            val v3 = signer.sign(LongTextNoteEvent.build("list-b", "title", dTag = "list-b", createdAt = 100))
+            val v1 = signer.sign(LongFormContentEvent.build("old", "title", dTag = "list-a", createdAt = 100))
+            val v2 = signer.sign(LongFormContentEvent.build("new", "title", dTag = "list-a", createdAt = 200))
+            val v3 = signer.sign(LongFormContentEvent.build("list-b", "title", dTag = "list-b", createdAt = 100))
             preload(v1, v2, v3)
 
             val (events, _) =
                 client.collectUntilEose(
                     defaultRelayUrl,
-                    Filter(kinds = listOf(LongTextNoteEvent.KIND), authors = listOf(signer.pubKey)),
+                    Filter(kinds = listOf(LongFormContentEvent.KIND), authors = listOf(signer.pubKey)),
                 )
 
             assertEquals(2, events.size)

@@ -29,11 +29,11 @@ import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.davotoula.lightcompressor.hls.Rendition
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.service.upload.HlsPublishState
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPosterUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishRequest
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.HlsPublishState
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.flow.MutableStateFlow

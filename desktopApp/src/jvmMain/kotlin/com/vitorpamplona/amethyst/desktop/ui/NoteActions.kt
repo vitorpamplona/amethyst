@@ -102,7 +102,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -168,9 +168,9 @@ data class ZapReceipt(
 )
 
 /**
- * Converts an LnZapEvent to a ZapReceipt for display.
+ * Converts an ZapReceiptEvent to a ZapReceipt for display.
  */
-fun LnZapEvent.toZapReceipt(localCache: DesktopLocalCache): ZapReceipt? {
+fun ZapReceiptEvent.toZapReceipt(localCache: DesktopLocalCache): ZapReceipt? {
     val senderPubKey = zappedRequestAuthor() ?: return null
     val amountSats = amount?.toLong() ?: return null
 
@@ -484,7 +484,7 @@ fun ZapReceiptsPopup(
                     val name = user?.toBestDisplayName() ?: pubKey.take(12)
                     val pictureUrl = user?.profilePicture()
                     val amount =
-                        (receipt?.event as? LnZapEvent)?.amount?.toLong()
+                        (receipt?.event as? ZapReceiptEvent)?.amount?.toLong()
                             ?: return@mapNotNull null
                     val message = request.event?.content?.ifBlank { null }
                     ZapEntry(pubKey, pictureUrl, name, amount, message)

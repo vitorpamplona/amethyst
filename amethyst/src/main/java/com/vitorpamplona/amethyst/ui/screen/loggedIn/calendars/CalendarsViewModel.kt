@@ -36,10 +36,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarsViewMode
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -162,13 +163,13 @@ class CalendarsViewModel : ViewModel() {
      * changes about once a week.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val ownCalendars: StateFlow<List<CalendarEvent>> =
+    val ownCalendars: StateFlow<List<CalendarCollectionEvent>> =
         inputs
             .filterNotNull()
             .flatMapLatest { (myPubKey, _) ->
                 LocalCache
-                    .observeEvents<CalendarEvent>(
-                        Filter(kinds = listOf(CalendarEvent.KIND), authors = listOf(myPubKey)),
+                    .observeEvents<CalendarCollectionEvent>(
+                        Filter(kinds = listOf(CalendarCollectionEvent.KIND), authors = listOf(myPubKey)),
                     ).map { calendars -> calendars.sortedBy { it.title()?.lowercase() ?: "" } }
             }
             // The seed scan inside observeEvents walks the whole notes cache (LocalCache.filter

@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.nip51Lists.ui.ListOfBookmarkGroupsFeedView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_lists
@@ -64,7 +64,7 @@ fun ListOfBookmarkGroupsScreen(
         oldBookmarks = accountViewModel.account.oldBookmarkState,
         pinnedNotes = accountViewModel.account.pinState,
         repositories = accountViewModel.account.gitRepositoryListState,
-        listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
+        listSource = accountViewModel.account.bookmarkSets.listFeedFlow,
         openDefaultBookmarks = { nav.nav(Route.Bookmarks) },
         openOldBookmarks = { nav.nav(Route.OldBookmarks) },
         openPinnedNotes = { nav.nav(Route.PinnedNotes) },
@@ -82,7 +82,7 @@ fun ListOfBookmarkGroupsScreen(
         },
         cloneBookmarkGroup = { bookmarkGroup, customName, customDesc ->
             accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.cloneBookmarkList(
+                accountViewModel.account.bookmarkSets.cloneBookmarkList(
                     currentBookmarkList = bookmarkGroup,
                     customCloneName = customName,
                     customCloneDescription = customDesc,
@@ -92,7 +92,7 @@ fun ListOfBookmarkGroupsScreen(
         },
         deleteBookmarkGroup = { bookmarkGroup ->
             accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.deleteBookmarkList(
+                accountViewModel.account.bookmarkSets.deleteBookmarkList(
                     bookmarkListIdentifier = bookmarkGroup.identifier,
                     account = accountViewModel.account,
                 )
@@ -109,7 +109,7 @@ fun ListOfBookmarkGroupsFeed(
     oldBookmarks: OldBookmarkListState,
     pinnedNotes: PinListState,
     repositories: GitRepositoryListState,
-    listSource: StateFlow<List<LabeledBookmarkList>>,
+    listSource: StateFlow<List<BookmarkSet>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
@@ -117,10 +117,10 @@ fun ListOfBookmarkGroupsFeed(
     openPodcasts: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
-    renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
-    changeBookmarkGroupDescription: (bookmarkGroup: LabeledBookmarkList) -> Unit,
-    cloneBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
-    deleteBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
+    renameBookmarkGroup: (bookmarkGroup: BookmarkSet) -> Unit,
+    changeBookmarkGroupDescription: (bookmarkGroup: BookmarkSet) -> Unit,
+    cloneBookmarkGroup: (bookmarkGroup: BookmarkSet, customName: String?, customDesc: String?) -> Unit,
+    deleteBookmarkGroup: (bookmarkGroup: BookmarkSet) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

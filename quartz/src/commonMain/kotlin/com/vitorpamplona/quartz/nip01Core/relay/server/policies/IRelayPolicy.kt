@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -102,6 +103,17 @@ interface IRelayPolicy {
     suspend fun onAuthenticated(event: RelayAuthEvent): Boolean = false
 
     /**
+     * This policy's say on recording [pubkey] as authenticated when the transport, not a NIP-42
+     * AUTH, proved it: a NIP-98 header on a NIP-FE HTTP command. Return a NIP-01 reason to refuse,
+     * or null for no objection; the engine records the key only when no policy in the chain
+     * objects. There is no AUTH event here, so [accept] (AuthCmd) and [onAuthenticated] never run.
+     *
+     * The default objects, so a policy that decides logins in those two hooks is not bypassed by a
+     * transport it was not written for. Policies with no say over identity return null.
+     */
+    suspend fun acceptTransportIdentity(pubkey: HexKey): String? = TRANSPORT_IDENTITY_REFUSED
+
+    /**
      * Inspects a raw inbound message before it is parsed. Return a reason
      * string to reject it (the engine sends it as a `NOTICE`), or null to let
      * it through. This is the only hook that sees the unparsed frame, so guards
@@ -163,3 +175,6 @@ sealed interface PolicyResult<T : Command> {
         val reason: String,
     ) : PolicyResult<T>
 }
+
+/** The refusal a policy that does not accept transport-proved identities answers with. */
+const val TRANSPORT_IDENTITY_REFUSED = "restricted: this relay signs in over NIP-42 AUTH only"

@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
@@ -147,10 +148,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
-import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -588,7 +588,7 @@ fun DisplayFollowerCount(
     baseAccountUser: Account,
     accountViewModel: AccountViewModel,
 ) {
-    val followerCount by observeUserContactCardsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
+    val followerCount by observeUserAssertionsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
 
     Text(
         text = followerCount,

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.composer.IExpiration
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.expiration_date_explainer
@@ -63,10 +64,10 @@ import com.vitorpamplona.amethyst.commons.resources.expiration_date_select
 import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
 import com.vitorpamplona.amethyst.commons.resources.expiration_time
 import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
 import java.time.ZoneId

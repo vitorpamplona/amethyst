@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previousEvents
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
@@ -84,7 +84,7 @@ class Nip29SpecUpdatesTest {
 
     @Test
     fun editMetadataCarriesPreviousAsOneTag() {
-        val template = EditMetadataEvent.build(gid, name = "x", previousEvents = listOf("11111111", "22222222"))
+        val template = GroupEditMetadataEvent.build(gid, name = "x", previousEvents = listOf("11111111", "22222222"))
         assertEquals(listOf(listOf("previous", "11111111", "22222222")), template.tags.filter { it[0] == "previous" }.map { it.toList() })
     }
 
@@ -95,8 +95,8 @@ class Nip29SpecUpdatesTest {
         assertEquals("https://p/banner.png", parsed.banner())
         assertEquals("https://p/p.png", parsed.picture())
 
-        val edit = EditMetadataEvent.build(gid, name = "Pizza", banner = "https://p/banner2.png")
-        assertEquals("https://p/banner2.png", EditMetadataEvent("00".repeat(32), relaySelf, 1, edit.tags, "", "22".repeat(64)).banner())
+        val edit = GroupEditMetadataEvent.build(gid, name = "Pizza", banner = "https://p/banner2.png")
+        assertEquals("https://p/banner2.png", GroupEditMetadataEvent("00".repeat(32), relaySelf, 1, edit.tags, "", "22".repeat(64)).banner())
     }
 
     @Test
@@ -121,7 +121,7 @@ class Nip29SpecUpdatesTest {
         )
 
         val edit =
-            EditMetadataEvent.build(
+            GroupEditMetadataEvent.build(
                 gid,
                 name = "Pizza Lovers",
                 banner = current.banner(),

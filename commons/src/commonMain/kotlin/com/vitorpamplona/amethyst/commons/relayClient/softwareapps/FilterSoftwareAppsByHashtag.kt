@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 fun filterSoftwareAppsByHashtag(
     relay: NormalizedRelayUrl,
@@ -45,7 +45,7 @@ fun filterSoftwareAppsByHashtag(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.TAG_FEED,
-                    kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
+                    kinds = listOf(SoftwareApplicationEvent.KIND, ReleaseArtifactSetEvent.KIND),
                     tags = mapOf("t" to expanded),
                     limit = 200,
                     since = since,

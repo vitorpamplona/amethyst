@@ -34,10 +34,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -48,12 +48,12 @@ val PostsByRelayKinds =
     listOf(
         TextNoteEvent.KIND,
         ChannelMessageEvent.KIND,
-        LongTextNoteEvent.KIND,
+        LongFormContentEvent.KIND,
         PollEvent.KIND,
         LiveActivitiesChatMessageEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
-        WikiNoteEvent.KIND,
+        WikiArticleEvent.KIND,
         CommentEvent.KIND,
     )
 

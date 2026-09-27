@@ -82,8 +82,10 @@ import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_management_add
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allow
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allow_event
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allow_kind
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allow_pubkey
+import com.vitorpamplona.amethyst.commons.resources.relay_management_allowed_events
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allowed_kinds
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allowed_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_apply
@@ -96,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_block_ip
 import com.vitorpamplona.amethyst.commons.resources.relay_management_blocked_ips
 import com.vitorpamplona.amethyst.commons.resources.relay_management_cancel
 import com.vitorpamplona.amethyst.commons.resources.relay_management_confirm
+import com.vitorpamplona.amethyst.commons.resources.relay_management_disallowed_kinds
 import com.vitorpamplona.amethyst.commons.resources.relay_management_dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_management_error
 import com.vitorpamplona.amethyst.commons.resources.relay_management_event_id_hex
@@ -103,11 +106,13 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_ip_address
 import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_number
 import com.vitorpamplona.amethyst.commons.resources.relay_management_loading
 import com.vitorpamplona.amethyst.commons.resources.relay_management_moderation_queue
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_events
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_kinds
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_banned_events
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_banned_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_blocked_ips
+import com.vitorpamplona.amethyst.commons.resources.relay_management_no_disallowed_kinds
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_methods
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_moderation_events
 import com.vitorpamplona.amethyst.commons.resources.relay_management_reason_optional
@@ -122,6 +127,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -133,7 +139,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
@@ -288,12 +293,19 @@ private fun RelayManagementContent(
                     add(ManagementTab.PUBKEYS)
                 }
                 if (supportedMethods.any {
-                        it in listOf(Nip86Method.BAN_EVENT, Nip86Method.LIST_BANNED_EVENTS, Nip86Method.ALLOW_EVENT, Nip86Method.LIST_EVENTS_NEEDING_MODERATION)
+                        it in
+                            listOf(
+                                Nip86Method.BAN_EVENT,
+                                Nip86Method.LIST_BANNED_EVENTS,
+                                Nip86Method.ALLOW_EVENT,
+                                Nip86Method.LIST_ALLOWED_EVENTS,
+                                Nip86Method.LIST_EVENTS_NEEDING_MODERATION,
+                            )
                     }
                 ) {
                     add(ManagementTab.EVENTS)
                 }
-                if (supportedMethods.any { it in listOf(Nip86Method.ALLOW_KIND, Nip86Method.DISALLOW_KIND, Nip86Method.LIST_ALLOWED_KINDS) }) {
+                if (supportedMethods.any { it in listOf(Nip86Method.ALLOW_KIND, Nip86Method.DISALLOW_KIND, Nip86Method.LIST_ALLOWED_KINDS, Nip86Method.LIST_DISALLOWED_KINDS) }) {
                     add(ManagementTab.KINDS)
                 }
                 if (supportedMethods.any { it in listOf(Nip86Method.BLOCK_IP, Nip86Method.UNBLOCK_IP, Nip86Method.LIST_BLOCKED_IPS) }) {
@@ -571,8 +583,10 @@ private fun EventsTab(
     supportedMethods: List<String>,
 ) {
     val bannedEvents by viewModel.bannedEvents.collectAsState()
+    val allowedEvents by viewModel.allowedEvents.collectAsState()
     val eventsNeedingModeration by viewModel.eventsNeedingModeration.collectAsState()
     var showBanDialog by remember { mutableStateOf(false) }
+    var showAllowDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         contentPadding = PaddingValues(10.dp),
@@ -596,6 +610,7 @@ private fun EventsTab(
                         reason = entry.reason,
                         canAllow = supportedMethods.contains(Nip86Method.ALLOW_EVENT),
                         canBan = supportedMethods.contains(Nip86Method.BAN_EVENT),
+                        // Approve: `allowevent` allow-lists the event (and lifts any ban).
                         onAllow = { viewModel.allowEvent(entry.id) },
                         onBan = { viewModel.banEvent(entry.id) },
                     )
@@ -616,16 +631,52 @@ private fun EventsTab(
             if (bannedEvents.isEmpty()) {
                 item { EmptyListMessage(stringRes(Res.string.relay_management_no_banned_events)) }
             } else {
-                items(bannedEvents, key = { it.id }) { entry ->
+                items(bannedEvents, key = { "banned" + it.id }) { entry ->
                     HexEntryCard(
                         hex = entry.id,
                         reason = entry.reason,
-                        showRemove = false,
-                        onRemove = {},
+                        showRemove = supportedMethods.contains(Nip86Method.UNBAN_EVENT),
+                        onRemove = { viewModel.unbanEvent(entry.id) },
                     )
                 }
             }
         }
+
+        if (supportedMethods.contains(Nip86Method.LIST_ALLOWED_EVENTS)) {
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                SectionHeaderWithAdd(
+                    stringRes(Res.string.relay_management_allowed_events),
+                    showAdd = supportedMethods.contains(Nip86Method.ALLOW_EVENT),
+                    onAdd = { showAllowDialog = true },
+                )
+            }
+
+            if (allowedEvents.isEmpty()) {
+                item { EmptyListMessage(stringRes(Res.string.relay_management_no_allowed_events)) }
+            } else {
+                items(allowedEvents, key = { "allowed" + it.id }) { entry ->
+                    HexEntryCard(
+                        hex = entry.id,
+                        reason = entry.reason,
+                        showRemove = supportedMethods.contains(Nip86Method.UNALLOW_EVENT),
+                        onRemove = { viewModel.unallowEvent(entry.id) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAllowDialog) {
+        HexInputDialog(
+            title = stringRes(Res.string.relay_management_allow_event),
+            label = stringRes(Res.string.relay_management_event_id_hex),
+            onConfirm = { hex, reason ->
+                viewModel.allowEvent(hex, reason.ifBlank { null })
+                showAllowDialog = false
+            },
+            onDismiss = { showAllowDialog = false },
+        )
     }
 
     if (showBanDialog) {
@@ -648,6 +699,7 @@ private fun KindsTab(
     supportedMethods: List<String>,
 ) {
     val allowedKinds by viewModel.allowedKinds.collectAsState()
+    val disallowedKinds by viewModel.disallowedKinds.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -665,12 +717,36 @@ private fun KindsTab(
         if (allowedKinds.isEmpty()) {
             item { EmptyListMessage(stringRes(Res.string.relay_management_no_allowed_kinds)) }
         } else {
-            items(allowedKinds, key = { it }) { kind ->
+            items(allowedKinds, key = { "allowed$it" }) { kind ->
                 KindEntryCard(
                     kind = kind,
                     showRemove = supportedMethods.contains(Nip86Method.DISALLOW_KIND),
                     onRemove = { viewModel.disallowKind(kind) },
                 )
+            }
+        }
+
+        // Read-only: NIP-86 has no "undisallow"; `allowkind` would also turn on the allow list.
+        if (supportedMethods.contains(Nip86Method.LIST_DISALLOWED_KINDS)) {
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                SectionHeaderWithAdd(
+                    stringRes(Res.string.relay_management_disallowed_kinds),
+                    showAdd = false,
+                    onAdd = {},
+                )
+            }
+
+            if (disallowedKinds.isEmpty()) {
+                item { EmptyListMessage(stringRes(Res.string.relay_management_no_disallowed_kinds)) }
+            } else {
+                items(disallowedKinds, key = { "disallowed$it" }) { kind ->
+                    KindEntryCard(
+                        kind = kind,
+                        showRemove = false,
+                        onRemove = {},
+                    )
+                }
             }
         }
     }

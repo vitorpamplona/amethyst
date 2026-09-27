@@ -45,8 +45,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 
 @Composable
-fun RelayFeedsList(
-    postViewModel: RelayFeedsListViewModel,
+fun FavoriteRelayList(
+    postViewModel: FavoriteRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: INav,
@@ -71,7 +71,7 @@ fun RelayFeedsList(
 
 fun LazyListScope.renderRelayFeedsItems(
     feedState: List<BasicRelaySetupInfo>,
-    postViewModel: RelayFeedsListViewModel,
+    postViewModel: FavoriteRelayListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     dragState: RelayDragState? = null,

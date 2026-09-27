@@ -29,9 +29,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
+import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -117,7 +117,7 @@ class NotificationSummaryState(
                         }
                     }
 
-                    noteEvent is LnZapEvent -> {
+                    noteEvent is ZapReceiptEvent -> {
                         // the user might be sending his own receipts noteEvent.pubKey != currentUser
                         if (noteEvent.isTaggedUser(currentUser)) {
                             val netDate = formatDate(noteEvent.createdAt)
@@ -212,7 +212,7 @@ class NotificationSummaryState(
                             }
                         }
 
-                        noteEvent is LnZapEvent -> {
+                        noteEvent is ZapReceiptEvent -> {
                             if (noteEvent.isTaggedUser(currentUser)) {
                                 //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                                 val netDate = formatDate(noteEvent.createdAt)

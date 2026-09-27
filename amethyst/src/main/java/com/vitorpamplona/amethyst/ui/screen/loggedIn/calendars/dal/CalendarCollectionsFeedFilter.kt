@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 
 class CalendarCollectionsFeedFilter(
     val account: Account,
@@ -49,7 +49,7 @@ class CalendarCollectionsFeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet { _, it ->
                 val e = it.event
-                e is CalendarEvent && params.match(e, it.relays)
+                e is CalendarCollectionEvent && params.match(e, it.relays)
             }
         return sort(notes)
     }
@@ -66,7 +66,7 @@ class CalendarCollectionsFeedFilter(
         val params = buildFilterParams(account)
         return collection.filterTo(HashSet()) {
             val e = it.event
-            e is CalendarEvent && params.match(e, it.relays)
+            e is CalendarCollectionEvent && params.match(e, it.relays)
         }
     }
 

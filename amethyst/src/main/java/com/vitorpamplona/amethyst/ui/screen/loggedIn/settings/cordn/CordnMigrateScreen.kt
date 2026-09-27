@@ -47,9 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
+import com.vitorpamplona.amethyst.commons.cordn.ui.BusyLabel
+import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_cancel
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_cancel_desc
 import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_code_note
@@ -79,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.model.cordn.AndroidCordnBlobStore
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -119,8 +123,8 @@ fun CordnMigrateScreen(
     ) { padding ->
         if (runtime == null) {
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -350,7 +354,7 @@ private fun ReceiveSide(
         modifier = Modifier.fillMaxWidth(),
     )
 
-    done?.let { Text(stringRes(Res.string.cordn_migrate_done, it), style = MaterialTheme.typography.bodyMedium) }
+    done?.let { Text(pluralStringRes(Res.plurals.cordn_migrate_done, it, it), style = MaterialTheme.typography.bodyMedium) }
     error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
 
     Button(

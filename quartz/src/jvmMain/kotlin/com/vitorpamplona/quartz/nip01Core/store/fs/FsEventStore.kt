@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
@@ -136,7 +136,7 @@ open class FsEventStore(
             if (slot != null && existingSlot?.id != event.id) {
                 slots.install(slot, canonical, event, existingSlot)
             }
-            if (event is DeletionEvent) processDeletion(event, canonical)
+            if (event is DeletionRequestEvent) processDeletion(event, canonical)
             if (event is RequestToVanishEvent) processVanish(event, canonical)
             return
         }
@@ -158,7 +158,7 @@ open class FsEventStore(
             if (slot != null) {
                 slots.install(slot, canonical, event, existingSlot)
             }
-            if (event is DeletionEvent) processDeletion(event, canonical)
+            if (event is DeletionRequestEvent) processDeletion(event, canonical)
             if (event is RequestToVanishEvent) processVanish(event, canonical)
         } catch (t: Throwable) {
             Files.deleteIfExists(tmp)
@@ -223,7 +223,7 @@ open class FsEventStore(
      * future re-inserts are blocked.
      */
     private fun processDeletion(
-        deletion: DeletionEvent,
+        deletion: DeletionRequestEvent,
         deletionCanonical: java.nio.file.Path,
     ) {
         val ownerHashOfDeletion = hasher.hash(deletion.pubKey)

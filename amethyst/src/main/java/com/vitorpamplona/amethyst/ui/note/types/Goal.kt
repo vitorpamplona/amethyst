@@ -53,14 +53,14 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.fundraiserProgressColor
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import kotlin.math.roundToInt
@@ -71,14 +71,14 @@ fun RenderGoal(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? GoalEvent ?: return
+    val noteEvent = note.event as? ZapGoalEvent ?: return
 
     GoalHeader(noteEvent, note, accountViewModel, nav)
 }
 
 @Composable
 fun GoalHeader(
-    noteEvent: GoalEvent,
+    noteEvent: ZapGoalEvent,
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,

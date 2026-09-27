@@ -58,28 +58,64 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
 import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
+import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_add_action
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_add_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_copy_key
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_action
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_add
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_seen
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_discover_unheard
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_health_down
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_health_ok
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_health_retrying
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_health_unknown
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_identify
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_key
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_label
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_label_note
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_more
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_purge
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_purge_body
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_purge_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_relays_label
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_remove
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_rename
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_discover
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_manual
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_section_yours
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_server
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_server_claim
+import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_server_silent
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_coordinator_pubkey
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_coordinator_relays
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_save
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CopyableKeyRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -127,8 +163,8 @@ fun CordnCoordinatorsScreen(
             // The app's own empty state, centred and titled, rather than a
             // sentence stranded in the top-left corner.
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -146,7 +182,7 @@ fun CordnCoordinatorsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                text = stringRes(R.string.cordn_coordinators_explainer),
+                text = stringRes(Res.string.cordn_coordinators_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -165,7 +201,7 @@ fun CordnCoordinatorsScreen(
 
                     if (coordinators.isEmpty()) {
                         Text(
-                            text = stringRes(R.string.cordn_coordinators_none),
+                            text = stringRes(Res.string.cordn_coordinators_none),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -225,7 +261,7 @@ private fun CoordinatorCard(
                 IconButton(onClick = { renaming = true }) {
                     Icon(
                         symbol = MaterialSymbols.Edit,
-                        contentDescription = stringRes(R.string.cordn_coordinators_rename),
+                        contentDescription = stringRes(Res.string.cordn_coordinators_rename),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -264,10 +300,10 @@ private fun CoordinatorCard(
         // away on the clipboard, which is how a comparison is actually done.
         val coordinator = remember(config.pubKey) { LocalCache.getOrCreateUser(config.pubKey) }
         CopyableKeyRow(
-            label = stringRes(R.string.cordn_coordinators_key),
+            label = stringRes(Res.string.cordn_coordinators_key),
             shown = coordinator.pubkeyDisplayHex(),
             copied = coordinator.pubkeyNpub(),
-            copyDescription = stringRes(R.string.cordn_coordinators_copy_key),
+            copyDescription = stringRes(Res.string.cordn_coordinators_copy_key),
         )
 
         // Every relay, not the first two and a count: this is the management
@@ -275,7 +311,7 @@ private fun CoordinatorCard(
         // came here to check or to rule out.
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = stringRes(R.string.cordn_coordinators_relays_label),
+                text = stringRes(Res.string.cordn_coordinators_relays_label),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -304,10 +340,10 @@ private fun CoordinatorCard(
                     text =
                         info?.let {
                             stringRes(
-                                R.string.cordn_coordinators_server,
+                                Res.string.cordn_coordinators_server,
                                 listOfNotNull(it.name, it.version, it.protocolVersion).joinToString(" \u00b7 "),
                             )
-                        } ?: stringRes(R.string.cordn_coordinators_server_silent),
+                        } ?: stringRes(Res.string.cordn_coordinators_server_silent),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -315,7 +351,7 @@ private fun CoordinatorCard(
                     // Said next to it, every time, because a name on a settings
                     // screen reads as verified and this one is not: §8.5 makes
                     // the pubkey the identity and nothing else.
-                    text = stringRes(R.string.cordn_coordinators_server_claim),
+                    text = stringRes(Res.string.cordn_coordinators_server_claim),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -333,7 +369,7 @@ private fun CoordinatorCard(
                     infoChecked = true
                 }
             }) {
-                Text(stringRes(R.string.cordn_coordinators_identify))
+                Text(stringRes(Res.string.cordn_coordinators_identify))
             }
 
             Spacer(Modifier.weight(1f))
@@ -345,14 +381,14 @@ private fun CoordinatorCard(
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         symbol = MaterialSymbols.MoreVert,
-                        contentDescription = stringRes(R.string.cordn_coordinators_more),
+                        contentDescription = stringRes(Res.string.cordn_coordinators_more),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.cordn_coordinators_remove)) },
+                        text = { Text(stringRes(Res.string.cordn_coordinators_remove)) },
                         onClick = {
                             menuOpen = false
                             scope.launch { runtime.forget(config.pubKey) }
@@ -361,7 +397,7 @@ private fun CoordinatorCard(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = stringRes(R.string.cordn_coordinators_purge),
+                                text = stringRes(Res.string.cordn_coordinators_purge),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         },
@@ -378,14 +414,14 @@ private fun CoordinatorCard(
     if (confirmingPurge) {
         AlertDialog(
             onDismissRequest = { confirmingPurge = false },
-            title = { Text(stringRes(R.string.cordn_coordinators_purge_title)) },
-            text = { Text(stringRes(R.string.cordn_coordinators_purge_body)) },
+            title = { Text(stringRes(Res.string.cordn_coordinators_purge_title)) },
+            text = { Text(stringRes(Res.string.cordn_coordinators_purge_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmingPurge = false
                     scope.launch { runtime.purge(config.pubKey) }
                 }) {
-                    Text(stringRes(R.string.cordn_coordinators_purge), color = MaterialTheme.colorScheme.error)
+                    Text(stringRes(Res.string.cordn_coordinators_purge), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -409,10 +445,10 @@ private fun CoordinatorCard(
 private fun HealthLine(state: CoordinatorHealth.State) {
     val text =
         when {
-            state.isUnknown -> stringRes(R.string.cordn_coordinators_health_unknown)
-            state.isDown -> stringRes(R.string.cordn_coordinators_health_down, state.consecutiveFailures)
-            state.consecutiveFailures > 0 -> stringRes(R.string.cordn_coordinators_health_retrying)
-            else -> stringRes(R.string.cordn_coordinators_health_ok)
+            state.isUnknown -> stringRes(Res.string.cordn_coordinators_health_unknown)
+            state.isDown -> pluralStringRes(Res.plurals.cordn_coordinators_health_down, state.consecutiveFailures, state.consecutiveFailures)
+            state.consecutiveFailures > 0 -> stringRes(Res.string.cordn_coordinators_health_retrying)
+            else -> stringRes(Res.string.cordn_coordinators_health_ok)
         }
 
     Text(
@@ -447,10 +483,10 @@ private fun DiscoverCoordinators(
     var result by remember { mutableStateOf<CordnCoordinatorDiscovery.Result?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val failed = stringRes(R.string.cordn_coordinators_discover_failed)
+    val failed = stringRes(Res.string.cordn_coordinators_discover_failed)
 
     Text(
-        text = stringRes(R.string.cordn_coordinators_discover_explainer),
+        text = stringRes(Res.string.cordn_coordinators_discover_explainer),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -475,7 +511,7 @@ private fun DiscoverCoordinators(
             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(8.dp))
         }
-        Text(stringRes(R.string.cordn_coordinators_discover_action))
+        Text(stringRes(Res.string.cordn_coordinators_discover_action))
     }
 
     error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
@@ -497,11 +533,11 @@ private fun DiscoverCoordinators(
                 Text(
                     text =
                         if (found.unreachable.isEmpty()) {
-                            stringRes(R.string.cordn_coordinators_discover_none)
+                            stringRes(Res.string.cordn_coordinators_discover_none)
                         } else {
                             // "Nobody is announcing" and "we were not told" are
                             // different answers and only one of them is final.
-                            stringRes(R.string.cordn_coordinators_discover_unheard, found.unreachable.size)
+                            pluralStringRes(Res.plurals.cordn_coordinators_discover_unheard, found.unreachable.size, found.unreachable.size)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -529,19 +565,19 @@ private fun RenameCoordinatorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(R.string.cordn_coordinators_rename)) },
+        title = { Text(stringRes(Res.string.cordn_coordinators_rename)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
-                    label = { Text(stringRes(R.string.cordn_coordinators_label)) },
+                    label = { Text(stringRes(Res.string.cordn_coordinators_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
                     // The same caution the add form gives, for the same reason.
-                    text = stringRes(R.string.cordn_coordinators_label_note),
+                    text = stringRes(Res.string.cordn_coordinators_label_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -549,7 +585,7 @@ private fun RenameCoordinatorDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(input.trim().ifEmpty { null }) }) {
-                Text(stringRes(R.string.cordn_info_save))
+                Text(stringRes(Res.string.cordn_info_save))
             }
         },
         dismissButton = {
@@ -601,7 +637,7 @@ private fun DiscoveredCard(
             Text(
                 // Staleness matters more here than anywhere: the last live
                 // survey found most announcements were months-dead demos.
-                text = stringRes(R.string.cordn_coordinators_discover_seen, timeAgoNoDot(offer.announcedAt).trim()),
+                text = stringRes(Res.string.cordn_coordinators_discover_seen, timeAgoNoDot(offer.announcedAt).trim()),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -619,7 +655,7 @@ private fun DiscoveredCard(
                 enabled = !busy,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
-                Text(stringRes(R.string.cordn_coordinators_discover_add))
+                Text(stringRes(Res.string.cordn_coordinators_discover_add))
             }
         }
     }
@@ -633,7 +669,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
     var labelInput by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    val failed = stringRes(R.string.cordn_coordinators_add_failed)
+    val failed = stringRes(Res.string.cordn_coordinators_add_failed)
 
     val config =
         remember(pubKeyInput, relaysInput, labelInput) {
@@ -652,7 +688,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
             pubKeyInput = it
             error = null
         },
-        label = { Text(stringRes(R.string.cordn_create_coordinator_pubkey)) },
+        label = { Text(stringRes(Res.string.cordn_create_coordinator_pubkey)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -662,14 +698,14 @@ private fun AddCoordinator(runtime: CordnRuntime) {
             relaysInput = it
             error = null
         },
-        label = { Text(stringRes(R.string.cordn_create_coordinator_relays)) },
+        label = { Text(stringRes(Res.string.cordn_create_coordinator_relays)) },
         singleLine = false,
         modifier = Modifier.fillMaxWidth(),
     )
     OutlinedTextField(
         value = labelInput,
         onValueChange = { labelInput = it },
-        label = { Text(stringRes(R.string.cordn_coordinators_label)) },
+        label = { Text(stringRes(Res.string.cordn_coordinators_label)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -677,7 +713,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
     Text(
         // A label is ours, never theirs. A coordinator cannot prove a name and
         // this one is not asked for one.
-        text = stringRes(R.string.cordn_coordinators_label_note),
+        text = stringRes(Res.string.cordn_coordinators_label_note),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -705,6 +741,6 @@ private fun AddCoordinator(runtime: CordnRuntime) {
         enabled = !busy && config != null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(stringRes(R.string.cordn_coordinators_add_action))
+        Text(stringRes(Res.string.cordn_coordinators_add_action))
     }
 }

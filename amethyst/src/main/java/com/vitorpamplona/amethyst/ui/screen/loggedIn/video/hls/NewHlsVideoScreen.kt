@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.resources.hls_title_label
 import com.vitorpamplona.amethyst.commons.resources.hls_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.hls_try_again
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
+import com.vitorpamplona.amethyst.commons.service.upload.HlsPublishState
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav

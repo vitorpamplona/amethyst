@@ -266,15 +266,8 @@
     <string name="mark_all_known_as_read">Tandai semua yang dikenal sebagai telah dibaca</string>
     <string name="mark_all_new_as_read">Tandai semua yang baru sebagai telah dibaca</string>
     <string name="mark_all_as_read">Tandai semua sebagai telah dibaca</string>
-    <string name="account_backup_tips2_md">        ## Tips Cadangan Kunci dan Keamanan
-        \n\nAkun Anda diamankan dengan kunci rahasia. Kunci ini adalah rangkaian karakter panjang yang diawali dengan **nsec1**. Siapa pun yang memiliki akses ke kunci rahasia ini dapat memposting dan mengubah identitas Anda.
-        \n\n- **Jangan** memasukkan kunci rahasia Anda ke situs web atau perangkat lunak yang tidak Anda percaya.
-        \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasia Anda.
-        \n- **Lakukan** pencadangan kunci rahasia Anda secara aman untuk pemulihan akun. Kami merekomendasikan penggunaan pengelola kata sandi.
-    </string>
-    <string name="account_backup_tips3_md">        Untuk keamanan tambahan, Anda dapat mengenkripsi kunci dengan kata sandi. Kunci ini diawali dengan **ncryptsec1** dan tidak dapat digunakan tanpa kata sandi Anda.
-        \n\nJika Anda kehilangan kata sandi, Anda tidak akan dapat memulihkan kunci Anda.
-    </string>
+    <string name="account_backup_tips2_md">## Tips Cadangan Kunci dan Keamanan \n\nAkun Anda diamankan dengan kunci rahasia. Kunci ini adalah rangkaian karakter panjang yang diawali dengan **nsec1**. Siapa pun yang memiliki akses ke kunci rahasia ini dapat memposting dan mengubah identitas Anda. \n\n- **Jangan** memasukkan kunci rahasia Anda ke situs web atau perangkat lunak yang tidak Anda percaya. \n- Pengembang Amethyst **tidak akan pernah** meminta kunci rahasia Anda. \n- **Lakukan** pencadangan kunci rahasia Anda secara aman untuk pemulihan akun. Kami merekomendasikan penggunaan pengelola kata sandi.</string>
+    <string name="account_backup_tips3_md">Untuk keamanan tambahan, Anda dapat mengenkripsi kunci dengan kata sandi. Kunci ini diawali dengan **ncryptsec1** dan tidak dapat digunakan tanpa kata sandi Anda. \n\nJika Anda kehilangan kata sandi, Anda tidak akan dapat memulihkan kunci Anda.</string>
     <string name="encrypt_and_copy_my_secret_key">Enkripsi dan salin kunci rahasia saya</string>
     <string name="badge_award_image_for">Gambar penghargaan lencana untuk %1$s</string>
     <string name="badge_award_image">"Gambar penghargaan lencana</string>
@@ -853,13 +846,11 @@
     <string name="meeting_space_closed_tag">DITUTUP</string>
     <string name="meeting_space_planned_tag">TERJADWAL</string>
     <string name="meeting_space_planned_starts_at">Mulai %1$s</string>
-    <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi yang disimpan secara lokal.
-Pastikan kunci pribadi Anda telah simpan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
+    <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi yang disimpan secara lokal. Pastikan kunci pribadi Anda telah simpan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
     <string name="followed_tags">Tags yang Diikuti</string>
     <string name="discover_follows_explainer">Ini adalah daftar pengguna yang Anda rekomendasikan kepada orang lain. Hanya pengguna publik yang diizinkan.</string>
     <string name="community_approved_posts">Post yang disetujui</string>
-    <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau peraturan.
-Beri tahu kepada pemilik untuk menambahnya</string>
+    <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau peraturan. Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="community_no_descriptor">Komunitas ini tidak memiliki deskripsi. Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="user_preferences">Preferensi Pengguna</string>
     <string name="settings_search_placeholder">Cari pengaturan</string>
@@ -951,9 +942,7 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="push_server_none_explainer">Matikan Pemberitahuan Push</string>
     <string name="push_server_uses_app_explainer">Memakai aplikasi %1$s</string>
     <string name="push_server_install_app">Pengaturan Pemberitahuan Push</string>
-    <string name="push_server_install_app_description">        Untuk menerima Pemberitahuan Push, Install aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Ntfy](https://ntfy.sh/).
-        Setelah diinstall, Pilih aplikasi yang ingin digunakan di pengaturan.
-    </string>
+    <string name="push_server_install_app_description">Untuk menerima Pemberitahuan Push, Install aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Ntfy](https://ntfy.sh/). Setelah diinstall, Pilih aplikasi yang ingin digunakan di pengaturan.</string>
     <string name="thread_title">Utas</string>
     <string name="send_the_seller_a_message">Kirim pesan ke penjual</string>
     <string name="hi_there_is_this_still_available">Halo, apakah ini masih tersedia?</string>
@@ -1991,15 +1980,7 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="could_not_fetch_invoice_from_details">Tidak dapat mengambil invoice dari %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Tidak dapat membuka file terkompresi</string>
     <string name="couldnt_find_nwc_wallets">Dompet tidak ditemukan</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst tidak dapat menemukan aplikasi dompet apa pun yang mendukung Nostr Wallet Connect (NWC).
-\n\nYang dapat Anda lakukan:
-\n\t1. Verifikasi Dukungan NWC: Pastikan aplikasi dompet pilihan Anda kompatibel dengan Nostr Wallet Connect.
-\n\t2. Buat Koneksi: Buka aplikasi dompet Anda dan buat koneksi NWC baru.
-\n\t3. Hubungkan ke Amethyst: Dompet Anda biasanya akan memberikan tiga pilihan:
-\n\t\t3.1 Tautan Otomatis: Tombol untuk secara otomatis membuka dan terhubung ke Amethyst. Jika ada, klik tombol tersebut, buka Amethyst dan tekan simpan di layar baru.
-\n\t\t3.2 Tautan Manual: URI Koneksi yang dapat Anda salin dan klik ikon tempel di layar ini untuk memasukkannya secara langsung.
-\n\t\t3.3 Kode QR: Dompet membuat kode QR yang dapat Anda baca dari tombol kode QR di layar ini.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst tidak dapat menemukan aplikasi dompet apa pun yang mendukung Nostr Wallet Connect (NWC). \n\nYang dapat Anda lakukan: \n\t1. Verifikasi Dukungan NWC: Pastikan aplikasi dompet pilihan Anda kompatibel dengan Nostr Wallet Connect. \n\t2. Buat Koneksi: Buka aplikasi dompet Anda dan buat koneksi NWC baru. \n\t3. Hubungkan ke Amethyst: Dompet Anda biasanya akan memberikan tiga pilihan: \n\t\t3.1 Tautan Otomatis: Tombol untuk secara otomatis membuka dan terhubung ke Amethyst. Jika ada, klik tombol tersebut, buka Amethyst dan tekan simpan di layar baru. \n\t\t3.2 Tautan Manual: URI Koneksi yang dapat Anda salin dan klik ikon tempel di layar ini untuk memasukkannya secara langsung. \n\t\t3.3 Kode QR: Dompet membuat kode QR yang dapat Anda baca dari tombol kode QR di layar ini.</string>
     <string name="create">Buat</string>
     <string name="d">h</string>
     <string name="danger_zone">Zona Berbahaya</string>
@@ -2183,8 +2164,7 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="image_saved_to_the_gallery">Gambar disimpan ke galeri</string>
     <string name="impersonation">Identitas palsu</string>
     <string name="inbox_relays_title">Relay Kotak Masuk</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sat) dari %2$s.
-Seharusnya %3$s</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sat) dari %2$s. Seharusnya %3$s</string>
     <string name="indexer_section">Relay Indeks</string>
     <string name="indexer_section_explainer">Relay yang berspesialisasi dalam menyimpan metadata dan daftar relay semua orang, seperti purplepag.es. Amethyst akan menggunakan relay ini untuk menemukan pengguna yang tidak ada dalam daftar Anda.</string>
     <string name="interest_set_creation_screen_title">Kumpulan Minat Baru</string>
@@ -2618,11 +2598,8 @@ Seharusnya %3$s</string>
     <string name="proxy_section">Relay Proxy</string>
     <string name="proxy_section_explainer">Relay agregator yang harus digunakan aplikasi untuk mengunduh feed Anda, seperti filter.nostr.wine. Ini menggantikan model outbox dan akan membuat aplikasi hanya terhubung ke relay dalam daftar Anda.</string>
     <string name="public_chat">Obrolan Publik</string>
-    <string name="public_chat_explainer">Obrolan publik terlihat oleh semua orang di Nostr dan siapa pun
-        dapat berpartisipasi. Sangat cocok untuk komunitas terbuka seputar topik tertentu.
-        Moderasi dapat dilakukan dengan menghapus postingan di relay-nya</string>
-    <string name="public_chat_relays_explainer">Masukkan antara 1–3 relay yang menjadi host grup ini.
-        Klien Nostr menggunakan pengaturan ini untuk mengetahui tempat mengunduh dan mengirim pesan Anda.</string>
+    <string name="public_chat_explainer">Obrolan publik terlihat oleh semua orang di Nostr dan siapa pun dapat berpartisipasi. Sangat cocok untuk komunitas terbuka seputar topik tertentu. Moderasi dapat dilakukan dengan menghapus postingan di relay-nya</string>
+    <string name="public_chat_relays_explainer">Masukkan antara 1–3 relay yang menjadi host grup ini. Klien Nostr menggunakan pengaturan ini untuk mengetahui tempat mengunduh dan mengirim pesan Anda.</string>
     <string name="public_chat_relays_title">relay</string>
     <string name="public_chat_title">Metadata Obrolan Publik</string>
     <string name="public_chats">Obrolan Publik</string>
@@ -2647,10 +2624,7 @@ Seharusnya %3$s</string>
     <string name="read_only_user">Pengguna hanya-baca</string>
     <string name="record_a_message_description">Tekan dan tahan untuk merekam pesan</string>
     <string name="relay_chat">Obrolan relay</string>
-    <string name="relay_chat_explainer">Obrolan relay adalah grup obrolan yang dikendalikan oleh relay induknya.
-        Obrolan ini terlihat oleh semua orang di Nostr dan siapa pun dapat berpartisipasi.
-        Sangat cocok untuk komunitas terbuka seputar topik tertentu. Beberapa grup ini bersifat sementara
-    sehingga pesan obrolan akan menghilang seiring waktu</string>
+    <string name="relay_chat_explainer">Obrolan relay adalah grup obrolan yang dikendalikan oleh relay induknya. Obrolan ini terlihat oleh semua orang di Nostr dan siapa pun dapat berpartisipasi. Sangat cocok untuk komunitas terbuka seputar topik tertentu. Beberapa grup ini bersifat sementara sehingga pesan obrolan akan menghilang seiring waktu</string>
     <string name="relay_chat_title">Obrolan relay</string>
     <string name="relay_management_tab_events">Acara</string>
     <string name="relay_management_tab_ips">IP</string>
@@ -2888,4 +2862,5 @@ Seharusnya %3$s</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
 </resources>

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -81,10 +81,10 @@ class NotificationTagsAnEventByUserTest {
                 1000,
                 arrayOf(
                     arrayOf("E", zapId, "", wallet),
-                    arrayOf("K", LnZapEvent.KIND.toString()),
+                    arrayOf("K", ZapReceiptEvent.KIND.toString()),
                     arrayOf("P", wallet),
                     arrayOf("e", zapId, "", wallet),
-                    arrayOf("k", LnZapEvent.KIND.toString()),
+                    arrayOf("k", ZapReceiptEvent.KIND.toString()),
                     arrayOf("p", wallet),
                     arrayOf("p", me),
                 ),
@@ -109,10 +109,10 @@ class NotificationTagsAnEventByUserTest {
                 1000,
                 arrayOf(
                     arrayOf("E", zapId, "", wallet),
-                    arrayOf("K", LnZapEvent.KIND.toString()),
+                    arrayOf("K", ZapReceiptEvent.KIND.toString()),
                     arrayOf("P", wallet),
                     arrayOf("e", zapId, "", wallet),
-                    arrayOf("k", LnZapEvent.KIND.toString()),
+                    arrayOf("k", ZapReceiptEvent.KIND.toString()),
                     arrayOf("p", wallet),
                 ),
                 "nice zap",

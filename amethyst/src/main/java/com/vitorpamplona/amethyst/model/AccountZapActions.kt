@@ -48,8 +48,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.Log
@@ -74,12 +74,12 @@ class AccountZapActions(
         event: Event,
         pollOption: Int?,
         message: String = "",
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         toUser: User?,
         additionalRelays: Set<NormalizedRelayUrl>? = null,
         amountMillisats: Long? = null,
         lnurl: String? = null,
-    ) = LnZapRequestEvent.create(
+    ) = ZapRequestEvent.create(
         zappedEvent = event,
         // Where the provider should publish the receipt. Zapping group content pins that to the room's
         // host relay: the receipt belongs where the message it pays for lives, so the room can show it
@@ -205,7 +205,7 @@ class AccountZapActions(
         offer: String,
         amountMillisats: Long,
         message: String,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
         onError: (StringResource, String?) -> Unit,
         // (code, detail) — the wallet refused or failed the payment; no funds moved.
@@ -215,7 +215,7 @@ class AccountZapActions(
     ) {
         // NONZAP means "pay, but publish no receipt" — settle the offer without binding
         // a zap intent or emitting a 9736, matching the privacy of a bolt11 NONZAP.
-        if (zapType == LnZapEvent.ZapType.NONZAP) {
+        if (zapType == ZapReceiptEvent.ZapType.NONZAP) {
             sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats), onTimeout) { response ->
                 account.scope.launch {
                     try {
@@ -228,7 +228,7 @@ class AccountZapActions(
             return
         }
 
-        val anonymous = zapType == LnZapEvent.ZapType.ANONYMOUS
+        val anonymous = zapType == ZapReceiptEvent.ZapType.ANONYMOUS
         // The 9737 intent and the 9736 zap MUST be signed by the same key. An anonymous
         // zap uses a fresh ephemeral key so it carries no `P` tag and isn't traceable.
         val zapSigner = if (anonymous) NostrSignerInternal(KeyPair()) else account.signer
@@ -284,12 +284,12 @@ class AccountZapActions(
     suspend fun createZapRequestFor(
         user: User,
         message: String = "",
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         amountMillisats: Long? = null,
         lnurl: String? = null,
-    ): LnZapRequestEvent {
+    ): ZapRequestEvent {
         val zapRequest =
-            LnZapRequestEvent.create(
+            ZapRequestEvent.create(
                 userHex = user.pubkeyHex,
                 relays = account.nip65RelayList.inboxFlow.value + (user.inboxRelays() ?: emptyList()),
                 signer = account.signer,

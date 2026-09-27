@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.toHexSet
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.MutableTime
@@ -103,14 +103,14 @@ class UserCardsSubAssembler(
                 val groups = groupByRelayPresence(lastUsersOnFilter, relay)
                 val trustedAccounts = trustedUsersInThisRelay.sorted()
                 listOfNotNull(
-                    filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                    filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay(
                         accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithoutEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = null,
                     ),
-                    filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                    filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay(
                         accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithEose.toHexSet(),
                         trustedAccounts = trustedAccounts,

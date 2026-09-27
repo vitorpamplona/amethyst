@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
@@ -110,6 +111,9 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
+import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
+import com.vitorpamplona.amethyst.commons.util.showAmount
+import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -127,12 +131,9 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismis
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
@@ -172,7 +173,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -202,16 +203,16 @@ import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
@@ -725,7 +726,7 @@ class AccountViewModel(
         val isHiddenAuthor = note.author?.let { account.isHidden(it) } == true
 
         val noteEvent = note.event
-        val isDecryptedPostHidden = if (noteEvent is PrivateDmEvent) account.isDecryptedContentHidden(noteEvent) else false
+        val isDecryptedPostHidden = if (noteEvent is EncryptedDmEvent) account.isDecryptedContentHidden(noteEvent) else false
 
         return if (isPostHidden || isDecryptedPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
@@ -924,14 +925,14 @@ class AccountViewModel(
                                 it.request.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.response.event as? ZapReceiptEvent)?.amount),
                                 it.response,
                             )
                     }.toMutableMap()
 
             val results =
                 mapNotNullAsync(
-                    zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
+                    zaps.filter { (it.request.event as? ZapRequestEvent)?.isPrivateZap() == true },
                 ) { next ->
                     val info = innerDecryptAmountMessage(next.request, next.response)
                     if (info != null) {
@@ -950,14 +951,14 @@ class AccountViewModel(
     fun cachedDecryptAmountMessageInGroup(zapNotes: List<CombinedZap>): ImmutableList<ZapAmountCommentNotification> =
         zapNotes
             .map {
-                val request = it.request.event as? LnZapRequestEvent
+                val request = it.request.event as? ZapRequestEvent
                 if (request?.isPrivateZap() == true) {
                     val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? ZapReceiptEvent)?.amount),
                             it.response,
                         )
                     } else {
@@ -966,7 +967,7 @@ class AccountViewModel(
                             it.request.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? ZapReceiptEvent)?.amount),
                             it.response,
                         )
                     }
@@ -976,7 +977,7 @@ class AccountViewModel(
                         it.request.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.response.event as? ZapReceiptEvent)?.amount),
                         it.response,
                     )
                 }
@@ -987,14 +988,14 @@ class AccountViewModel(
 
         return myList
             .map {
-                val request = it.first.event as? LnZapRequestEvent
+                val request = it.first.event as? ZapRequestEvent
                 if (request?.isPrivateZap() == true) {
                     val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? ZapReceiptEvent)?.amount),
                             it.second,
                         )
                     } else {
@@ -1003,7 +1004,7 @@ class AccountViewModel(
                             it.first.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? ZapReceiptEvent)?.amount),
                             it.second,
                         )
                     }
@@ -1013,7 +1014,7 @@ class AccountViewModel(
                         it.first.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.second?.event as? ZapReceiptEvent)?.amount),
                         it.second,
                     )
                 }
@@ -1036,7 +1037,7 @@ class AccountViewModel(
                                 it.first.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.second?.event as? ZapReceiptEvent)?.amount),
                                 it.second,
                             )
                     }.toMutableMap()
@@ -1073,7 +1074,7 @@ class AccountViewModel(
     }
 
     suspend fun innerDecryptAmountMessage(zapNote: Note): ZapAmountCommentNotification? {
-        val zapEvent = zapNote.event as? LnZapEvent ?: return null
+        val zapEvent = zapNote.event as? ZapReceiptEvent ?: return null
         val zapRequest = zapEvent.zapRequest ?: return null
 
         return innerDecryptAmountMessage(zapRequest, zapEvent)?.copy(zapNote = zapNote)
@@ -1083,14 +1084,14 @@ class AccountViewModel(
         zapRequest: Note,
         zapEvent: Note,
     ): ZapAmountCommentNotification? {
-        val zapEvent = zapEvent.event as? LnZapEvent ?: return null
-        val zapRequest = zapRequest.event as? LnZapRequestEvent ?: return null
+        val zapEvent = zapEvent.event as? ZapReceiptEvent ?: return null
+        val zapRequest = zapRequest.event as? ZapRequestEvent ?: return null
         return innerDecryptAmountMessage(zapRequest, zapEvent)
     }
 
     suspend fun innerDecryptAmountMessage(
-        zapRequestEvent: LnZapRequestEvent,
-        zapEvent: LnZapEvent,
+        zapRequestEvent: ZapRequestEvent,
+        zapEvent: ZapReceiptEvent,
     ): ZapAmountCommentNotification? {
         val amount = showAmountInteger(zapEvent.amount)
         return if (zapRequestEvent.isPrivateZap()) {
@@ -1148,7 +1149,7 @@ class AccountViewModel(
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-        zapType: LnZapEvent.ZapType? = null,
+        zapType: ZapReceiptEvent.ZapType? = null,
     ) = launchSigner {
         // A podcast note (episode or show) can carry a Podcasting-2.0 value-for-value block. When it
         // does, "zapping" it means paying that split — lnaddress recipients go out as real zaps (with
@@ -1177,8 +1178,8 @@ class AccountViewModel(
         // comment stay encrypted. NONZAP is kept: paying without a zap
         // request produces no receipt at all, which is even more private.
         val effectiveType =
-            if (note.isPrivateRumor() && requestedType != LnZapEvent.ZapType.NONZAP) {
-                LnZapEvent.ZapType.PRIVATE
+            if (note.isPrivateRumor() && requestedType != ZapReceiptEvent.ZapType.NONZAP) {
+                ZapReceiptEvent.ZapType.PRIVATE
             } else {
                 requestedType
             }
@@ -1299,7 +1300,7 @@ class AccountViewModel(
             zappedNote = zappedNote,
             context = context,
             asZap = !streaming,
-            zapType = LnZapEvent.ZapType.PUBLIC,
+            zapType = ZapReceiptEvent.ZapType.PUBLIC,
             okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = { title, message ->
                 if (!streaming) toastManager.toast(title, message)
@@ -1463,7 +1464,7 @@ class AccountViewModel(
 
     fun follows(user: User): Note = LocalCache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
 
-    fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
+    fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(InterestListEvent.createAddress(user.pubkeyHex))
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
@@ -2128,7 +2129,7 @@ class AccountViewModel(
 
     fun updateZapAmounts(
         amountSet: List<Long>,
-        selectedZapType: LnZapEvent.ZapType,
+        selectedZapType: ZapReceiptEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
     ) = launchSigner { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
@@ -2150,11 +2151,11 @@ class AccountViewModel(
 
     fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
-    fun updateContactCardPetName(
+    fun updateUserAssertionPetName(
         user: User,
         petName: String?,
         summary: String?,
-    ) = launchSigner { account.updateContactCardPetName(user.pubkeyHex, petName, summary) }
+    ) = launchSigner { account.updateUserAssertionPetName(user.pubkeyHex, petName, summary) }
 
     fun hide(word: String) = launchSigner { account.hideWord(word) }
 
@@ -2854,7 +2855,7 @@ class AccountViewModel(
         }
     }
 
-    private suspend fun unwrapSeal(event: SealedRumorEvent): Note? {
+    private suspend fun unwrapSeal(event: SealEvent): Note? {
         val cacheInnerEventId = event.innerEventId
         return if (cacheInnerEventId != null) {
             val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
@@ -2888,7 +2889,7 @@ class AccountViewModel(
     private suspend fun unwrapIfNeeded(event: Event): Note? =
         when (event) {
             is GiftWrapEvent -> unwrapGiftWrap(event)
-            is SealedRumorEvent -> unwrapSeal(event)
+            is SealEvent -> unwrapSeal(event)
             else -> LocalCache.getNoteIfExists(event.id)
         }
 
@@ -2942,7 +2943,7 @@ class AccountViewModel(
                 LocalCache.notes.maxOrNullOf(
                     filter = { _, note ->
                         val noteEvent = note.event
-                        noteEvent is NIP90ContentDiscoveryResponseEvent &&
+                        noteEvent is DvmContentDiscoveryResponseEvent &&
                             noteEvent.pubKey == pubkeyHex &&
                             noteEvent.isTaggedUser(account.signer.pubKey) &&
                             noteEvent.createdAt > fifteenMinsAgo
@@ -3011,13 +3012,13 @@ class AccountViewModel(
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
-        zapType: LnZapEvent.ZapType? = null,
+        zapType: ZapReceiptEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val effectiveZapType = zapType ?: defaultZapType()
                 val zapRequest =
-                    if (effectiveZapType != LnZapEvent.ZapType.NONZAP) {
+                    if (effectiveZapType != ZapReceiptEvent.ZapType.NONZAP) {
                         // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
                         val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
                         account.zaps.createZapRequestFor(

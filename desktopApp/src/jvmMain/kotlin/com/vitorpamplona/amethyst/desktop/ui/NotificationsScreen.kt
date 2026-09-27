@@ -87,7 +87,7 @@ import com.vitorpamplona.amethyst.desktop.ui.notifications.NotificationGroup
 import com.vitorpamplona.amethyst.desktop.ui.notifications.groupNotifications
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -97,7 +97,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 
@@ -157,7 +157,7 @@ sealed class NotificationItem(
 val NotificationItem.effectiveAuthorPubKey: String
     get() =
         when (val e = event) {
-            is LnZapEvent -> e.zapRequest?.pubKey ?: e.pubKey
+            is ZapReceiptEvent -> e.zapRequest?.pubKey ?: e.pubKey
             else -> event.pubKey
         }
 
@@ -169,7 +169,7 @@ private fun classifyNotification(event: Event): NotificationItem? =
     when (event) {
         is ReactionEvent -> NotificationItem.Reaction(event, event.createdAt, event.content)
         is RepostEvent, is GenericRepostEvent -> NotificationItem.Repost(event, event.createdAt)
-        is LnZapEvent -> NotificationItem.Zap(event, event.createdAt, event.amount?.toLong())
+        is ZapReceiptEvent -> NotificationItem.Zap(event, event.createdAt, event.amount?.toLong())
         // Nutzaps: treat like a zap; sats amount extraction requires the Cashu
         // token proof and is deferred to when Desktop renders zap detail.
         is NutzapEvent -> NotificationItem.Zap(event, event.createdAt, null)
@@ -186,7 +186,7 @@ private fun classifyNotification(event: Event): NotificationItem? =
         // NIP-28 channel messages read like public mentions.
         is ChannelMessageEvent -> NotificationItem.Mention(event, event.createdAt)
         // DMs (NIP-04 legacy + NIP-17 gift-wrap + rumor + file-header).
-        is PrivateDmEvent,
+        is EncryptedDmEvent,
         is ChatMessageEvent,
         is GiftWrapEvent,
         is ChatMessageEncryptedFileHeaderEvent,

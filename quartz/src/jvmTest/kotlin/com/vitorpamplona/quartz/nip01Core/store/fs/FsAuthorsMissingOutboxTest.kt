@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -95,7 +95,7 @@ class FsAuthorsMissingOutboxTest {
             store.insert(relayList)
             assertEquals(emptySet(), store.authorsMissingOutbox().toSet())
 
-            store.insert(signer.sign(DeletionEvent.build(listOf(relayList))))
+            store.insert(signer.sign(DeletionRequestEvent.build(listOf(relayList))))
             assertEquals(setOf(signer.pubKey), store.authorsMissingOutbox().toSet())
         }
 }

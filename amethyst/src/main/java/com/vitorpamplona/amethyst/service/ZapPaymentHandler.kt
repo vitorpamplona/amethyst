@@ -48,8 +48,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionMetadata
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
@@ -79,7 +79,7 @@ class ZapPaymentHandler(
         // The signed kind 9734 this invoice was fetched with, and the message on it.
         // Carried so the NWC payment can name the payee (NWC-06 `metadata`); null for
         // a NONZAP split, which has no zap request to send.
-        val zapRequest: LnZapRequestEvent? = null,
+        val zapRequest: ZapRequestEvent? = null,
         val message: String = "",
     )
 
@@ -122,7 +122,7 @@ class ZapPaymentHandler(
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
     ) = withContext(Dispatchers.IO) {
         val noteEvent = note.event
         val zapSplitSetup = noteEvent?.zapSplitSetup()
@@ -297,7 +297,7 @@ class ZapPaymentHandler(
         note: Note,
         pollOption: Int?,
         message: String,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         totalAmountMilliSats: Long,
         totalWeight: Double,
         okHttpClient: (String) -> OkHttpClient,
@@ -360,14 +360,14 @@ class ZapPaymentHandler(
 
     class ZapRequestReady(
         val inputSetup: MyZapSplitSetup,
-        val zapRequest: LnZapRequestEvent?,
+        val zapRequest: ZapRequestEvent?,
     )
 
     suspend fun signAllZapRequests(
         note: Note,
         pollOption: Int?,
         message: String,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         zapsToSend: List<MyZapSplitSetup>,
         totalAmountMilliSats: Long,
         // Shared across the lightning + BOLT12 lanes so a mixed split stays proportional.
@@ -389,7 +389,7 @@ class ZapPaymentHandler(
             val splitLnurl = LnurlForm.toUrl(next.lnAddress)?.let(LnurlForm::urlToBech32)
 
             val zapRequest =
-                if (zapType != LnZapEvent.ZapType.NONZAP && noteEvent != null) {
+                if (zapType != ZapReceiptEvent.ZapType.NONZAP && noteEvent != null) {
                     account.zaps.createZapRequestFor(
                         event = noteEvent,
                         pollOption = pollOption,
@@ -535,7 +535,7 @@ class ZapPaymentHandler(
         totalAmountMilliSats: Long,
         totalWeight: Double,
         message: String,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
@@ -672,7 +672,7 @@ class ZapPaymentHandler(
     private suspend fun assembleInvoice(
         lud16: String,
         splitSetup: MyZapSplitSetup,
-        nostrZapRequest: LnZapRequestEvent?,
+        nostrZapRequest: ZapRequestEvent?,
         zapValue: Long,
         message: String,
         okHttpClient: (String) -> OkHttpClient,
@@ -683,7 +683,7 @@ class ZapPaymentHandler(
 
         // Only the request the provider actually accepted may be claimed as bound to
         // this invoice; see lnAddressInvoice's onZapRequestSent.
-        var sentZapRequest: LnZapRequestEvent? = null
+        var sentZapRequest: ZapRequestEvent? = null
 
         val invoice =
             LightningAddressResolver().lnAddressInvoice(

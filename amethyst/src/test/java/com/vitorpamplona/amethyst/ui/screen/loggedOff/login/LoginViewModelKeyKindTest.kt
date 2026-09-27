@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
 
 import androidx.compose.ui.text.input.TextFieldValue
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_bunker_not_supported
 import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_supported

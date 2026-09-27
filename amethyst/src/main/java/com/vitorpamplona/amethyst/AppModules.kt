@@ -1159,7 +1159,7 @@ class AppModules(
     // Local store for posts the user has scheduled to publish later. Backed by a
     // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
     val scheduledPostStore =
-        ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME))
+        ScheduledPostStore(File(appContext.filesDir, ScheduledPostStore.FILE_NAME).path)
 
     // Organizes cache clearing
     val trimmingService by

@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import okhttp3.OkHttpClient
 
 /**
@@ -222,8 +222,8 @@ object ZapCommand {
         sats: Long,
         lnAddress: String,
         comment: String,
-        request: LnZapRequestEvent,
-        zapType: LnZapEvent.ZapType,
+        request: ZapRequestEvent,
+        zapType: ZapReceiptEvent.ZapType,
         timeoutMs: Long,
         settleWith: NDebit?,
         zappedEventId: HexKey? = null,
@@ -300,7 +300,7 @@ object ZapCommand {
         sats: Long,
         comment: String,
         zappedEventId: HexKey,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         requests: List<ZapActions.ZapRequestForSplit>,
         timeoutMs: Long,
         settleWith: NDebit?,
@@ -350,11 +350,11 @@ object ZapCommand {
         )
     }
 
-    private fun parseZapType(args: Args): LnZapEvent.ZapType =
+    private fun parseZapType(args: Args): ZapReceiptEvent.ZapType =
         when {
-            args.bool("anon") -> LnZapEvent.ZapType.ANONYMOUS
-            args.bool("private") -> LnZapEvent.ZapType.PRIVATE
-            else -> LnZapEvent.ZapType.PUBLIC
+            args.bool("anon") -> ZapReceiptEvent.ZapType.ANONYMOUS
+            args.bool("private") -> ZapReceiptEvent.ZapType.PRIVATE
+            else -> ZapReceiptEvent.ZapType.PUBLIC
         }
 
     private suspend fun fetchLatestMetadata(

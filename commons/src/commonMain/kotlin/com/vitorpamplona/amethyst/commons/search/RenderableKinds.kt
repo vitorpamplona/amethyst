@@ -33,12 +33,12 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -47,18 +47,18 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -66,17 +66,17 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
@@ -141,15 +141,15 @@ object RenderableKinds {
         setOf(
             MetadataEvent.KIND,
             ContactListEvent.KIND,
-            DeletionEvent.KIND,
+            DeletionRequestEvent.KIND,
             RepostEvent.KIND,
             ReactionEvent.KIND,
             GenericRepostEvent.KIND,
             RequestToVanishEvent.KIND,
-            FileHeaderEvent.KIND,
+            FileMetadataEvent.KIND,
             CommunityPostApprovalEvent.KIND,
-            LnZapRequestEvent.KIND,
-            LnZapEvent.KIND,
+            ZapRequestEvent.KIND,
+            ZapReceiptEvent.KIND,
             AppSpecificDataEvent.KIND,
         )
 
@@ -166,8 +166,8 @@ object RenderableKinds {
             TextNoteEvent.KIND,
             CommentEvent.KIND,
             PublicMessageEvent.KIND,
-            LongTextNoteEvent.KIND,
-            WikiNoteEvent.KIND,
+            LongFormContentEvent.KIND,
+            WikiArticleEvent.KIND,
             HighlightEvent.KIND,
             CodeSnippetEvent.KIND,
             NipTextEvent.KIND,
@@ -175,8 +175,8 @@ object RenderableKinds {
             PictureEvent.KIND,
             VideoNormalEvent.KIND,
             VideoShortEvent.KIND,
-            VideoHorizontalEvent.KIND,
-            VideoVerticalEvent.KIND,
+            AddressableNormalVideoEvent.KIND,
+            AddressableShortVideoEvent.KIND,
             // A video list has a card of its own, so by the rule the omission list states — in
             // ALL when Amethyst can render it — it belongs in the window. Its title and
             // description are what Quartz indexes, which is exactly what a reader would search.
@@ -202,15 +202,15 @@ object RenderableKinds {
             MeetingRoomEvent.KIND,
             // communities and lists
             CommunityDefinitionEvent.KIND,
-            PeopleListEvent.KIND,
-            FollowListEvent.KIND,
+            FollowSetEvent.KIND,
+            StarterPackEvent.KIND,
             BookmarkListEvent.KIND,
             OldBookmarkListEvent.KIND,
             PinListEvent.KIND,
             // calendar
             CalendarDateSlotEvent.KIND,
             CalendarTimeSlotEvent.KIND,
-            CalendarEvent.KIND,
+            CalendarCollectionEvent.KIND,
             // marketplace, apps, code and sites
             ClassifiedsEvent.KIND,
             SoftwareApplicationEvent.KIND,

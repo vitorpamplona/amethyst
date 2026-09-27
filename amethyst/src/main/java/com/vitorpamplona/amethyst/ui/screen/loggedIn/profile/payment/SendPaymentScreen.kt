@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
@@ -105,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -117,7 +117,7 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
@@ -621,9 +621,9 @@ private fun SendPaymentLoaded(
     val messageLabel =
         when {
             selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(Res.string.note_to_receiver)
-            selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == LnZapEvent.ZapType.PRIVATE ->
+            selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == ZapReceiptEvent.ZapType.PRIVATE ->
                 stringRes(Res.string.custom_zaps_add_a_message_private)
-            selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == LnZapEvent.ZapType.NONZAP ->
+            selectedMethod == ProfilePaymentMethod.LIGHTNING && zapType == ZapReceiptEvent.ZapType.NONZAP ->
                 stringRes(Res.string.custom_zaps_add_a_message_nonzap)
             else -> stringRes(Res.string.custom_zaps_add_a_message)
         }
@@ -738,10 +738,10 @@ private fun rememberLightningZapTypeOptions(): ImmutableList<ZapTypeOption> {
 
     return remember {
         persistentListOf(
-            ZapTypeOption(LnZapEvent.ZapType.PUBLIC, publicLabel, publicExplainer),
-            ZapTypeOption(LnZapEvent.ZapType.PRIVATE, privateLabel, privateExplainer),
-            ZapTypeOption(LnZapEvent.ZapType.ANONYMOUS, anonymousLabel, anonymousExplainer),
-            ZapTypeOption(LnZapEvent.ZapType.NONZAP, nonzapLabel, nonzapExplainer),
+            ZapTypeOption(ZapReceiptEvent.ZapType.PUBLIC, publicLabel, publicExplainer),
+            ZapTypeOption(ZapReceiptEvent.ZapType.PRIVATE, privateLabel, privateExplainer),
+            ZapTypeOption(ZapReceiptEvent.ZapType.ANONYMOUS, anonymousLabel, anonymousExplainer),
+            ZapTypeOption(ZapReceiptEvent.ZapType.NONZAP, nonzapLabel, nonzapExplainer),
         )
     }
 }

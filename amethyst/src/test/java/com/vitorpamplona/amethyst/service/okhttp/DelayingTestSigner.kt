@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.delay
 
 /**
@@ -74,7 +74,7 @@ class DelayingTestSigner(
         fromPublicKey: HexKey,
     ) = unsupported()
 
-    override suspend fun decryptZapEvent(event: LnZapRequestEvent) = unsupported()
+    override suspend fun decryptZapEvent(event: ZapRequestEvent) = unsupported()
 
     override suspend fun deriveKey(nonce: HexKey) = unsupported()
 

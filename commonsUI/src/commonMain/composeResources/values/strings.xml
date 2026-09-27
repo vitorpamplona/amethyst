@@ -219,7 +219,10 @@
     <string name="geocache_hunt_new">New hunt…</string>
     <string name="geocache_hunt_none_yet">You have not made a hunt yet.</string>
     <string name="geocache_hunt_already_on">Already on this hunt</string>
-    <string name="geocache_caches_here">%1$d caches here</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d cache here</item>
+        <item quantity="other">%1$d caches here</item>
+    </plurals>
     <string name="geocache_photo_remove">Remove this photo</string>
     <string name="geocache_archived_notice">This cache has been archived. It is no longer in play.</string>
     <string name="geocache_ftf_won_by">First to find claimed by %1$s</string>
@@ -278,7 +281,6 @@
     <string name="geocache_map_recenter">Centre on me</string>
     <string name="geocache_map_long_press">Long-press the map to hide a cache there</string>
     <string name="geocache_map_open">Open</string>
-    <string name="geocache_map_pin_count">%1$d caches</string>
     <string name="geocache_new_section_where">Where</string>
     <string name="geocache_new_section_what">What</string>
     <string name="geocache_new_section_extras">Extras</string>
@@ -306,7 +308,10 @@
     <string name="geocache_new_needs_location">Pick where the cache is hidden.</string>
     <string name="geocache_hunt_progress">%1$d of %2$d found</string>
     <string name="geocache_hunt_start">Start the hunt</string>
-    <string name="geocache_hunt_caches">%1$d caches</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d cache</item>
+        <item quantity="other">%1$d caches</item>
+    </plurals>
     <string name="geocache_hunt_title">Title</string>
     <string name="geocache_hunt_description">Description</string>
     <string name="geocache_hunt_banner">Banner image</string>
@@ -355,7 +360,10 @@
     <string name="qr_scanner_no_code_in_image">No QR code found in that picture</string>
     <string name="qr_scanner_clipboard_empty">Nothing on the clipboard to scan</string>
     <string name="qr_scanner_pick_one">Tap the code you want</string>
-    <string name="qr_scanner_sequence_progress">Captured %1$s of %2$s parts — keep going</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">Captured %1$s of %2$s part — keep going</item>
+        <item quantity="other">Captured %1$s of %2$s parts — keep going</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Reset zoom</string>
     <string name="qr_scanner_unsupported_title">Amethyst can't open this code</string>
     <string name="qr_scanner_unsupported_secret">This code carries a private key or a pairing secret, so its contents are not shown here. Use the screen that expects it.</string>
@@ -660,17 +668,8 @@
     <string name="mark_all_known_as_read">Mark all Known as read</string>
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
-    <string name="account_backup_tips2_md">
-        ## Key Backup and Safety Tips
-        \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
-        \n\n- Do **not** put your secret key in any website or software you do not trust.
-        \n- Amethyst developers will **never** ask for your secret key.
-        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
-    </string>
-    <string name="account_backup_tips3_md">
-        For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
-        \n\nIf you lose your password, you will not be able to recover your key.
-    </string>
+    <string name="account_backup_tips2_md">## Key Backup and Safety Tips \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity. \n\n- Do **not** put your secret key in any website or software you do not trust. \n- Amethyst developers will **never** ask for your secret key. \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.</string>
+    <string name="account_backup_tips3_md">For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password. \n\nIf you lose your password, you will not be able to recover your key.</string>
     <string name="backup_keys_nudge_title">Back up your keys</string>
     <string name="backup_keys_nudge_body">Your secret key is the only way to access this account. If you lose it, it can never be recovered. Save it somewhere safe now.</string>
     <string name="backup_keys_nudge_backup_now">Back up now</string>
@@ -1861,10 +1860,7 @@
     <string name="push_server_none_explainer">Disables Push Notifications</string>
     <string name="push_server_uses_app_explainer">Uses app %1$s</string>
     <string name="push_server_install_app">Push Notification Setup</string>
-    <string name="push_server_install_app_description">
-        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/).
-        After installing, select the app you want to use in the Settings.
-    </string>
+    <string name="push_server_install_app_description">To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/). After installing, select the app you want to use in the Settings.</string>
     <string name="thread_title">Thread</string>
     <string name="send_the_seller_a_message">Send the seller a message</string>
     <string name="hi_there_is_this_still_available">Hi there, is this still available?</string>
@@ -2817,8 +2813,13 @@
     <string name="relay_management_no_moderation_events">No events needing moderation</string>
     <string name="relay_management_banned_events">Banned Events</string>
     <string name="relay_management_no_banned_events">No banned events</string>
+    <string name="relay_management_allowed_events">Allowed Events</string>
+    <string name="relay_management_no_allowed_events">No allowed events</string>
+    <string name="relay_management_allow_event">Allow Event</string>
     <string name="relay_management_allowed_kinds">Allowed Kinds</string>
     <string name="relay_management_no_allowed_kinds">No allowed kinds</string>
+    <string name="relay_management_disallowed_kinds">Disallowed Kinds</string>
+    <string name="relay_management_no_disallowed_kinds">No disallowed kinds</string>
     <string name="relay_management_blocked_ips">Blocked IPs</string>
     <string name="relay_management_no_blocked_ips">No blocked IPs</string>
     <string name="relay_management_add">Add</string>
@@ -2851,6 +2852,8 @@
     <string name="relay_members_join_sent">Join request sent</string>
     <string name="relay_members_leave_sent">Leave request sent</string>
     <string name="relay_members_you_are_member">You are a member</string>
+    <string name="relay_members_invite_code">Invite code</string>
+    <string name="relay_members_invite_code_hint">This relay admits members with an invite code from its operator</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
     <string name="relay_members_added">%1$d members added to relay</string>
@@ -3637,15 +3640,7 @@
     <string name="could_not_fetch_invoice_from_details">Could not fetch invoice from %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Could not open the compressed file</string>
     <string name="couldnt_find_nwc_wallets">Wallet not found</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn't find any wallet apps that support Nostr Wallet Connect (NWC).
-\n\nWhat you can do:
-\n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect.
-\n\t2. Create Connection: Go to your wallet app and create a new NWC connection.
-\n\t3. Link to Amethyst: Your wallet will usually give you three options:
-\n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen.
-\n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it.
-\n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn't find any wallet apps that support Nostr Wallet Connect (NWC). \n\nWhat you can do: \n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect. \n\t2. Create Connection: Go to your wallet app and create a new NWC connection. \n\t3. Link to Amethyst: Your wallet will usually give you three options: \n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen. \n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it. \n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.</string>
     <string name="create">Create</string>
     <string name="d">d</string>
     <string name="danger_zone">Danger Zone</string>
@@ -4781,11 +4776,8 @@
     <string name="proxy_section">Proxy Relays</string>
     <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
     <string name="public_chat">Public Chat</string>
-    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
-        can participate on them. They are great for open communities around specific topics.
-        Moderation can be controlled by deleting posts on its relays</string>
-    <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group.
-        Nostr clients use this setting to know where to download messages from and send your messages to.</string>
+    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone can participate on them. They are great for open communities around specific topics. Moderation can be controlled by deleting posts on its relays</string>
+    <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group. Nostr clients use this setting to know where to download messages from and send your messages to.</string>
     <string name="public_chat_relays_title">Relays</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chats">Public Chats</string>
@@ -4852,10 +4844,7 @@
     <string name="relay_auth_search_keywords">auth authentication login relay sign verify nip-42 identity</string>
     <string name="relay_auth_settings_title">Relay login</string>
     <string name="relay_chat">Relay Chat</string>
-    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay.
-        They are visible to everyone on Nostr and anyone can participate on them.
-        They are great for open communities around specific topics. Some of these groups are ephemeral
-    and thus chat messages disappear over time</string>
+    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay. They are visible to everyone on Nostr and anyone can participate on them. They are great for open communities around specific topics. Some of these groups are ephemeral and thus chat messages disappear over time</string>
     <string name="relay_chat_title">Relay Chats</string>
     <string name="relay_explain_account_data">Your own profile, settings and drafts, on your home relays.</string>
     <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>
@@ -5358,7 +5347,10 @@
     <string name="cordn_health_unknown">Not contacted yet</string>
     <string name="cordn_health_ok">Responding</string>
     <string name="cordn_health_down">Not responding</string>
-    <string name="cordn_health_failures">%1$d failed attempts in a row</string>
+    <plurals name="cordn_health_failures">
+        <item quantity="one">%1$d failed attempt in a row</item>
+        <item quantity="other">%1$d failed attempts in a row</item>
+    </plurals>
 
     <string name="cordn_link_explainer">Paste a cordn1… link someone shared with you to see which coordinator carries that group, and what that operator would learn about you if you joined.</string>
     <string name="cordn_link_field">cordn1…</string>
@@ -5454,7 +5446,10 @@
     <string name="cordn_migrate_import">Bring the groups here</string>
     <string name="cordn_migrate_importing">Fetching…</string>
     <string name="cordn_migrate_replaces_warning">This replaces any cordn groups already on this phone. They cannot be merged.</string>
-    <string name="cordn_migrate_done">%1$d groups moved</string>
+    <plurals name="cordn_migrate_done">
+        <item quantity="one">%1$d group moved</item>
+        <item quantity="other">%1$d groups moved</item>
+    </plurals>
     <string name="cordn_migrate_no_groups">There are no cordn groups on this device to move.</string>
     <string name="cordn_migrate_no_server">Set a media server first — the encrypted documents need somewhere to sit while the other phone fetches them.</string>
     <string name="cordn_migrate_exposure_title">What leaves this device</string>
@@ -5480,14 +5475,720 @@
     <string name="cyberspace_bag_cancel">Stop</string>
     <string name="cyberspace_bag_measuring">Pricing the search on this device…</string>
     <string name="cyberspace_bag_progress">Searched %1$s of %2$s regions</string>
-    <string name="cyberspace_bag_too_slow_minutes">Out of reach: about %1$d minutes of searching on this device</string>
-    <string name="cyberspace_bag_too_slow_hours">Out of reach: about %1$d hours of searching on this device</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">Out of reach: about %1$d minute of searching on this device</item>
+        <item quantity="other">Out of reach: about %1$d minutes of searching on this device</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">Out of reach: about %1$d hour of searching on this device</item>
+        <item quantity="other">Out of reach: about %1$d hours of searching on this device</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">Not in the box the hint named</string>
     <string name="cyberspace_bag_damaged">Found the region, but the contents could not be read</string>
-    <string name="cyberspace_bag_dropped">%1$d item hidden here did not match its signature and was dropped</string>
-    <string name="cyberspace_bag_dropped_many">%1$d items hidden here did not match their signatures and were dropped</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">%1$d item hidden here did not match its signature and was dropped</item>
+        <item quantity="other">%1$d items hidden here did not match their signatures and were dropped</item>
+    </plurals>
     <string name="cyberspace_bag_empty">Opened, and there was nothing inside</string>
     <string name="cyberspace_bag_unsigned">Unsigned, so this author is a claim</string>
     <string name="cyberspace_bag_unknown_kind">An item of kind %1$d, which this client does not draw</string>
-    <string name="cyberspace_bag_opaque">%1$d bytes of something this client does not read</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d byte of something this client does not read</item>
+        <item quantity="other">%1$d bytes of something this client does not read</item>
+    </plurals>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
+    <string name="browser_pill_close">Close</string>
+    <string name="browser_pill_tile_copy">Copy link</string>
+    <string name="browser_pill_tile_find">Find</string>
+    <string name="browser_pill_tile_text">Text size</string>
+    <string name="browser_pill_tile_desktop">Desktop</string>
+    <string name="browser_pill_tile_home">Add to Home</string>
+    <string name="browser_pill_tile_other">Other browser</string>
+    <string name="browser_pill_tile_full">Full screen</string>
+    <string name="browser_pill_edit_address">Edit address</string>
+    <string name="browser_pill_back">Back</string>
+    <string name="browser_pill_forward">Forward</string>
+    <string name="browser_pill_reload">Reload</string>
+    <string name="browser_pill_stop">Stop loading</string>
+    <string name="browser_pill_favorite_add">Add to favorites</string>
+    <string name="browser_pill_favorite_remove">Remove from favorites</string>
+    <string name="browser_pill_share">Share</string>
+    <string name="browser_pill_copy">Copy link</string>
+    <string name="browser_pill_find">Find in page</string>
+    <string name="browser_pill_text_size">Text size</string>
+    <string name="browser_pill_add_home">Add to Home</string>
+    <string name="browser_pill_desktop">Desktop site</string>
+    <string name="browser_pill_other_browser">Open in browser</string>
+    <string name="browser_pill_other_browser_named">Open in %1$s</string>
+    <string name="browser_pill_full_screen">Full screen</string>
+    <string name="browser_pill_left_site">You left %1$s</string>
+    <string name="browser_pill_back_to_app">Back to app</string>
+    <string name="browser_pill_text_smaller">Smaller text</string>
+    <string name="browser_pill_text_larger">Larger text</string>
+    <string name="browser_pill_text_reset">Reset</string>
+    <string name="browser_pill_text_value">%1$d%</string>
+    <string name="browser_pill_privacy">Privacy</string>
+    <string name="browser_pill_tor_title">Onion routing</string>
+    <string name="browser_pill_tor_on">The site can't see your IP address</string>
+    <string name="browser_pill_tor_off">The site can see your IP address</string>
+    <string name="browser_pill_site_settings">Site settings</string>
+    <string name="browser_pill_site_settings_none">Nothing allowed yet</string>
+    <string name="browser_pill_access">What it can access</string>
+    <string name="browser_pill_access_desc">Your keys never leave Amethyst</string>
+    <string name="browser_pill_access_keys_desc">Every sign, publish, upload or payment goes through your approval</string>
+    <string name="browser_pill_access_none">No special access</string>
+    <string name="browser_pill_access_none_desc">It runs sandboxed and can't act on your account</string>
+    <string name="browser_pill_access_manage">Manage permissions</string>
+    <string name="browser_pill_access_nsite">nSite · sandboxed</string>
+    <string name="browser_pill_access_napplet">nApplet · sandboxed</string>
+    <string name="browser_pill_console">Console</string>
+    <string name="browser_pill_security_https">Secure connection</string>
+    <string name="browser_pill_security_http">Not secure</string>
+    <string name="browser_pill_security_tor">Onion-routed</string>
+    <string name="browser_pill_security_sandbox">Sandboxed app</string>
+    <string name="browser_pill_permission_camera">Camera</string>
+    <string name="browser_pill_permission_microphone">Microphone</string>
+    <string name="browser_pill_permission_location">Location</string>
+    <string name="browser_pill_decision_ask">Ask</string>
+    <string name="browser_pill_decision_allow">Allow</string>
+    <string name="browser_pill_decision_block">Block</string>
+    <string name="browser_pill_permission_state">%1$s %2$s</string>
+    <string name="browser_pill_decision_allowed">allowed</string>
+    <string name="browser_pill_decision_blocked">blocked</string>
+    <string name="browser_pill_address_hint">Search or enter address</string>
+    <string name="browser_pill_go">Go</string>
+    <string name="browser_pill_clear">Clear</string>
+    <string name="browser_pill_paste_go">Paste and go</string>
+    <string name="browser_pill_fill_in">Use this address</string>
+    <string name="browser_pill_find_hint">Find in page</string>
+    <string name="browser_pill_find_count">%1$d / %2$d</string>
+    <string name="browser_pill_find_none">No matches</string>
+    <string name="browser_pill_find_previous">Previous match</string>
+    <string name="browser_pill_find_next">Next match</string>
+    <string name="browser_pill_find_close">Close find in page</string>
+    <string name="browser_pill_console_all">All</string>
+    <string name="browser_pill_console_errors">Errors</string>
+    <string name="browser_pill_console_warnings">Warnings</string>
+    <string name="browser_pill_console_copy">Copy</string>
+    <string name="browser_pill_console_clear">Clear</string>
+    <string name="browser_pill_console_empty">Nothing logged yet</string>
+    <string name="browser_pill_perm_title">This site wants to use</string>
+    <string name="browser_pill_perm_camera_desc">See what your camera sees</string>
+    <string name="browser_pill_perm_microphone_desc">Hear what your microphone hears</string>
+    <string name="browser_pill_perm_location_desc">Know roughly where you are</string>
+    <string name="browser_pill_perm_tor_note">Calls can reveal your IP address even over Tor.</string>
+    <string name="browser_pill_perm_allow">Allow while visiting</string>
+    <string name="browser_pill_perm_once">Only this time</string>
+    <string name="browser_pill_perm_deny">Don't allow</string>
+    <string name="browser_pill_dialog_says">%1$s says</string>
+    <string name="browser_pill_dialog_generic">This page says</string>
+    <string name="browser_pill_dialog_block">Don't let this page show more dialogs</string>
+    <string name="browser_pill_dialog_answer">Your answer</string>
+    <string name="browser_pill_dialog_leave_title">Leave site?</string>
+    <string name="browser_pill_dialog_leave_message">Changes you made may not be saved.</string>
+    <string name="browser_pill_dialog_leave">Leave</string>
+    <string name="browser_pill_ok">OK</string>
+    <string name="browser_pill_cancel">Cancel</string>
+    <string name="browser_pill_info_connection">Connection</string>
+    <string name="browser_pill_info_https">Connection is encrypted</string>
+    <string name="browser_pill_info_https_desc">Information you send can't be read on the way.</string>
+    <string name="browser_pill_info_http">Connection is not encrypted</string>
+    <string name="browser_pill_info_http_desc">Don't enter passwords or payment details.</string>
+    <string name="browser_pill_info_tor">Onion-routed over Tor</string>
+    <string name="browser_pill_info_open">Open web</string>
+    <string name="browser_pill_info_certificate">Certificate</string>
+    <string name="browser_pill_info_certificate_desc">Issued to %1$s by %2$s · valid until %3$s</string>
+    <string name="browser_pill_info_permissions">Permissions</string>
+    <string name="browser_pill_info_site_data">Cookies and site data</string>
+    <string name="browser_pill_info_site_data_desc">Logins and preferences this site saved for this account</string>
+    <string name="browser_pill_info_clear">Clear site data</string>
+    <string name="browser_pill_info_clear_confirm">Sign out of this site and delete its data?</string>
+    <string name="backup_action_block_again">Block %1$s again</string>
+    <string name="backup_action_keep_count">Keep %1$s</string>
+    <string name="backup_action_rejoin">Rejoin %1$s</string>
+    <string name="backup_action_remute">Re-mute %1$s</string>
+    <string name="backup_action_restore_count">Restore %1$s</string>
+    <string name="backup_action_restore_feeds">Restore feeds</string>
+    <string name="backup_action_restore_places">Restore places</string>
+    <string name="backup_action_restore_profile">Restore profile</string>
+    <string name="backup_action_restore_providers">Restore providers</string>
+    <string name="backup_action_restore_relays">Restore relays</string>
+    <string name="backup_action_restore_topics">Restore topics</string>
+    <string name="backup_action_restore_wallet">Restore wallet</string>
+    <string name="backup_card_accept">Accept</string>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s and added %2$d</item>
+        <item quantity="other">%1$s and added %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s and blocked %2$d</item>
+        <item quantity="other">%1$s and blocked %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s and followed %2$d</item>
+        <item quantity="other">%1$s and followed %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s and joined %2$d</item>
+        <item quantity="other">%1$s and joined %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s and muted %2$d</item>
+        <item quantity="other">%1$s and muted %2$d</item>
+    </plurals>
+    <string name="backup_card_app_settings">Your Amethyst synced app settings changed in another app that is not Amethyst. This can create problems.</string>
+    <string name="backup_card_concord_emptied">You emptied your Concord list</string>
+    <string name="backup_card_concord_rewritten">You changed your Concord list</string>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">You removed %1$d DM relay</item>
+        <item quantity="other">You removed %1$d DM relays</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">You removed %1$d favorite feed</item>
+        <item quantity="other">You removed %1$d favorite feeds</item>
+    </plurals>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">You unfollowed %1$d person</item>
+        <item quantity="other">You unfollowed %1$d people</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">You unfollowed %1$d hashtag</item>
+        <item quantity="other">You unfollowed %1$d hashtags</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">You removed %1$d indexer relay</item>
+        <item quantity="other">You removed %1$d indexer relays</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">You removed %1$d group-chat key relay</item>
+        <item quantity="other">You removed %1$d group-chat key relays</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">You left %1$d public chat</item>
+        <item quantity="other">You left %1$d public chats</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">You left %1$d community</item>
+        <item quantity="other">You left %1$d communities</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">You left %1$d group</item>
+        <item quantity="other">You left %1$d groups</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">You left %1$d chat room</item>
+        <item quantity="other">You left %1$d chat rooms</item>
+    </plurals>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">You unmuted %1$d thing</item>
+        <item quantity="other">You unmuted %1$d things</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">You removed %1$d public relay</item>
+        <item quantity="other">You removed %1$d public relays</item>
+    </plurals>
+    <string name="backup_card_nutzap_key_removed">You removed your nutzap key</string>
+    <string name="backup_card_nutzap_key_replaced">You replaced your nutzap key</string>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">You removed %1$d nutzap mint</item>
+        <item quantity="other">You removed %1$d nutzap mints</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">You removed %1$d BOLT12 offer</item>
+        <item quantity="other">You removed %1$d BOLT12 offers</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">You removed %1$d way to get paid</item>
+        <item quantity="other">You removed %1$d ways to get paid</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">You unfollowed %1$d place</item>
+        <item quantity="other">You unfollowed %1$d places</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">You removed %1$d private relay</item>
+        <item quantity="other">You removed %1$d private relays</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">You removed %1$d profile field</item>
+        <item quantity="other">You removed %1$d profile fields</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">You removed %1$d relay feed</item>
+        <item quantity="other">You removed %1$d relay feeds</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">You removed %1$d search relay</item>
+        <item quantity="other">You removed %1$d search relays</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">You changed the provider of %1$d trust service</item>
+        <item quantity="other">You changed the provider of %1$d trust services</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">You stopped trusting %1$d relay</item>
+        <item quantity="other">You stopped trusting %1$d relays</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">You unblocked %1$d relay</item>
+        <item quantity="other">You unblocked %1$d relays</item>
+    </plurals>
+    <string name="backup_card_wallet_emptied">You emptied your Cashu wallet</string>
+    <string name="backup_card_wallet_rewritten">You changed your Cashu wallet</string>
+    <string name="backup_conflict_added">Added (%1$s)</string>
+    <string name="backup_conflict_changed">Changed (%1$s)</string>
+    <string name="backup_conflict_count_added">%1$s added</string>
+    <string name="backup_conflict_count_changed">%1$s changed</string>
+    <string name="backup_conflict_count_removed">%1$s removed</string>
+    <string name="backup_conflict_keep_new">Use new version</string>
+    <string name="backup_conflict_private_added">You added private (encrypted) items.</string>
+    <string name="backup_conflict_private_changed">You also changed private (encrypted) items. They can't be compared here.</string>
+    <string name="backup_conflict_private_cleared">You removed all private (encrypted) items.</string>
+    <string name="backup_conflict_relay_read_only">read only</string>
+    <string name="backup_conflict_relay_read_write">read and write</string>
+    <string name="backup_conflict_relay_write_only">write only</string>
+    <string name="backup_conflict_removed">Removed (%1$s)</string>
+    <string name="backup_conflict_restore_mine">Restore saved version</string>
+    <string name="backup_conflict_title">You changed your %1$s in another app</string>
+    <string name="backup_entry_algo_feed">Feeds</string>
+    <string name="backup_entry_chat_room">Chat rooms</string>
+    <string name="backup_entry_community">Communities</string>
+    <string name="backup_entry_hashtag">Hashtags</string>
+    <string name="backup_entry_identity_claim">Linked identities</string>
+    <string name="backup_entry_location">Locations</string>
+    <string name="backup_entry_mint">Mints</string>
+    <string name="backup_entry_nutzap_key">Nutzap keys</string>
+    <string name="backup_entry_offer">Offers</string>
+    <string name="backup_entry_other">Other entries</string>
+    <string name="backup_entry_payment_target">Payment addresses</string>
+    <string name="backup_entry_person">People</string>
+    <string name="backup_entry_profile_field">Profile fields</string>
+    <string name="backup_entry_public_chat">Public chats</string>
+    <string name="backup_entry_relay">Relays</string>
+    <string name="backup_entry_relay_group">Groups</string>
+    <string name="backup_entry_thread">Threads</string>
+    <string name="backup_entry_trust_provider">Trust providers</string>
+    <string name="backup_entry_word">Words</string>
+    <string name="backup_profile_field_about">About</string>
+    <string name="backup_profile_field_banner">Banner</string>
+    <string name="backup_profile_field_birthday">Birthday</string>
+    <string name="backup_profile_field_bot">Bot flag</string>
+    <string name="backup_profile_field_clink_offer">CLINK offer</string>
+    <string name="backup_profile_field_display_name">Display name</string>
+    <string name="backup_profile_field_lud06">LNURL</string>
+    <string name="backup_profile_field_lud16">Lightning address</string>
+    <string name="backup_profile_field_name">Username</string>
+    <string name="backup_profile_field_nip05">Nostr address</string>
+    <string name="backup_profile_field_picture">Picture</string>
+    <string name="backup_profile_field_pronouns">Pronouns</string>
+    <string name="backup_profile_field_website">Website</string>
+    <string name="backup_review_allowed_tag">Allowed</string>
+    <string name="backup_review_changed_by_other_app">Changed in another app · %1$s</string>
+    <string name="backup_review_concord_body">Your Concord communities are encrypted to you, so they can't be compared here. Restoring puts back exactly what this device saved.</string>
+    <string name="backup_review_demoted_tag">Moved</string>
+    <string name="backup_review_dropped_count">%1$s dropped</string>
+    <string name="backup_review_dropped_tag">Dropped</string>
+    <string name="backup_review_encrypted_added">You created it</string>
+    <string name="backup_review_encrypted_changed">You changed it</string>
+    <string name="backup_review_encrypted_cleared">You emptied it</string>
+    <string name="backup_review_feed">Feed</string>
+    <string name="backup_review_gone">Gone</string>
+    <string name="backup_review_hashtags_you_follow">Hashtags you follow</string>
+    <string name="backup_review_inbox">Inbox</string>
+    <string name="backup_review_inbox_explainer">where others reach you</string>
+    <string name="backup_review_joined">joined</string>
+    <string name="backup_review_kept">kept</string>
+    <string name="backup_review_kept_count">%1$s kept</string>
+    <string name="backup_review_key_removed">Receiving key removed</string>
+    <string name="backup_review_key_replaced">Receiving key replaced</string>
+    <string name="backup_review_key_warning">Nutzaps will be locked to this new key. If this device doesn't have it, you may not be able to redeem them here.</string>
+    <string name="backup_review_left">left</string>
+    <string name="backup_review_left_tag">Left</string>
+    <string name="backup_review_listed_tag">Listed</string>
+    <string name="backup_review_moved_tag">Moved</string>
+    <string name="backup_review_names_and_more">%1$s and %2$s more</string>
+    <string name="backup_review_new">New version</string>
+    <string name="backup_review_new_count">%1$s new</string>
+    <string name="backup_review_new_count_caption">new</string>
+    <string name="backup_review_new_tag">New</string>
+    <string name="backup_review_newly_blocked">Newly blocked</string>
+    <string name="backup_review_newly_muted">%1$s newly muted</string>
+    <string name="backup_review_no_longer_blocked">No longer blocked</string>
+    <string name="backup_review_not_set">Not set</string>
+    <string name="backup_review_nothing_here">Nothing here</string>
+    <string name="backup_review_offer">BOLT12 offer</string>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d offer removed</item>
+        <item quantity="other">%1$d offers removed</item>
+    </plurals>
+    <string name="backup_review_outbox">Outbox</string>
+    <string name="backup_review_outbox_explainer">where you publish</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">%1$d way to pay you removed</item>
+        <item quantity="other">%1$d ways to pay you removed</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">People paying you only see what's in this list.</string>
+    <string name="backup_review_places_gone">places gone</string>
+    <string name="backup_review_places_you_follow">Places you follow</string>
+    <string name="backup_review_private_added_body">They're encrypted now, which is likely where the public items above went.</string>
+    <string name="backup_review_private_added_title">You made items private</string>
+    <string name="backup_review_private_changed_body">They're encrypted, so they can't be compared here.</string>
+    <string name="backup_review_private_changed_title">You changed private items</string>
+    <string name="backup_review_private_wiped_body">They're encrypted, so only you can see what they were. Restoring brings them all back.</string>
+    <string name="backup_review_private_wiped_title">You removed all private items</string>
+    <string name="backup_review_receiving_tag">Receiving</string>
+    <string name="backup_review_renamed">renamed</string>
+    <string name="backup_review_renamed_tag">Renamed</string>
+    <string name="backup_review_saved">On this device</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">Search %1$s person</item>
+        <item quantity="other">Search %1$s people</item>
+    </plurals>
+    <string name="backup_review_searching_tag">Searching</string>
+    <string name="backup_review_service">Service</string>
+    <string name="backup_review_service_followers">Followers</string>
+    <string name="backup_review_service_rank">Rank</string>
+    <string name="backup_review_service_topics">Topics</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">%1$s of %2$s service changed</item>
+        <item quantity="other">%1$s of %2$s services changed</item>
+    </plurals>
+    <string name="backup_review_services_changed_explainer">They now come from someone else, or no one</string>
+    <string name="backup_review_still_blocked">Still blocked</string>
+    <string name="backup_review_storing_tag">Storing</string>
+    <string name="backup_review_tab_dropped">Dropped · %1$s</string>
+    <string name="backup_review_tab_edited">Edited · %1$s</string>
+    <string name="backup_review_tab_new">New · %1$s</string>
+    <string name="backup_review_title_cleared">%1$s cleared</string>
+    <string name="backup_review_title_updated">%1$s updated</string>
+    <string name="backup_review_topics_gone">topics gone</string>
+    <string name="backup_review_trust_warning">Ranks, follower counts and spam filtering you see come from these providers.</string>
+    <string name="backup_review_trusted_tag">Trusted</string>
+    <string name="backup_review_unblocked">%1$s unblocked</string>
+    <string name="backup_review_unblocked_explainer">Amethyst will connect to them again</string>
+    <string name="backup_review_units_tag">Units</string>
+    <string name="backup_review_unmuted">%1$s unmuted</string>
+    <string name="backup_review_unmuted_explainer">These can reach your feeds again</string>
+    <string name="backup_review_untrusted_tag">Untrusted</string>
+    <string name="backup_review_wallet_body">Your wallet's mints and keys are encrypted to you, so they can't be compared item by item here. Restoring puts back exactly what this device saved.</string>
+    <string name="backup_review_was_named">was “%1$s”</string>
+    <string name="backup_review_words_and_hashtags">Words &amp; hashtags</string>
+    <string name="backup_type_app_settings">synced app settings</string>
+    <string name="backup_type_app_settings_explainer">Amethyst settings synced across your devices. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_blocked_relays">blocked relay list</string>
+    <string name="backup_type_blocked_relays_explainer">Relays this app never connects to.</string>
+    <string name="backup_type_bolt12_offers">BOLT12 offers</string>
+    <string name="backup_type_bolt12_offers_explainer">The lightning offers others use to pay you.</string>
+    <string name="backup_type_cashu_wallet">Cashu wallet</string>
+    <string name="backup_type_cashu_wallet_explainer">Your ecash wallet settings and mints. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_communities">community list</string>
+    <string name="backup_type_communities_explainer">The communities you joined.</string>
+    <string name="backup_type_concord_communities">Concord community list</string>
+    <string name="backup_type_concord_communities_explainer">The Concord communities you joined. They are encrypted, so only their presence can be compared.</string>
+    <string name="backup_type_dm_relays">DM relay list</string>
+    <string name="backup_type_dm_relays_explainer">Where others deliver your private messages.</string>
+    <string name="backup_type_ephemeral_chats">ephemeral chat list</string>
+    <string name="backup_type_ephemeral_chats_explainer">The ephemeral chat rooms you joined.</string>
+    <string name="backup_type_favorite_algo_feeds">favorite feeds list</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">The algorithmic feeds you saved.</string>
+    <string name="backup_type_follow_list">follow list</string>
+    <string name="backup_type_follow_list_explainer">Decides whose posts appear in your home feed.</string>
+    <string name="backup_type_geohashes">followed locations</string>
+    <string name="backup_type_geohashes_explainer">Locations whose posts appear in your feeds.</string>
+    <string name="backup_type_hashtags">followed hashtags</string>
+    <string name="backup_type_hashtags_explainer">Hashtags whose posts appear in your feeds.</string>
+    <string name="backup_type_indexer_relays">indexer relay list</string>
+    <string name="backup_type_indexer_relays_explainer">The relays used to find other people's profiles and relay lists.</string>
+    <string name="backup_type_key_package_relays">group-chat key relays</string>
+    <string name="backup_type_key_package_relays_explainer">Where others find the keys to add you to encrypted group chats.</string>
+    <string name="backup_type_mute_list">mute list</string>
+    <string name="backup_type_mute_list_explainer">Hides people, words, hashtags and threads from everything you see.</string>
+    <string name="backup_type_nutzap_info">nutzap receiving settings</string>
+    <string name="backup_type_nutzap_info_explainer">The mints and key others use to send you nutzaps.</string>
+    <string name="backup_type_other">list</string>
+    <string name="backup_type_other_explainer">A list saved on this device.</string>
+    <string name="backup_type_outbox_inbox_relays">public relay list</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">Tells everyone where to find your posts and where to send you replies and mentions.</string>
+    <string name="backup_type_payment_targets">payment addresses</string>
+    <string name="backup_type_payment_targets_explainer">The ways other people can pay you.</string>
+    <string name="backup_type_private_outbox_relays">private relay list</string>
+    <string name="backup_type_private_outbox_relays_explainer">Where your drafts and private data are stored.</string>
+    <string name="backup_type_profile">profile</string>
+    <string name="backup_type_profile_explainer">Your name, picture, bio and payment addresses, as everyone sees them.</string>
+    <string name="backup_type_public_chats">public chat list</string>
+    <string name="backup_type_public_chats_explainer">The public chats you joined.</string>
+    <string name="backup_type_relay_feeds">favorite relay feeds</string>
+    <string name="backup_type_relay_feeds_explainer">The relays you browse as feeds.</string>
+    <string name="backup_type_relay_groups">group list</string>
+    <string name="backup_type_relay_groups_explainer">The relay-based groups you joined.</string>
+    <string name="backup_type_search_relays">search relay list</string>
+    <string name="backup_type_search_relays_explainer">The relays used when you search.</string>
+    <string name="backup_type_trust_providers">trust provider list</string>
+    <string name="backup_type_trust_providers_explainer">The services you trust to rank and verify people for you.</string>
+    <string name="backup_type_trusted_relays">trusted relay list</string>
+    <string name="backup_type_trusted_relays_explainer">Relays you trust to connect to without asking.</string>
+    <string name="cordn_action_delete">Delete</string>
+    <string name="cordn_action_edit">Edit</string>
+    <string name="cordn_action_editing">Editing your message</string>
+    <string name="cordn_action_go_to_message">Go to message</string>
+    <string name="cordn_action_pin">Pin</string>
+    <string name="cordn_action_reply">Reply</string>
+    <string name="cordn_action_unpin">Unpin</string>
+    <string name="cordn_admin_action_failed">That change could not be made.</string>
+    <string name="cordn_admin_coordinator_silent">The coordinator did not answer, so nothing was changed. Try again in a moment.</string>
+    <string name="cordn_admin_no_key_package">%1$s has not published a key package to this coordinator, so they cannot be added yet. Ask them to open cordn on this coordinator first.</string>
+    <string name="cordn_admin_no_self_remove">You cannot remove yourself from a cordn group.</string>
+    <string name="cordn_admin_no_welcome">%1$s could not be given a way into the group, so the add was abandoned.</string>
+    <string name="cordn_admin_not_a_member">%1$s is not in this group.</string>
+    <string name="cordn_admin_someone">That person</string>
+    <string name="cordn_admin_wrong_key_package">This coordinator served a key package that belongs to someone else, so %1$s was not added. Nothing was changed.</string>
+    <string name="cordn_backup_contents_body">Your group encryption keys, your key packages, and every message in those groups. Anyone who opens it can read the conversations. The passphrase is the only thing protecting it once it leaves Amethyst.</string>
+    <string name="cordn_backup_contents_title">What is in the file</string>
+    <string name="cordn_backup_explainer">Your nsec cannot bring cordn groups back. A cordn group lives as encryption state on this device and an ordered stream on a coordinator that cannot read it — lose the device without a backup and the group is gone, including everything already said in it.</string>
+    <string name="cordn_backup_export">Export</string>
+    <string name="cordn_backup_exported">Backup saved.</string>
+    <string name="cordn_backup_failed">That did not work. Check the passphrase and the file.</string>
+    <string name="cordn_backup_passphrase">Passphrase</string>
+    <string name="cordn_backup_restore">Restore</string>
+    <string name="cordn_backup_restore_body">Restoring replaces the cordn groups on this device with the ones in the file. It is for a phone that has taken over from another — not a way to use the same groups on two devices at once.</string>
+    <string name="cordn_backup_restore_confirm_body">Every cordn group now on this device will be removed and replaced by the ones in the file.\n\nDo not restore onto a second phone while the first is still in use. Both would hold the same group keys, and once both have sent a message the group breaks for everyone — silently, and with no way back.</string>
+    <string name="cordn_backup_restore_confirm_title">Replace this device's cordn groups?</string>
+    <string name="cordn_backup_restore_title">Restore</string>
+    <string name="cordn_backup_restored">Restored.</string>
+    <string name="cordn_chat_empty_description">Anything sent here is encrypted for this group. The coordinator relays it without being able to read it.</string>
+    <string name="cordn_chat_empty_title">No messages yet</string>
+    <string name="cordn_chat_unread_divider">New messages</string>
+    <string name="cordn_chat_yesterday">Yesterday</string>
+    <string name="cordn_composer_hint">Message</string>
+    <string name="cordn_coordinators_add_action">Add</string>
+    <string name="cordn_coordinators_add_failed">Could not open that coordinator.</string>
+    <string name="cordn_coordinators_copy_key">Copy the coordinator's npub</string>
+    <string name="cordn_coordinators_discover_action">Look for coordinators</string>
+    <string name="cordn_coordinators_discover_add">Add</string>
+    <string name="cordn_coordinators_discover_explainer">Reads announcements your relays already carry. No coordinator is contacted, so none of them learns you looked.</string>
+    <string name="cordn_coordinators_discover_failed">Could not read announcements</string>
+    <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
+    <string name="cordn_coordinators_discover_seen">Announced %1$s ago</string>
+    <string name="cordn_coordinators_discover_seen_on">Last announced %1$s</string>
+    <plurals name="cordn_coordinators_discover_unheard">
+        <item quantity="one">Nothing found, and %1$d of your relays did not answer.</item>
+        <item quantity="other">Nothing found, and %1$d of your relays did not answer.</item>
+    </plurals>
+    <string name="cordn_coordinators_explainer">A coordinator orders one group's messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>
+    <plurals name="cordn_coordinators_health_down">
+        <item quantity="one">Not answering — %1$d call in a row has failed. Groups on it are not syncing.</item>
+        <item quantity="other">Not answering — %1$d calls in a row have failed. Groups on it are not syncing.</item>
+    </plurals>
+    <string name="cordn_coordinators_health_ok">Answering.</string>
+    <string name="cordn_coordinators_health_retrying">A call failed; retrying.</string>
+    <string name="cordn_coordinators_health_unknown">Nothing asked of it yet.</string>
+    <string name="cordn_coordinators_hide_older">Hide the ones that stopped announcing</string>
+    <string name="cordn_coordinators_identify">Ask who it is</string>
+    <string name="cordn_coordinators_key">Coordinator key</string>
+    <string name="cordn_coordinators_label">A name for it (yours, optional)</string>
+    <string name="cordn_coordinators_label_note">This name is yours and stays on this device. A coordinator cannot prove a name, so it is never asked for one.</string>
+    <string name="cordn_coordinators_more">More actions</string>
+    <string name="cordn_coordinators_none">No coordinators yet.</string>
+    <string name="cordn_coordinators_purge">Purge</string>
+    <string name="cordn_coordinators_purge_body">Removing keeps the groups on this device, so adding the coordinator back brings them with it. Purging deletes them: the group keys, the read positions and your key packages all go, and those groups can only be re-entered by a fresh invitation.\n\nThe coordinator is not told and keeps whatever it already had.</string>
+    <string name="cordn_coordinators_purge_title">Purge this coordinator?</string>
+    <string name="cordn_coordinators_relays">%1$s</string>
+    <string name="cordn_coordinators_relays_label">Answers on</string>
+    <string name="cordn_coordinators_relays_more">%1$s +%2$d more</string>
+    <string name="cordn_coordinators_remove">Remove</string>
+    <string name="cordn_coordinators_rename">Rename</string>
+    <string name="cordn_coordinators_server">Says it is: %1$s</string>
+    <string name="cordn_coordinators_server_claim">A coordinator's name and version are strings it chose. Its public key is the only thing that identifies it.</string>
+    <string name="cordn_coordinators_server_silent">Answered, but named nothing.</string>
+    <string name="cordn_coordinators_show_all">Show all %1$d</string>
+    <string name="cordn_coordinators_show_fewer">Show fewer</string>
+    <plurals name="cordn_coordinators_show_older">
+        <item quantity="one">Show %1$d that stopped announcing</item>
+        <item quantity="other">Show %1$d that stopped announcing</item>
+    </plurals>
+    <string name="cordn_coordinators_stale_note">These have not announced in over a month. Creating a group on one that has gone away will fail.</string>
+    <string name="cordn_create_action">Create group</string>
+    <plurals name="cordn_create_action_invite">
+        <item quantity="one">Create and invite %1$d person</item>
+        <item quantity="other">Create and invite %1$d people</item>
+    </plurals>
+    <string name="cordn_create_add_member">Add someone</string>
+    <string name="cordn_create_admin">Admin</string>
+    <plurals name="cordn_create_admin_count">
+        <item quantity="one">%1$d person can add and remove</item>
+        <item quantity="other">%1$d people can add and remove</item>
+    </plurals>
+    <string name="cordn_create_admin_only_me">Only I manage this group</string>
+    <string name="cordn_create_admin_only_me_on">Only you can invite, remove members or change the group's details. You can hand that to someone else later.</string>
+    <string name="cordn_create_coordinator">Coordinator</string>
+    <string name="cordn_create_coordinator_change">Change</string>
+    <string name="cordn_create_coordinator_discover">Find coordinators</string>
+    <string name="cordn_create_coordinator_hide">Done</string>
+    <string name="cordn_create_coordinator_new">Another coordinator</string>
+    <string name="cordn_create_coordinator_pubkey">Coordinator public key (hex or npub)</string>
+    <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
+    <plurals name="cordn_create_coverage_all">
+        <item quantity="one">Reaches your %1$d person</item>
+        <item quantity="other">Reaches all %1$d of your people</item>
+    </plurals>
+    <string name="cordn_create_coverage_partial">Reaches %1$d of %2$d &#8212; the rest would be left out</string>
+    <string name="cordn_create_coverage_unknown">Not checked &#8212; picking it will ask</string>
+    <string name="cordn_create_description">Description (optional)</string>
+    <string name="cordn_create_egalitarian">Everyone can add and remove</string>
+    <string name="cordn_create_egalitarian_note">Everyone in the group can invite, remove members and change its details. Any member can name admins later, which ends that.</string>
+    <string name="cordn_create_explainer">A cordn group is ordered by one coordinator you choose. Creating the group happens on this device — the coordinator only learns the group exists once you invite someone or send a message.</string>
+    <string name="cordn_create_failed">The group could not be created.</string>
+    <string name="cordn_create_name">Group name</string>
+    <string name="cordn_create_no_coordinator">No coordinator chosen</string>
+    <string name="cordn_create_outcome_explainer">Each invitation is a Welcome left on the coordinator, so they can fail one at a time. Nobody has been notified: they see it next time they open their app.</string>
+    <string name="cordn_create_outcome_failed">The coordinator refused the invitation</string>
+    <string name="cordn_create_outcome_link">Send a link</string>
+    <string name="cordn_create_outcome_no_welcome">Added to the group, but the invitation did not reach them &#8212; try again from the group screen</string>
+    <string name="cordn_create_outcome_open">Open the chat</string>
+    <string name="cordn_create_outcome_skipped">No key here, so no Welcome could be left</string>
+    <string name="cordn_create_outcome_title">The group exists</string>
+    <string name="cordn_create_outcome_waiting">Waiting for them</string>
+    <string name="cordn_create_people_done">Done</string>
+    <string name="cordn_create_people_empty">Nobody added yet. A group can be created empty and invitations sent later, but naming people now is what shows which coordinator can reach them.</string>
+    <string name="cordn_create_people_none">Nobody yet &#8212; tap to add people</string>
+    <string name="cordn_create_people_note">Naming people now is what tells us which coordinator can reach them. Each one gets a Welcome left on that coordinator, which they pick up next time they open their app.</string>
+    <plurals name="cordn_create_reach_count">
+        <item quantity="one">Reachable on %1$d coordinator</item>
+        <item quantity="other">Reachable on %1$d coordinators</item>
+    </plurals>
+    <string name="cordn_create_reach_none">No key on any coordinator you use</string>
+    <string name="cordn_create_reach_unknown">Not checked yet</string>
+    <string name="cordn_create_step_admins">Who can add and remove</string>
+    <string name="cordn_create_step_name">Name it</string>
+    <string name="cordn_create_step_people">Who is in it</string>
+    <string name="cordn_create_step_where">Where it lives</string>
+    <string name="cordn_create_title">New Cordn group</string>
+    <plurals name="cordn_create_unreachable_count">
+        <item quantity="one">%1$d person cannot be reached by any coordinator you use</item>
+        <item quantity="other">%1$d people cannot be reached by any coordinator you use</item>
+    </plurals>
+    <string name="cordn_create_you">You, always an admin</string>
+    <string name="cordn_delete_confirm_body">Everyone in the group will see this message as withdrawn, and Amethyst will stop showing its text. The coordinator still holds the encrypted copy it was sent as, and anyone who already read it has already read it.</string>
+    <string name="cordn_delete_confirm_title">Withdraw message</string>
+    <string name="cordn_delivery_accepted">Accepted by the coordinator</string>
+    <string name="cordn_exposure_close">Got it</string>
+    <string name="cordn_exposure_open">What this coordinator can see</string>
+    <string name="cordn_group_info">Group info</string>
+    <string name="cordn_group_unavailable">This group is not available. Its coordinator may have been removed.</string>
+    <string name="cordn_group_unavailable_detail">Add a coordinator in Settings to start using cordn groups.</string>
+    <plurals name="cordn_groups_count">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
+    </plurals>
+    <string name="cordn_groups_down_note">Nothing is arriving from these groups. Amethyst keeps retrying.</string>
+    <string name="cordn_groups_manage">Coordinators</string>
+    <string name="cordn_groups_none">No cordn groups yet</string>
+    <string name="cordn_groups_none_detail">A cordn group lives on one coordinator that holds its membership and passes messages along, without ever seeing what anyone writes.</string>
+    <string name="cordn_groups_start">Start one</string>
+    <string name="cordn_info_add_member">Add someone</string>
+    <string name="cordn_info_add_member_none">Nobody found by that name.</string>
+    <string name="cordn_info_add_member_note">They can only be added if they published a key package to this coordinator.</string>
+    <string name="cordn_info_add_member_placeholder">Name, npub or name@domain</string>
+    <string name="cordn_info_admin_badge">Admin</string>
+    <plurals name="cordn_info_admins_kept">
+        <item quantity="one">The group's %1$d admin stays as it is.</item>
+        <item quantity="other">The group's %1$d admins stay as they are.</item>
+    </plurals>
+    <string name="cordn_info_coordinator">Coordinator</string>
+    <string name="cordn_info_coordinator_key">Coordinator key</string>
+    <string name="cordn_info_coordinator_nprofile">Coordinator link</string>
+    <string name="cordn_info_copy_nprofile">Copy the coordinator's nprofile</string>
+    <string name="cordn_info_edit_details">Edit details</string>
+    <string name="cordn_info_egalitarian">This group has no admins: everyone can add, remove and rename, permanently.</string>
+    <string name="cordn_info_epoch">Epoch</string>
+    <string name="cordn_info_gid">Group id</string>
+    <string name="cordn_info_has_key_package">Can be added on this coordinator</string>
+    <string name="cordn_info_members">Members</string>
+    <string name="cordn_info_remove_confirm_body">%1$s stops receiving messages from here. They keep what they have already read, and this cannot be undone — they would have to be invited again.</string>
+    <string name="cordn_info_remove_confirm_title">Remove from group?</string>
+    <string name="cordn_info_remove_member">Remove</string>
+    <string name="cordn_info_save">Save</string>
+    <string name="cordn_info_technical">Technical details</string>
+    <string name="cordn_invitations_accept">Join</string>
+    <string name="cordn_invitations_decline">Decline</string>
+    <string name="cordn_invitations_decline_warning">Declining is permanent. Getting back in means being invited again.</string>
+    <string name="cordn_invitations_explainer">Checked when you open this screen, and at no other time — asking a coordinator whether anyone invited you tells it you are here, so Amethyst does not do it in the background.</string>
+    <string name="cordn_invitations_load_failed">Could not read invitations.</string>
+    <plurals name="cordn_invitations_members">
+        <item quantity="one">%1$d person is already in this group</item>
+        <item quantity="other">%1$d people are already in this group</item>
+    </plurals>
+    <string name="cordn_invitations_members_more">+%1$d more</string>
+    <string name="cordn_invitations_no_coordinators">You have no coordinator open. cordn invitations arrive through a coordinator, so there is nowhere to look yet.</string>
+    <string name="cordn_invitations_none">No invitations waiting.</string>
+    <string name="cordn_invitations_refresh">Check again</string>
+    <string name="cordn_invitations_skipped">An invitation was left for another device</string>
+    <string name="cordn_invitations_title">Cordn invitations</string>
+    <string name="cordn_invitations_unreachable">%1$s did not answer</string>
+    <string name="cordn_invitations_via">Through %1$s</string>
+    <string name="cordn_keypackages_disclosure">Publishing signs a record under your own account key. That coordinator then knows this account exists and is invitable — permanently, and whether or not anyone invites you.</string>
+    <string name="cordn_keypackages_explainer">Others can only add you to a cordn group by taking a key package you published to that coordinator. cordn has no other place to keep one, so with none published nobody can invite you — and nothing tells them why.</string>
+    <string name="cordn_keypackages_failed">Could not read the key packages.</string>
+    <string name="cordn_keypackages_last_resort_no">No last-resort package. Once the single-use ones run out, invitations fail.</string>
+    <string name="cordn_keypackages_last_resort_yes">A last-resort package is published, so an invitation can still be made once the single-use ones run out.</string>
+    <plurals name="cordn_keypackages_orphans">
+        <item quantity="one">%1$d package this device cannot open</item>
+        <item quantity="other">%1$d packages this device cannot open</item>
+    </plurals>
+    <string name="cordn_keypackages_orphans_body">The coordinator will hand these to anyone inviting you, but the private half is not on this device — it belongs to another install. If that install is gone, an invitation using one of these produces a welcome nobody can ever open.</string>
+    <string name="cordn_keypackages_publish">Publish one</string>
+    <string name="cordn_keypackages_publish_last_resort">Publish last-resort</string>
+    <plurals name="cordn_keypackages_summary">
+        <item quantity="one">%1$d single-use package available.</item>
+        <item quantity="other">%1$d single-use packages available.</item>
+    </plurals>
+    <string name="cordn_keypackages_topup_note">Once you have published here, Amethyst quietly replaces packages as they are used up. It never publishes the first one for you.</string>
+    <string name="cordn_keypackages_withdraw_all">Withdraw all</string>
+    <string name="cordn_keypackages_withdraw_orphans">Withdraw those</string>
+    <string name="cordn_link_request">Ask to join this group</string>
+    <string name="cordn_link_request_disclosure">This publishes a key package under your own account key and tells the coordinator you want into this group — whether or not anyone answers.</string>
+    <string name="cordn_link_request_failed">Could not ask to join.</string>
+    <string name="cordn_link_request_sent">Asked. A member of the group has to add you; the invitation will show up under cordn invitations.</string>
+    <string name="cordn_link_scan">Scan</string>
+    <string name="cordn_media_download_failed">Could not open that file.</string>
+    <string name="cordn_media_no_server">No media server is set for this account, so there is nowhere to put the file. Pick one in Settings.</string>
+    <string name="cordn_media_unreadable">That file could not be read.</string>
+    <string name="cordn_media_upload_failed">Could not send that file.</string>
+    <plurals name="cordn_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+    <string name="cordn_message_deleted">Message deleted</string>
+    <string name="cordn_message_details_coordinator">Coordinator</string>
+    <string name="cordn_message_details_cursor">Cursor</string>
+    <string name="cordn_message_details_sent_at">Sent</string>
+    <string name="cordn_message_details_title">Message details</string>
+    <string name="cordn_message_edited">edited</string>
+    <string name="cordn_pinned_by">Pinned by %1$s</string>
+    <plurals name="cordn_pinned_count">
+        <item quantity="one">%1$d pinned message in this group</item>
+        <item quantity="other">%1$d pinned messages in this group</item>
+    </plurals>
+    <string name="cordn_pinned_next">Next pinned message</string>
+    <string name="cordn_pinned_previous">Previous pinned message</string>
+    <string name="cordn_pinned_show_all">Show all pinned messages</string>
+    <string name="cordn_pinned_title">Pinned messages</string>
+    <string name="cordn_reactions_title">Reactions</string>
+    <string name="cordn_requests_accept">Add</string>
+    <string name="cordn_requests_admin_only">Only an admin can accept. In a group with no admins, that is everyone.</string>
+    <string name="cordn_requests_check">Check for requests</string>
+    <string name="cordn_requests_decline">Dismiss</string>
+    <string name="cordn_requests_failed">Could not read the requests.</string>
+    <string name="cordn_requests_none">Nobody is waiting to join.</string>
+    <string name="cordn_requests_title">Requests to join</string>
+    <string name="cordn_send">Send</string>
+    <string name="cordn_send_failed">That did not send.</string>
+    <string name="cordn_send_no_session">This group's coordinator is not open, so nothing can be sent yet.</string>
+    <string name="cordn_share_copied">Copied</string>
+    <string name="cordn_share_copy">Copy link</string>
+    <string name="cordn_share_explainer">Anyone with this link can ask to join. An admin still has to let them in.</string>
+    <string name="cordn_share_title">Share this group</string>
+    <string name="cordn_voice_play">Play voice note</string>
+    <string name="cordn_voice_record">Record a voice note</string>
+    <string name="cordn_voice_stop">Stop and send</string>
 </resources>

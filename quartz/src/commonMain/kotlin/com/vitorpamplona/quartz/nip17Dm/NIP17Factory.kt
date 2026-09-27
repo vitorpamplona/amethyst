@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
@@ -88,7 +88,7 @@ class NIP17Factory {
                     AddressedSeal(
                         recipient = next,
                         seal =
-                            SealedRumorEvent.create(
+                            SealEvent.create(
                                 event = event,
                                 encryptTo = next,
                                 expirationDelta = innerExpDelta,
@@ -169,7 +169,7 @@ class NIP17Factory {
             val build: suspend () -> GiftWrapEvent = {
                 GiftWrapEvent.create(
                     event =
-                        SealedRumorEvent.create(
+                        SealEvent.create(
                             event = event,
                             encryptTo = next,
                             expirationDelta = innerExpDelta,
@@ -258,7 +258,7 @@ class NIP17Factory {
      * it would e-tag the private rumor id onto public relays.
      */
     suspend fun createDeletionNIP17(
-        template: EventTemplate<DeletionEvent>,
+        template: EventTemplate<DeletionRequestEvent>,
         to: List<HexKey>,
         signer: NostrSigner,
     ): Result {

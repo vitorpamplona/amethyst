@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -224,10 +224,10 @@ class FsSlotsTest {
                 }
 
             val got =
-                store.query<LongTextNoteEvent>(
+                store.query<LongFormContentEvent>(
                     Filter(
                         authors = listOf(signer.pubKey),
-                        kinds = listOf(LongTextNoteEvent.KIND),
+                        kinds = listOf(LongFormContentEvent.KIND),
                         tags = mapOf("d" to listOf("intro")),
                     ),
                 )
@@ -255,10 +255,10 @@ class FsSlotsTest {
         slug: String,
         body: String,
         createdAt: Long,
-    ): LongTextNoteEvent =
+    ): LongFormContentEvent =
         signer.sign(
             createdAt = createdAt,
-            kind = LongTextNoteEvent.KIND,
+            kind = LongFormContentEvent.KIND,
             tags = arrayOf(arrayOf("d", slug)),
             content = body,
         )
@@ -271,7 +271,7 @@ class FsSlotsTest {
             store.insert(v1)
             store.insert(v2)
 
-            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            val got = store.query<LongFormContentEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
             assertEquals(listOf(v2.id), got.map { it.id })
             assertFalse(store.hasCanonical(v1.id), "older draft canonical should be removed")
         }
@@ -284,7 +284,7 @@ class FsSlotsTest {
             store.insert(intro)
             store.insert(about)
 
-            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            val got = store.query<LongFormContentEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
             assertEquals(setOf(intro.id, about.id), got.map { it.id }.toSet())
         }
 
@@ -296,7 +296,7 @@ class FsSlotsTest {
             store.insert(newer)
             store.insert(older)
 
-            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey)))
+            val got = store.query<LongFormContentEvent>(Filter(authors = listOf(signer.pubKey)))
             assertEquals(listOf(newer.id), got.map { it.id })
         }
 
@@ -307,7 +307,7 @@ class FsSlotsTest {
             store.insert(v)
 
             val dHash = FsLayout.sha256Hex("intro")
-            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            val slot = root.resolve("addressable/${LongFormContentEvent.KIND}/${signer.pubKey}/$dHash.json")
             assertTrue(slot.exists())
             val parsed = Event.fromJson(slot.readText())
             assertEquals(v.id, parsed.id)
@@ -320,7 +320,7 @@ class FsSlotsTest {
             store.insert(v)
 
             val dHash = FsLayout.sha256Hex("")
-            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            val slot = root.resolve("addressable/${LongFormContentEvent.KIND}/${signer.pubKey}/$dHash.json")
             assertTrue(slot.exists())
         }
 
@@ -330,7 +330,7 @@ class FsSlotsTest {
             val v = article("intro", "hello", 10)
             store.insert(v)
             val dHash = FsLayout.sha256Hex("intro")
-            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            val slot = root.resolve("addressable/${LongFormContentEvent.KIND}/${signer.pubKey}/$dHash.json")
             assertTrue(slot.exists())
 
             store.delete(v.id)

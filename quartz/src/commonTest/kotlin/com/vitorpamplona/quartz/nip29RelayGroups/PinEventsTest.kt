@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
@@ -94,19 +94,19 @@ class PinEventsTest {
     @Test
     fun updatePinListEventParsesGroupAndIds() {
         val tags = arrayOf(arrayOf("h", gid), arrayOf("e", id1), arrayOf("e", id2))
-        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, UpdatePinListEvent.KIND, tags, "", "22".repeat(64))
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, GroupUpdatePinListEvent.KIND, tags, "", "22".repeat(64))
 
-        assertEquals(true, event is UpdatePinListEvent)
-        event as UpdatePinListEvent
+        assertEquals(true, event is GroupUpdatePinListEvent)
+        event as GroupUpdatePinListEvent
         assertEquals(gid, event.groupId())
         assertEquals(listOf(id1, id2), event.pinnedEventIds())
     }
 
     @Test
     fun updatePinListBuildCarriesHTagAndFullList() {
-        val template = UpdatePinListEvent.build(gid, listOf(EventPin(id1), EventPin(id2)))
+        val template = GroupUpdatePinListEvent.build(gid, listOf(EventPin(id1), EventPin(id2)))
 
-        assertEquals(UpdatePinListEvent.KIND, template.kind)
+        assertEquals(GroupUpdatePinListEvent.KIND, template.kind)
         assertEquals(gid, template.tags.firstOrNull { it[0] == GroupIdTag.TAG_NAME }?.getOrNull(1))
         assertEquals(listOf(id1, id2), template.tags.filter { it[0] == "e" }.map { it[1] })
     }
@@ -146,9 +146,9 @@ class PinEventsTest {
     @Test
     fun updatePinListParsesAddressPins() {
         val tags = arrayOf(arrayOf("h", gid), arrayOf("a", addr), arrayOf("e", id1))
-        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, UpdatePinListEvent.KIND, tags, "", "22".repeat(64))
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, GroupUpdatePinListEvent.KIND, tags, "", "22".repeat(64))
 
-        event as UpdatePinListEvent
+        event as GroupUpdatePinListEvent
         assertEquals(listOf(addr, id1), event.pins().map { it.ref })
     }
 
@@ -165,7 +165,7 @@ class PinEventsTest {
                 "22".repeat(64),
             )
         val newPin = AddressPin(Address(30023, author, "second"))
-        val template = UpdatePinListEvent.build(gid, pinned.pins() + newPin)
+        val template = GroupUpdatePinListEvent.build(gid, pinned.pins() + newPin)
 
         assertEquals(
             listOf(

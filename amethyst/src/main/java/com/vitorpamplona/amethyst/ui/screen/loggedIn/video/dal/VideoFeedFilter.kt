@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.feeds.SupportedContent
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -29,17 +31,16 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 class VideoFeedFilter(
     val account: Account,
@@ -72,10 +73,10 @@ class VideoFeedFilter(
             LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
             } +
-                LocalCache.addressables.filterIntoSet(VideoHorizontalEvent.KIND) { _, it ->
+                LocalCache.addressables.filterIntoSet(AddressableNormalVideoEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 } +
-                LocalCache.addressables.filterIntoSet(VideoVerticalEvent.KIND) { _, it ->
+                LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 }
 
@@ -101,11 +102,11 @@ class VideoFeedFilter(
 
     fun acceptanceEvent(noteEvent: PictureEvent) = acceptablePictureiMetas(noteEvent.imetaTags())
 
-    fun acceptanceEvent(noteEvent: FileHeaderEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
+    fun acceptanceEvent(noteEvent: FileMetadataEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
 
-    fun acceptanceEvent(noteEvent: VideoVerticalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
+    fun acceptanceEvent(noteEvent: AddressableShortVideoEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
-    fun acceptanceEvent(noteEvent: VideoHorizontalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
+    fun acceptanceEvent(noteEvent: AddressableNormalVideoEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
     fun acceptanceEvent(noteEvent: VideoNormalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
@@ -122,9 +123,9 @@ class VideoFeedFilter(
         }
 
         return (
-            (noteEvent is FileHeaderEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is VideoVerticalEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is VideoHorizontalEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is FileMetadataEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is AddressableShortVideoEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is AddressableNormalVideoEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is PictureEvent && acceptanceEvent(noteEvent))

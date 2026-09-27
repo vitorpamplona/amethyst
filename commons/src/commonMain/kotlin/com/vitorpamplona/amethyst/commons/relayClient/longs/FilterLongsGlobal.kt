@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,7 +43,7 @@ fun filterLongsGlobal(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.MEDIA_FEED,
-                    kinds = listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND),
+                    kinds = listOf(VideoNormalEvent.KIND, AddressableNormalVideoEvent.KIND),
                     limit = 200,
                     since = since,
                 ),

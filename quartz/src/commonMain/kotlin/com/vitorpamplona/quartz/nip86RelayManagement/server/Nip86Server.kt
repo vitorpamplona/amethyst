@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip86RelayManagement.server
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
@@ -60,7 +62,16 @@ import kotlinx.serialization.json.int
  *
  * [supportedMethods] is the canonical list this server actually
  * implements; methods returned outside of it are no-ops and a NIP-86
- * client must not advertise them.
+ * client must not advertise them. Every admin on the [allowList] holds
+ * every permission, so the list is the same for every authorized caller
+ * (NIP-86 lets it be tailored per caller; there is nothing to tailor).
+ *
+ * The NIP-43 role (`createrole`, `editrole`, `deleterole`, `assignrole`,
+ * `unassignrole`) and invite-code (`listclaims`, `createclaim`,
+ * `deleteclaim`) methods only maintain the [BanStore]'s records. A relay
+ * that publishes kind 13534 / 33534 events or admits kind 28934 join
+ * requests reads them from there ([BanStore.listRoles],
+ * [BanStore.rolesOf], [BanStore.isValidClaim]).
  */
 class Nip86Server(
     val banStore: BanStore,
@@ -118,12 +129,24 @@ class Nip86Server(
             Nip86Method.ALLOW_PUBKEY,
             Nip86Method.UNALLOW_PUBKEY,
             Nip86Method.LIST_ALLOWED_PUBKEYS,
+            Nip86Method.CREATE_ROLE,
+            Nip86Method.EDIT_ROLE,
+            Nip86Method.DELETE_ROLE,
+            Nip86Method.ASSIGN_ROLE,
+            Nip86Method.UNASSIGN_ROLE,
+            Nip86Method.LIST_CLAIMS,
+            Nip86Method.CREATE_CLAIM,
+            Nip86Method.DELETE_CLAIM,
             Nip86Method.BAN_EVENT,
+            Nip86Method.UNBAN_EVENT,
             Nip86Method.ALLOW_EVENT,
+            Nip86Method.UNALLOW_EVENT,
             Nip86Method.LIST_BANNED_EVENTS,
+            Nip86Method.LIST_ALLOWED_EVENTS,
             Nip86Method.ALLOW_KIND,
             Nip86Method.DISALLOW_KIND,
             Nip86Method.LIST_ALLOWED_KINDS,
+            Nip86Method.LIST_DISALLOWED_KINDS,
             Nip86Method.CHANGE_RELAY_NAME,
             Nip86Method.CHANGE_RELAY_DESCRIPTION,
             Nip86Method.CHANGE_RELAY_ICON,
@@ -190,12 +213,65 @@ class Nip86Server(
                     }
                 }
 
+                Nip86Method.UNBAN_EVENT -> {
+                    withHex(req, "event_id") { id -> banStore.unbanEvent(id) }
+                }
+
                 Nip86Method.ALLOW_EVENT -> {
-                    withHex(req, "event_id") { id -> banStore.allowEvent(id) }
+                    withHexAndReason(req, "event_id") { id, reason -> banStore.allowEvent(id, reason) }
+                }
+
+                Nip86Method.UNALLOW_EVENT -> {
+                    withHex(req, "event_id") { id -> banStore.unallowEvent(id) }
                 }
 
                 Nip86Method.LIST_BANNED_EVENTS -> {
                     ok(banStore.listBannedEvents().map { (id, r) -> BannedEvent(id, r) }.toJsonArray(BannedEvent.serializer()))
+                }
+
+                Nip86Method.LIST_ALLOWED_EVENTS -> {
+                    ok(banStore.listAllowedEvents().map { (id, r) -> AllowedEvent(id, r) }.toJsonArray(AllowedEvent.serializer()))
+                }
+
+                Nip86Method.CREATE_ROLE -> {
+                    withRole(req) { role ->
+                        if (banStore.createRole(role)) okTrue else Nip86Response(error = "role already exists: ${role.id}")
+                    }
+                }
+
+                Nip86Method.EDIT_ROLE -> {
+                    withRole(req) { role ->
+                        if (banStore.editRole(role)) okTrue else Nip86Response(error = "unknown role: ${role.id}")
+                    }
+                }
+
+                Nip86Method.DELETE_ROLE -> {
+                    withNonBlankString(req, "id") { id -> banStore.deleteRole(id) }
+                }
+
+                Nip86Method.ASSIGN_ROLE -> {
+                    withPubkeyAndRole(req) { pk, roleId ->
+                        if (banStore.assignRole(pk, roleId)) okTrue else Nip86Response(error = "unknown role: $roleId")
+                    }
+                }
+
+                Nip86Method.UNASSIGN_ROLE -> {
+                    withPubkeyAndRole(req) { pk, roleId ->
+                        banStore.unassignRole(pk, roleId)
+                        okTrue
+                    }
+                }
+
+                Nip86Method.LIST_CLAIMS -> {
+                    ok(buildJsonArray { banStore.listClaims().forEach { add(JsonPrimitive(it)) } })
+                }
+
+                Nip86Method.CREATE_CLAIM -> {
+                    withNonBlankString(req, "claim") { claim -> banStore.createClaim(claim) }
+                }
+
+                Nip86Method.DELETE_CLAIM -> {
+                    withNonBlankString(req, "claim") { claim -> banStore.deleteClaim(claim) }
                 }
 
                 Nip86Method.ALLOW_KIND -> {
@@ -212,6 +288,10 @@ class Nip86Server(
 
                 Nip86Method.LIST_ALLOWED_KINDS -> {
                     ok(buildJsonArray { banStore.listAllowedKinds().forEach { add(JsonPrimitive(it)) } })
+                }
+
+                Nip86Method.LIST_DISALLOWED_KINDS -> {
+                    ok(buildJsonArray { banStore.listDisallowedKinds().forEach { add(JsonPrimitive(it)) } })
                 }
 
                 Nip86Method.CHANGE_RELAY_NAME -> {
@@ -281,6 +361,45 @@ class Nip86Server(
         return okTrue
     }
 
+    private inline fun withNonBlankString(
+        req: Nip86Request,
+        label: String,
+        action: (String) -> Unit,
+    ): Nip86Response {
+        val v = req.params.firstString()?.takeIf { it.isNotBlank() } ?: return malformed("expected [$label]")
+        action(v)
+        return okTrue
+    }
+
+    /**
+     * Parses NIP-86 `[id, label, description, color, order]`. Only `id` is
+     * required; trailing params may be omitted or `null`. `color` (a hue,
+     * 0..360) and `order` accept a JSON number or a numeric string, since
+     * the kind 33534 tags carry them as strings.
+     */
+    private inline fun withRole(
+        req: Nip86Request,
+        action: (RelayRole) -> Nip86Response,
+    ): Nip86Response {
+        val id = req.params.firstString()?.takeIf { it.isNotBlank() } ?: return malformed("expected [id, label?, description?, color?, order?]")
+        val label = req.params.optString(1) ?: return malformed("label must be a string")
+        val description = req.params.optString(2) ?: return malformed("description must be a string")
+        val color = req.params.optInt(3) ?: return malformed("color must be an integer hue")
+        if (color.value != null && !RelayRole.isValidHue(color.value)) return malformed("color must be a hue between 0 and 360")
+        val order = req.params.optInt(4) ?: return malformed("order must be an integer")
+        return action(RelayRole(id, label.value?.ifEmpty { null }, description.value?.ifEmpty { null }, color.value, order.value))
+    }
+
+    private inline fun withPubkeyAndRole(
+        req: Nip86Request,
+        action: (HexKey, String) -> Nip86Response,
+    ): Nip86Response {
+        val (pk, roleId) = req.params.stringPair() ?: return malformed("expected [pubkey, role_id]")
+        if (!Hex.isHex64(pk)) return malformed("pubkey must be 64-char hex")
+        if (roleId.isNullOrBlank()) return malformed("expected [pubkey, role_id]")
+        return action(pk.lowercase(), roleId)
+    }
+
     private fun rewriteInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
         infoHolder.set(transform(infoHolder.get()))
     }
@@ -303,6 +422,30 @@ private fun JsonArray.stringPair(): Pair<String, String?>? {
 }
 
 private fun JsonArray.firstString(): String? = (getOrNull(0) as? JsonPrimitive)?.contentOrNull()
+
+/** An optional positional param: [value] is null when the param is missing or JSON `null`. */
+private class OptionalParam<T>(
+    val value: T?,
+)
+
+/** Missing / `null` -> empty; a JSON string -> its content; anything else -> null (malformed). */
+private fun JsonArray.optString(index: Int): OptionalParam<String>? {
+    val el = getOrNull(index) ?: return OptionalParam(null)
+    if (el == JsonNull) return OptionalParam(null)
+    val prim = el as? JsonPrimitive ?: return null
+    if (!prim.isString) return null
+    return OptionalParam(prim.content)
+}
+
+/** Missing / `null` / "" -> empty; an integer number or numeric string -> its value; anything else -> null (malformed). */
+private fun JsonArray.optInt(index: Int): OptionalParam<Int>? {
+    val el = getOrNull(index) ?: return OptionalParam(null)
+    if (el == JsonNull) return OptionalParam(null)
+    val prim = el as? JsonPrimitive ?: return null
+    val text = prim.content.trim()
+    if (prim.isString && text.isEmpty()) return OptionalParam(null)
+    return text.toIntOrNull()?.let { OptionalParam(it) }
+}
 
 private fun JsonArray.firstInt(): Int? =
     runCatching {

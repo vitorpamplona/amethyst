@@ -34,9 +34,9 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -131,7 +131,7 @@ object RelayGroupCommands {
 
             val createAck = ctx.publish(ctx.signer.sign(CreateGroupEvent.build(groupId)), target)
             val status = groupStatus(isPrivate, isClosed)
-            val edit = EditMetadataEvent.build(groupId, name = name, about = about, picture = picture, banner = banner, status = status, parent = parent)
+            val edit = GroupEditMetadataEvent.build(groupId, name = name, about = about, picture = picture, banner = banner, status = status, parent = parent)
             val editAck = ctx.publish(ctx.signer.sign(edit), target)
             // Track it in our own kind:10009 so `relaygroup list` shows it, matching
             // the Android create flow (Account.createRelayGroup → follow).
@@ -184,7 +184,7 @@ object RelayGroupCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val join = JoinRequestEvent.build(groupId, reason = args.flag("reason") ?: "", inviteCode = code)
+            val join = GroupJoinRequestEvent.build(groupId, reason = args.flag("reason") ?: "", inviteCode = code)
             args.rejectUnknown()
             val signed = ctx.signer.sign(join)
             val ack = ctx.publish(signed, setOf(relay))
@@ -220,7 +220,7 @@ object RelayGroupCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val signed = ctx.signer.sign(LeaveRequestEvent.build(groupId))
+            val signed = ctx.signer.sign(GroupLeaveRequestEvent.build(groupId))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = false)

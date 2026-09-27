@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_use_videos
 import com.vitorpamplona.amethyst.commons.resources.tor_use_videos_explainer
 import com.vitorpamplona.amethyst.commons.resources.use_internal_tor
 import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
+import com.vitorpamplona.amethyst.commons.tor.TorDialogViewModel
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType

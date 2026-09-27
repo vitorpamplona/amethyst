@@ -60,10 +60,10 @@ class RelayListPublicEntriesTest {
         )
 
     @Test
-    fun relayFeedsListKeepsTheSurvivorPublic() =
+    fun favoriteRelayListKeepsTheSurvivorPublic() =
         runTest {
-            val before = publicListFromAnotherClient<RelayFeedsListEvent>(RelayFeedsListEvent.KIND)
-            val after = RelayFeedsListEvent.updateRelayList(before, listOf(damus), signer, 1740669817)
+            val before = publicListFromAnotherClient<FavoriteRelayListEvent>(FavoriteRelayListEvent.KIND)
+            val after = FavoriteRelayListEvent.updateRelayList(before, listOf(damus), signer, 1740669817)
             assertEquals(listOf(damus), after.tags.relays())
         }
 

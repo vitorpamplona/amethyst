@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -349,7 +349,7 @@ class SQLiteEventStore(
             invalidateAll = true
             return
         }
-        if (event is DeletionEvent && deletedRows > 0) {
+        if (event is DeletionRequestEvent && deletedRows > 0) {
             // Only a kind-5 that actually removed rows costs a rebuild.
             // The common case — a delete broadcast for events this relay
             // never stored — deletes nothing and records as a plain row,
@@ -581,9 +581,9 @@ class SQLiteEventStore(
         }
         // The replaceable / addressable unique indexes fire only when the supersession
         // trigger found nothing older to delete, i.e. the stored version already wins
-        // (STORE-W01/W02). Same shape as a duplicate: nothing to write, `OK true`.
+        // (STORE-W01/W02). Nothing was written, so REPLACED: `OK false`, not a duplicate.
         if (message.contains(SUPERSEDED_CONSTRAINT) || isSupersededByStored(event, db)) {
-            return IEventStore.InsertOutcome.Rejected(RejectionReason.SUPERSEDED)
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.REPLACED)
         }
 
         return if (message.contains("constraint", ignoreCase = true)) {
@@ -618,7 +618,7 @@ class SQLiteEventStore(
      * trigger *would* have deleted doesn't count. That precision matters
      * here: this is the fallback for unrecognized failures, and a disk
      * error while inserting a winning replaceable event must stay `Failed`
-     * rather than turn into a silent `OK true`. An equal id is the
+     * rather than be reported as having lost to a stored version. An equal id is the
      * duplicate case and is answered before this one.
      */
     private fun isSupersededByStored(

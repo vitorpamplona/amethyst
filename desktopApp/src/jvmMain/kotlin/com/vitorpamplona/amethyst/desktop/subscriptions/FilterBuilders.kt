@@ -447,7 +447,7 @@ object FilterBuilders {
         limit: Int? = null,
     ): Filter =
         Filter(
-            kinds = listOf(9735), // LnZapEvent.KIND
+            kinds = listOf(9735), // ZapReceiptEvent.KIND
             tags = mapOf("e" to eventIds),
             limit = limit,
         )
@@ -517,7 +517,7 @@ object FilterBuilders {
         since: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(4), // PrivateDmEvent.KIND
+            kinds = listOf(4), // EncryptedDmEvent.KIND
             tags = mapOf("p" to listOf(pubKeyHex)),
             limit = limit,
             since = since,
@@ -537,7 +537,7 @@ object FilterBuilders {
         since: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(4), // PrivateDmEvent.KIND
+            kinds = listOf(4), // EncryptedDmEvent.KIND
             authors = listOf(pubKeyHex),
             limit = limit,
             since = since,
@@ -569,7 +569,7 @@ object FilterBuilders {
      */
     fun dmRelayList(pubKeyHex: String): Filter =
         Filter(
-            kinds = listOf(10050), // ChatMessageRelayListEvent.KIND
+            kinds = listOf(10050), // DmRelayListEvent.KIND
             authors = listOf(pubKeyHex),
             limit = 1,
         )
@@ -588,7 +588,7 @@ object FilterBuilders {
         until: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            kinds = listOf(30023), // LongFormContentEvent.KIND
             limit = limit,
             since = since,
             until = until,
@@ -606,7 +606,7 @@ object FilterBuilders {
         dTag: String,
     ): Filter =
         Filter(
-            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            kinds = listOf(30023), // LongFormContentEvent.KIND
             authors = listOf(pubkey),
             tags = mapOf("d" to listOf(dTag)),
             limit = 1,
@@ -628,7 +628,7 @@ object FilterBuilders {
         until: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            kinds = listOf(30023), // LongFormContentEvent.KIND
             authors = authors,
             limit = limit,
             since = since,

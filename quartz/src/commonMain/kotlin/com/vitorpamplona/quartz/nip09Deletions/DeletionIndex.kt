@@ -45,10 +45,10 @@ class DeletionIndex {
 
     // stores a set of id OR atags (kind:pubkey:dtag) by pubkey with the created at of the deletion event.
     // Anything newer than the date should not be deleted.
-    private val deletedReferencesBefore = LargeCache<DeletionRequest, DeletionEvent>()
+    private val deletedReferencesBefore = LargeCache<DeletionRequest, DeletionRequestEvent>()
 
     fun add(
-        event: DeletionEvent,
+        event: DeletionRequestEvent,
         wasVerified: Boolean,
     ): Boolean {
         var atLeastOne = false
@@ -74,7 +74,7 @@ class DeletionIndex {
     private fun add(
         ref: String,
         byPubKey: HexKey,
-        deletionEvent: DeletionEvent,
+        deletionEvent: DeletionRequestEvent,
         wasVerified: Boolean,
     ): Boolean {
         val key = DeletionRequest(ref, byPubKey)
@@ -89,7 +89,7 @@ class DeletionIndex {
         return false
     }
 
-    fun hasBeenDeletedBy(event: Event): DeletionEvent? {
+    fun hasBeenDeletedBy(event: Event): DeletionRequestEvent? {
         deletedReferencesBefore.get(DeletionRequest(event.id, event.pubKey))?.let {
             return it
         }

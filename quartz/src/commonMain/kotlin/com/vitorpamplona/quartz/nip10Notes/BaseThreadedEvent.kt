@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
@@ -90,7 +90,7 @@ open class BaseThreadedEvent(
         val tagAddresses =
             taggedATags()
                 .filter { aTag ->
-                    aTag.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || aTag.kind != WikiNoteEvent.KIND) && (kind != NipTextEvent.KIND || aTag.kind != NipTextEvent.KIND)
+                    aTag.kind != CommunityDefinitionEvent.KIND && (kind != WikiArticleEvent.KIND || aTag.kind != WikiArticleEvent.KIND) && (kind != NipTextEvent.KIND || aTag.kind != NipTextEvent.KIND)
                     // removes forks from itself.
                 }.map {
                     it.toTag()

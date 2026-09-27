@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
@@ -84,14 +85,29 @@ class Nip86Client(
         return JsonMapper.fromJson<List<BannedEvent>>(result.toString())
     }
 
+    fun parseAllowedEvents(response: Nip86Response): List<AllowedEvent>? {
+        val result = response.result ?: return null
+        return JsonMapper.fromJson<List<AllowedEvent>>(result.toString())
+    }
+
     fun parseEventsNeedingModeration(response: Nip86Response): List<EventNeedingModeration>? {
         val result = response.result ?: return null
         return JsonMapper.fromJson<List<EventNeedingModeration>>(result.toString())
     }
 
-    fun parseAllowedKinds(response: Nip86Response): List<Int>? {
+    fun parseAllowedKinds(response: Nip86Response): List<Int>? = parseKinds(response)
+
+    fun parseDisallowedKinds(response: Nip86Response): List<Int>? = parseKinds(response)
+
+    private fun parseKinds(response: Nip86Response): List<Int>? {
         val result = response.result ?: return null
         return (result as? JsonArray)?.map { it.jsonPrimitive.int }
+    }
+
+    /** `listclaims` result: a plain array of NIP-43 invite codes. */
+    fun parseClaims(response: Nip86Response): List<String>? {
+        val result = response.result ?: return null
+        return (result as? JsonArray)?.map { it.jsonPrimitive.content }
     }
 
     fun parseBlockedIps(response: Nip86Response): List<BlockedIp>? {
@@ -134,12 +150,58 @@ class Nip86Client(
         reason: String? = null,
     ) = Nip86Request.allowEvent(eventId, reason)
 
+    fun unallowEventRequest(
+        eventId: String,
+        reason: String? = null,
+    ) = Nip86Request.unallowEvent(eventId, reason)
+
     fun banEventRequest(
         eventId: String,
         reason: String? = null,
     ) = Nip86Request.banEvent(eventId, reason)
 
+    fun unbanEventRequest(
+        eventId: String,
+        reason: String? = null,
+    ) = Nip86Request.unbanEvent(eventId, reason)
+
     fun listBannedEventsRequest() = Nip86Request.listBannedEvents()
+
+    fun listAllowedEventsRequest() = Nip86Request.listAllowedEvents()
+
+    fun createRoleRequest(
+        id: String,
+        label: String? = null,
+        description: String? = null,
+        color: Int? = null,
+        order: Int? = null,
+    ) = Nip86Request.createRole(id, label, description, color, order)
+
+    fun editRoleRequest(
+        id: String,
+        label: String? = null,
+        description: String? = null,
+        color: Int? = null,
+        order: Int? = null,
+    ) = Nip86Request.editRole(id, label, description, color, order)
+
+    fun deleteRoleRequest(id: String) = Nip86Request.deleteRole(id)
+
+    fun assignRoleRequest(
+        pubkey: String,
+        roleId: String,
+    ) = Nip86Request.assignRole(pubkey, roleId)
+
+    fun unassignRoleRequest(
+        pubkey: String,
+        roleId: String,
+    ) = Nip86Request.unassignRole(pubkey, roleId)
+
+    fun listClaimsRequest() = Nip86Request.listClaims()
+
+    fun createClaimRequest(claim: String) = Nip86Request.createClaim(claim)
+
+    fun deleteClaimRequest(claim: String) = Nip86Request.deleteClaim(claim)
 
     fun changeRelayNameRequest(newName: String) = Nip86Request.changeRelayName(newName)
 
@@ -152,6 +214,8 @@ class Nip86Client(
     fun disallowKindRequest(kind: Int) = Nip86Request.disallowKind(kind)
 
     fun listAllowedKindsRequest() = Nip86Request.listAllowedKinds()
+
+    fun listDisallowedKindsRequest() = Nip86Request.listDisallowedKinds()
 
     fun blockIpRequest(
         ip: String,

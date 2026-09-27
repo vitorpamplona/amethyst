@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -42,7 +42,7 @@ val CommunityPostKinds =
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         ClassifiedsEvent.KIND,
-        LongTextNoteEvent.KIND,
+        LongFormContentEvent.KIND,
         CommunityPostApprovalEvent.KIND,
         AttestationEvent.KIND,
     )

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.buzz.moderation
 
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -40,7 +40,7 @@ class ModerationUnbanEventTest {
     @Test
     fun kindCollidesWithNip75GoalEvent() {
         // Documents the collision: this kind must NOT be registered in EventFactory,
-        // where 9041 already belongs to the NIP-75 GoalEvent.
-        assertEquals(GoalEvent.KIND, ModerationUnbanEvent.KIND)
+        // where 9041 already belongs to the NIP-75 ZapGoalEvent.
+        assertEquals(ZapGoalEvent.KIND, ModerationUnbanEvent.KIND)
     }
 }

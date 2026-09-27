@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -67,7 +68,8 @@ class RelaySession(
     private val store: SessionBackend,
     val policy: IRelayPolicy,
     private val scope: CoroutineScope,
-    private val onSend: (String) -> Unit,
+    /** Where every frame for this client goes; see [SessionSink] for the typed/raw split. */
+    private val sink: SessionSink,
     private val onClose: (RelaySession) -> Unit,
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     /**
@@ -78,6 +80,17 @@ class RelaySession(
      */
     val id: Long = nextConnectionId(),
 ) : AutoCloseable {
+    /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
+    constructor(
+        store: SessionBackend,
+        policy: IRelayPolicy,
+        scope: CoroutineScope,
+        onSend: (String) -> Unit,
+        onClose: (RelaySession) -> Unit,
+        negentropySettings: NegentropySettings = NegentropySettings.Default,
+        id: Long = nextConnectionId(),
+    ) : this(store, policy, scope, SessionSink.of(onSend), onClose, negentropySettings, id)
+
     private val subscriptions = LargeCache<String, Job>()
 
     /**
@@ -133,10 +146,7 @@ class RelaySession(
 
     fun send(message: Message) {
         try {
-            // message.toJson() defaults to OptimizedJsonMapper.toJson(this) for
-            // every type; NegMsgMessage overrides it with a direct-build wire
-            // path (identical output, ~2× faster on big reconcile frames).
-            onSend(message.toJson())
+            sink.message(message)
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
@@ -145,7 +155,7 @@ class RelaySession(
     /** [send] for frames that are already wire-format JSON (the raw REQ path). */
     private fun sendRaw(json: String) {
         try {
-            onSend(json)
+            sink.raw(json)
         } catch (e: Exception) {
             Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
@@ -175,6 +185,16 @@ class RelaySession(
                 return
             }
 
+        receive(cmd)
+    }
+
+    /**
+     * Dispatches an already-parsed command, for a transport that parsed and
+     * sized it itself (NIP-FE's HTTP bodies). [IRelayPolicy.acceptMessage]
+     * is not run here — it judges wire text — so such a caller applies the
+     * message-length limit before calling.
+     */
+    suspend fun receive(cmd: Command) {
         if (!cmd.isValid()) {
             send(NoticeMessage("error: invalid command"))
             return
@@ -260,6 +280,24 @@ class RelaySession(
             }
 
         send(CountMessage(cmd.queryId, countResult))
+    }
+
+    /**
+     * Records [pubkey], proved by the transport rather than a NIP-42 AUTH (NIP-FE's NIP-98 header),
+     * once the policy chain has no objection ([IRelayPolicy.acceptTransportIdentity]). Returns the
+     * refusal, or null when the key is now authenticated on this connection exactly as AUTH would.
+     */
+    suspend fun authenticateByTransport(pubkey: HexKey): String? {
+        val refused =
+            try {
+                policy.acceptTransportIdentity(pubkey)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                MachineReadablePrefix.ERROR.format(e.message ?: "authentication failed")
+            }
+        if (refused == null) authenticatedUsers = authenticatedUsers + pubkey
+        return refused
     }
 
     // -- NIP-42: AUTH ---------------------------------------------------------

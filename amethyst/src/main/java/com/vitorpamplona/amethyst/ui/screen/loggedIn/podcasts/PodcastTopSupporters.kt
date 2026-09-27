@@ -54,14 +54,14 @@ import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import java.math.BigDecimal
 
 private val Gold = Color(0xFFFFC300)
@@ -86,7 +86,7 @@ fun PodcastTopSupporters(
         remember(zapState) {
             val contributions =
                 note.zaps.mapNotNull { (_, receiptNote) ->
-                    val receipt = receiptNote?.event as? LnZapEvent ?: return@mapNotNull null
+                    val receipt = receiptNote?.event as? ZapReceiptEvent ?: return@mapNotNull null
                     val request = receipt.zapRequest ?: return@mapNotNull null
                     val sats = receipt.amount()?.toLong() ?: return@mapNotNull null
                     // Anon/private zaps carry an `anon` tag; collapse them into the shared bucket.
