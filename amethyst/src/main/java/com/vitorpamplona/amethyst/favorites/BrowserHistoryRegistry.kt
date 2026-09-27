@@ -101,8 +101,9 @@ object BrowserHistoryRegistry {
     ) {
         val host = OmniboxInput.hostOf(url) ?: url
         val now = System.currentTimeMillis()
+        val key = historyKey(url)
         update { current ->
-            val existing = current.firstOrNull { it.url == url }
+            val existing = current.firstOrNull { historyKey(it.url) == key }
             val entry =
                 if (existing != null) {
                     existing.copy(
@@ -114,18 +115,22 @@ object BrowserHistoryRegistry {
                 } else {
                     BrowserHistoryEntry(url = url, title = title, host = host, lastVisitedAt = now, visitCount = 1)
                 }
-            (listOf(entry) + current.filterNot { it.url == url }).take(MAX_ENTRIES)
+            (listOf(entry) + current.filterNot { historyKey(it.url) == key }).take(MAX_ENTRIES)
         }
     }
 
-    fun remove(url: String) = update { current -> current.filterNot { it.url == url } }
+    fun remove(url: String) =
+        update { current ->
+            val key = historyKey(url)
+            current.filterNot { historyKey(it.url) == key }
+        }
 
     fun clear() = update { emptyList() }
 
     private fun dedupeNewestFirst(list: List<BrowserHistoryEntry>): List<BrowserHistoryEntry> =
         list
             .sortedByDescending { it.lastVisitedAt }
-            .distinctBy { it.url }
+            .distinctBy { historyKey(it.url) }
             .take(MAX_ENTRIES)
 
     private inline fun update(transform: (List<BrowserHistoryEntry>) -> List<BrowserHistoryEntry>) {
@@ -151,4 +156,27 @@ object BrowserHistoryRegistry {
             Log.w("BrowserHistoryRegistry", "Failed to decode history", e)
             emptyList()
         }
+}
+
+/**
+ * What counts as "the same page" in the history list.
+ *
+ * Keying on the raw URL string put `primal.net` in the list twice: a trailing slash, a different case
+ * in the host, or a leftover `#fragment` reads as one page and compares as two Strings. So the scheme
+ * and host are lowercased, a fragment is dropped, and a trailing slash is dropped when the path is
+ * nothing but that slash.
+ *
+ * The path and the query are kept and compared as-is. Two pages of the same site are two entries, and
+ * guessing which query parameters are load-bearing is how you lose one of them.
+ */
+internal fun historyKey(url: String): String {
+    val noFragment = url.substringBefore('#')
+    val schemeEnd = noFragment.indexOf("://")
+    if (schemeEnd <= 0) return noFragment
+    val scheme = noFragment.substring(0, schemeEnd).lowercase()
+    val rest = noFragment.substring(schemeEnd + 3)
+    val authorityEnd = rest.indexOfFirst { it == '/' || it == '?' }
+    val authority = (if (authorityEnd < 0) rest else rest.substring(0, authorityEnd)).lowercase()
+    val tail = if (authorityEnd < 0) "" else rest.substring(authorityEnd)
+    return scheme + "://" + authority + if (tail == "/") "" else tail
 }

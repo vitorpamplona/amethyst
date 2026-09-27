@@ -353,7 +353,7 @@ private fun OutOfScopeBanner(
     }
 }
 
-/** Page actions as tiles, four per row; toggles (desktop site, text size) fill while on. */
+/** Page actions as tiles, at most four per row; toggles (desktop site, text size) fill while on. */
 @Composable
 private fun TileGrid(
     actions: List<Action>,
@@ -361,9 +361,16 @@ private fun TileGrid(
     textSizeOpen: Boolean,
     onAction: (Action) -> Unit,
 ) {
-    val columns = 4
+    // Spread over the rows we are going to use anyway, rather than filling each
+    // one to four and leaving the remainder stranded. Six actions read as 3 + 3
+    // instead of 4 + 2 with a hole beside it, and five as 3 + 2 instead of 4 + 1.
+    // Every row is chunked to the same width, so the tiles stay a uniform size
+    // and a gap appears only when the count is not divisible — seven is 4 + 3
+    // either way.
+    var taken = 0
+    val rows = balancedRowSizes(actions.size, MAX_TILE_COLUMNS).map { size -> actions.subList(taken, taken + size).also { taken += size } }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        actions.chunked(columns).forEach { rowActions ->
+        rows.forEach { rowActions ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowActions.forEach { action ->
                     // The hand-off tile names the browser it will actually open when the
@@ -384,11 +391,33 @@ private fun TileGrid(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                // Keep the last row's tiles the same width as the others.
-                repeat(columns - rowActions.size) { Spacer(Modifier.weight(1f)) }
+                // Keep every row's tiles the same width, whatever the row holds.
+                repeat(MAX_TILE_COLUMNS - rowActions.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
+}
+
+/** Most tiles on one row. Four is what fits at the pill's width without the labels wrapping twice. */
+private const val MAX_TILE_COLUMNS = 4
+
+/**
+ * How many tiles go on each row, spread as evenly as the count allows.
+ *
+ * The number of rows is fixed by [max] either way — this only decides how the
+ * items are shared out between them, so the leftovers do not all land on the
+ * last row. Ten tiles are 4 + 3 + 3, not 4 + 4 + 2. Rows are padded back out
+ * to [max] where they draw, so the tiles stay a uniform width throughout.
+ */
+internal fun balancedRowSizes(
+    count: Int,
+    max: Int,
+): List<Int> {
+    if (count <= 0) return emptyList()
+    val rows = (count + max - 1) / max
+    val base = count / rows
+    val remainder = count % rows
+    return List(rows) { index -> base + if (index < remainder) 1 else 0 }
 }
 
 /** Text size: a stepped slider between a small and a large "A", the value, and a way back to 100%. */
