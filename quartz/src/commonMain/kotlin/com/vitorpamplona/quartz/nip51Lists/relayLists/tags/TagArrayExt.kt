@@ -21,7 +21,12 @@
 package com.vitorpamplona.quartz.nip51Lists.relayLists.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 
 fun TagArray.relays() = mapNotNull(RelayTag::parse)
 
 fun TagArray.relaySet() = mapNotNullTo(mutableSetOf(), RelayTag::parse)
+
+/** `a` pointers to kind:30002 relay sets, as kind 10012 may carry them. */
+fun TagArray.relaySetPointers() = mapNotNull { tag -> AddressBookmark.parse(tag)?.takeIf { it.address.kind == RelaySetEvent.KIND } }

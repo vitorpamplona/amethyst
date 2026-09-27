@@ -242,7 +242,7 @@ private fun WebBookmarkCard(
             onDismiss = { showEditDialog = false },
             onSave = { url, title, description, tags ->
                 accountViewModel.launchSigner {
-                    accountViewModel.account.sendWebBookmark(url, title, description, tags)
+                    accountViewModel.account.sendWebBookmark(url, title, description, tags, editing = event)
                 }
                 showEditDialog = false
             },

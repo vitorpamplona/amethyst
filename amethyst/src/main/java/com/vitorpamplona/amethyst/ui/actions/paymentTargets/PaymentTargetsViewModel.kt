@@ -23,9 +23,10 @@ package com.vitorpamplona.amethyst.ui.actions.paymentTargets
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -62,7 +63,8 @@ class PaymentTargetsViewModel : ViewModel() {
         type: String,
         authority: String,
     ) {
-        val trimmedType = type.trim().lowercase()
+        // Stores the NIP-A3 spelling of known aliases (btc -> bitcoin, cashapp -> cashme).
+        val trimmedType = PaymentTargetTypes.canonical(type)
         val trimmedAuthority = authority.trim()
         if (trimmedType.isEmpty() || trimmedAuthority.isEmpty()) return
         val target = PaymentTarget(trimmedType, trimmedAuthority)

@@ -1941,6 +1941,10 @@ class AccountViewModel(
 
     fun unfollowFavoriteAlgoFeed(dvm: Address) = launchSigner { account.unfollowFavoriteAlgoFeed(dvm) }
 
+    fun followFavoriteFollowSet(followSet: AddressBookmark) = launchSigner { account.followFavoriteFollowSet(followSet) }
+
+    fun unfollowFavoriteFollowSet(followSet: Address) = launchSigner { account.unfollowFavoriteFollowSet(followSet) }
+
     fun refreshFavoriteAlgoFeed(dvm: Address) = account.favoriteAlgoFeedsOrchestrator.refresh(dvm)
 
     fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }

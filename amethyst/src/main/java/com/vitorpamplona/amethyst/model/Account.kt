@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList.Block
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteFollowSetsLists.FavoriteFollowSetsListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
@@ -149,6 +150,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.bookmarkSets.BookmarkSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteFollowSetsLists.FavoriteFollowSetsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.StarterPacksState
@@ -199,7 +201,6 @@ import com.vitorpamplona.quartz.experimental.nip95.header.dimension
 import com.vitorpamplona.quartz.experimental.nip95.header.fileSize
 import com.vitorpamplona.quartz.experimental.nip95.header.hash
 import com.vitorpamplona.quartz.experimental.nip95.header.mimeType
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
@@ -337,6 +338,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -764,6 +766,9 @@ class Account(
     val favoriteAlgoFeedsListDecryptionCache = FavoriteAlgoFeedsListDecryptionCache(signer)
     val favoriteAlgoFeedsList = FavoriteAlgoFeedsListState(signer, cache, favoriteAlgoFeedsListDecryptionCache, scope, settings)
     val favoriteAlgoFeedsOrchestrator = FavoriteAlgoFeedsOrchestrator(this, scope)
+
+    val favoriteFollowSetsListDecryptionCache = FavoriteFollowSetsListDecryptionCache(signer)
+    val favoriteFollowSetsList = FavoriteFollowSetsListState(signer, cache, favoriteFollowSetsListDecryptionCache, scope)
 
     val geohashListDecryptionCache = GeohashListDecryptionCache(signer)
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
@@ -2136,6 +2141,10 @@ class Account(
 
     fun isFavoriteAlgoFeed(dvm: Address): Boolean = favoriteAlgoFeedsList.flow.value.contains(dvm)
 
+    suspend fun followFavoriteFollowSet(followSet: AddressBookmark) = sendMyPublicAndPrivateOutbox(favoriteFollowSetsList.follow(followSet))
+
+    suspend fun unfollowFavoriteFollowSet(followSet: Address) = sendMyPublicAndPrivateOutbox(favoriteFollowSetsList.unfollow(followSet))
+
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
     suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
@@ -2163,14 +2172,32 @@ class Account(
         title: String?,
         description: String,
         hashtags: List<String> = emptyList(),
+        editing: WebBookmarkEvent? = null,
     ) {
         if (!isWriteable()) return
 
-        val template = WebBookmarkEvent.build(url, title, description, tags = hashtags)
+        val now = TimeUtils.now()
+        val template =
+            WebBookmarkEvent.build(
+                url,
+                title,
+                description,
+                tags = hashtags,
+                createdAt = now,
+                firstPublishedAt = editing?.publishedAt() ?: now,
+            )
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+
+        // A different d tag is a different address, so the edit would otherwise leave the old
+        // bookmark behind. That happens when the URL was changed, and when re-saving a bookmark
+        // stored under the pre-2026 NIP-B0 rule, which also dropped `http://` (the d tag then
+        // reads as https, and saving the real http URL now keeps the scheme).
+        if (editing != null && editing.dTag() != signedEvent.dTag()) {
+            deleteWebBookmark(editing)
+        }
     }
 
     suspend fun deleteWebBookmark(event: WebBookmarkEvent) {

@@ -40,8 +40,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserNameText
 import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
@@ -103,7 +103,7 @@ fun UsernameDisplay(
     accountViewModel: AccountViewModel,
 ) {
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
-    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val nickname by observeUserDisplayNickname(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
         // the account's own nickname for this user wins over the user's metadata;

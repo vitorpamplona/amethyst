@@ -22,7 +22,12 @@ package com.vitorpamplona.quartz.nip51Lists.interestList
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 
 fun TagArray.hashtagList() = mapNotNull(HashtagTag::parse)
 
 fun TagArray.hashtagSet() = mapNotNullTo(mutableSetOf(), HashtagTag::parse)
+
+/** `a` pointers to kind:30015 interest sets, as kind 10015 may carry them. */
+fun TagArray.interestSetPointers() = mapNotNull { tag -> AddressBookmark.parse(tag)?.takeIf { it.address.kind == InterestSetEvent.KIND } }
